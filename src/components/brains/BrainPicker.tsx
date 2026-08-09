@@ -1,14 +1,19 @@
 /**
- * BrainPicker.tsx — 103-05-T1. The phase's single interactive surface: a Popover-hosted cmdk
- * picker, grouped Subscription / API / Local (D-07), with an explicit This profile / All
- * profiles scope selector (D-08) whose two branches dispatch to two genuinely different places:
+ * BrainPicker.tsx — 103-05-T1, seam retired under Phase 109 Plan 03 (D-01/D-02). The phase's single
+ * interactive surface: a Popover-hosted cmdk picker, grouped Subscription / API / Local (D-07), with
+ * an explicit This profile / All profiles scope selector (D-08) whose two branches dispatch to two
+ * genuinely different places:
  *
- *  - "This profile" — `brainsApi.dispatchSwap` with the `gateway.model.set` shape from
- *    103-CONTRACT.md, `scope: "profile"`. This branch is stub-backed (D-16) and carries the STUB
- *    indicator.
+ *  - "This profile" — dispatches the real, server-registered `swap.set` with `profile_id` through
+ *    the same bounded `useCommandDispatch()` sender the global axis already uses (D-01). The
+ *    previous per-profile command type (retired in full by this plan — see 109-CONTEXT.md D-01 for
+ *    its exact name) was never implemented by Ástríðr's dispatcher registry — an unknown `type`
+ *    failed Pydantic union validation on every send.
  *  - "All profiles" — opens `GlobalSwapModal` (103-04), which owns the live, shipped `swap.set`
- *    dispatch itself. This branch never touches `brainsApi` and is never marked stub — labelling
- *    live data as stub would be its own honesty failure.
+ *    dispatch itself.
+ *
+ * Both branches now read from the SAME single catalogue (`useBrainCatalogue`, D-02) — the catalogue
+ * was never scope-dependent; only the dispatch target is.
  *
  * Structurally follows `BrainControl.tsx` (Phase 186-09) — the single most important analog in
  * this phase, whose docstring records three live operator checkpoint rounds. Every one of those
@@ -38,9 +43,9 @@
  *
  * Keyboard activation (103-11, CR-02): `handleActivate` is the single branch decision both
  * `CommandItem.onSelect` (search → arrow → Enter) and `BrainPickerRow`'s own button (mouse click)
- * call — see its own doc comment below. `fetchCatalogue` (WR-01) is generation-guarded so a rapid
- * scope toggle can never leave the rendered catalogue on one axis while `scope` points at the
- * other.
+ * call — see its own doc comment below. The former WR-01 scope-toggle staleness race no longer
+ * exists: since Phase 109 D-02 the catalogue is scope-independent, so toggling scope never
+ * re-fetches and there is nothing left to race.
  *
  * 103-12 (CR-03/WR-02, superseded by 103-18): this component used to own `GlobalSwapModal`'s mount
  * lifecycle directly (a `globalTarget` mount guard decoupled from a `globalDialogOpen` visibility
@@ -61,7 +66,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import {
   Popover,
@@ -84,31 +88,21 @@ import { type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
 import { useActiveEngine } from "@/hooks/useActiveEngine";
 import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
-import { useAstridrWS } from "@/contexts/AstridrWSContext";
+import { useBrainCatalogue, type BrainCatalogueEntry } from "@/hooks/useBrainCatalogue";
+import { useCommandDispatch } from "@/hooks/useCommandDispatch";
 import { useGlobalSwap } from "@/contexts/GlobalSwapContext";
 import {
-  brainsApi,
-  BRAINS_STUB_ACTIVE,
   buildModelNameMap,
   resolveModelDisplayName,
   type CatalogueEntry,
 } from "@/lib/brainsApi";
 import { cn } from "@/lib/utils";
 
-/** Raw entry shape `swap.catalogue` actually returns (`ws_commands.py::_handle_swap_catalogue`,
- * mirrored by `BrainControl.tsx`'s own `CatalogueEntry`) — id/name/vendor only, none of the
- * per-profile `CatalogueEntry`'s D-07 fields (group/billing/costTier/...), because the live global
- * axis has never carried that data. */
-interface GlobalCatalogueEntry {
-  id: string;
-  name: string;
-  vendor?: string;
-}
-
 /**
- * Adapts a live `swap.catalogue` entry into this picker's `CatalogueEntry` shape so it can render
- * through the SAME D-07 grouped rows the per-profile branch uses — no second render path. Every
- * global-axis entry is billed per-token through the gateway, so `group`/`billing: "api"` is an
+ * Adapts a live `swap.catalogue` entry (`useBrainCatalogue`'s `BrainCatalogueEntry` —
+ * id/name/vendor only) into this picker's `CatalogueEntry` shape so it can render through the D-07
+ * grouped rows regardless of which scope dispatches it — one catalogue, one render path (D-02).
+ * Every catalogue entry is billed per-token through the gateway, so `group`/`billing: "api"` is an
  * accurate description, not an invented one.
  *
  * `costTier: "normal"` rather than `"unknown"` is a deliberate choice, not a guess dressed up as
@@ -120,9 +114,10 @@ interface GlobalCatalogueEntry {
  * copy of its own (`needsCostWarning`). Tagging every live entry `"unknown"` here would silently
  * re-introduce the double-confirm UI-SPEC forbids and change this task's explicitly out-of-scope
  * dispatch semantics as a side effect of a labeling choice. `quotaRemainingPct`/`health` stay
- * omitted (both optional) — `swap.catalogue` has never reported either.
+ * omitted (both optional) — `swap.catalogue` has never reported either. (D-09's real group/billing
+ * mapping, replacing this flattening, is plan 109-07's job — out of this plan's scope.)
  */
-function normalizeGlobalCatalogueEntry(entry: GlobalCatalogueEntry): CatalogueEntry {
+function normalizeCatalogueEntry(entry: BrainCatalogueEntry): CatalogueEntry {
   return {
     id: entry.id,
     name: entry.name,
@@ -152,7 +147,7 @@ export interface BrainPickerProps {
    * asChild>{trigger}</PopoverTrigger>`) — chosen over a `renderTrigger` function because the
    * consumer's element (`BrainHeaderBadge`'s own visible, accessible button) needs no picker
    * internals passed into it, just Radix's own onClick/ref cloned onto it via `asChild`. Omit for
-   * the default trigger (base label + pending suffix + STUB chip), which every existing consumer
+   * the default trigger (base label + pending suffix), which every existing consumer
    * (Chat composer, Settings row, 103-07) keeps using unchanged.
    */
   trigger?: React.ReactNode;
@@ -179,6 +174,15 @@ export interface BrainPickerProps {
 
 type PickerScope = "profile" | "global";
 
+/**
+ * Bound on the per-profile "This profile" dispatch, mirroring `GlobalSwapModal`'s
+ * `GLOBAL_SWAP_DISPATCH_TIMEOUT_MS` (T-109-08). `AstridrWSContext.sendCommand` can queue a command
+ * with no timeout of its own when the socket is not OPEN, so `await dispatch(...)` could otherwise
+ * hang forever — leaving the picker's pending-swap suffix stuck indefinitely. Exported for direct
+ * test control (fake timers).
+ */
+export const PROFILE_SWAP_DISPATCH_TIMEOUT_MS = 15000;
+
 const GROUP_ORDER: { group: CatalogueEntry["group"]; label: string }[] = [
   { group: "subscription", label: "Subscription" },
   { group: "api", label: "API" },
@@ -201,8 +205,6 @@ export function BrainPicker({
   const isOpenControlled = openProp !== undefined;
   const open = isOpenControlled ? openProp : uncontrolledOpen;
   const [scope, setScope] = useState<PickerScope>("profile");
-  const [entries, setEntries] = useState<CatalogueEntry[] | null>(null);
-  const [fetchError, setFetchError] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pendingTarget, setPendingTarget] = useState<CatalogueEntry | null>(null);
 
@@ -210,17 +212,17 @@ export function BrainPicker({
   // default (D-08) is not a preference that can re-arm itself.
   const consumedEntryScope = useRef(false);
 
-  // WR-01: incremented at the top of every `fetchCatalogue` invocation. A response is only
-  // applied if its captured generation is still the latest one when it resolves — a rapid scope
-  // toggle ("This profile" -> "All profiles" -> "This profile") can otherwise let the SLOWER
-  // (now-superseded) request's response win, leaving the rendered catalogue on one axis while
-  // `scope` (and therefore the dispatch branch) points at the other.
-  const fetchGenRef = useRef(0);
-
   const activeEngines = useActiveEngine();
   const activeEngine = activeEngines[profileId] ?? null;
   const allProfiles = useProfileConfigs();
-  const { sendCommand } = useAstridrWS();
+  // D-02: the ONE swap.catalogue fetcher, serving BOTH scopes — no second, scope-conditional
+  // catalogue source. The hook's own generation guard supersedes a stale in-flight response on
+  // `refetch()`; this component no longer needs its own.
+  const { entries: rawEntries, error: catalogueError, refetch: refetchCatalogue } = useBrainCatalogue();
+  const entries = useMemo<CatalogueEntry[] | null>(
+    () => (rawEntries ? rawEntries.map(normalizeCatalogueEntry) : null),
+    [rawEntries]
+  );
   // WR-02: the "All profiles" scope's row highlight must compare against the global axis, not the
   // per-profile engine — see `isCurrent` below.
   const { modelOverride: globalOverrideModel } = useGlobalBrainOverride();
@@ -228,45 +230,41 @@ export function BrainPicker({
   // `GlobalSwapContext` instead of mounting/owning a `GlobalSwapModal` of its own — see this file's
   // and that module's docstrings.
   const { openGlobalSwap } = useGlobalSwap();
+  const { dispatch } = useCommandDispatch();
 
   /**
-   * Scope-aware catalogue source (fix for the scope-blind picker bug): "profile" keeps using
-   * `brainsApi.getCatalogue()` exactly as before — that seam is still the stub-backed, deferred
-   * per-profile axis (103-CONTRACT.md §1, Ástríðr Phase 184.1) and must never be told otherwise.
-   * "global" instead reads the LIVE `swap.catalogue` command the same way `BrainControl.tsx:142`
-   * already does — same request shape, same `ack.status === "ok" && Array.isArray(ack.entries)`
-   * success check, same "anything else is an error, never a silent empty success" handling — so a
-   * real backend failure surfaces the existing error state instead of quietly rendering as an
-   * empty catalogue or falling back to stub data.
+   * D-01's dispatch seam for the "This profile" branch (T-109-08): the same bounded
+   * `Promise.race` + timeout + `finally`-clearTimeout wrapper `GlobalSwapModal.tsx`'s own
+   * `dispatchBounded` already ships for the global axis, so a hang or rejection settles into an
+   * honest error instead of leaving the picker's pending state stuck forever.
    */
-  const fetchCatalogue = useCallback(
-    async (targetScope: PickerScope) => {
-      const gen = ++fetchGenRef.current;
-      setFetchError(false);
-      setEntries(null);
-      try {
-        if (targetScope === "global") {
-          const ack = await sendCommand({ type: "swap.catalogue", target: "brain" });
-          if (gen !== fetchGenRef.current) return; // stale response, scope changed since
-          if (ack.status === "ok" && Array.isArray(ack.entries)) {
-            setEntries(
-              (ack.entries as GlobalCatalogueEntry[]).map(normalizeGlobalCatalogueEntry)
-            );
-          } else {
-            setFetchError(true);
-          }
-          return;
-        }
-        const list = await brainsApi.getCatalogue();
-        if (gen !== fetchGenRef.current) return; // stale response, scope changed since
-        setEntries(list);
-      } catch {
-        if (gen !== fetchGenRef.current) return; // stale response, scope changed since
-        setFetchError(true);
-      }
-    },
-    [sendCommand]
-  );
+  async function dispatchBounded(
+    cmd: Record<string, unknown>
+  ): Promise<{ status: "ok" | "error"; error?: string }> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        dispatch(cmd).then((ack) => ({ status: ack.status, error: ack.error })),
+        new Promise<{ status: "error"; error: string }>((resolve) => {
+          timer = setTimeout(
+            () =>
+              resolve({
+                status: "error",
+                error: "no response from Ástríðr — the command was never delivered",
+              }),
+            PROFILE_SWAP_DISPATCH_TIMEOUT_MS
+          );
+        }),
+      ]);
+    } catch (err) {
+      return {
+        status: "error",
+        error: err instanceof Error ? err.message : "the command could not be delivered",
+      };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
 
   const handleOpenChange = (next: boolean) => {
     if (!isOpenControlled) setUncontrolledOpen(next);
@@ -279,7 +277,9 @@ export function BrainPicker({
       }
       setScope(nextScope);
       setExpandedId(null);
-      void fetchCatalogue(nextScope);
+      // D-02: re-fetch every open (never caches client-side) — toggling scope AFTER open does NOT
+      // re-fetch, since the catalogue no longer depends on scope.
+      refetchCatalogue();
     }
   };
 
@@ -307,13 +307,15 @@ export function BrainPicker({
     async (entry: CatalogueEntry) => {
       setPendingTarget(entry);
       handleOpenChange(false);
-      const ack = await brainsApi.dispatchSwap({
-        type: "gateway.model.set",
-        request_id: "",
-        scope: "profile",
+      // D-01: the real, server-registered swap.set with profile_id — plan 109-06 replaces this
+      // whole ad-hoc pending-state block with the 5-state useProfileSwap machine and must not find
+      // a second, competing implementation; this is the interim consumer.
+      const ack = await dispatchBounded({
+        type: "swap.set",
+        target: "brain",
+        value: entry.id,
+        restore: false,
         profile_id: profileId,
-        model: entry.id,
-        mode: "session",
       });
       if (ack.status === "error") {
         setPendingTarget(null);
@@ -323,7 +325,8 @@ export function BrainPicker({
         );
       }
     },
-    [profileId, activeEngine]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profileId, activeEngine, dispatch]
   );
 
   /**
@@ -449,14 +452,6 @@ export function BrainPicker({
                 · switching to {pendingTarget.name}…
               </span>
             )}
-            {BRAINS_STUB_ACTIVE && (
-              <span
-                data-testid="brain-picker-trigger-stub-chip"
-                className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
-              >
-                STUB
-              </span>
-            )}
           </button>
         )}
       </PopoverTrigger>
@@ -474,24 +469,14 @@ export function BrainPicker({
         <TooltipProvider delayDuration={200}>
         <Command>
           <div className="flex flex-col gap-2">
-            {BRAINS_STUB_ACTIVE && (
-              <div className="flex items-center gap-2 rounded-md bg-(--status-warn)/10 px-3 py-2 text-sm text-(--status-warn)">
-                <FlaskConical className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Running on stub brain data — live Ástríðr backend not connected
-              </div>
-            )}
             <ToggleGroup
               type="single"
               value={scope}
               onValueChange={(next) => {
                 if (!next) return;
-                const nextScope = next as PickerScope;
-                // The catalogue is scope-sourced now (profile -> brainsApi.getCatalogue(),
-                // global -> live swap.catalogue) -- switching scope mid-open must re-fetch, or
-                // this would keep rendering the OLD scope's list under the NEW scope's dispatch
-                // branch, recreating the scope-blind bug this fix closes.
-                setScope(nextScope);
-                void fetchCatalogue(nextScope);
+                // D-02: the catalogue is scope-INDEPENDENT now — toggling scope only changes the
+                // dispatch branch and the row highlight source, never re-fetches.
+                setScope(next as PickerScope);
               }}
               variant="outline"
               className="w-full"
@@ -506,32 +491,19 @@ export function BrainPicker({
             <CommandInput placeholder="Search brains…" autoFocus />
           </div>
           <CommandList className="max-h-80">
-            {entries === null && !fetchError && (
+            {entries === null && !catalogueError && (
               <div className="flex flex-col gap-1.5 p-1" aria-label="Loading brain catalogue">
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
               </div>
             )}
-            {/* UAT 2026-07-29 (103-UAT.md test 3): the profile axis's failure is STRUCTURAL, not
-                transient — `models.catalog` is absent from Ástríðr's accepted command union until
-                astridr Phase 184.1 ships, so this fetch cannot succeed no matter how many times the
-                operator retries. Since the picker opens on this scope by default, "try again in a
-                moment" was the first thing an operator saw and it blamed the wrong cause. The global
-                axis keeps the retry copy, because there a failure genuinely IS transient. */}
-            {fetchError &&
-              (scope === "profile" ? (
-                <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                  Per-profile swapping isn't available yet — switch to{" "}
-                  <span className="font-medium text-foreground">All profiles</span> to change the
-                  engine.
-                </p>
-              ) : (
-                <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                  Couldn't load the brain catalogue — try again in a moment.
-                </p>
-              ))}
-            {entries !== null && !fetchError && entries.length === 0 && (
+            {catalogueError && (
+              <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                Couldn't load the brain catalogue — try again in a moment.
+              </p>
+            )}
+            {entries !== null && !catalogueError && entries.length === 0 && (
               <div className="flex flex-col gap-1 px-2 py-4 text-center">
                 <p className="text-sm font-semibold">No brains reachable</p>
                 <p className="text-xs text-muted-foreground">
@@ -540,7 +512,7 @@ export function BrainPicker({
                 </p>
               </div>
             )}
-            {entries !== null && !fetchError && entries.length > 0 && (
+            {entries !== null && !catalogueError && entries.length > 0 && (
               <>
                 <CommandEmpty>No brains match your search.</CommandEmpty>
                 {groups.map((group) => (

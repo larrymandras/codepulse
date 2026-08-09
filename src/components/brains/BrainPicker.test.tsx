@@ -1,30 +1,35 @@
 /**
- * BrainPicker.test.tsx — 103-05-T2, extended 103-08 for the scope-aware catalogue fix.
+ * BrainPicker.test.tsx — 103-05-T2, extended 103-08 for the scope-aware catalogue fix, rewritten
+ * under Phase 109 Plan 03 (D-01/D-02) for the D-16 seam retirement.
  *
- * Structured after `BrainControl.test.tsx` (module-level `vi.mock`, exact
- * `toHaveBeenCalledWith` command-shape assertions, the never-truncates and
- * re-fetches-on-every-open regression tests). `brainsApi`, `useActiveEngine`,
- * `useProfileConfigs`, and `GlobalSwapModal` are mocked directly so every dispatched
- * command shape and every open branch can be asserted exactly — a render-without-error
- * smoke test would prove none of D-08/D-14/D-15/D-16.
+ * `@/hooks/useBrainCatalogue` is mocked directly (controllable `entries`/`error`/a `refetch` spy) —
+ * this file tests BrainPicker's OWN composition of the hook (fetch-on-open via `refetch()`,
+ * loading/error/empty states, normalization into grouped rows), not the hook's own fetch/generation
+ * -guard behavior (covered directly by `useBrainCatalogue.test.ts`). `@/hooks/useCommandDispatch` is
+ * mocked directly (a `mockDispatch` spy) — both the "This profile" branch's `swap.set` dispatch AND
+ * (for the "real GlobalSwapModal" describe blocks below) `GlobalSwapModal`'s own global-axis
+ * dispatch share this SAME mock, since both now go through the one `useCommandDispatch()` sender.
  *
- * `convex/react` + the generated Convex API module are mocked only because
- * `BrainPickerRow` (reused verbatim, per plan) transitively calls the real
- * `useProviderHealth()` hook — same mocking idiom `BrainPickerRow.test.tsx` already
- * established for this exact reason.
+ * `convex/react` + the generated Convex API module are mocked only because `BrainPickerRow` (reused
+ * verbatim, per plan) transitively calls the real `useProviderHealth()` hook — same mocking idiom
+ * `BrainPickerRow.test.tsx` already established for this exact reason.
  *
- * `@/contexts/AstridrWSContext` is mocked (103-08) the same way `BrainControl.test.tsx`
- * mocks it, because the picker's "global" scope branch now reads the live catalogue via
- * `useAstridrWS().sendCommand` exactly as `BrainControl.tsx` does — every "profile"-scope
- * test in this file supplies a `mockSendCommand` that is never asserted against, proving
- * those tests stay entirely on the `brainsApi.getCatalogue()` seam.
+ * `@/hooks/useResolvedBrain`'s `useGlobalBrainOverride` is mocked directly (103-12, WR-02) — a
+ * plain mutable `mockGlobalOverride` object the picker reads for the "All profiles" scope's row
+ * highlight.
  *
- * `@/hooks/useResolvedBrain`'s `useGlobalBrainOverride` is mocked directly (103-12, WR-02) —
- * a plain mutable `mockGlobalOverride` object the picker reads for the "All profiles" scope's row
- * highlight. Mocked at the hook level (not by driving `mockSendCommand`'s `swap.get_state` reply)
- * so this file's existing WR-01 staleness test — which relies on `mockSendCommand.mockImplementationOnce`
- * resolving exactly the NEXT `sendCommand` call — is not disturbed by an unrelated hydration call
- * this hook would otherwise make on mount.
+ * D-02 REALITY CHECK, read before extending this file: `normalizeCatalogueEntry` (`BrainPicker.tsx`)
+ * flattens every live catalogue entry to `group: "api"`, `costTier: "normal"` regardless of vendor
+ * — this is the SAME flattening the pre-Phase-109 "All profiles" scope already applied, now shared
+ * by both scopes. Two direct consequences, both already documented in `109-CONTEXT.md` D-09/D-13 as
+ * an accepted, deferred gap (plan 109-07's job, out of THIS plan's scope):
+ *   1. Only the "API" group heading is reachable through the picker's live catalogue today —
+ *      Subscription/Local are structurally unreachable (D-13).
+ *   2. `needsCostConfirm` (which gates on `costTier !== "normal"`) can never fire through the
+ *      picker's live catalogue either — the expensive/unknown-tier inline-confirm branch is fully
+ *      covered directly against hand-built fixtures in `BrainPickerRow.test.tsx` instead.
+ * Both are asserted directly below (not silently dropped) so a future re-introduction of real
+ * grouping/cost-tier data is caught by an assertion that no longer holds, not by nothing at all.
  *
  * 103-16 (CR-01): `GlobalSwapModal`'s own mock (below) is why the reselect-same-brain defect
  * shipped invisibly in the first place — every test in this file that exercised the global-swap
@@ -32,7 +37,7 @@
  * component's internal `phase`/`outcome` state, so nothing here could have caught a reset guard
  * that only clears on a `target.id` change. The mock now supports a module-level
  * `globalSwapModalMode` toggle ("mock" | "real") so a handful of tests can render the ACTUAL
- * `GlobalSwapModal` against this file's already-mocked `useAstridrWS`/`useGlobalBrainOverride`/
+ * `GlobalSwapModal` against this file's already-mocked `useCommandDispatch`/`useGlobalBrainOverride`/
  * `sonner` seams — see the "BrainPicker + real GlobalSwapModal" describe block.
  *
  * 103-18 (WR-01): `BrainPicker` no longer mounts/owns a `GlobalSwapModal` at all — it requests one
@@ -45,46 +50,43 @@
 
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalSwapProvider } from "@/contexts/GlobalSwapContext";
-import { STUB_CATALOGUE } from "@/lib/brainsFixtures";
+import type { BrainCatalogueEntry } from "@/hooks/useBrainCatalogue";
 import { BrainPicker } from "./BrainPicker";
+
+// ─── Fixtures ─────────────────────────────────────────────────────────────────
+
+/** Bare id/name/vendor — the real shape `swap.catalogue` returns. Two entries deliberately share a
+ * display name ("Sonnet 5") with distinct ids — the cmdk value-keyed duplicate-selection regression
+ * guard (Pitfall 3). */
+const TEST_ENTRIES: BrainCatalogueEntry[] = [
+  { id: "codex-cli", name: "Codex CLI", vendor: "codex" },
+  { id: "antigravity-cli", name: "Antigravity CLI", vendor: "antigravity" },
+  { id: "anthropic-sonnet-5", name: "Sonnet 5", vendor: "anthropic" },
+  { id: "openrouter-sonnet-5-dup", name: "Sonnet 5", vendor: "openrouter" },
+];
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockGetCatalogue = vi.fn();
-const mockDispatchSwap = vi.fn();
-let stubActive = false;
+let mockCatalogueEntries: BrainCatalogueEntry[] | null = TEST_ENTRIES;
+let mockCatalogueError = false;
+const mockRefetch = vi.fn();
+vi.mock("@/hooks/useBrainCatalogue", () => ({
+  useBrainCatalogue: () => ({
+    entries: mockCatalogueEntries,
+    defaultProfileId: "assistant-default",
+    error: mockCatalogueError,
+    refetch: mockRefetch,
+  }),
+}));
 
-// The display-name helpers are pure functions with no I/O, so they are wired to the REAL
-// implementations via importOriginal rather than stubbed — a stub returning the raw id would
-// silently pass the very cosmetic regression they exist to prevent (UAT 2026-07-29).
-vi.mock("@/lib/brainsApi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/brainsApi")>();
-  return {
-    resolveModelDisplayName: actual.resolveModelDisplayName,
-    buildModelNameMap: actual.buildModelNameMap,
-    brainsApi: {
-      isStub: true,
-      getCatalogue: (...args: unknown[]) => mockGetCatalogue(...args),
-      dispatchSwap: (...args: unknown[]) => mockDispatchSwap(...args),
-      getDefaultProfileId: async () => "assistant-default",
-    },
-    get BRAINS_STUB_ACTIVE() {
-      return stubActive;
-    },
-  };
-});
-
-const mockSendCommand = vi.fn();
-vi.mock("@/contexts/AstridrWSContext", () => ({
-  useAstridrWS: () => ({
-    status: "connected",
-    sendCommand: (...args: unknown[]) => mockSendCommand(...args),
-    subscribe: vi.fn(() => vi.fn()),
-    subscribeEvent: vi.fn(() => vi.fn()),
-    reconnect: vi.fn(),
+const mockDispatch = vi.fn();
+vi.mock("@/hooks/useCommandDispatch", () => ({
+  useCommandDispatch: () => ({
+    dispatch: (...args: unknown[]) => mockDispatch(...args),
+    isConnected: true,
   }),
 }));
 
@@ -194,6 +196,10 @@ vi.mock("../../../convex/_generated/api", () => ({
   api: { providerHealth: { latest: "providerHealth:latest" } },
 }));
 
+function okAck(overrides: Record<string, unknown> = {}) {
+  return { type: "ack", request_id: "", status: "ok", ...overrides };
+}
+
 beforeAll(() => {
   if (typeof window.ResizeObserver === "undefined") {
     window.ResizeObserver = class ResizeObserver {
@@ -210,14 +216,16 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  mockGetCatalogue.mockReset();
-  mockDispatchSwap.mockReset();
+  mockCatalogueEntries = TEST_ENTRIES;
+  mockCatalogueError = false;
+  mockRefetch.mockReset();
+  mockDispatch.mockReset();
+  mockDispatch.mockResolvedValue(okAck());
   mockToastFn.mockReset();
   mockToastSuccess.mockReset();
   mockToastError.mockReset();
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue({});
-  mockSendCommand.mockReset();
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
   // 103-17: reset the two config/telemetry seams to their file-wide defaults so the OBS-8
   // describe block's per-test reassignments never leak into any other test in this file.
@@ -235,17 +243,6 @@ beforeEach(() => {
   // GlobalSwapModal" describe block below opts into "real" for its own tests and restores "mock"
   // in its own afterEach so this default never leaks into any other describe block in the file.
   globalSwapModalMode = "mock";
-  // Default so any incidental swap.catalogue call in a "profile"-scope test (there shouldn't be
-  // one) resolves harmlessly instead of hanging the test on an unresolved promise. Named to line
-  // up with STUB_CATALOGUE's "Codex CLI" entry so tests that toggle to "All profiles" without
-  // caring about the catalogue's actual contents can keep asserting on the same familiar text.
-  mockSendCommand.mockResolvedValue({
-    type: "ack",
-    request_id: "",
-    status: "ok",
-    entries: [{ id: "codex-cli", name: "Codex CLI", vendor: "codex" }],
-  });
-  stubActive = false;
 });
 
 function renderPicker(props: Partial<React.ComponentProps<typeof BrainPicker>> = {}) {
@@ -264,63 +261,71 @@ function openPicker() {
 
 // ---------------------------------------------------------------------------
 
-describe("BrainPicker — catalogue fetch", () => {
-  it("fetches the catalogue every time the popover opens, never caching client-side", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+describe("BrainPicker — catalogue fetch (D-02: the one shared catalogue)", () => {
+  it("re-fetches (via useBrainCatalogue's refetch()) every time the popover opens, never caching client-side", async () => {
     renderPicker();
 
     openPicker();
-    await waitFor(() => expect(mockGetCatalogue).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRefetch).toHaveBeenCalledTimes(1));
     await screen.findByText("Codex CLI");
 
     openPicker(); // close
     openPicker(); // reopen
 
-    await waitFor(() => expect(mockGetCatalogue).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockRefetch).toHaveBeenCalledTimes(2));
   });
 
-  it("shows a loading skeleton while the fetch is in flight, then an error state on failure", async () => {
-    mockGetCatalogue.mockRejectedValue(new Error("boom"));
-    renderPicker();
+  it("shows a loading skeleton while entries is null, then an error state when the hook reports error:true", async () => {
+    mockCatalogueEntries = null;
+    mockCatalogueError = false;
+    const { rerender } = renderPicker();
 
     openPicker();
-    // UAT test 3: on the profile axis the failure is structural (the deferred astridr Phase 184.1
-    // `models.catalog` command), so the copy names that instead of promising a retry will work.
-    expect(
-      await screen.findByText(/Per-profile swapping isn't available yet/)
-    ).toBeInTheDocument();
-  });
+    expect(screen.getByLabelText("Loading brain catalogue")).toBeInTheDocument();
 
-  it("does not blame transience on the profile axis, but still does on the global axis (UAT test 3)", async () => {
-    // The picker opens on the profile scope by default, so this copy is the FIRST thing an operator
-    // sees — it must not tell them to retry something that cannot succeed until an external phase
-    // ships.
-    mockGetCatalogue.mockRejectedValue(new Error("models.catalog not in the accepted union"));
-    renderPicker();
-
-    openPicker();
-    expect(
-      await screen.findByText(/Per-profile swapping isn't available yet/)
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Couldn't load the brain catalogue — try again in a moment.")
-    ).not.toBeInTheDocument();
-
-    // The global axis is genuinely live, so a failure there IS plausibly transient and keeps the
-    // retry wording.
-    mockSendCommand.mockRejectedValue(new Error("socket blip"));
-    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    mockCatalogueEntries = null;
+    mockCatalogueError = true;
+    rerender(
+      <TooltipProvider>
+        <GlobalSwapProvider>
+          <BrainPicker profileId="assistant-default" />
+        </GlobalSwapProvider>
+      </TooltipProvider>
+    );
 
     expect(
       await screen.findByText("Couldn't load the brain catalogue — try again in a moment.")
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Per-profile swapping isn't available yet/)).not.toBeInTheDocument();
+  });
+
+  it("uses the SAME error copy for both scopes — the scope-specific 'not available yet' copy is gone (UI-SPEC §E collapse)", async () => {
+    mockCatalogueEntries = null;
+    mockCatalogueError = true;
+    renderPicker();
+
+    openPicker();
+    expect(
+      await screen.findByText("Couldn't load the brain catalogue — try again in a moment.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    expect(
+      screen.getByText("Couldn't load the brain catalogue — try again in a moment.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/isn't available yet/)).not.toBeInTheDocument();
+  });
+
+  it("renders the honest 'No brains reachable' empty state for a genuinely empty (not null, not error) catalogue", async () => {
+    mockCatalogueEntries = [];
+    renderPicker();
+
+    openPicker();
+    expect(await screen.findByText("No brains reachable")).toBeInTheDocument();
   });
 });
 
 describe("BrainPicker — scope selector reset (D-08)", () => {
   it('reads "This profile" on every open, including after being moved to "All profiles"', async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker();
 
     openPicker();
@@ -347,7 +352,6 @@ describe("BrainPicker — scope selector reset (D-08)", () => {
   });
 
   it('opens on "All profiles" once when entryScope="global" is supplied, and resets on the next open', async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker({ entryScope: "global" });
 
     openPicker();
@@ -366,53 +370,90 @@ describe("BrainPicker — scope selector reset (D-08)", () => {
       "true"
     );
   });
+
+  it("toggling scope after open issues NO additional refetch — the catalogue is scope-independent (D-02)", async () => {
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+    await waitFor(() => expect(mockRefetch).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    fireEvent.click(screen.getByRole("radio", { name: "This profile" }));
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
 });
 
-describe("BrainPicker — dispatch branch separation", () => {
-  it('dispatches exactly one gateway.model.set for a normal-tier row in "This profile" scope', async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockDispatchSwap.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
+describe("BrainPicker — dispatch branch separation (D-01)", () => {
+  it('dispatches exactly one real swap.set with profile_id for a "This profile" scope selection', async () => {
     renderPicker();
 
     openPicker();
     const row = await screen.findByText("Codex CLI");
     fireEvent.click(row);
 
-    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
-    expect(mockDispatchSwap).toHaveBeenCalledWith({
-      type: "gateway.model.set",
-      request_id: "",
-      scope: "profile",
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: "swap.set",
+      target: "brain",
+      value: "codex-cli",
+      restore: false,
       profile_id: "assistant-default",
-      model: "codex-cli",
-      mode: "session",
     });
   });
 
   it('opens GlobalSwapModal and dispatches nothing until it confirms, in "All profiles" scope', async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker();
 
     openPicker();
     await screen.findByText("Codex CLI");
     fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
-    // Switching scope re-fetches (103-08: the catalogue is scope-sourced now), so the row
-    // momentarily disappears behind the loading skeleton before the global fetch resolves.
     await screen.findByText("Codex CLI");
 
     fireEvent.click(screen.getByText("Codex CLI"));
 
     const modal = await screen.findByTestId("global-swap-modal");
     expect(modal).toHaveAttribute("data-target-id", "codex-cli");
-    expect(mockDispatchSwap).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
+  });
+
+  it("settles a never-resolving dispatch as an error within the bounded timeout instead of hanging the popover (T-109-08)", async () => {
+    mockDispatch.mockImplementation(() => new Promise(() => {})); // never resolves
+    renderPicker();
+
+    // Open and locate the row on REAL timers first — testing-library's async queries poll via
+    // `setTimeout`, which fake timers would otherwise freeze and hang forever (the exact failure
+    // mode this ordering avoids; matches GlobalSwapModal.test.tsx's own working idiom for the
+    // analogous GLOBAL_SWAP_DISPATCH_TIMEOUT_MS case).
+    openPicker();
+    const row = await screen.findByText("Codex CLI");
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        fireEvent.click(row);
+      });
+
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("brain-picker-pending-suffix")).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(15000 + 100);
+      });
+
+      expect(mockToastError).toHaveBeenCalled();
+      expect(mockToastError.mock.calls[0][0]).toMatch(/never delivered|Couldn't switch/);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
 describe("BrainPicker — pending never lies (D-15)", () => {
   it("keeps the base label byte-identical and shows a switching-to suffix while a dispatch is in flight", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     let resolveDispatch: (value: unknown) => void = () => {};
-    mockDispatchSwap.mockImplementation(
+    mockDispatch.mockImplementation(
       () =>
         new Promise((resolve) => {
           resolveDispatch = resolve;
@@ -431,13 +472,12 @@ describe("BrainPicker — pending never lies (D-15)", () => {
     );
     expect(screen.getByTestId("brain-picker-base-label").textContent).toBe(baseLabelBefore);
 
-    resolveDispatch({ type: "ack", request_id: "", status: "ok" });
-    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
+    resolveDispatch(okAck());
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
   });
 
   it("drops the switching-to suffix and keeps the original base label after an error ack, with no error styling on the trigger", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockDispatchSwap.mockResolvedValue({
+    mockDispatch.mockResolvedValue({
       type: "ack",
       request_id: "",
       status: "error",
@@ -463,8 +503,6 @@ describe("BrainPicker — pending never lies (D-15)", () => {
 
 describe("BrainPicker — cmdk duplicate-value guard", () => {
   it("renders two same-name catalogue entries as independently selectable items with distinct values", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockDispatchSwap.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
     renderPicker();
 
     openPicker();
@@ -478,85 +516,44 @@ describe("BrainPicker — cmdk duplicate-value guard", () => {
 
     fireEvent.click(items[1]); // openrouter-sonnet-5-dup
     await waitFor(() =>
-      expect(mockDispatchSwap).toHaveBeenCalledWith(
-        expect.objectContaining({ model: "openrouter-sonnet-5-dup" })
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ value: "openrouter-sonnet-5-dup" })
       )
     );
   });
 });
 
-describe("BrainPicker — group order (D-07)", () => {
-  it("renders the three catalogue groups in the fixed order Subscription, API, Local", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+// D-02 REALITY: only the "API" group is reachable through the picker's live catalogue today — see
+// this file's top-of-file docstring. This replaces the pre-109 three-group-order test, which relied
+// on stub fixture entries pre-tagged with `group: "subscription"`/`"local"` that a live catalogue
+// entry can never carry (D-13).
+describe("BrainPicker — group rendering (D-02/D-13: only 'API' is reachable live)", () => {
+  it("renders every live catalogue entry under a single 'API' group heading", async () => {
     renderPicker();
 
     openPicker();
     await screen.findByText("Codex CLI");
 
-    // Query the cmdk group-heading elements specifically -- a plain text match on "API" would
-    // also collect every row's billing chip, which is a different (and differently-scoped) "API"
-    // string entirely.
     const headings = Array.from(document.querySelectorAll("[cmdk-group-heading]"));
-    expect(headings.map((h) => h.textContent)).toEqual(["Subscription", "API", "Local"]);
+    expect(headings.map((h) => h.textContent)).toEqual(["API"]);
   });
 });
 
-describe("BrainPicker — stub indicator (D-16)", () => {
-  it("renders the STUB banner and chip only when the stub adapter is active", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    stubActive = true;
-    renderPicker();
-
-    expect(screen.getByTestId("brain-picker-trigger-stub-chip")).toBeInTheDocument();
-
-    openPicker();
-    await screen.findByText("Codex CLI");
-    expect(
-      screen.getByText("Running on stub brain data — live Ástríðr backend not connected")
-    ).toBeInTheDocument();
-  });
-
-  it("renders neither the STUB banner nor chip anywhere when the stub adapter is inactive", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    stubActive = false;
+describe("BrainPicker — no stub chrome anywhere (D-01)", () => {
+  it("never renders a STUB chip on the trigger or a stub banner in the popover, under any condition", async () => {
     renderPicker();
 
     expect(screen.queryByTestId("brain-picker-trigger-stub-chip")).not.toBeInTheDocument();
 
     openPicker();
     await screen.findByText("Codex CLI");
-    expect(
-      screen.queryByText("Running on stub brain data — live Ástríðr backend not connected")
-    ).not.toBeInTheDocument();
-  });
-
-  it('never attaches a STUB chip to the "All profiles" (global) dispatch path', async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    stubActive = true;
-    renderPicker();
-
-    const stubChipCountBefore = screen.getAllByTestId("brain-picker-trigger-stub-chip").length;
-
-    openPicker();
-    await screen.findByText("Codex CLI");
-    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
-    // Switching scope re-fetches (103-08), so wait for the global-sourced row before clicking it.
-    await screen.findByText("Codex CLI");
-    fireEvent.click(screen.getByText("Codex CLI"));
-
-    await screen.findByTestId("global-swap-modal");
-    // Selecting in "All profiles" scope never sets the per-profile pending state, so it can
-    // never grow the trigger's own STUB chip count -- the global branch stays un-stub-tagged.
-    expect(screen.getAllByTestId("brain-picker-trigger-stub-chip").length).toBe(
-      stubChipCountBefore
-    );
-    expect(mockDispatchSwap).not.toHaveBeenCalled();
+    expect(screen.queryByText(/stub brain data/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("STUB")).not.toBeInTheDocument();
   });
 });
 
 describe("BrainPicker — composition API (103-06)", () => {
   it("renders a custom `trigger` in place of its own default trigger, and clicking it opens the popover", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     render(
       <TooltipProvider>
         <GlobalSwapProvider>
@@ -568,8 +565,8 @@ describe("BrainPicker — composition API (103-06)", () => {
       </TooltipProvider>
     );
 
-    // The picker's own default trigger button (base label, pending suffix, STUB chip) never
-    // renders at all when a custom `trigger` is supplied -- there is exactly one trigger element.
+    // The picker's own default trigger button (base label, pending suffix) never renders at all
+    // when a custom `trigger` is supplied -- there is exactly one trigger element.
     expect(screen.queryByTestId("brain-picker-base-label")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "custom trigger" })).toBeInTheDocument();
 
@@ -578,9 +575,8 @@ describe("BrainPicker — composition API (103-06)", () => {
   });
 
   it("fires onPendingChange with the same formatted switching-to label the default trigger renders", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     let resolveDispatch: (value: unknown) => void = () => {};
-    mockDispatchSwap.mockImplementation(
+    mockDispatch.mockImplementation(
       () =>
         new Promise((resolve) => {
           resolveDispatch = resolve;
@@ -605,13 +601,12 @@ describe("BrainPicker — composition API (103-06)", () => {
       expect(onPendingChange).toHaveBeenCalledWith("· switching to Codex CLI…")
     );
 
-    resolveDispatch({ type: "ack", request_id: "", status: "ok" });
-    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
+    resolveDispatch(okAck());
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
   });
 
   it("drops the pending callback to null on a failed dispatch, matching the default trigger's own drop-suffix behavior", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockDispatchSwap.mockResolvedValue({
+    mockDispatch.mockResolvedValue({
       type: "ack",
       request_id: "",
       status: "error",
@@ -633,7 +628,6 @@ describe("BrainPicker — composition API (103-06)", () => {
   });
 
   it("supports controlled open/onOpenChange while every other test in this file (which omits both) proves the default uncontrolled behavior is unchanged", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     const onOpenChange = vi.fn();
 
     function Controlled() {
@@ -666,14 +660,18 @@ describe("BrainPicker — composition API (103-06)", () => {
 
 describe("BrainPicker — never-truncates regression guard", () => {
   it("renders a long catalogue entry name without a truncate class on the row", async () => {
-    const longNameCatalogue = [
-      { ...STUB_CATALOGUE[0], name: "A Very Long Engine Name That Would Previously Have Been Truncated" },
+    mockCatalogueEntries = [
+      {
+        ...TEST_ENTRIES[0],
+        name: "A Very Long Engine Name That Would Previously Have Been Truncated",
+      },
     ];
-    mockGetCatalogue.mockResolvedValue(longNameCatalogue);
     renderPicker();
 
     openPicker();
-    const nameEl = await screen.findByText(longNameCatalogue[0].name);
+    const nameEl = await screen.findByText(
+      "A Very Long Engine Name That Would Previously Have Been Truncated"
+    );
     const row = nameEl.closest("button")!;
     expect(row.className).toContain("whitespace-normal");
     expect(row.className).toContain("break-words");
@@ -681,26 +679,19 @@ describe("BrainPicker — never-truncates regression guard", () => {
   });
 });
 
-// ── 103-08: scope-aware catalogue source ──────────────────────────────────────
-//
-// Before this fix, BOTH scopes rendered the SAME single fetch from `brainsApi.getCatalogue()`
-// (the stub-backed, deferred per-profile seam) — the "All profiles" branch never touched the
-// live, shipped `swap.catalogue` command at all, so the flagship picker could not initiate even
-// the global swap that already works. These tests prove each scope reads from its own correct
-// source and that a live failure never quietly degrades into stub data.
-
 // ── 103-11: keyboard activation (CR-02) ────────────────────────────────────────
 //
 // CR-02 found the picker's cmdk CommandItems never wired `onSelect`, so the component's own
 // designed primary interaction (search -> arrow-navigate -> Enter) was completely non-functional
 // -- only a literal mouse click on the row's nested button worked. These tests drive the real,
 // unmocked cmdk `Command` via keyboard events on the `CommandInput` (never `.click()`) to prove
-// the keyboard path now dispatches through the exact same branch the mouse path uses.
+// the keyboard path now dispatches through the exact same branch the mouse path uses. Every live
+// catalogue entry normalizes to `costTier: "normal"` (D-02 reality, see top-of-file docstring), so
+// only the no-confirm dispatch path is reachable here — the expensive/unknown-tier inline-confirm
+// keyboard leg is covered directly against hand-built fixtures in `BrainPickerRow.test.tsx`.
 
 describe("BrainPicker — keyboard activation (103-11, CR-02)", () => {
-  it("profile scope, normal-tier row: ArrowDown + Enter dispatches the exact gateway.model.set payload", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockDispatchSwap.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
+  it("profile scope, normal-tier row: ArrowDown + Enter dispatches the exact swap.set payload", async () => {
     renderPicker();
 
     openPicker();
@@ -714,210 +705,33 @@ describe("BrainPicker — keyboard activation (103-11, CR-02)", () => {
     fireEvent.keyDown(search, { key: "ArrowDown" });
     fireEvent.keyDown(search, { key: "Enter" });
 
-    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
-    expect(mockDispatchSwap).toHaveBeenCalledWith({
-      type: "gateway.model.set",
-      request_id: "",
-      scope: "profile",
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: "swap.set",
+      target: "brain",
+      value: "codex-cli",
+      restore: false,
       profile_id: "assistant-default",
-      model: "codex-cli",
-      mode: "session",
     });
   });
 
-  it("profile scope, expensive-tier row: first Enter expands the inline confirm without dispatching, second Enter dispatches (UI-SPEC §3 regression guard)", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockDispatchSwap.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
-    renderPicker();
-
-    openPicker();
-    await screen.findByText("Codex CLI");
-
-    const search = screen.getByPlaceholderText("Search brains…");
-    // "opus-4-8" (not the display name "Opus") -- cmdk's fuzzy filter/re-select-top-match-on-search
-    // behavior can otherwise let a loosely-matching duplicate-name entry ("Sonnet 5") outscore the
-    // intended target for an ambiguous query; this substring is unique to anthropic-opus-4-8's id.
-    fireEvent.change(search, { target: { value: "opus-4-8" } });
-    await screen.findByText("Opus 4.8"); // anthropic-opus-4-8, costTier: expensive
-    expect(screen.queryAllByText("Sonnet 5")).toHaveLength(0);
-
-    fireEvent.keyDown(search, { key: "ArrowDown" });
-    fireEvent.keyDown(search, { key: "Enter" });
-
-    // First Enter must NOT dispatch -- it opens the same inline expand-to-confirm branch a mouse
-    // click takes, never a bypass (the exact regression CR-02's own note warns a naive fix
-    // would introduce).
-    expect(mockDispatchSwap).not.toHaveBeenCalled();
-    expect(await screen.findByText("Confirm swap")).toBeInTheDocument();
-    expect(
-      screen.getByText(/This model may be expensive per token\. Confirm swap to Opus 4\.8\?/)
-    ).toBeInTheDocument();
-
-    fireEvent.keyDown(search, { key: "Enter" });
-
-    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
-    expect(mockDispatchSwap).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "anthropic-opus-4-8" })
-    );
-  });
-
-  it("global scope, any row: Enter opens GlobalSwapModal and dispatches zero swap.set WS frames (D-15 confirm-gate regression guard)", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+  it("global scope, any row: Enter opens GlobalSwapModal and dispatches zero swap.set frames from the picker itself (D-15 confirm-gate regression guard)", async () => {
     renderPicker();
 
     openPicker();
     await screen.findByText("Codex CLI");
     fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
-    // Scope switch re-fetches (103-08) -- the default mockSendCommand resolution (see beforeEach)
-    // resolves with a single "codex-cli" entry, matching the profile-scope fixture's own name so
-    // the same search string works for both branches.
     await screen.findByText("Codex CLI");
 
     const search = screen.getByPlaceholderText("Search brains…");
+    fireEvent.change(search, { target: { value: "Codex" } });
+    await screen.findByText("Codex CLI");
     fireEvent.keyDown(search, { key: "ArrowDown" });
     fireEvent.keyDown(search, { key: "Enter" });
 
     const modal = await screen.findByTestId("global-swap-modal");
     expect(modal).toHaveAttribute("data-target-id", "codex-cli");
-    expect(mockDispatchSwap).not.toHaveBeenCalled();
-    // ANTI-STUB-MASKING PROOF: asserted directly against the real sendCommand frame log, which
-    // never passes through brainsApi/VITE_BRAINS_STUB at all.
-    expect(mockSendCommand).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: "swap.set" })
-    );
-  });
-});
-
-// ── 103-11: WR-01 staleness guard on the scope-driven catalogue fetch ─────────────────────────
-
-describe("BrainPicker — catalogue fetch generation guard (WR-01)", () => {
-  it("discards a stale (superseded) catalogue response instead of overwriting the latest scope's data", async () => {
-    let resolveGlobal: (value: unknown) => void = () => {};
-    const deferredGlobal = new Promise((resolve) => {
-      resolveGlobal = resolve;
-    });
-    mockGetCatalogue
-      .mockResolvedValueOnce(STUB_CATALOGUE) // initial open, "This profile"
-      .mockResolvedValueOnce([
-        { ...STUB_CATALOGUE[0], id: "profile-marker", name: "Profile Marker Entry" },
-      ]); // second "This profile" fetch, after the toggle-back below
-    mockSendCommand.mockImplementationOnce(() => deferredGlobal); // "All profiles" fetch -- never resolves until we say so
-
-    renderPicker();
-    openPicker();
-    await screen.findByText("Codex CLI"); // gen 1 (This profile) loaded
-
-    // Rapid toggle: This profile -> All profiles (gen 2, deliberately left unresolved) -> This
-    // profile again (gen 3, resolves immediately).
-    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
-    fireEvent.click(screen.getByRole("radio", { name: "This profile" }));
-
-    await screen.findByText("Profile Marker Entry"); // gen 3 (the LATEST request) won the render
-
-    // Now let the STALE gen-2 (global) response resolve. If the generation guard were absent,
-    // this would overwrite the already-rendered gen-3 data with gen-2's -- exactly the scope-blind
-    // dispatch bug WR-01 describes (rendering one axis's catalogue while `scope` -- and the
-    // dispatch branch keyed on it -- points at the other).
-    resolveGlobal({
-      type: "ack",
-      request_id: "",
-      status: "ok",
-      entries: [{ id: "global-marker", name: "Global Marker Entry", vendor: "x" }],
-    });
-    // A real timer flush (not just a couple of microtask ticks) -- the stale response's `await
-    // sendCommand(...)` continuation, the guard check, and (if it were absent) the resulting
-    // setEntries/re-render all need to have a genuine chance to run before we can honestly assert
-    // the stale data never landed. A bare `await Promise.resolve()` pair is not enough ticks to
-    // reach that continuation reliably, which would make a negative assertion immediately after it
-    // pass vacuously regardless of whether the guard actually works.
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    expect(screen.getByText("Profile Marker Entry")).toBeInTheDocument();
-    expect(screen.queryByText("Global Marker Entry")).not.toBeInTheDocument();
-    // The scope selector itself agrees with what's rendered -- both point at the same axis.
-    expect(screen.getByRole("radio", { name: "This profile" })).toHaveAttribute(
-      "aria-checked",
-      "true"
-    );
-  });
-});
-
-describe("BrainPicker — scope-aware catalogue source (103-08)", () => {
-  it('scope "profile" sources the catalogue from brainsApi.getCatalogue() only, never sendCommand', async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    renderPicker();
-
-    openPicker();
-    await screen.findByText("Codex CLI");
-
-    expect(mockGetCatalogue).toHaveBeenCalledTimes(1);
-    expect(mockSendCommand).not.toHaveBeenCalled();
-  });
-
-  it('scope "global" sources the catalogue from the live swap.catalogue command, not brainsApi', async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockSendCommand.mockResolvedValue({
-      type: "ack",
-      request_id: "",
-      status: "ok",
-      entries: [{ id: "x-ai/grok-4.5", name: "Grok Live", vendor: "x-ai" }],
-    });
-    renderPicker();
-
-    openPicker();
-    await screen.findByText("Codex CLI"); // initial open, default "This profile" scope
-
-    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
-
-    await waitFor(() =>
-      expect(mockSendCommand).toHaveBeenCalledWith({ type: "swap.catalogue", target: "brain" })
-    );
-    expect(await screen.findByText("Grok Live")).toBeInTheDocument();
-    // The stub-backed per-profile catalogue never bleeds into the global branch's rendered list.
-    expect(screen.queryByText("Codex CLI")).not.toBeInTheDocument();
-    // Only the initial "This profile" open touched brainsApi -- the scope switch to "global"
-    // did not fall back to it.
-    expect(mockGetCatalogue).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows the error state, never a stub fallback, when the global swap.catalogue ack is non-ok", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    mockSendCommand.mockResolvedValue({
-      type: "ack",
-      request_id: "",
-      status: "error",
-      error: "backend unreachable",
-    });
-    renderPicker();
-
-    openPicker();
-    await screen.findByText("Codex CLI");
-
-    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
-
-    expect(
-      await screen.findByText("Couldn't load the brain catalogue — try again in a moment.")
-    ).toBeInTheDocument();
-    // Honesty check (constraint from 103-08): an errored live request must never silently
-    // degrade into presenting stub data as though it were a successful (if empty) live result.
-    expect(screen.queryByText("Codex CLI")).not.toBeInTheDocument();
-    expect(mockGetCatalogue).toHaveBeenCalledTimes(1);
-  });
-
-  it('reads from swap.catalogue immediately when entryScope="global" is the initial scope', async () => {
-    mockSendCommand.mockResolvedValue({
-      type: "ack",
-      request_id: "",
-      status: "ok",
-      entries: [{ id: "x-ai/grok-4.5", name: "Grok Live", vendor: "x-ai" }],
-    });
-    renderPicker({ entryScope: "global" });
-
-    openPicker();
-    await screen.findByText("Grok Live");
-
-    expect(mockSendCommand).toHaveBeenCalledWith({ type: "swap.catalogue", target: "brain" });
-    expect(mockGetCatalogue).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 });
 
@@ -932,7 +746,6 @@ describe("BrainPicker — scope-aware catalogue source (103-08)", () => {
 
 describe("BrainPicker — GlobalSwapModal mount lifecycle (103-12, CR-03)", () => {
   it("keeps the modal instance mounted after onOpenChange(false); a later onOpenChange(true) makes it visible again", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker();
 
     openPicker();
@@ -957,7 +770,6 @@ describe("BrainPicker — GlobalSwapModal mount lifecycle (103-12, CR-03)", () =
   });
 
   it("replaces the mounted instance's target only when a genuinely new selection is made", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker();
 
     openPicker();
@@ -992,7 +804,6 @@ describe("BrainPicker — GlobalSwapModal mount lifecycle (103-12, CR-03)", () =
 
 describe("BrainPicker — row highlight is scope-aware (103-12, WR-02)", () => {
   it("tracks the global override in 'All profiles' scope, not the per-profile engine", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
     renderPicker();
 
@@ -1019,7 +830,6 @@ describe("BrainPicker — row highlight is scope-aware (103-12, WR-02)", () => {
 
 describe("BrainPicker — global-swap selection nonce bumps on every activation (103-16, CR-01)", () => {
   it("increments selectionNonce on a repeat activation of the same brain, not just a different one", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker();
 
     openPicker();
@@ -1053,8 +863,10 @@ describe("BrainPicker — global-swap selection nonce bumps on every activation 
 // note on why that let the original CR-01 defect ship invisibly). These tests flip
 // `globalSwapModalMode` to "real" so the ACTUAL component's `phase`/`outcome` state is exercised
 // through BrainPicker's real `handleSelect` -> `selectionNonce` wiring, against this file's
-// already-mocked `useAstridrWS`/`useGlobalBrainOverride`/`sonner` seams -- no new mocking surface
-// needed. Covers all four scenarios from 103-16-PLAN.md's Task 2 action text.
+// already-mocked `useCommandDispatch`/`useGlobalBrainOverride`/`sonner` seams -- no new mocking
+// surface needed, since `GlobalSwapModal` now shares the SAME `useCommandDispatch()` mock this file
+// already wires for the per-profile branch. Covers all four scenarios from 103-16-PLAN.md's Task 2
+// action text.
 
 // Module-scope (103-17) so the OBS-8/D-14 describe block below can reuse it without duplicating
 // the open -> switch-scope -> select sequence.
@@ -1069,10 +881,6 @@ async function openGlobalPickerAndSelect(entryName: string) {
 describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (103-16, CR-01)", () => {
   beforeEach(() => {
     globalSwapModalMode = "real";
-    // Only the initial "This profile" scope (the default on every popover open) reads this --
-    // every test below immediately switches to "All profiles", but the fetch still fires once on
-    // open and must resolve to something so it doesn't leave a dangling unresolved promise.
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker();
   });
 
@@ -1099,17 +907,12 @@ describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (10
   });
 
   it("(b) reselecting the same brain after a failed swap restores the retry path, not a dead Done", async () => {
-    mockSendCommand.mockImplementation(async (cmd: unknown) => {
+    mockDispatch.mockImplementation(async (cmd: unknown) => {
       const type = (cmd as { type?: string }).type;
       if (type === "swap.set") {
         return { type: "ack", request_id: "", status: "error", error: "backend unreachable" };
       }
-      return {
-        type: "ack",
-        request_id: "",
-        status: "ok",
-        entries: [{ id: "codex-cli", name: "Codex CLI", vendor: "codex" }],
-      };
+      return okAck();
     });
 
     await openGlobalPickerAndSelect("Codex CLI");
@@ -1174,21 +977,10 @@ describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (10
   });
 
   it("(d) selecting a different brain after Done still opens a fresh confirm prompt (pre-existing target.id path still works)", async () => {
-    mockSendCommand.mockImplementation(async (cmd: unknown) => {
-      const type = (cmd as { type?: string }).type;
-      if (type === "swap.set") {
-        return { type: "ack", request_id: "", status: "ok" };
-      }
-      return {
-        type: "ack",
-        request_id: "",
-        status: "ok",
-        entries: [
-          { id: "codex-cli", name: "Codex CLI", vendor: "codex" },
-          { id: "x-ai/grok-4.5", name: "Grok Live", vendor: "x-ai" },
-        ],
-      };
-    });
+    mockCatalogueEntries = [
+      { id: "codex-cli", name: "Codex CLI", vendor: "codex" },
+      { id: "x-ai/grok-4.5", name: "Grok Live", vendor: "x-ai" },
+    ];
 
     await openGlobalPickerAndSelect("Codex CLI");
     fireEvent.click(
@@ -1218,7 +1010,6 @@ describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (10
 
 describe("BrainPicker + GlobalSwapProvider — exactly one GlobalSwapModal instance app-wide (103-18, WR-01)", () => {
   it("renders exactly one GlobalSwapModal even with two BrainPicker hosts mounted under the same provider", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     render(
       <TooltipProvider>
         <GlobalSwapProvider>
@@ -1259,7 +1050,6 @@ describe("BrainPicker + GlobalSwapProvider — exactly one GlobalSwapModal insta
 describe("BrainPicker + GlobalSwapProvider — WR-01: revert survives the requesting picker unmounting (route-change simulation)", () => {
   it("a toast revert fired after the requesting BrainPicker unmounts still renders a visible result and dispatches for real", async () => {
     globalSwapModalMode = "real";
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
 
     function Harness({ showPicker }: { showPicker: boolean }) {
       return (
@@ -1300,7 +1090,7 @@ describe("BrainPicker + GlobalSwapProvider — WR-01: revert survives the reques
     expect(
       await screen.findByText("Global override cleared — profiles are back on their own defaults.")
     ).toBeInTheDocument();
-    expect(mockSendCommand).toHaveBeenCalledWith({
+    expect(mockDispatch).toHaveBeenCalledWith({
       type: "swap.set",
       target: "brain",
       restore: true,
@@ -1318,7 +1108,6 @@ describe("BrainPicker + GlobalSwapProvider — WR-01: revert survives the reques
 describe("BrainPicker + real GlobalSwapModal — 103-14 stays closed: revert restores the prior override, not a clear", () => {
   it("restores the exact prior global override instead of clearing it when one was in force before the swap", async () => {
     globalSwapModalMode = "real";
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     // A global override is already in force (matching the default mocked active engine's model,
     // so the pre-swap snapshot resolves a readable display name for it) BEFORE this swap starts.
     mockGlobalOverride = { modelOverride: "anthropic-sonnet-5", voiceOverride: null };
@@ -1329,7 +1118,7 @@ describe("BrainPicker + real GlobalSwapModal — 103-14 stays closed: revert res
       await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
     );
 
-    expect(mockSendCommand).toHaveBeenCalledWith({
+    expect(mockDispatch).toHaveBeenCalledWith({
       type: "swap.set",
       target: "brain",
       value: "codex-cli",
@@ -1349,7 +1138,7 @@ describe("BrainPicker + real GlobalSwapModal — 103-14 stays closed: revert res
 
     // Restores to the PRIOR override ("anthropic-sonnet-5"), never a plain clear -- `restore:
     // false` with the captured prior value, exactly as a fresh swap to that engine would dispatch.
-    expect(mockSendCommand).toHaveBeenCalledWith({
+    expect(mockDispatch).toHaveBeenCalledWith({
       type: "swap.set",
       target: "brain",
       value: "anthropic-sonnet-5",
@@ -1357,7 +1146,10 @@ describe("BrainPicker + real GlobalSwapModal — 103-14 stays closed: revert res
     });
 
     mockGlobalOverride = { modelOverride: "anthropic-sonnet-5", voiceOverride: null };
-    expect(await screen.findByText("Reverted to anthropic-sonnet-5.")).toBeInTheDocument();
+    // Unlike the OBS-8 vendor-prefixed case above, this catalogue entry's id matches the override
+    // value EXACTLY ("anthropic-sonnet-5"), so resolveModelDisplayName resolves it to the
+    // catalogue's real display name ("Sonnet 5") rather than falling back to the raw id.
+    expect(await screen.findByText("Reverted to Sonnet 5.")).toBeInTheDocument();
   });
 });
 
@@ -1376,7 +1168,6 @@ describe("BrainPicker + real GlobalSwapModal — 103-14 stays closed: revert res
 describe("BrainPicker + real GlobalSwapModal — pinned-default count from config, D-14 boundary (103-17, OBS 8)", () => {
   beforeEach(() => {
     globalSwapModalMode = "real";
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
   });
 
   it("reports a pinned-default count of 3 and names the shadowed default when all three real profiles carry a configured primary and zero telemetry rows have reported (live OBS 8 shape)", async () => {
@@ -1493,8 +1284,6 @@ describe("BrainPicker + real GlobalSwapModal — pinned-default count from confi
 
 describe("BrainPicker — renders catalogue rows with no TooltipProvider ancestor (UAT blocker)", () => {
   it("renders rows from a routed host that supplies no TooltipProvider, instead of throwing", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-
     // NOTE: no <TooltipProvider> -- this is the Chat-pill / Settings-row host shape.
     render(
       <GlobalSwapProvider>
@@ -1511,10 +1300,6 @@ describe("BrainPicker — renders catalogue rows with no TooltipProvider ancesto
   });
 
   it("still renders rows with no TooltipProvider after switching to the global scope", async () => {
-    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
-    // The global-scope catalogue reply comes from this file's default `mockSendCommand`
-    // (beforeEach), which returns a single "Codex CLI" entry.
-
     render(
       <GlobalSwapProvider>
         <BrainPicker profileId="assistant-default" />
