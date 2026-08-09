@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Completed 109-05-PLAN.md
-last_updated: "2026-08-09T14:48:58.303Z"
+stopped_at: Completed 109-06-PLAN.md
+last_updated: "2026-08-09T15:27:43.677Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 16
-  completed_plans: 12
+  completed_plans: 13
   percent: 8
 ---
 
@@ -44,7 +44,7 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 109 (per-agent-engine-ui) — EXECUTING
-Plan: 5 of 9 complete (next: Plan 5)
+Plan: 6 of 9 complete (next: Plan 7)
 Status: Ready to execute
 Last activity: 2026-08-09
 
@@ -843,6 +843,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 109]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.* verbs not run) — completed_plans 10->11
 - [Phase 109-05]: modelIdsMatch(a,b) = a===b || stripVendorPrefix(a)===stripVendorPrefix(b), exported alongside stripVendorPrefix; used at all 7 model-id equality sites instead of raw ===
 - [Phase 109-05]: deriveMixedState folds with modelIdsMatch but keeps the first-seen literal id as the distinctModels representative, never a canonicalized synthetic value
+- [Phase 109]: useProfileSwap confirms via profileOverrides[profileId] (swap.state override slot) with a raw === comparison, matching GlobalSwapModal's own override-slot readback precedent -- not a D-08 modelIdsMatch site, since the override slot echoes back exactly what was dispatched.
+- [Phase 109]: onPendingChange widened from string|null to {label,kind:inflight|uncertain}|null so the accepted (bounded-timeout) state can render distinctly from in-progress on every mirrored per-profile brain surface, per 109-UI-SPEC.md section C.
 
 ### Pending Todos
 
@@ -882,11 +884,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 109 P01 | 17min | 3 tasks | 6 files |
 | Phase 109 P03 | 40min | 3 tasks | 23 files |
 | Phase 109 P05 | 15min | 3 tasks | 14 files |
+| Phase 109 P06 | 55min | 3 tasks | 10 files |
 
 ## Session Continuity
 
-Last session: 2026-08-09T14:48:58.287Z
-Stopped at: Completed 109-05-PLAN.md
+Last session: 2026-08-09T15:27:43.662Z
+Stopped at: Completed 109-06-PLAN.md
 
 --- Prior (superseded by the above) --- Completed 109-01-PLAN.md (Astridr D-05 profile_overrides + D-03 default_profile_id, feature/brain-swap commits 10503e4f/effb7a48/411e0253/8c4842f1)
 

@@ -743,7 +743,7 @@ Plans:
 
 **Wave 5**
 
-- [ ] 109-06-PLAN.md — `useProfileSwap`: the 5-state server-confirmed outcome machine, confirming against the override slot, with the bounded "not yet confirmed" state on all four surfaces (ENGINE-04; D-05)
+- [x] 109-06-PLAN.md — `useProfileSwap`: the 5-state server-confirmed outcome machine, confirming against the override slot, with the bounded "not yet confirmed" state on all four surfaces (ENGINE-04; D-05)
 
 **Wave 6**
 
@@ -828,7 +828,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 5/9 | In Progress|  |
+| 109. Per-Agent Engine UI | 6/9 | In Progress|  |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
