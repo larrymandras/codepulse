@@ -67,7 +67,7 @@ import {
   useControlVerbSwaps,
 } from "@/hooks/useControlVerbSwaps";
 import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
-import type { CatalogueEntry } from "@/lib/brainsApi";
+import { modelIdsMatch, type CatalogueEntry } from "@/lib/brainsApi";
 
 /** TELEMETRY-shaped — mirrors `ActiveEngine.mode` (`useActiveEngine.ts`) verbatim. Kept distinct
  * from `hasConfiguredDefault` (below) on purpose (103-17): this is "what the live engine reading
@@ -498,8 +498,11 @@ export function GlobalSwapModal({
     // Resolution order: a per-profile snapshot row that happens to hold this exact model, then the
     // caller-supplied catalogue name map (the usual hit for a GLOBAL override, which is never one of
     // the snapshot's per-profile "current" values), then the raw id unchanged — never a made-up name.
+    // D-08: `snap`'s per-profile `model` values and `modelOverride` (the global override slot) can
+    // disagree on vendor-prefix format for the same model — a raw `===` lookup missed the snapshot
+    // row and fell straight through to the raw-id fallback instead of resolving a real name.
     priorOverrideDisplayNameRef.current = modelOverride
-      ? (snap.find((s) => s.model === modelOverride)?.modelDisplayName ??
+      ? (snap.find((s) => modelIdsMatch(s.model, modelOverride))?.modelDisplayName ??
         modelNames?.[modelOverride] ??
         modelOverride)
       : null;

@@ -42,7 +42,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { BrainPicker } from "@/components/brains/BrainPicker";
 import { useBrainCatalogue } from "@/hooks/useBrainCatalogue";
 import { useGlobalModelNames, useResolvedBrain } from "@/hooks/useResolvedBrain";
-import { resolveModelDisplayName } from "@/lib/brainsApi";
+import { modelIdsMatch, resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { cn } from "@/lib/utils";
 
@@ -72,8 +72,11 @@ export function BrainHeaderBadge() {
 
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
+  // D-08: the catalogue's ids are bare ("claude-sonnet-5") while a resolved `inherited`-mode
+  // reading can be vendor-prefixed ("anthropic/claude-sonnet-5") — a raw `===` here missed every
+  // such row and the provider dot fell back to the neutral color for the whole inherited class.
   const vendorForModel = (modelId: string): string | undefined =>
-    catalogue?.find((e) => e.id === modelId)?.vendor;
+    catalogue?.find((e) => modelIdsMatch(e.id, modelId))?.vendor;
 
   const dotColor = (modelId: string): string =>
     PROVIDER_COLORS[vendorForModel(modelId) ?? ""] ?? "var(--muted-foreground)";

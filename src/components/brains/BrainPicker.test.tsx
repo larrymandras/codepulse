@@ -512,6 +512,68 @@ describe("BrainPicker — pending never lies (D-15)", () => {
   });
 });
 
+describe("BrainPicker — genuinely-landed toast tolerates a model-id vendor-prefix mismatch (Phase 109 Plan 05, D-08 site 7)", () => {
+  it("fires the switched toast when the confirming telemetry model differs from the dispatched target only by vendor prefix", async () => {
+    const { rerender } = renderPicker();
+
+    openPicker();
+    fireEvent.click(await screen.findByText("Codex CLI"));
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
+
+    // Confirming telemetry arrives in the OTHER id format than the dispatched target
+    // ("codex-cli") — this is D-08's highest-impact site: without the comparator, this toast, the
+    // operator's only confirmation the per-profile swap actually landed, would never fire.
+    mockActiveEngines = {
+      "assistant-default": {
+        profileId: "assistant-default",
+        model: "codex/codex-cli",
+        mode: "inherited",
+        selectionPath: "codepulse-default",
+        timestamp: Date.now(),
+      },
+    };
+    rerender(
+      <TooltipProvider>
+        <GlobalSwapProvider>
+          <BrainPicker profileId="assistant-default" />
+        </GlobalSwapProvider>
+      </TooltipProvider>
+    );
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith("assistant-default switched to Codex CLI.")
+    );
+  });
+
+  it("CONTROL: does not fire the toast when the confirming telemetry reports a genuinely different model — a change that made the gate always fire must fail this", async () => {
+    const { rerender } = renderPicker();
+
+    openPicker();
+    fireEvent.click(await screen.findByText("Codex CLI"));
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
+
+    mockActiveEngines = {
+      "assistant-default": {
+        profileId: "assistant-default",
+        model: "some-other-engine",
+        mode: "inherited",
+        selectionPath: "codepulse-default",
+        timestamp: Date.now(),
+      },
+    };
+    rerender(
+      <TooltipProvider>
+        <GlobalSwapProvider>
+          <BrainPicker profileId="assistant-default" />
+        </GlobalSwapProvider>
+      </TooltipProvider>
+    );
+
+    await screen.findByTestId("brain-picker-pending-suffix");
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+});
+
 describe("BrainPicker — cmdk duplicate-value guard", () => {
   it("renders two same-name catalogue entries as independently selectable items with distinct values", async () => {
     renderPicker();
@@ -850,6 +912,49 @@ describe("BrainPicker — row highlight is scope-aware (103-12, WR-02, extended 
     expect(globalScopeRow?.className ?? "").toContain("bg-primary/10");
     const globalScopeOverrideRow = screen.getByText("Antigravity CLI").closest(".rounded-md.border");
     expect(globalScopeOverrideRow?.className ?? "").not.toContain("bg-primary/10");
+  });
+});
+
+// ── Phase 109 Plan 05 (D-08): isCurrent tolerates a model-id vendor-prefix mismatch ──
+
+describe("BrainPicker — isCurrent highlight tolerates a model-id vendor-prefix mismatch (D-08)", () => {
+  it("'This profile' scope highlights the catalogue entry whose id differs from the resolved model only by vendor prefix", async () => {
+    mockActiveEngines = {
+      "assistant-default": {
+        profileId: "assistant-default",
+        model: "anthropic/anthropic-sonnet-5",
+        mode: "inherited",
+        selectionPath: "codepulse-default",
+        timestamp: Date.now(),
+      },
+    };
+    renderPicker();
+
+    openPicker();
+    // TEST_ENTRIES declares two "Sonnet 5" rows; the first is "anthropic-sonnet-5" (index 0).
+    const items = await screen.findAllByText("Sonnet 5");
+    const anthropicRow = items[0].closest(".rounded-md.border");
+    expect(anthropicRow?.className ?? "").toContain("bg-primary/10");
+  });
+
+  it("CONTROL: a genuinely different model highlights no row — a change that made the lookup always succeed must fail this", async () => {
+    mockActiveEngines = {
+      "assistant-default": {
+        profileId: "assistant-default",
+        model: "anthropic/claude-opus-4-8",
+        mode: "inherited",
+        selectionPath: "codepulse-default",
+        timestamp: Date.now(),
+      },
+    };
+    renderPicker();
+
+    openPicker();
+    const items = await screen.findAllByText("Sonnet 5");
+    for (const item of items) {
+      const row = item.closest(".rounded-md.border");
+      expect(row?.className ?? "").not.toContain("bg-primary/10");
+    }
   });
 });
 

@@ -120,14 +120,17 @@ vi.mock("@/components/brains/BrainPicker", () => ({
   },
 }));
 
-// The display-name helpers are pure functions with no I/O, so they are wired to the REAL
-// implementations via importOriginal rather than stubbed — a stub returning the raw id would
-// silently pass the very cosmetic regression they exist to prevent (UAT 2026-07-29).
+// The display-name helpers (and, since Phase 109 Plan 05, D-08's modelIdsMatch) are pure
+// functions with no I/O, so they are wired to the REAL implementations via importOriginal rather
+// than stubbed — a stub returning the raw id would silently pass the very cosmetic regression
+// they exist to prevent (UAT 2026-07-29), and a stubbed modelIdsMatch would silently pass the
+// provider-dot format-tolerance regression D-08 exists to prevent.
 vi.mock("@/lib/brainsApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/brainsApi")>();
   return {
     resolveModelDisplayName: actual.resolveModelDisplayName,
     buildModelNameMap: actual.buildModelNameMap,
+    modelIdsMatch: actual.modelIdsMatch,
   };
 });
 
@@ -258,6 +261,44 @@ describe("BrainHeaderBadge — agreement", () => {
 
     await screen.findByTestId("brain-header-badge-label");
     expect(screen.getByTestId("mock-brain-picker")).toHaveAttribute("data-entry-scope", "");
+  });
+});
+
+describe("BrainHeaderBadge — provider dot tolerates a model-id vendor-prefix mismatch (Phase 109 Plan 05, D-08)", () => {
+  it("resolves the real vendor color when the reported model is vendor-prefixed but the catalogue id is bare", async () => {
+    mockCatalogueEntries = [
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic_direct" },
+    ];
+    seedEngines(
+      [makeEngine("assistant-default", "anthropic/claude-sonnet-5")],
+      ["assistant-default"]
+    );
+    const { container } = renderBadge();
+
+    await screen.findByTestId("brain-header-badge-label");
+    const dot = container.querySelector(
+      'span[aria-hidden="true"].rounded-full:not(.animate-pulse)'
+    );
+    expect(dot).not.toBeNull();
+    expect((dot as HTMLElement).style.backgroundColor).not.toBe("var(--muted-foreground)");
+  });
+
+  it("CONTROL: still falls back to the neutral dot when the reported model matches NOTHING in the catalogue — a change that made the lookup always succeed must fail this", async () => {
+    mockCatalogueEntries = [
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic_direct" },
+    ];
+    seedEngines(
+      [makeEngine("assistant-default", "anthropic/claude-opus-4-8")],
+      ["assistant-default"]
+    );
+    const { container } = renderBadge();
+
+    await screen.findByTestId("brain-header-badge-label");
+    const dot = container.querySelector(
+      'span[aria-hidden="true"].rounded-full:not(.animate-pulse)'
+    );
+    expect(dot).not.toBeNull();
+    expect((dot as HTMLElement).style.backgroundColor).toBe("var(--muted-foreground)");
   });
 });
 

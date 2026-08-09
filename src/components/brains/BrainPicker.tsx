@@ -95,6 +95,7 @@ import { useCommandDispatch } from "@/hooks/useCommandDispatch";
 import { useGlobalSwap } from "@/contexts/GlobalSwapContext";
 import {
   buildModelNameMap,
+  modelIdsMatch,
   resolveModelDisplayName,
   type CatalogueEntry,
 } from "@/lib/brainsApi";
@@ -304,7 +305,13 @@ export function BrainPicker({
   // "switched."
   useEffect(() => {
     if (!pendingTarget) return;
-    if (activeEngine?.model === pendingTarget.id) {
+    // D-08 site 7 (highest-impact site, not in the decision's original four-item list): the
+    // confirmed engine can come back in a DIFFERENT id format than the dispatched target (e.g.
+    // `pendingTarget.id` is a bare catalogue id, but the confirming telemetry row reports the
+    // vendor-prefixed form). A raw `===` here means this toast — the operator's only confirmation
+    // that a per-profile swap actually landed — silently never fires for an `inherited`-mode
+    // profile, leaving the pending suffix stuck until some unrelated engine change clears it.
+    if (activeEngine && modelIdsMatch(activeEngine.model, pendingTarget.id)) {
       toast.success(`${profileId} switched to ${pendingTarget.name}.`);
       setPendingTarget(null);
     }
@@ -561,8 +568,8 @@ export function BrainPicker({
                           entry={entry}
                           isCurrent={
                             scope === "global"
-                              ? globalOverrideModel === entry.id
-                              : resolvedTrigger.model === entry.id
+                              ? !!globalOverrideModel && modelIdsMatch(globalOverrideModel, entry.id)
+                              : !!resolvedTrigger.model && modelIdsMatch(resolvedTrigger.model, entry.id)
                           }
                           isExpanded={expandedId === entry.id}
                           onExpandChange={(exp) => setExpandedId(exp ? entry.id : null)}

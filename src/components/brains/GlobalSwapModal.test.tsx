@@ -65,15 +65,23 @@ vi.mock("@/hooks/useResolvedBrain", () => ({
   useGlobalBrainOverride: () => mockGlobalOverride,
 }));
 
-// Anti-fan-out proof surface only — GlobalSwapModal.tsx imports NOTHING at runtime from this
-// module post-103-12 (only a type-only `CatalogueEntry` import, erased at build time), so
-// `mockDispatchSwap` staying at zero calls across every test in this file is the direct
-// 103-CONTRACT.md §8 compliance assertion: nothing in this component ever reaches a per-profile
-// dispatch path.
+// Anti-fan-out proof surface — GlobalSwapModal.tsx imports NOTHING at runtime from this module
+// that reaches a per-profile dispatch path post-103-12 (only a type-only `CatalogueEntry` import,
+// erased at build time), so `mockDispatchSwap` staying at zero calls across every test in this
+// file is the direct 103-CONTRACT.md §8 compliance assertion: nothing in this component ever
+// reaches a per-profile dispatch path. Phase 109 Plan 05 (D-08) adds one genuine runtime import,
+// `modelIdsMatch` — a pure function with no I/O, wired to the REAL implementation via
+// importOriginal (matching this repo's standing convention for pure display/comparison helpers)
+// rather than stubbed, since a stubbed always-true/always-false comparator would silently pass
+// the prior-override display-name format-tolerance regression D-08 exists to prevent.
 const mockDispatchSwap = vi.fn();
-vi.mock("@/lib/brainsApi", () => ({
-  dispatchSwap: (...args: unknown[]) => mockDispatchSwap(...args),
-}));
+vi.mock("@/lib/brainsApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/brainsApi")>();
+  return {
+    dispatchSwap: (...args: unknown[]) => mockDispatchSwap(...args),
+    modelIdsMatch: actual.modelIdsMatch,
+  };
+});
 
 const mockToastFn = vi.fn();
 vi.mock("sonner", () => ({
@@ -1102,6 +1110,104 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
     );
     expect(
       await screen.findByText("Global override cleared — profiles are back on their own defaults.")
+    ).toBeInTheDocument();
+  });
+});
+
+// ── Phase 109 Plan 05 (D-08): prior-override display-name lookup tolerates a vendor-prefix ──
+// mismatch between the snapshot's per-profile `model` and the captured `modelOverride`.
+
+describe("GlobalSwapModal — prior-override display name tolerates a model-id vendor-prefix mismatch (D-08)", () => {
+  it("resolves the snapshot's display name even when the snapshot model is vendor-prefixed and the captured override is bare", async () => {
+    const prefixedProfiles: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({
+      ...p,
+      currentModel: `anthropic/${PRIOR_OVERRIDE_MODEL_ID}`,
+      currentModelDisplayName: PRIOR_OVERRIDE_DISPLAY_NAME,
+    }));
+    mockGlobalOverride = { modelOverride: PRIOR_OVERRIDE_MODEL_ID, voiceOverride: null };
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={prefixedProfiles}
+        open
+        selectionNonce={1}
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={prefixedProfiles}
+        open
+        selectionNonce={1}
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    const [, toastOptions] = mockToastFn.mock.calls[0] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+
+    toastOptions.action.onClick();
+
+    // mockDispatch resolves immediately, so the "pending" frame can pass before this assertion
+    // polls — asserted on "confirming" instead (matches this file's existing revert-flow tests).
+    // A raw `===` regression would show the raw id ("claude-haiku-4-5-20251001…") here instead of
+    // the snapshot's resolved display name, since the literal strings never matched.
+    expect(
+      await screen.findByText(`Accepted — confirming the revert to ${PRIOR_OVERRIDE_DISPLAY_NAME}…`)
+    ).toBeInTheDocument();
+  });
+
+  it("CONTROL: falls back to the raw id when the override matches no snapshot row and no modelNames entry at all — a change that made the lookup always succeed must fail this", async () => {
+    mockGlobalOverride = { modelOverride: "totally-unrelated-model", voiceOverride: null };
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        selectionNonce={1}
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        selectionNonce={1}
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    const [, toastOptions] = mockToastFn.mock.calls[0] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+
+    toastOptions.action.onClick();
+
+    expect(
+      await screen.findByText("Accepted — confirming the revert to totally-unrelated-model…")
     ).toBeInTheDocument();
   });
 });
