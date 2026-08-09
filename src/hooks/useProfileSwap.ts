@@ -8,7 +8,8 @@
  * profile row) and no modal to hold component-local state in. Every one of those surfaces renders
  * the exact same five-state suffix (109-UI-SPEC.md §C) driven by ONE instance of this hook per
  * profile — this is the single implementation; no consumer may hold a second, competing copy of
- * this state (the exact failure mode `BrainPicker.tsx`'s pre-Plan-06 `pendingTarget` block was).
+ * this state (the exact failure mode `BrainPicker.tsx`'s pre-Plan-06 interim pending-state block
+ * was).
  *
  * D-05 substitution — the one thing that differs from the global axis, stated explicitly per
  * 109-CONTEXT.md/109-UI-SPEC.md's own instruction: the global axis confirms `confirming ->
@@ -48,7 +49,7 @@
  * starting a new swap.
  *
  * NOT put in a component, and NOT left alongside a second, competing implementation (the plan's
- * own explicit instruction): `BrainPicker.tsx`'s pre-Plan-06 `pendingTarget` state, its D-14
+ * own explicit instruction): `BrainPicker.tsx`'s pre-Plan-06 interim in-flight-target state, its D-14
  * success-toast effect, and its `dispatchBounded`/`PROFILE_SWAP_DISPATCH_TIMEOUT_MS` are all
  * deleted by plan Task 2 in favor of this hook.
  */

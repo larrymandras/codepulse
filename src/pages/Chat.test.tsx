@@ -597,7 +597,7 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     );
     expect(screen.getByTestId("chat-brain-pill-label").textContent).toBe(labelBefore);
 
-    // Error ack: BrainPicker itself clears pendingTarget, which drives onPendingChange(null).
+    // Error ack: useProfileSwap resolves to "error" (no suffix), which drives onPendingChange(null).
     act(() => {
       lastBrainPickerProps?.onPendingChange?.(null);
     });
