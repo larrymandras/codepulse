@@ -6,8 +6,8 @@
  * `BrainControl`. Before this module existed, `BrainHeaderBadge` and the Chat composer pill each
  * held an independent, partial view of the global-override axis — one subscribed to `swap.state`
  * only (a CHANGE event) and never asked for a snapshot, the other never read the global axis at
- * all — so a global override already active before page load rendered as "No brain reported" /
- * "Auto" on two of the three surfaces while `BrainControl` (which already did both the snapshot
+ * all — so a global override already active before page load rendered as an honest-absent string
+ * on two of the three surfaces while `BrainControl` (which already did both the snapshot
  * pull AND the subscription, see the precedent this module generalizes at the bottom of this file)
  * read correctly. That three-way disagreement is precisely the "stale config read presented as
  * live state" failure BSC-01 exists to eliminate.

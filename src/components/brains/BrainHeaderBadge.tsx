@@ -11,7 +11,8 @@
  * this badge cannot disagree with itself, the Chat composer pill, or Control Center's
  * `BrainControl` (D-14). Before 103-09, this badge only ever *subscribed* to global-override
  * *changes* (`swap.state`) and never requested a snapshot on mount — an override already active
- * before page load rendered as "No brain reported" until the next live change. `useResolvedBrain`
+ * before page load rendered as the pre-Phase-109 absent-state string until the next live change.
+ * `useResolvedBrain`
  * closes that gap for every consumer at once.
  *
  * This component's own visible button IS `BrainPicker`'s real Popover trigger — passed in via
@@ -83,20 +84,28 @@ export function BrainHeaderBadge() {
   // now lives once, in `resolveActiveBrain`.
   const isMixed = resolved.source === "mixed";
   const isGlobal = resolved.source === "global";
-  const isProfile = resolved.source === "profile";
+  // Phase 109 D-06: "override" (a live per-profile pin reported over swap.state) renders through
+  // the exact same JSX branch as "profile" — the operator never needs to know which of the two
+  // live signals answered the question (both are genuinely live server state, UI-SPEC §B).
+  const isProfile = resolved.source === "profile" || resolved.source === "override";
+  const isAbsent = resolved.source === "none";
 
   // UAT cosmetic fix (2026-07-29): show the catalogue display name when one is known, instead of the
   // raw model id ("claude-sonnet-5" where the swap dialog said "Claude Sonnet 5"). Falls back to the
   // id unchanged when the catalogue has no entry — never a fabricated name.
+  // Phase 109 D-07/UI-SPEC §A: the honest "no telemetry yet" state renders the one canonical
+  // string across every brain surface — never a per-surface-specific absent string, and never a
+  // fabricated claim that a resolution happened.
   const baseLabel = isMixed
     ? "Mixed brains"
-    : resolved.source === "none"
-      ? "No brain reported"
+    : isAbsent
+      ? "Not reported"
       : resolveModelDisplayName(resolved.model as string, catalogue, globalModelNames);
   // A global reading must never present itself as an honest per-profile reading — the
   // "(global)" qualifier is folded into the accessible name itself (not just the visible "Global"
   // chip) since an explicit `aria-label` on the button replaces all descendant text for
-  // assistive tech.
+  // assistive tech. No parenthetical is added for the absent state (UI-SPEC §A) — "Not reported"
+  // already reads as absence without qualification.
   const ariaLabel = `Active brain: ${baseLabel}${isGlobal ? " (global)" : ""}`;
 
   // Confirmed-live pulse (UI-SPEC "Accent" table item 4): Phase 109 D-01 retired the build-time
@@ -144,7 +153,13 @@ export function BrainHeaderBadge() {
                   style={{ backgroundColor: dotColor(resolved.model) }}
                 />
               ) : null}
-              <span data-testid="brain-header-badge-label" className="hidden sm:inline">
+              <span
+                data-testid="brain-header-badge-label"
+                className={cn(
+                  "hidden sm:inline",
+                  isAbsent && "italic text-muted-foreground"
+                )}
+              >
                 {baseLabel}
               </span>
               {isGlobal && (
@@ -187,6 +202,9 @@ export function BrainHeaderBadge() {
       />
       <TooltipContent side="bottom" sideOffset={8}>
         <p className="text-xs">{ariaLabel}</p>
+        {isAbsent && (
+          <p className="text-xs text-muted-foreground">No engine telemetry yet for this profile.</p>
+        )}
       </TooltipContent>
     </Tooltip>
     </TooltipProvider>

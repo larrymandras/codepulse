@@ -77,10 +77,11 @@ describe("LlmStatusPanel", () => {
     expect(screen.getByText("LLM STATUS")).toBeInTheDocument();
   });
 
-  it('falls back to "Auto" with no override and no last-turn model', () => {
+  it('falls back to "Not reported" with no override and no last-turn model (Phase 109 D-07/UI-SPEC §A: the canonical honest absent string, not "Auto")', () => {
     mockUseResolvedBrain.mockReturnValue(resolvedNone());
     render(<LlmStatusPanel />);
-    expect(screen.getByText("Auto")).toBeInTheDocument();
+    expect(screen.getByText("Not reported")).toBeInTheDocument();
+    expect(screen.queryByText("Auto")).not.toBeInTheDocument();
   });
 
   it("shows the resolved brain label when one is reported", () => {

@@ -138,12 +138,17 @@ function formatBrainTtl(expiresAt?: number): string {
 
 /** Explains which axis the pill is actually showing, keyed off `resolved.source` — replaces the
  * pre-103-09 title string that claimed a per-profile-only reading regardless of whether a global
- * override was actually governing the turn. */
-function pillTitle(source: "global" | "profile" | "mixed" | "lastTurn" | "none"): string {
+ * override was actually governing the turn.
+ *
+ * Phase 109 D-06/UI-SPEC §B: "override" (a live per-profile pin) is INVISIBLE to the operator —
+ * it shares "profile"'s title text verbatim, the same rule every other render branch below
+ * follows, so the two rungs can never be told apart on screen. */
+function pillTitle(source: "override" | "global" | "profile" | "mixed" | "lastTurn" | "none"): string {
   switch (source) {
     case "global":
       return "A global override is active — this surface reflects it, not the per-profile default";
     case "profile":
+    case "override":
       return "This surface reflects the per-profile default";
     case "mixed":
       return "Multiple profiles report different engines";
@@ -171,13 +176,15 @@ function BrainComposerPill() {
   const vendor = catalogue?.find((e) => e.id === resolved.model)?.vendor;
   const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
   const isGlobal = resolved.source === "global";
+  const isAbsent = resolved.source === "none";
   // UAT cosmetic fix (2026-07-29): show the catalogue display name when one is known, instead of the
   // raw model id ("claude-sonnet-5" where the swap dialog said "Claude Sonnet 5"). Falls back to the
   // id unchanged when the catalogue has no entry — never a fabricated name.
-  const baseLabel =
-    resolved.source === "none"
-      ? "Auto"
-      : resolveModelDisplayName(resolved.model as string, catalogue, globalModelNames);
+  // Phase 109 D-07/UI-SPEC §A: the honest "no telemetry yet" state renders the one canonical
+  // string every brain surface shares — never a fabricated claim that a resolution happened.
+  const baseLabel = isAbsent
+    ? "Not reported"
+    : resolveModelDisplayName(resolved.model as string, catalogue, globalModelNames);
 
   return (
     <BrainPicker
@@ -190,12 +197,19 @@ function BrainComposerPill() {
           title={pillTitle(resolved.source)}
           className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
         >
+          {resolved.model && (
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: dotColor ?? "var(--muted-foreground)" }}
+            />
+          )}
           <span
-            aria-hidden="true"
-            className="h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: dotColor ?? "var(--muted-foreground)" }}
-          />
-          <span data-testid="chat-brain-pill-label">{baseLabel}</span>
+            data-testid="chat-brain-pill-label"
+            className={isAbsent ? "italic text-muted-foreground" : undefined}
+          >
+            {baseLabel}
+          </span>
           {isGlobal && (
             <span
               data-testid="chat-brain-pill-global-chip"
@@ -217,7 +231,9 @@ function BrainComposerPill() {
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
           )}
-          {!pendingLabel && resolved.source === "profile" && resolved.mode === "session" && (
+          {!pendingLabel &&
+            (resolved.source === "profile" || resolved.source === "override") &&
+            resolved.mode === "session" && (
             <span
               data-testid="chat-brain-pill-session"
               className="flex items-center gap-0.5 text-xs text-(--status-info)"
@@ -226,7 +242,9 @@ function BrainComposerPill() {
               {formatBrainTtl(resolved.expiresAt)}
             </span>
           )}
-          {!pendingLabel && resolved.source === "profile" && resolved.mode === "pinned" && (
+          {!pendingLabel &&
+            (resolved.source === "profile" || resolved.source === "override") &&
+            resolved.mode === "pinned" && (
             <span
               data-testid="chat-brain-pill-pinned"
               className="flex items-center gap-0.5 text-xs text-muted-foreground"

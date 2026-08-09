@@ -78,7 +78,7 @@ export function useActiveEngine(): ActiveEngineMap {
   for (const row of snapshots) {
     // UAT 2026-07-29 (103-UAT.md test 2): a row carrying no resolvable profile or model is the
     // ABSENCE of a reading, not a reading of "unknown". Dropping it here is what keeps a profile
-    // with no telemetry reading as null (→ "No brain reported") instead of letting the sentinel
+    // with no telemetry reading as null (→ the honest absent state) instead of letting the sentinel
     // become deriveMixedState's single agreed model and light the confirmed-live pulse on it.
     // Filtered on the read path as well as at ingest because one such row is already stored in
     // production, and this hook must be honest about it before it is deleted.

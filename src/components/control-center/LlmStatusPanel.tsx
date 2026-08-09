@@ -74,10 +74,12 @@ export function resolveChipState(
 
 export function LlmStatusPanel() {
   const resolved = useResolvedBrain();
-  // Same fallback BrainControl.tsx uses (`override ?? lastTurnModel ?? "Auto"`), expressed
-  // through the shared resolver: `resolved.source === "none"` is exactly the case where
-  // neither a global override nor any reported/last-turn engine exists.
-  const brainLabel = resolved.source === "none" ? "Auto" : resolved.model ?? "Auto";
+  // Phase 109 D-07/UI-SPEC §A: renders the same canonical "Not reported" string every other
+  // brain surface uses for the identical "no telemetry yet" condition — this site needed no
+  // other change for the "override" source (109-RESEARCH.md §C.7): it flows through the
+  // `resolved.source === "none"`-only branch below unaffected, since `.model` is already read
+  // directly for every non-"none" source.
+  const brainLabel = resolved.source === "none" ? "Not reported" : resolved.model ?? "Not reported";
 
   const health = useProviderHealth() as Record<string, ProviderHealthEntry | undefined>;
   const { calls } = useLlmMetrics(1);

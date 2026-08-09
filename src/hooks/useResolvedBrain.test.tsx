@@ -497,7 +497,7 @@ describe("resolveActiveBrain (pure)", () => {
   });
 });
 
-describe("useLastTurnModel / useResolvedBrain — 'No brain reported' fallback (2026-07-31 live finding)", () => {
+describe("useLastTurnModel / useResolvedBrain — honest-absent-state fallback (2026-07-31 live finding)", () => {
   it("useLastTurnModel starts null and updates from a live run.completed push", async () => {
     const { result } = renderHook(() => useLastTurnModel());
     expect(result.current).toBeNull();

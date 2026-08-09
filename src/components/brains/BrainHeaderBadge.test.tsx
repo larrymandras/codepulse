@@ -39,11 +39,16 @@ import { BrainHeaderBadge } from "./BrainHeaderBadge";
 type WSEventCallback = (event: Record<string, unknown>) => void;
 
 let mockAstridrWSThrows = false;
-let capturedSwapStateCallback: WSEventCallback | undefined;
+// Phase 109 D-06: `useProfileBrainOverrides` (via `useResolvedBrain`) is now a SECOND, independent
+// `swap.state` subscriber alongside `useGlobalBrainOverride`'s — mirroring the real
+// `AstridrWSProvider`'s fan-out (every `subscribeEvent` call registers its own listener; firing an
+// event invokes ALL listeners registered for that type), this tracks every registered swap.state
+// callback, not just the last one, so `emitSwapState` below drives both hooks correctly.
+const capturedSwapStateCallbacks: WSEventCallback[] = [];
 const mockUnsubscribe = vi.fn();
 const mockSubscribeEvent = vi.fn((eventType: string, callback: WSEventCallback) => {
   if (eventType === "swap.state") {
-    capturedSwapStateCallback = callback;
+    capturedSwapStateCallbacks.push(callback);
   }
   return mockUnsubscribe;
 });
@@ -68,14 +73,13 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
 }));
 
 /** Fires the real `swap.state` event shape (`{ event_type, data: { model_override } }`) through
- * whichever callback the component last subscribed with — mirrors what `AstridrWSProvider`'s own
- * `ws.onmessage` fan-out delivers to `subscribeEvent` listeners. */
+ * EVERY registered swap.state callback — mirrors what `AstridrWSProvider`'s own `ws.onmessage`
+ * fan-out delivers to `subscribeEvent` listeners (every subscriber, not just the most recent). */
 function emitSwapState(modelOverride: string | null) {
   act(() => {
-    capturedSwapStateCallback?.({
-      event_type: "swap.state",
-      data: { model_override: modelOverride },
-    });
+    for (const cb of capturedSwapStateCallbacks) {
+      cb({ event_type: "swap.state", data: { model_override: modelOverride } });
+    }
   });
 }
 
@@ -171,7 +175,7 @@ beforeEach(() => {
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue(undefined);
   mockAstridrWSThrows = false;
-  capturedSwapStateCallback = undefined;
+  capturedSwapStateCallbacks.length = 0;
   mockUnsubscribe.mockReset();
   mockSubscribeEvent.mockClear();
   mockSendCommand.mockReset();
@@ -298,8 +302,22 @@ describe("BrainHeaderBadge — no engine reported", () => {
     expect(() => renderBadge()).not.toThrow();
 
     expect(await screen.findByTestId("brain-header-badge-label")).toHaveTextContent(
-      "No brain reported"
+      "Not reported"
     );
+  });
+
+  it('carries the accessible name "Active brain: Not reported" (no parenthetical), italic/muted label text, and no color dot for the absent state (D-07/UI-SPEC §A)', async () => {
+    seedEngines([], []);
+    const { container } = renderBadge();
+
+    const label = await screen.findByTestId("brain-header-badge-label");
+    expect(label.className).toContain("italic");
+    expect(label.className).toContain("text-muted-foreground");
+    expect(
+      screen.getByRole("button", { name: "Active brain: Not reported" })
+    ).toBeInTheDocument();
+    // No color dot — neither the single-model dot nor the mixed-state stacked cluster.
+    expect(container.querySelector('span[aria-hidden="true"].rounded-full')).not.toBeInTheDocument();
   });
 });
 
@@ -485,7 +503,7 @@ describe("BrainHeaderBadge — global engine fallback (103-08, precedence correc
     seedEngines([], []);
     renderBadge();
     await screen.findByTestId("brain-header-badge-label");
-    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("No brain reported");
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("Not reported");
 
     emitSwapState("anthropic-opus-4-8");
 
@@ -496,18 +514,18 @@ describe("BrainHeaderBadge — global engine fallback (103-08, precedence correc
     ).toBeInTheDocument();
   });
 
-  it('keeps "No brain reported" when both per-profile telemetry and the global engine are empty', async () => {
+  it('keeps "Not reported" when both per-profile telemetry and the global engine are empty', async () => {
     seedEngines([], []);
     renderBadge();
 
     expect(await screen.findByTestId("brain-header-badge-label")).toHaveTextContent(
-      "No brain reported"
+      "Not reported"
     );
     expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
 
     // An explicit null override (no global override active either) must not manufacture a reading.
     emitSwapState(null);
-    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("No brain reported");
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("Not reported");
     expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
   });
 
@@ -535,7 +553,7 @@ describe("BrainHeaderBadge — global engine fallback (103-08, precedence correc
 
     expect(() => renderBadge()).not.toThrow();
     expect(await screen.findByTestId("brain-header-badge-label")).toHaveTextContent(
-      "No brain reported"
+      "Not reported"
     );
     expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
   });
@@ -546,12 +564,14 @@ describe("BrainHeaderBadge — global engine fallback (103-08, precedence correc
     await screen.findByTestId("brain-header-badge-label");
 
     expect(mockSubscribeEvent).toHaveBeenCalledWith("swap.state", expect.any(Function));
-    // useLastTurnModel's run.completed fallback subscription (2026-07-31 "No brain reported" fix).
+    // useLastTurnModel's run.completed fallback subscription (2026-07-31 honest-absent-state fix).
     expect(mockSubscribeEvent).toHaveBeenCalledWith("run.completed", expect.any(Function));
     expect(mockUnsubscribe).not.toHaveBeenCalled();
 
     unmount();
-    expect(mockUnsubscribe).toHaveBeenCalledTimes(2);
+    // Phase 109 D-06: useProfileBrainOverrides also subscribes to swap.state (a second, independent
+    // subscription alongside useGlobalBrainOverride's) — three total: swap.state x2, run.completed x1.
+    expect(mockUnsubscribe).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -575,9 +595,9 @@ describe("BrainHeaderBadge — global override snapshot on load (103-09, BSC-01 
     expect(screen.getByTestId("brain-header-badge-global-chip")).toHaveTextContent("Global");
     // This is the exact 2026-07-28 live regression: the pre-103-09 badge only ever subscribed to
     // swap.state (a change event) and never requested a snapshot, so an override already active
-    // before load read as "No brain reported" forever. The subscription is still set up (for
+    // before load read as "Not reported" forever. The subscription is still set up (for
     // in-tab changes), but this test's reading comes entirely from the ack.
-    expect(capturedSwapStateCallback).toBeDefined();
+    expect(capturedSwapStateCallbacks.length).toBeGreaterThan(0);
   });
 
   it('still renders "Mixed brains" when there is no global override and two profiles disagree — the global path must not swallow the honest mixed reading', async () => {

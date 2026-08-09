@@ -634,6 +634,61 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     expect(screen.queryByTestId("chat-brain-pill-stub-chip")).not.toBeInTheDocument();
     expect(screen.queryByText("STUB")).not.toBeInTheDocument();
   });
+
+  it('renders the canonical "Not reported" string, italic and muted, with no color dot, when nothing is reported (D-07/UI-SPEC §A)', async () => {
+    mockActiveEngineMap = {};
+    renderPlainChat();
+
+    const label = await screen.findByTestId("chat-brain-pill-label");
+    expect(label).toHaveTextContent("Not reported");
+    expect(label.className).toContain("italic");
+    expect(label.className).toContain("text-muted-foreground");
+
+    // Scoped to the composer pill trigger — Control Center's separate "Choose brain" (BrainControl)
+    // box also renders in this tree and legitimately still says "Auto" (out of this plan's scope).
+    const trigger = screen.getByRole("button", { name: /Active brain/ });
+    expect(within(trigger).queryByText("Auto")).not.toBeInTheDocument();
+    expect(trigger.querySelector('span[aria-hidden="true"].rounded-full')).not.toBeInTheDocument();
+  });
+
+  it('carries the accessible name "Active brain: Not reported" (no parenthetical) for the absent state', async () => {
+    mockActiveEngineMap = {};
+    renderPlainChat();
+
+    await screen.findByTestId("chat-brain-pill-label");
+    expect(
+      screen.getByRole("button", { name: "Active brain: Not reported — opens the brain picker" })
+    ).toBeInTheDocument();
+  });
+
+  describe("Chat — composer pill, D-06 override rung invisibility (UI-SPEC §B)", () => {
+    it("renders byte-identical pill markup for source:'override' vs source:'profile'+mode:'pinned', same model", async () => {
+      // A pinned reading sourced purely from per-profile TELEMETRY (no live override at all).
+      mockSendCommand.mockResolvedValue({ status: "ok" });
+      mockActiveEngineMap = { "assistant-default": { model: "claude-opus-4-8", mode: "pinned" } };
+      const profileRender = renderPlainChat();
+      await screen.findByText("claude-opus-4-8");
+      const profileButton = screen.getByTestId("chat-brain-pill-label").closest("button")!;
+      const profileHtml = profileButton.outerHTML;
+      profileRender.unmount();
+
+      // The SAME model, but now sourced purely from a live per-profile OVERRIDE — no telemetry at all.
+      mockActiveEngineMap = {};
+      mockSendCommand.mockResolvedValue({
+        status: "ok",
+        profile_overrides: {
+          "assistant-default": { model: "claude-opus-4-8", source: "operator" },
+        },
+      });
+      const overrideRender = renderPlainChat();
+      await screen.findByText("claude-opus-4-8");
+      const overrideButton = screen.getByTestId("chat-brain-pill-label").closest("button")!;
+      const overrideHtml = overrideButton.outerHTML;
+      overrideRender.unmount();
+
+      expect(overrideHtml).toBe(profileHtml);
+    });
+  });
 });
 
 // ─── 188-13: Command Center toggle + layout + panel mounts (D-18) ───────────
