@@ -18,18 +18,21 @@
  * plain mutable `mockGlobalOverride` object the picker reads for the "All profiles" scope's row
  * highlight.
  *
- * D-02 REALITY CHECK, read before extending this file: `normalizeCatalogueEntry` (`BrainPicker.tsx`)
- * flattens every live catalogue entry to `group: "api"`, `costTier: "normal"` regardless of vendor
- * — this is the SAME flattening the pre-Phase-109 "All profiles" scope already applied, now shared
- * by both scopes. Two direct consequences, both already documented in `109-CONTEXT.md` D-09/D-13 as
- * an accepted, deferred gap (plan 109-07's job, out of THIS plan's scope):
- *   1. Only the "API" group heading is reachable through the picker's live catalogue today —
- *      Subscription/Local are structurally unreachable (D-13).
- *   2. `needsCostConfirm` (which gates on `costTier !== "normal"`) can never fire through the
- *      picker's live catalogue either — the expensive/unknown-tier inline-confirm branch is fully
- *      covered directly against hand-built fixtures in `BrainPickerRow.test.tsx` instead.
- * Both are asserted directly below (not silently dropped) so a future re-introduction of real
- * grouping/cost-tier data is caught by an assertion that no longer holds, not by nothing at all.
+ * D-09/D-13 REALITY (Phase 109 Plan 07), superseding the pre-Plan-07 flattening this file used to
+ * document here: `normalizeCatalogueEntry` (`BrainPicker.tsx`) now derives `group`/`billing`/
+ * `costTier` from `mapCatalogueVendorToBilling(entry.vendor)` (`src/lib/catalogueBilling.ts`).
+ * With this file's `TEST_ENTRIES` fixture (vendors `codex`/`antigravity`/`anthropic`/`openrouter` —
+ * none empty), every entry still maps to group `"api"`/`costTier:"normal"` under D-13's rule (the
+ * OpenRouter catch-all plus the `"anthropic"` alias both resolve to the `api` billing channel), so
+ * the single-"API"-heading test below is still accurate for THIS fixture set — not because grouping
+ * is flattened anymore, but because none of these four vendors is empty/missing. A dedicated
+ * "Unclassified group" describe block below exercises an empty-vendor entry directly, the one case
+ * this fixture set structurally cannot reach.
+ *   1. Subscription/Local remain structurally unreachable from a real `swap.catalogue` payload
+ *      today (D-13) — no Ollama or CLI-gateway vendor is ever returned.
+ *   2. `needsCostConfirm` (which gates on `costTier === "expensive" || "unknown"`) still cannot fire
+ *      through THIS fixture set's four mapped vendors — it now CAN fire through a genuinely
+ *      unclassified (empty-vendor) live entry, asserted directly in the new describe block below.
  *
  * 103-16 (CR-01): `GlobalSwapModal`'s own mock (below) is why the reselect-same-brain defect
  * shipped invisibly in the first place — every test in this file that exercised the global-swap
@@ -655,6 +658,47 @@ describe("BrainPicker — group rendering (D-02/D-13: only 'API' is reachable li
 
     const headings = Array.from(document.querySelectorAll("[cmdk-group-heading]"));
     expect(headings.map((h) => h.textContent)).toEqual(["API"]);
+  });
+});
+
+describe("BrainPicker — Unclassified group (D-09/D-13, Phase 109 Plan 07)", () => {
+  it("renders an empty-vendor entry under 'Unclassified' with the UNCLASSIFIED chip and fires the expand-to-confirm step, paired with a mapped control entry under 'API' with no such chip and no expand-to-confirm", async () => {
+    mockCatalogueEntries = [
+      { id: "mystery-model", name: "Mystery Model", vendor: "" },
+      { id: "google-gemini", name: "Gemini Pro", vendor: "google" },
+    ];
+    renderPicker();
+    openPicker();
+    await screen.findByText("Mystery Model");
+
+    const headings = Array.from(document.querySelectorAll("[cmdk-group-heading]"));
+    expect(headings.map((h) => h.textContent)).toEqual(["API", "Unclassified"]);
+    expect(screen.getByText("UNCLASSIFIED")).toBeInTheDocument();
+
+    // Unclassified entry: costTier "unknown" -> needsCostConfirm fires the inline expand-to-confirm
+    // instead of dispatching immediately.
+    fireEvent.click(screen.getByText("Mystery Model"));
+    expect(await screen.findByText("Confirm swap")).toBeInTheDocument();
+    expect(mockDispatch).not.toHaveBeenCalled();
+
+    // Control: the mapped entry (a real, non-empty vendor) carries no UNCLASSIFIED chip and
+    // dispatches immediately, no expand-to-confirm step.
+    fireEvent.click(screen.getByText("Gemini Pro"));
+    await waitFor(() =>
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ value: "google-gemini" })
+      )
+    );
+  });
+
+  it("does not render the Unclassified group heading when every catalogue entry maps to a real vendor", async () => {
+    renderPicker(); // default TEST_ENTRIES: codex/antigravity/anthropic/openrouter, all mapped
+    openPicker();
+    await screen.findByText("Codex CLI");
+
+    const headings = Array.from(document.querySelectorAll("[cmdk-group-heading]"));
+    expect(headings.map((h) => h.textContent)).not.toContain("Unclassified");
+    expect(screen.queryByText("UNCLASSIFIED")).not.toBeInTheDocument();
   });
 });
 

@@ -126,7 +126,10 @@ export function BrainPickerRow({
   const liveHealth = useProviderHealth();
   const healthStatus = resolveHealthStatus(entry, liveHealth);
   const needsConfirm = needsCostConfirm(entry);
-  const dotColor = PROVIDER_COLORS[entry.vendor] ?? "#6b7280";
+  // Rule 1/2 fix (Phase 109 Plan 07, T-109-18's own "no hardcoded hex" gate): the fallback for a
+  // vendor missing from PROVIDER_COLORS now reads a CSS var, matching BrainHeaderBadge.tsx:88's
+  // established `var(--muted-foreground)` fallback for the same lookup — no hex literal survives.
+  const dotColor = PROVIDER_COLORS[entry.vendor] ?? "var(--muted-foreground)";
   const billingLabel = entry.billing === "sub" ? "SUB" : "API";
   const quotaStateLabel =
     entry.quotaRemainingPct !== undefined
@@ -185,9 +188,24 @@ export function BrainPickerRow({
               style={{ backgroundColor: dotColor }}
             />
             <span className="flex-1 text-sm">{entry.name}</span>
-            <Badge variant="outline" className="text-xs uppercase px-1 py-0">
-              {billingLabel}
-            </Badge>
+            {entry.group === "unclassified" ? (
+              // D-09/D-13 (Phase 109 Plan 07): the one narrow, explicit exception to this codebase's
+              // "billing chip is neutral, never accent/status color" rule (103-UI-SPEC §3) — an
+              // unmapped vendor's cost profile is genuinely unverified, so the chip must look
+              // different enough that an operator notices it, not blend in as an ordinary billing
+              // label. Full word "UNCLASSIFIED" (deliberately wider than the 3-char API/SUB chips —
+              // the extra width is part of the signal); same size/typography as every other chip.
+              <Badge
+                variant="outline"
+                className="text-xs px-1 py-0 border-dashed border-(--status-warn)/50 text-(--status-warn)"
+              >
+                UNCLASSIFIED
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs uppercase px-1 py-0">
+                {billingLabel}
+              </Badge>
+            )}
             {/* WR-03 fix: purely presentational now -- no tabIndex, no nested TooltipTrigger. The
                 health word survives via this button's own aria-label above, and hover/focus
                 discovery survives via the Tooltip now wrapping this whole button instead. */}

@@ -21,7 +21,10 @@ export interface CatalogueEntry {
   id: string;
   name: string;
   vendor: string;
-  group: "subscription" | "api" | "local";
+  // "unclassified" added by Phase 109 Plan 07 (D-09/D-13): a genuinely honest 4th group for a
+  // vendor `mapCatalogueVendorToBilling` (src/lib/catalogueBilling.ts) cannot map — reachable only
+  // on empty/missing vendor data, never silently folded into "api".
+  group: "subscription" | "api" | "local" | "unclassified";
   billing: "api" | "sub";
   costTier: "normal" | "expensive" | "unknown";
   quotaRemainingPct?: number;

@@ -83,6 +83,17 @@ const TEST_CATALOGUE: CatalogueEntry[] = [
     health: "reachable",
     // no quotaRemainingPct — local brains have no quota concept either
   },
+  {
+    // D-09/D-13 (Phase 109 Plan 07): a genuinely unclassified entry — the shape
+    // `mapCatalogueVendorToBilling` returns for an empty/missing vendor.
+    id: "mystery-model",
+    name: "Mystery Model",
+    vendor: "",
+    group: "unclassified",
+    billing: "api",
+    costTier: "unknown",
+    health: "reachable",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -232,6 +243,25 @@ describe("BrainPickerRow — billing chip", () => {
     const chip = screen.getByText("SUB");
     expect(chip.className).not.toMatch(/primary/);
     expect(chip.className).not.toMatch(/--status/);
+  });
+
+  it('renders the deliberately-irregular full-word "UNCLASSIFIED" chip (dashed --status-warn border) for an unclassified entry, instead of the ordinary API/SUB chip', () => {
+    renderRow({ entry: findEntry("mystery-model") });
+    expect(screen.queryByText("API")).not.toBeInTheDocument();
+    expect(screen.queryByText("SUB")).not.toBeInTheDocument();
+    const chip = screen.getByText("UNCLASSIFIED");
+    expect(chip.className).toContain("border-dashed");
+    expect(chip.className).toContain("--status-warn");
+    // Same sizing as every other chip — only color and text differ.
+    expect(chip.className).toContain("text-xs");
+    expect(chip.className).toContain("px-1");
+    expect(chip.className).toContain("py-0");
+  });
+
+  it("renders the ordinary API chip (not UNCLASSIFIED) for a mapped api-billed control entry", () => {
+    renderRow({ entry: findEntry("anthropic-sonnet-5") });
+    expect(screen.queryByText("UNCLASSIFIED")).not.toBeInTheDocument();
+    expect(screen.getByText("API")).toBeInTheDocument();
   });
 });
 

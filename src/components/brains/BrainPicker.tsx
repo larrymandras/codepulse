@@ -102,35 +102,31 @@ import {
   resolveModelDisplayName,
   type CatalogueEntry,
 } from "@/lib/brainsApi";
+import { mapCatalogueVendorToBilling } from "@/lib/catalogueBilling";
 import { cn } from "@/lib/utils";
 
 /**
  * Adapts a live `swap.catalogue` entry (`useBrainCatalogue`'s `BrainCatalogueEntry` —
  * id/name/vendor only) into this picker's `CatalogueEntry` shape so it can render through the D-07
  * grouped rows regardless of which scope dispatches it — one catalogue, one render path (D-02).
- * Every catalogue entry is billed per-token through the gateway, so `group`/`billing: "api"` is an
- * accurate description, not an invented one.
  *
- * `costTier: "normal"` rather than `"unknown"` is a deliberate choice, not a guess dressed up as
- * data: the shared `needsCostConfirm` predicate (`BrainPickerRow.tsx`) that both this file's
- * `handleActivate` and the row itself consult is scope-blind — it fires the inline expand-to-confirm
- * step for ANY row regardless of "This profile" vs. "All profiles" scope. 103-UI-SPEC.md §3 is explicit that the two frictions must
- * never stack for the global branch ("the row still dispatches into the global-swap modal...
- * instead of a second confirmation surface") — `GlobalSwapModal` already owns cost-tier warning
- * copy of its own (`needsCostWarning`). Tagging every live entry `"unknown"` here would silently
- * re-introduce the double-confirm UI-SPEC forbids and change this task's explicitly out-of-scope
- * dispatch semantics as a side effect of a labeling choice. `quotaRemainingPct`/`health` stay
- * omitted (both optional) — `swap.catalogue` has never reported either. (D-09's real group/billing
- * mapping, replacing this flattening, is plan 109-07's job — out of this plan's scope.)
+ * `group`/`billing`/`costTier` derive from `mapCatalogueVendorToBilling(entry.vendor)` (D-09/D-13,
+ * `src/lib/catalogueBilling.ts`) — CodePulse's own `PROVIDER_BILLING` registry, not an invented
+ * flattening. Plans 109-03 through 109-06 shipped this function with every row hardcoded to
+ * `group:"api", billing:"api", costTier:"normal"` regardless of vendor, specifically to avoid
+ * firing `needsCostConfirm` on data with no real cost-tier signal — D-09/D-13 replace that premise
+ * now that a real signal (the vendor field) is classified honestly instead. An Unclassified entry
+ * (empty/missing `vendor`) gets `costTier:"unknown"` from the mapper, not `"normal"`: tagging it
+ * `"normal"` would keep the expensive-model confirm gate silently suppressed for exactly the
+ * entries D-09's honesty clause says must not be silently trusted. `quotaRemainingPct`/`health`
+ * stay omitted (both optional) — `swap.catalogue` has never reported either.
  */
 function normalizeCatalogueEntry(entry: BrainCatalogueEntry): CatalogueEntry {
   return {
     id: entry.id,
     name: entry.name,
     vendor: entry.vendor ?? "",
-    group: "api",
-    billing: "api",
-    costTier: "normal",
+    ...mapCatalogueVendorToBilling(entry.vendor),
   };
 }
 
@@ -192,6 +188,9 @@ const GROUP_ORDER: { group: CatalogueEntry["group"]; label: string }[] = [
   { group: "subscription", label: "Subscription" },
   { group: "api", label: "API" },
   { group: "local", label: "Local" },
+  // D-09/D-13 (Phase 109 Plan 07): appended LAST, never folded into an existing group — an
+  // honest 4th group for a vendor mapCatalogueVendorToBilling cannot classify.
+  { group: "unclassified", label: "Unclassified" },
 ];
 
 export function BrainPicker({
