@@ -10,8 +10,8 @@
  *
  * ANTI-STUB-MASKING: this file imports nothing from `@/lib/brainsApi` and never mocks it — the
  * global axis under test here is fed exclusively through the mocked `useAstridrWS().sendCommand`
- * ack and its `swap.state` event push (via the mocked `subscribeEvent`), which is the live
- * transport regardless of `VITE_BRAINS_STUB`.
+ * ack and its `swap.state` event push (via the mocked `subscribeEvent`), the same live transport
+ * every brain surface uses (Phase 109 D-01 retired the build-time stub seam entirely).
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";

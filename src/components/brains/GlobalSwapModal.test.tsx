@@ -19,17 +19,18 @@
  *
  * ── Moved/retired coverage from the pre-103-12 suite (per 103-12-PLAN.md's explicit instruction
  * to record this, not silently drop it) ──
- * The old suite asserted a `Promise.allSettled` per-profile fan-out (`gateway.model.set` dispatched
- * once per profile, a partial-failure fixture showing one row `ok` and one `error`, and a STUB chip
- * on per-profile result rows). That entire axis is deleted by 103-CONTRACT.md §8 — a global swap
- * never dispatches `gateway.model.set` at all, so there is no per-row partial-failure surface to
- * test anymore (D-12 applied to a one-command axis: one command has one outcome). Those assertions
- * are replaced below by the single-outcome-row tests in the "dispatch" describe block, and the old
- * "fires the live swap.set global override and the per-profile gateway.model.set fan-out" test is
- * replaced by "fires exactly the live swap.set command and never touches the deferred per-profile
- * fan-out." The STUB-chip-on-result-row test is retired outright — `BRAINS_STUB_ACTIVE` must never
- * render on this surface at all now (the global axis is live by definition, D-16 amendment), and a
- * dedicated test below asserts that directly.
+ * The old suite asserted a `Promise.allSettled` per-profile fan-out (a legacy per-profile dispatch
+ * command fired once per profile, a partial-failure fixture showing one row `ok` and one `error`,
+ * and a build-time stub indicator on per-profile result rows). That entire axis is deleted by
+ * 103-CONTRACT.md §8 — a global swap never dispatches that per-profile command at all, so there is
+ * no per-row partial-failure surface to test anymore (D-12 applied to a one-command axis: one
+ * command has one outcome). Those assertions are replaced below by the single-outcome-row tests in
+ * the "dispatch" describe block, and the old "fires the live swap.set global override and the
+ * per-profile fan-out" test is replaced by "fires exactly the live swap.set command and never
+ * touches the deferred per-profile fan-out." The build-time-stub-indicator-on-result-row test was
+ * retired outright under 103-12/103-16, and Phase 109 D-01 subsequently deleted the underlying
+ * stub-mode concept from the codebase entirely — there is no flag or component left anywhere that
+ * could render such an indicator, so no replacement assertion is needed here.
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -64,18 +65,14 @@ vi.mock("@/hooks/useResolvedBrain", () => ({
   useGlobalBrainOverride: () => mockGlobalOverride,
 }));
 
-// Anti-stub-masking proof surface only — GlobalSwapModal.tsx imports NOTHING from this module
-// post-103-12 (grep -c "brainsApi" returns 0), so `mockDispatchSwap` staying at zero calls across
-// every test in this file is the direct 103-CONTRACT.md §8 compliance assertion.
+// Anti-fan-out proof surface only — GlobalSwapModal.tsx imports NOTHING at runtime from this
+// module post-103-12 (only a type-only `CatalogueEntry` import, erased at build time), so
+// `mockDispatchSwap` staying at zero calls across every test in this file is the direct
+// 103-CONTRACT.md §8 compliance assertion: nothing in this component ever reaches a per-profile
+// dispatch path.
 const mockDispatchSwap = vi.fn();
 vi.mock("@/lib/brainsApi", () => ({
-  brainsApi: {
-    isStub: true,
-    dispatchSwap: (...args: unknown[]) => mockDispatchSwap(...args),
-  },
-  get BRAINS_STUB_ACTIVE() {
-    return false;
-  },
+  dispatchSwap: (...args: unknown[]) => mockDispatchSwap(...args),
 }));
 
 const mockToastFn = vi.fn();
@@ -624,24 +621,6 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
     }
   });
 
-  it("never renders the BRAINS_STUB_ACTIVE chip on the result surface — the global axis is live by definition (D-16 amendment)", async () => {
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={PINNED_AND_INHERITED_PAIR}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
-
-    fireEvent.click(
-      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
-    );
-
-    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
-    expect(screen.queryByText("STUB")).not.toBeInTheDocument();
-  });
 });
 
 // ─── Dismiss / revert (CR-03: survives Done, renders a real result) ───────────

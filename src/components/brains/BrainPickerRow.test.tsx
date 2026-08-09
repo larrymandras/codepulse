@@ -15,8 +15,75 @@ import {
   quotaLevel,
   resolveHealthStatus,
 } from "./BrainPickerRow";
-import { STUB_CATALOGUE } from "@/lib/brainsFixtures";
 import type { CatalogueEntry } from "@/lib/brainsApi";
+
+// Phase 109 Plan 03 (D-01): `@/lib/brainsFixtures.ts` (the D-16 stub seam's fixture set) was
+// deleted along with the stub adapter it existed to serve. `BrainPickerRow` itself is a pure
+// presentational component with no dependency on that seam — it only needs `CatalogueEntry`-shaped
+// data — so this file now owns its own small, self-contained fixture set covering exactly the same
+// cost-tier/quota/billing/health branches the original stub fixtures covered (mirrors the coverage
+// notes the deleted file used to carry).
+const TEST_CATALOGUE: CatalogueEntry[] = [
+  {
+    id: "claude-cli-sonnet5",
+    name: "Sonnet 5 (CLI)",
+    vendor: "claude-cli",
+    group: "subscription",
+    billing: "sub",
+    costTier: "normal",
+    health: "reachable",
+    // no quotaRemainingPct — subscription CLI brains render "∞"
+  },
+  {
+    id: "antigravity-cli",
+    name: "Antigravity CLI",
+    vendor: "antigravity",
+    group: "subscription",
+    billing: "sub",
+    costTier: "unknown",
+    health: "degraded",
+  },
+  {
+    id: "anthropic-opus-4-8",
+    name: "Opus 4.8",
+    vendor: "anthropic_direct",
+    group: "api",
+    billing: "api",
+    costTier: "expensive",
+    quotaRemainingPct: 0.03, // below the 0.05 error threshold
+    health: "reachable",
+  },
+  {
+    id: "anthropic-sonnet-5",
+    name: "Sonnet 5",
+    vendor: "anthropic_direct",
+    group: "api",
+    billing: "api",
+    costTier: "normal",
+    quotaRemainingPct: 0.35, // at/above the 0.20 ok threshold
+    health: "reachable",
+  },
+  {
+    id: "openrouter-sonnet-5-dup",
+    name: "Sonnet 5",
+    vendor: "openrouter",
+    group: "api",
+    billing: "api",
+    costTier: "normal",
+    quotaRemainingPct: 0.5,
+    health: "reachable",
+  },
+  {
+    id: "ollama-llama3",
+    name: "Llama 3 (local)",
+    vendor: "ollama",
+    group: "local",
+    billing: "sub",
+    costTier: "normal",
+    health: "reachable",
+    // no quotaRemainingPct — local brains have no quota concept either
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -52,7 +119,7 @@ function renderRow(overrides: Partial<React.ComponentProps<typeof BrainPickerRow
   const onSelect = vi.fn();
   const onExpandChange = vi.fn();
   const props = {
-    entry: STUB_CATALOGUE[0],
+    entry: TEST_CATALOGUE[0],
     isExpanded: false,
     onExpandChange,
     onSelect,
@@ -67,7 +134,7 @@ function renderRow(overrides: Partial<React.ComponentProps<typeof BrainPickerRow
 }
 
 function findEntry(id: string): CatalogueEntry {
-  const entry = STUB_CATALOGUE.find((e) => e.id === id);
+  const entry = TEST_CATALOGUE.find((e) => e.id === id);
   if (!entry) throw new Error(`fixture entry ${id} not found`);
   return entry;
 }

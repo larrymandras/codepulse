@@ -16,8 +16,7 @@ import { test, expect, type Page } from '@playwright/test';
  * real cut. That is why this is a Playwright spec against a real browser and a real `<audio>`
  * element (see plan's <why_this_must_be_a_browser_test>).
  *
- * Reaching real playback: this harness runs with no astridr backend (VITE_BRAINS_STUB only covers
- * brain-swap, not chat/TTS). Investigated, in order:
+ * Reaching real playback: this harness runs with no astridr backend at all. Investigated, in order:
  *   1. No dev/stub affordance drives useTtsPlayback directly — grepped `__astridr*` across src/,
  *      only `__astridrVoiceTrace` exists (the trace ring buffer itself, not a play trigger).
  *   2. `page.route` CAN intercept the audio request `new Audio(fullUrl)` issues and serve a real,
