@@ -59,13 +59,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SwapHistoryList } from "@/components/brains/SwapHistoryList";
 import { useCommandDispatch } from "@/hooks/useCommandDispatch";
-import {
-  describeSwapOutcome,
-  filterBrainSwaps,
-  SWAP_HISTORY_CAP,
-  useControlVerbSwaps,
-} from "@/hooks/useControlVerbSwaps";
 import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import { modelIdsMatch, type CatalogueEntry } from "@/lib/brainsApi";
 
@@ -225,26 +220,12 @@ function describeOutcome(
   }
 }
 
-/** D-15: `timestamp` on a `controlVerbSwaps` row is epoch SECONDS
- * (`runtimeIngest.ts`'s `now = Date.now() / 1000`), never milliseconds — multiply before handing
- * to `Date`. Short clock-time only; the row list is capped at `SWAP_HISTORY_CAP` so a full date is
- * rarely needed to disambiguate. */
-function formatSwapTime(timestampSeconds: number): string {
-  return new Date(timestampSeconds * 1000).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 /**
  * SwapHistorySection — D-15's readout, rendered inside `GlobalSwapModal`'s confirm phase.
- * Filters to `verb === "swap_model"` (brain) rows via `filterBrainSwaps`; the `swap_voice` rows
- * D-14 captures stay captured but unsurfaced here (108-CONTEXT.md "Deferred Ideas").
  *
  * `profileId` is always `undefined` at this component's only call site: `GlobalSwapModal` is the
  * ALL-PROFILES axis (103-CONTRACT.md §8 — one live `swap.set` command touches every profile, there
- * is no single profile this dialog is scoped to). `useControlVerbSwaps` skips the query outright
- * when `profileId` is `undefined` (never fabricates a read).
+ * is no single profile this dialog is scoped to).
  *
  * **D-15 correction (108-CONTEXT.md, 2026-08-07, considered-and-falsified):** this component
  * previously rendered an empty state ("No swap history to show yet.") whenever `profileId` was
@@ -255,17 +236,14 @@ function formatSwapTime(timestampSeconds: number): string {
  * honest behaviour. `profileId` stays a real parameter (not hardcoded away) so a future per-profile
  * surface can reuse this same section with a real id and get the populated render path below.
  *
- * `.slice(0, SWAP_HISTORY_CAP)` is a client-side belt-and-suspenders bound on top of the query's
- * own server-side `.take(SWAP_HISTORY_CAP)` (convex/controlVerbSwaps.ts) — it guarantees the
- * on-screen "Showing the last N swaps" caption can never be a lie about what's rendered, even if
- * the read path above it changes.
- *
- * Gap closure (108-06 adversarial gate): the caption only claims truncation when `brainSwaps` is
- * genuinely AT the cap (`length >= SWAP_HISTORY_CAP`). It previously rendered unconditionally
- * inside the `length === 0` else-branch — i.e. for any non-empty list, including 1 or 2 rows — so
- * "Showing the last 20 swaps" was shown over a 2-row list. That is a fabricated reading of the
- * data (the exact class this whole phase exists to eliminate): a genuinely complete list read as
- * truncated. A sub-cap count states its real count instead of inventing one the UI isn't showing.
+ * **Phase 109 (D-10/D-11/D-12, TELE-02's surfaced half): re-pointed to delegate to
+ * `SwapHistoryList` (src/components/brains/SwapHistoryList.tsx).** That component now owns the
+ * row-rendering body this function used to hold directly — the combined scoped+global read, the
+ * GLOBAL badge, the live-derived pinned note, and the honest `profileId === undefined` render-
+ * nothing gate (preserved, not reinvented). `Settings.tsx`'s new per-profile collapsible section
+ * (D-10) is `SwapHistoryList`'s other, real consumer. Kept as a named export (not inlined at the
+ * mount site below) so no existing import breaks and so `GlobalSwapModal.test.tsx` can keep
+ * exercising this exact call site directly.
  */
 /**
  * Exported (not just used internally below) so GlobalSwapModal.test.tsx can render it directly
@@ -275,61 +253,7 @@ function formatSwapTime(timestampSeconds: number): string {
  * scaffolding.
  */
 export function SwapHistorySection({ profileId }: { profileId: string | undefined }) {
-  const rows = useControlVerbSwaps(profileId);
-
-  // D-15 correction: an unscoped mount (today's only mount site) has no
-  // profile to show history FOR — render nothing rather than a permanent
-  // "no history yet" that can never resolve. The hook above is still called
-  // unconditionally (Rules of Hooks); only the render is gated.
-  if (profileId === undefined) {
-    return null;
-  }
-
-  const brainSwaps = filterBrainSwaps(rows).slice(0, SWAP_HISTORY_CAP);
-  const atCap = brainSwaps.length >= SWAP_HISTORY_CAP;
-
-  return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border p-2">
-      <p className="text-xs text-muted-foreground">Recent swaps</p>
-      {brainSwaps.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No swap history to show yet.</p>
-      ) : (
-        <>
-          {brainSwaps.map((row) => {
-            const outcome = describeSwapOutcome(row);
-            return (
-              <div key={row._id} className="flex items-center gap-2 text-sm">
-                {outcome.kind === "refused" ? (
-                  <X className="h-4 w-4 shrink-0 text-(--status-error)" aria-hidden="true" />
-                ) : outcome.kind === "unresolved" ? (
-                  <AlertTriangle
-                    className="h-4 w-4 shrink-0 text-(--status-warn)"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  // "success" and "restore" both read as the OK token — neither is a refusal
-                  // and neither leaves the outcome ambiguous the way "unresolved" does.
-                  <Check className="h-4 w-4 shrink-0 text-(--status-ok)" aria-hidden="true" />
-                )}
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {formatSwapTime(row.timestamp)}
-                </span>
-                <span className="flex-1">
-                  {row.target ?? "—"} → {row.resolved ?? "—"}
-                </span>
-                <span className="text-muted-foreground">{outcome.label}</span>
-              </div>
-            );
-          })}
-          <p className="text-xs text-muted-foreground">
-            {atCap
-              ? `Showing the last ${SWAP_HISTORY_CAP} swaps`
-              : `Showing ${brainSwaps.length} swap${brainSwaps.length === 1 ? "" : "s"}`}
-          </p>
-        </>
-      )}
-    </div>
-  );
+  return <SwapHistoryList profileId={profileId} />;
 }
 
 export function GlobalSwapModal({
@@ -631,12 +555,13 @@ export function GlobalSwapModal({
                 ))}
               </div>
               {/* D-15 (TELE-02), corrected 2026-08-07 (108-CONTEXT.md): the per-profile
-                  swap-history readout does NOT belong on this ALL-PROFILES modal — Phase 109 owns
-                  the real per-profile host. `profileId={undefined}` here renders nothing (see
-                  SwapHistorySection above); kept mounted (not deleted) so the component/hook stay
-                  exercised and ready for Phase 109 to pass a real profileId. Still wrapped so a
-                  failure reading swap history can never take the whole confirm dialog down with
-                  it. */}
+                  swap-history readout does NOT belong on this ALL-PROFILES modal. `profileId=
+                  {undefined}` here renders nothing (see SwapHistorySection above, which now
+                  delegates to SwapHistoryList — Phase 109 D-10); kept mounted (not deleted) so
+                  the component/hook stay exercised. Settings.tsx's per-profile collapsible
+                  section is SwapHistoryList's real, populated host (Phase 109 plan 08). Still
+                  wrapped so a failure reading swap history can never take the whole confirm
+                  dialog down with it. */}
               <SectionErrorBoundary name="Swap history">
                 <SwapHistorySection profileId={undefined} />
               </SectionErrorBoundary>
