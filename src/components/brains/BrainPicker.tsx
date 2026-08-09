@@ -26,8 +26,9 @@
  * `DashboardLayout.tsx` and the Skills palette owns its own separate binding; this picker opens
  * by click only.
  *
- * Pending treatment (D-15): the trigger keeps rendering the actually-active engine from
- * `useActiveEngine()` and layers a purely additive "switching to X…" suffix on top — the base
+ * Pending treatment (D-15): the trigger keeps rendering the actually-active engine (Phase 109
+ * D-06: the full resolved precedence chain, `resolveActiveBrain`, not raw `useActiveEngine()`
+ * telemetry alone) and layers a purely additive "switching to X…" suffix on top — the base
  * label is never touched optimistically. On a failed dispatch the suffix simply drops; there is
  * nothing to roll back because the UI never claimed the swap had landed. The real success toast
  * fires from a separate effect that watches the reactive engine query for confirmation, never
@@ -55,7 +56,8 @@
  * This file now only calls `useGlobalSwap().openGlobalSwap(entry, globalSwapProfiles)` from
  * `handleSelect`'s global branch — it renders no `GlobalSwapModal` of its own. WR-02 is unaffected:
  * the row highlight (`isCurrent`) is still scope-aware, comparing against `useGlobalBrainOverride()`
- * for `global` scope and the per-profile `useActiveEngine()` reading for `profile` scope.
+ * for `global` scope and the per-profile resolved chain (Phase 109 D-06: `resolveActiveBrain`,
+ * not raw telemetry alone) for `profile` scope.
  *
  * 103-16 (CR-01, hoisted by 103-18): the per-selection nonce that lets the modal tell "the user just
  * picked a brain again" apart from "this open transition is a revert reopening the same live
@@ -86,7 +88,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BrainPickerRow, needsCostConfirm } from "@/components/brains/BrainPickerRow";
 import { type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
 import { useActiveEngine } from "@/hooks/useActiveEngine";
-import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
+import { useGlobalBrainOverride, useProfileBrainOverrides, resolveActiveBrain } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { useBrainCatalogue, type BrainCatalogueEntry } from "@/hooks/useBrainCatalogue";
 import { useCommandDispatch } from "@/hooks/useCommandDispatch";
@@ -226,6 +228,20 @@ export function BrainPicker({
   // WR-02: the "All profiles" scope's row highlight must compare against the global axis, not the
   // per-profile engine — see `isCurrent` below.
   const { modelOverride: globalOverrideModel } = useGlobalBrainOverride();
+  // Phase 109 D-06: the live per-profile override map (`swap.state`'s `profile_overrides`), read
+  // directly (mirroring `globalOverrideModel` above, not the composed `useResolvedBrain` hook) so
+  // it can feed BOTH the single trigger's resolved reading below AND `globalSwapProfiles`'
+  // per-row derivation without calling a hook inside `.map()` (Rules of Hooks).
+  const profileOverrides = useProfileBrainOverrides();
+  // ENGINE-03 SC1: the trigger's base label and the "This profile" scope's row highlight must
+  // answer through the FULL resolved precedence chain (override -> global -> telemetry -> none),
+  // not raw `activeEngine?.model` alone — this is the literal fix for a pinned profile rendering
+  // its pre-pin engine. `profileId` is always defined here (a required prop), and this branch
+  // never falls back to `lastTurnModel` (D-07), so the pure call omits it entirely.
+  const resolvedTrigger = useMemo(
+    () => resolveActiveBrain({ globalOverride: globalOverrideModel, activeEngines, profileId, profileOverrides }),
+    [globalOverrideModel, activeEngines, profileId, profileOverrides]
+  );
   // 103-18 (WR-01): requests a global swap through the hoisted, route-surviving instance owned by
   // `GlobalSwapContext` instead of mounting/owning a `GlobalSwapModal` of its own — see this file's
   // and that module's docstrings.
@@ -337,11 +353,20 @@ export function BrainPicker({
    * genuinely different questions: "what is this profile's LIVE engine" (telemetry,
    * `useActiveEngine`, D-14) and "does this profile have a CONFIGURED default that a global
    * override would shadow" (config, `profileConfigs.modelPreferences.primary`, already in hand via
-   * `allProfiles`). `currentModel`/`currentModelDisplayName`/`mode` are UNCHANGED below — still
-   * telemetry-only, per `useActiveEngine.ts`'s docstring on why config must never backfill the
-   * live column (the "obvious fix" this plan's own PLAN.md calls out as wrong). Only
-   * `hasConfiguredDefault`/`configuredDefault`/`configuredDefaultDisplayName` are new, and they are
-   * the ONLY fields `GlobalSwapModal` now reads to compute `pinnedCount` and the shadowing warning.
+   * `allProfiles`). `mode` is UNCHANGED below — still telemetry-only, per `useActiveEngine.ts`'s
+   * docstring on why config must never backfill the live column (the "obvious fix" 103-17-PLAN.md
+   * calls out as wrong). `hasConfiguredDefault`/`configuredDefault`/`configuredDefaultDisplayName`
+   * are the ONLY fields `GlobalSwapModal` reads to compute `pinnedCount` and the shadowing warning
+   * — kept separate on purpose (109-UI-SPEC.md §G's last paragraph): a saved config preference and
+   * a live runtime pin are two different questions, and this memo must not conflate them.
+   *
+   * Phase 109 D-06 (109-UI-SPEC.md §G): `currentModel`/`currentModelDisplayName` now derive from
+   * the FULL resolved precedence chain (`resolveActiveBrain`, per profile) rather than raw
+   * `activeEngines` telemetry alone — a profile pinned moments ago now shows the pinned model in
+   * this column immediately, instead of its stale pre-pin telemetry reading until the next
+   * resolution. Called as the pure function per profile (not the `useResolvedBrain` hook), since
+   * this memo iterates over ALL profiles — calling a hook inside `.map()` violates the Rules of
+   * Hooks. The absent case renders §A's canonical honest-absent string, never a fabricated one.
    *
    * Defined ABOVE `handleSelect` (moved here by 103-18) because `handleSelect` now passes this
    * snapshot straight through to `openGlobalSwap` — `GlobalSwapContext` has no independent source
@@ -350,7 +375,13 @@ export function BrainPicker({
   const globalSwapProfiles = useMemo<GlobalSwapProfile[]>(() => {
     return allProfiles.map((p) => {
       const engine = activeEngines[p.profileId] ?? null;
-      const currentModel = engine?.model ?? "auto";
+      const resolvedRow = resolveActiveBrain({
+        globalOverride: globalOverrideModel,
+        activeEngines,
+        profileId: p.profileId,
+        profileOverrides,
+      });
+      const currentModel = resolvedRow.model ?? "auto";
       const rawPrimary: unknown = (p as { modelPreferences?: { primary?: unknown } })
         .modelPreferences?.primary;
       const configuredDefault =
@@ -358,9 +389,9 @@ export function BrainPicker({
       return {
         profileId: p.profileId,
         currentModel,
-        currentModelDisplayName: engine
+        currentModelDisplayName: resolvedRow.model
           ? resolveModelDisplayName(currentModel, entries)
-          : "Auto",
+          : "Not reported",
         mode: engine?.mode ?? "inherited",
         hasConfiguredDefault: configuredDefault !== null,
         configuredDefault,
@@ -372,7 +403,7 @@ export function BrainPicker({
           : null,
       };
     });
-  }, [allProfiles, activeEngines, entries]);
+  }, [allProfiles, activeEngines, entries, globalOverrideModel, profileOverrides]);
 
   const handleSelect = useCallback(
     (entry: CatalogueEntry) => {
@@ -426,7 +457,8 @@ export function BrainPicker({
     })).filter((g) => g.entries.length > 0);
   }, [entries]);
 
-  const baseLabel = activeEngine?.model ?? "Auto";
+  // ENGINE-03 SC1/D-06: reads the full resolved chain, not raw telemetry — see `resolvedTrigger`.
+  const baseLabel = resolvedTrigger.model ?? "Not reported";
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -530,7 +562,7 @@ export function BrainPicker({
                           isCurrent={
                             scope === "global"
                               ? globalOverrideModel === entry.id
-                              : activeEngine?.model === entry.id
+                              : resolvedTrigger.model === entry.id
                           }
                           isExpanded={expandedId === entry.id}
                           onExpandChange={(exp) => setExpandedId(exp ? entry.id : null)}

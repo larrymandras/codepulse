@@ -94,9 +94,19 @@ let mockGlobalOverride: { modelOverride: string | null; voiceOverride: string | 
   modelOverride: null,
   voiceOverride: null,
 };
-vi.mock("@/hooks/useResolvedBrain", () => ({
-  useGlobalBrainOverride: () => mockGlobalOverride,
-}));
+// Phase 109 D-06: `useProfileBrainOverrides` is mocked alongside `useGlobalBrainOverride` (same
+// controllable-object idiom); `resolveActiveBrain` is kept REAL via `importOriginal` — it's a pure
+// function with no I/O, and BrainPicker's own precedence-chain derivation (baseLabel, isCurrent,
+// globalSwapProfiles) depends on it actually running.
+let mockProfileOverrides: Record<string, { model: string; source: string | null }> = {};
+vi.mock("@/hooks/useResolvedBrain", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useResolvedBrain")>();
+  return {
+    ...actual,
+    useGlobalBrainOverride: () => mockGlobalOverride,
+    useProfileBrainOverrides: () => mockProfileOverrides,
+  };
+});
 
 // `let`, not `const` (103-17): a handful of OBS-8 tests below reassign these per-test to exercise
 // the live 2026-07-29 checkpoint shape (zero telemetry rows, configured `modelPreferences`) —
@@ -227,6 +237,7 @@ beforeEach(() => {
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue({});
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+  mockProfileOverrides = {};
   // 103-17: reset the two config/telemetry seams to their file-wide defaults so the OBS-8
   // describe block's per-test reassignments never leak into any other test in this file.
   mockActiveEngines = {
@@ -804,27 +815,41 @@ describe("BrainPicker — GlobalSwapModal mount lifecycle (103-12, CR-03)", () =
 
 // ── 103-12: row highlight is scope-aware (WR-02) ───────────────────────────────
 //
-// Before this fix, `isCurrent={activeEngine?.model === entry.id}` compared every row — in BOTH
-// "This profile" and "All profiles" scope — against the per-profile engine, so the "All profiles"
-// view could never highlight the row that actually matches the live global override.
+// Before the 103-12 fix, `isCurrent={activeEngine?.model === entry.id}` compared every row — in
+// BOTH "This profile" and "All profiles" scope — against the per-profile engine, so the "All
+// profiles" view could never highlight the row that actually matches the live global override.
+//
+// Phase 109 D-06: "This profile" scope's own highlight now reads the FULL resolved precedence
+// chain (override -> global -> telemetry), not raw per-profile telemetry alone — a live per-profile
+// OVERRIDE (the new top rung) is what proves the two scopes still read genuinely different axes,
+// since a plain global override now legitimately shows through BOTH scopes (it IS this profile's
+// active engine per BSC-01/D-06 — that is the fix's whole point, not a regression to guard against).
 
-describe("BrainPicker — row highlight is scope-aware (103-12, WR-02)", () => {
-  it("tracks the global override in 'All profiles' scope, not the per-profile engine", async () => {
+describe("BrainPicker — row highlight is scope-aware (103-12, WR-02, extended by 109-04 D-06)", () => {
+  it("'This profile' scope highlights the live PER-PROFILE OVERRIDE, while 'All profiles' scope highlights the GLOBAL override — proving the two scopes still read different axes", async () => {
+    // A live per-profile override for the picker's own profile (top rung) — DIFFERENT from the
+    // global override below. If "This profile" scope collapsed onto the global axis, it would
+    // highlight "codex-cli" instead of "antigravity-cli", and this test would fail.
+    mockProfileOverrides = {
+      "assistant-default": { model: "antigravity-cli", source: "operator" },
+    };
     mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
     renderPicker();
 
     openPicker();
     await screen.findByText("Codex CLI");
-    // "This profile" scope: the mocked active engine is "anthropic-sonnet-5", not "codex-cli" —
-    // no highlight even though the global override happens to match this row's id.
-    const profileRow = screen.getByText("Codex CLI").closest(".rounded-md.border");
-    expect(profileRow?.className ?? "").not.toContain("bg-primary/10");
+    const profileScopeOverrideRow = screen.getByText("Antigravity CLI").closest(".rounded-md.border");
+    expect(profileScopeOverrideRow?.className ?? "").toContain("bg-primary/10");
+    const profileScopeGlobalRow = screen.getByText("Codex CLI").closest(".rounded-md.border");
+    expect(profileScopeGlobalRow?.className ?? "").not.toContain("bg-primary/10");
 
     fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
     await screen.findByText("Codex CLI");
 
-    const globalRow = screen.getByText("Codex CLI").closest(".rounded-md.border");
-    expect(globalRow?.className ?? "").toContain("bg-primary/10");
+    const globalScopeRow = screen.getByText("Codex CLI").closest(".rounded-md.border");
+    expect(globalScopeRow?.className ?? "").toContain("bg-primary/10");
+    const globalScopeOverrideRow = screen.getByText("Antigravity CLI").closest(".rounded-md.border");
+    expect(globalScopeOverrideRow?.className ?? "").not.toContain("bg-primary/10");
   });
 });
 
@@ -1167,7 +1192,7 @@ describe("BrainPicker + real GlobalSwapModal — 103-14 stays closed: revert res
 // `activeEngineSnapshots` rows (also verified live) the confirm modal reported a pinned-default
 // count of 0. These tests exercise BrainPicker's REAL `globalSwapProfiles` derivation (through the
 // real `GlobalSwapModal`) against exactly that live shape, and pin the boundary the fix must not
-// cross: the current-engine column stays "Auto" -- never back-filled from `modelPreferences.primary`
+// cross: the current-engine column stays honestly unreported -- never back-filled from `modelPreferences.primary`
 // (the v9.0 VitalsRail trap `useActiveEngine.ts`'s docstring names explicitly, and the trap
 // 103-17-PLAN.md's objective calls out as "the obvious fix is wrong").
 
@@ -1226,11 +1251,13 @@ describe("BrainPicker + real GlobalSwapModal — pinned-default count from confi
     ).toBeInTheDocument();
   });
 
-  it("D-14 REGRESSION GUARD: the current-engine column stays 'Auto' -- never back-filled from modelPreferences.primary -- even though a configured default exists and telemetry is silent", async () => {
+  it("D-14 REGRESSION GUARD: the current-engine column stays honestly unreported -- never back-filled from modelPreferences.primary -- even though a configured default exists and telemetry/overrides are silent", async () => {
     // The risk 103-17-PLAN.md names explicitly: a later change "helpfully" back-filling the
     // current-engine column from `modelPreferences` would re-open the exact v9.0 VitalsRail
     // active-profile trap BSC-01 exists to remove (see useActiveEngine.ts's own docstring). This
-    // test fails if that ever happens.
+    // test fails if that ever happens. Phase 109 D-07/UI-SPEC §A: the honest-unreported literal
+    // changed to the one canonical string every brain surface shares — see BrainHeaderBadge/
+    // Chat.tsx's own equivalent fix.
     mockActiveEngines = {};
     mockProfileConfigs = [
       {
@@ -1250,11 +1277,11 @@ describe("BrainPicker + real GlobalSwapModal — pinned-default count from confi
     // never the configured primary.
     const row = screen.getByText("consulting").closest("div");
     expect(row).not.toBeNull();
-    expect(row!.textContent).toContain("Auto");
+    expect(row!.textContent).toContain("Not reported");
     expect(row!.textContent).not.toContain("anthropic/claude-sonnet-5");
   });
 
-  it("D-14 REGRESSION GUARD: the base trigger label for the picker's own profile also stays telemetry-only when that profile has a configured default but no reported engine", async () => {
+  it("D-14 REGRESSION GUARD: the base trigger label for the picker's own profile also stays telemetry/override-only when that profile has a configured default but no reported engine or override", async () => {
     mockActiveEngines = {};
     mockProfileConfigs = [
       {
@@ -1264,10 +1291,60 @@ describe("BrainPicker + real GlobalSwapModal — pinned-default count from confi
     ];
     renderPicker();
 
-    // No telemetry row for "assistant-default" -- the trigger's base label (BrainPicker.tsx's
-    // `activeEngine?.model ?? "Auto"`) must read "Auto", never the configured primary, even though
-    // this exact profile now has a configured default.
-    expect(screen.getByTestId("brain-picker-base-label").textContent).toBe("Auto");
+    // No telemetry row and no live override for "assistant-default" -- the trigger's base label
+    // (BrainPicker.tsx's `resolvedTrigger.model ?? "Not reported"`, Phase 109 D-06/D-07) must read
+    // the honest absent string, never the configured primary, even though this exact profile now
+    // has a configured default.
+    expect(screen.getByTestId("brain-picker-base-label").textContent).toBe("Not reported");
+  });
+});
+
+// ── Phase 109 D-06/UI-SPEC §G: confirm-modal current column resolves through the FULL chain ─────
+//
+// Before this fix, `globalSwapProfiles` derived `currentModel`/`currentModelDisplayName` from raw
+// `activeEngines` telemetry alone — a profile pinned via a scoped `swap.set` would show its
+// pre-pin engine in this column until the next telemetry resolution, even though `swap.state`
+// already knew the truth.
+
+describe("BrainPicker + real GlobalSwapModal — confirm-modal current column reads the full resolved chain (109-04, D-06/UI-SPEC §G)", () => {
+  beforeEach(() => {
+    globalSwapModalMode = "real";
+  });
+
+  it("shows the OVERRIDE's model for a pinned profile, paired with a control profile (same fixture, no own override) showing the GLOBAL model — one fixture, two profiles, opposite expected values", async () => {
+    mockActiveEngines = {};
+    mockProfileConfigs = [{ profileId: "consulting" }, { profileId: "business" }];
+    mockProfileOverrides = {
+      consulting: { model: "antigravity-cli", source: "operator" },
+    };
+    mockGlobalOverride = { modelOverride: "openrouter-sonnet-5-dup", voiceOverride: null };
+    renderPicker();
+
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    const consultingRow = screen.getByText("consulting").closest("div");
+    expect(consultingRow).not.toBeNull();
+    expect(consultingRow!.textContent).toContain("Antigravity CLI");
+    expect(consultingRow!.textContent).not.toContain("Sonnet 5");
+
+    const businessRow = screen.getByText("business").closest("div");
+    expect(businessRow).not.toBeNull();
+    expect(businessRow!.textContent).toContain("Sonnet 5");
+    expect(businessRow!.textContent).not.toContain("Antigravity CLI");
+  });
+
+  it("shows exactly 'Not reported' for a profile with neither an override, telemetry, nor an active global override", async () => {
+    mockActiveEngines = {};
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+    mockProfileOverrides = {};
+    mockProfileConfigs = [{ profileId: "consulting" }];
+    renderPicker();
+
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    const row = screen.getByText("consulting").closest("div");
+    expect(row).not.toBeNull();
+    expect(row!.textContent).toContain("Not reported");
   });
 });
 

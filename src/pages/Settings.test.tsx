@@ -29,6 +29,23 @@ vi.mock("../hooks/useActiveEngine", () => ({
   useActiveEngine: () => mockActiveEngineMap,
 }));
 
+// Phase 109 D-06/D-14: the two live override axes, mocked alongside `useActiveEngine`; the pure
+// `resolveActiveBrain` is kept REAL via importOriginal so `AgentProfileRows`' actual precedence
+// derivation runs.
+let mockGlobalOverride: { modelOverride: string | null; voiceOverride: string | null } = {
+  modelOverride: null,
+  voiceOverride: null,
+};
+let mockProfileOverrides: Record<string, { model: string; source: string | null }> = {};
+vi.mock("../hooks/useResolvedBrain", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../hooks/useResolvedBrain")>();
+  return {
+    ...actual,
+    useGlobalBrainOverride: () => mockGlobalOverride,
+    useProfileBrainOverrides: () => mockProfileOverrides,
+  };
+});
+
 // Phase 109 D-01/D-02: the ONE swap.catalogue fetcher, mocked directly — replaces the
 // pre-Phase-109 per-profile adapter and build-time stub flag mocks.
 let mockCatalogueEntries: { id: string; name: string; vendor?: string }[] | null = [];
@@ -53,6 +70,8 @@ beforeEach(() => {
   mockActiveEngineMap = {};
   mockCatalogueEntries = [];
   lastPickerProps = null;
+  mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+  mockProfileOverrides = {};
 });
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -136,6 +155,46 @@ describe("AgentProfileRows — live engine wins over stale config (D-06/BSC-01)"
   it("renders an honest empty state when there are no configured profiles", () => {
     renderRows({ profileConfigs: [] });
     expect(screen.getByText("No profiles configured.")).toBeInTheDocument();
+  });
+});
+
+describe("AgentProfileRows — engine label reads useResolvedBrain's full chain (109-04, D-06/D-14)", () => {
+  it("shows the OVERRIDE's model for a profile with an active live override, paired with a control profile (same fixture, telemetry only) showing the telemetry model", () => {
+    mockActiveEngineMap = {
+      personal: { model: "claude-sonnet-5", mode: "inherited" },
+      consulting: { model: "claude-sonnet-5", mode: "inherited" },
+    };
+    mockProfileOverrides = {
+      personal: { model: "claude-opus-4-8", source: "operator" },
+    };
+    renderRows({
+      profileConfigs: [makeConfig("personal"), makeConfig("consulting")],
+      profiles: [makeAgentProfile("personal"), makeAgentProfile("consulting")],
+    });
+
+    expect(screen.getByTestId("settings-engine-name-personal")).toHaveTextContent(
+      "claude-opus-4-8"
+    );
+    expect(screen.getByTestId("settings-engine-name-consulting")).toHaveTextContent(
+      "claude-sonnet-5"
+    );
+  });
+
+  it("a freshly-pinned profile's label updates immediately from the live override — never disagrees with a swap-history section mounted beneath it (the D-06 two-surface-disagreement class D-14 exists to remove)", () => {
+    mockActiveEngineMap = { personal: { model: "claude-sonnet-5", mode: "inherited" } };
+    mockProfileOverrides = { personal: { model: "claude-opus-4-8", source: "operator" } };
+    renderRows({
+      profileConfigs: [makeConfig("personal")],
+      profiles: [makeAgentProfile("personal")],
+    });
+
+    // The row shows the PIN, not the pre-pin telemetry reading — and per D-06's rendering rule it
+    // reads through the same "pinned" branch as a telemetry-sourced pinned reading (Pin icon).
+    expect(screen.getByTestId("settings-engine-name-personal")).toHaveTextContent(
+      "claude-opus-4-8"
+    );
+    expect(screen.getByTestId("settings-engine-pinned-personal")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-engine-session-personal")).not.toBeInTheDocument();
   });
 });
 

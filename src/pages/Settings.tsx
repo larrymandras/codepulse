@@ -7,6 +7,7 @@ import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
 import { useProfileConfigs } from "../hooks/useProfileConfigs";
 import { useActiveEngine } from "../hooks/useActiveEngine";
+import { useGlobalBrainOverride, useProfileBrainOverrides, resolveActiveBrain } from "../hooks/useResolvedBrain";
 import { usePrivacy } from "../contexts/PrivacyContext";
 import { useAmbient, type PresetName, type Category } from "../contexts/AmbientContext";
 import AgentAvatar from "../components/AgentAvatar";
@@ -185,11 +186,18 @@ function formatTtl(expiresAt?: number): string {
  * rows in production, `convex/profiles.ts:113`). `agentProfiles` is consulted only as an optional
  * join for `displayName`/`avatarId`/the Edit-button's metadata target.
  *
- * D-06: this row's engine label comes exclusively from `useActiveEngine()` (D-14 live,
- * server-reported telemetry) — the removed synced-config-field read this file's old line 663 used
- * to render was never a live-state read and must not be reintroduced here in any form, including
- * as a fallback when no telemetry has been reported yet (an unreported profile renders an honest
- * "Not reported" state instead of guessing from config).
+ * D-06 (103-07): this row's engine label comes exclusively from live server-reported state — the
+ * removed synced-config-field read this file's old line 663 used to render was never a live-state
+ * read and must not be reintroduced here in any form, including as a fallback when no telemetry
+ * has been reported yet (an unreported profile renders an honest "Not reported" state instead of
+ * guessing from config).
+ *
+ * Phase 109 D-14 (`109-CONTEXT.md`): the label now reads through the FULL resolved precedence
+ * chain (`resolveActiveBrain` — live per-profile override, then global override, then telemetry,
+ * then honest "none") rather than raw `useActiveEngine()` telemetry alone, so it cannot disagree
+ * with plan 109-08's swap-history section mounted directly beneath this row. `useGlobalBrainOverride()`
+ * and `useProfileBrainOverrides()` are each called ONCE here (not inside the `.map()` below —
+ * Rules of Hooks) and fed into the pure `resolveActiveBrain` per row.
  *
  * A separate component (not inlined in `Settings()`) so `useActiveEngine()`'s call site is a real
  * descendant of `<SectionErrorBoundary name="Agent Profiles">` — a throwing/undefined query here
@@ -215,11 +223,12 @@ export function AgentProfileRows({
   onEdit: (profile: AgentProfile | null) => void;
 }) {
   const activeEngines = useActiveEngine();
+  // Phase 109 D-06/D-14: the two live override axes, each read ONCE for the whole row list (not
+  // per-row) and fed into `resolveActiveBrain` below — same pattern `BrainPicker.tsx` establishes.
+  const { modelOverride: globalOverrideModel } = useGlobalBrainOverride();
+  const profileOverrides = useProfileBrainOverrides();
   // Phase 109 D-01/D-02: the ONE swap.catalogue fetcher — display-metadata resolution only
-  // (provider-identity dot color), never the engine truth itself, which comes exclusively from
-  // useActiveEngine above (D-14). The engine LABEL itself stays on raw telemetry (`engine.model`
-  // below) per this plan's explicit "do not touch Settings' D-14 label source" instruction — that
-  // is plan 109-04's job.
+  // (provider-identity dot color), never the engine truth itself.
   const { entries: engineCatalogue } = useBrainCatalogue();
   const [pendingByProfile, setPendingByProfile] = useState<Record<string, string | null>>({});
 
@@ -235,8 +244,17 @@ export function AgentProfileRows({
     <>
       {profileConfigs.map((c) => {
         const linkedProfile = profiles.find((ap) => ap.profileId === c.profileId) ?? null;
-        const engine = activeEngines[c.profileId] ?? null;
-        const vendor = engineCatalogue?.find((entry) => entry.id === engine?.model)?.vendor;
+        // Phase 109 D-06/D-14: the full resolved chain (override -> global -> telemetry -> none),
+        // not raw `activeEngines[c.profileId]` alone — a profile pinned moments ago must show its
+        // pinned model here immediately, and this label can never disagree with plan 109-08's
+        // swap-history section mounted directly beneath it.
+        const resolvedRow = resolveActiveBrain({
+          globalOverride: globalOverrideModel,
+          activeEngines,
+          profileId: c.profileId,
+          profileOverrides,
+        });
+        const vendor = engineCatalogue?.find((entry) => entry.id === resolvedRow.model)?.vendor;
         const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
         const pending = pendingByProfile[c.profileId] ?? null;
 
@@ -252,7 +270,7 @@ export function AgentProfileRows({
               </p>
               <p className="text-sm text-muted-foreground truncate">{c.profileId}</p>
               <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
-                {engine ? (
+                {resolvedRow.model ? (
                   <>
                     <span
                       aria-hidden="true"
@@ -263,7 +281,7 @@ export function AgentProfileRows({
                       data-testid={`settings-engine-name-${c.profileId}`}
                       className="text-foreground"
                     >
-                      {engine.model}
+                      {resolvedRow.model}
                     </span>
                   </>
                 ) : (
@@ -282,16 +300,16 @@ export function AgentProfileRows({
                     {pending}
                   </span>
                 )}
-                {!pending && engine?.mode === "session" && (
+                {!pending && resolvedRow.mode === "session" && (
                   <span
                     data-testid={`settings-engine-session-${c.profileId}`}
                     className="flex items-center gap-0.5 text-xs text-(--status-info)"
                   >
                     <Clock className="h-3 w-3" aria-hidden="true" />
-                    session override · expires in {formatTtl(engine.expiresAt)}
+                    session override · expires in {formatTtl(resolvedRow.expiresAt)}
                   </span>
                 )}
-                {!pending && engine?.mode === "pinned" && (
+                {!pending && resolvedRow.mode === "pinned" && (
                   <span
                     data-testid={`settings-engine-pinned-${c.profileId}`}
                     className="flex items-center gap-0.5 text-xs text-muted-foreground"

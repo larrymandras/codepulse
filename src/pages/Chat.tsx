@@ -438,8 +438,9 @@ export default function Chat() {
   }, [subscribeEvent]);
 
   // Live effective model (185-08): run.completed now carries the resolved
-  // model of each finished turn, so the Brain pill can show what actually
-  // answered instead of the "Auto" umbrella. Swap overrides still win in
+  // model of each finished turn, so Control Center's "Choose brain" trigger
+  // (BrainControl, a separate out-of-scope component) can show what actually
+  // answered instead of its own generic-fallback label. Swap overrides still win in
   // SwapBadge's display; this only feeds the unswapped (muted) state. The
   // fast-path's zero-LLM run.completed has no/empty model — keep the last
   // real one.

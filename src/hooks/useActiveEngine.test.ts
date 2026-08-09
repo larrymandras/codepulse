@@ -185,7 +185,7 @@ describe("useActiveEngine", () => {
 // written by runtimeIngest.ts's own coalescing, while all 3 real profiles
 // (consulting/business/personal) had no telemetry at all. The defensive join admitted
 // that row, so it became deriveMixedState's only reported entry and the dashboard-wide
-// badge rendered "unknown" as a confirmed-live engine instead of "No brain reported".
+// badge rendered "unknown" as a confirmed-live engine instead of the honest absent state.
 // ---------------------------------------------------------------------------
 
 describe("useActiveEngine — unresolved-sentinel rows are not readings (UAT test 2)", () => {
