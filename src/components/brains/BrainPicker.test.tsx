@@ -54,6 +54,7 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalSwapProvider } from "@/contexts/GlobalSwapContext";
 import type { BrainCatalogueEntry } from "@/hooks/useBrainCatalogue";
+import { PROFILE_SWAP_CONFIRM_TIMEOUT_MS } from "@/hooks/useProfileSwap";
 import { BrainPicker } from "./BrainPicker";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -191,10 +192,15 @@ vi.mock("@/components/brains/GlobalSwapModal", async (importOriginal) => {
 const mockToastFn = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+// Phase 109 Plan 06: `useProfileSwap`'s "accepted" state fires `toast.warning` — this mock must
+// provide it (not just `success`/`error`) or the hook throws at runtime the moment a swap reaches
+// that state, which every real consumer of this hook now can.
+const mockToastWarning = vi.fn();
 vi.mock("sonner", () => ({
   toast: Object.assign((...args: unknown[]) => mockToastFn(...args), {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
   }),
 }));
 
@@ -234,6 +240,7 @@ beforeEach(() => {
   mockToastFn.mockReset();
   mockToastSuccess.mockReset();
   mockToastError.mockReset();
+  mockToastWarning.mockReset();
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue({});
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
@@ -512,67 +519,106 @@ describe("BrainPicker — pending never lies (D-15)", () => {
   });
 });
 
-describe("BrainPicker — genuinely-landed toast tolerates a model-id vendor-prefix mismatch (Phase 109 Plan 05, D-08 site 7)", () => {
-  it("fires the switched toast when the confirming telemetry model differs from the dispatched target only by vendor prefix", async () => {
-    const { rerender } = renderPicker();
+describe("BrainPicker — the bounded 'accepted, not yet confirmed' state reads as uncertain, never in-progress (Phase 109 Plan 06, 109-UI-SPEC.md §C)", () => {
+  it("renders a static warning icon (not a pulsing dot) once the confirm timeout elapses, paired with a control asserting the pulsing dot renders during pending", async () => {
+    renderPicker();
 
+    // Open and locate the row on REAL timers first — testing-library's async queries poll via
+    // setTimeout, which fake timers would otherwise freeze and hang forever (matches the
+    // T-109-08 test's own working idiom above).
     openPicker();
-    fireEvent.click(await screen.findByText("Codex CLI"));
-    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
+    const row = await screen.findByText("Codex CLI");
 
-    // Confirming telemetry arrives in the OTHER id format than the dispatched target
-    // ("codex-cli") — this is D-08's highest-impact site: without the comparator, this toast, the
-    // operator's only confirmation the per-profile swap actually landed, would never fire.
-    mockActiveEngines = {
-      "assistant-default": {
-        profileId: "assistant-default",
-        model: "codex/codex-cli",
-        mode: "inherited",
-        selectionPath: "codepulse-default",
-        timestamp: Date.now(),
-      },
-    };
-    rerender(
-      <TooltipProvider>
-        <GlobalSwapProvider>
-          <BrainPicker profileId="assistant-default" />
-        </GlobalSwapProvider>
-      </TooltipProvider>
-    );
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        fireEvent.click(row);
+      });
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith("assistant-default switched to Codex CLI.")
-    );
+      // CONTROL: while pending/confirming, the pulsing dot renders and there is no warning icon.
+      let trigger = screen.getByRole("button", { name: /Active brain/ });
+      expect(trigger.querySelector(".animate-pulse")).not.toBeNull();
+      expect(trigger.querySelector('[class*="status-warn"]')).toBeNull();
+      expect(screen.getByTestId("brain-picker-pending-suffix")).toHaveTextContent(
+        "switching to Codex CLI"
+      );
+
+      await act(async () => {
+        vi.advanceTimersByTime(PROFILE_SWAP_CONFIRM_TIMEOUT_MS + 100);
+      });
+
+      // "accepted": a static warning icon, NEVER a pulsing dot — a pulsing dot here would read as
+      // still-in-progress rather than genuinely uncertain.
+      trigger = screen.getByRole("button", { name: /Active brain/ });
+      expect(trigger.querySelector(".animate-pulse")).toBeNull();
+      expect(trigger.querySelector('[class*="status-warn"]')).not.toBeNull();
+      expect(screen.getByTestId("brain-picker-pending-suffix")).toHaveTextContent(
+        "not yet confirmed"
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it("CONTROL: does not fire the toast when the confirming telemetry reports a genuinely different model — a change that made the gate always fire must fail this", async () => {
-    const { rerender } = renderPicker();
-
-    openPicker();
-    fireEvent.click(await screen.findByText("Codex CLI"));
-    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
-
-    mockActiveEngines = {
-      "assistant-default": {
-        profileId: "assistant-default",
-        model: "some-other-engine",
-        mode: "inherited",
-        selectionPath: "codepulse-default",
-        timestamp: Date.now(),
-      },
-    };
-    rerender(
+  it("passes the SAME { label, kind } value to onPendingChange that the default trigger's own DOM renders, in the same render (both the inflight and the uncertain state)", async () => {
+    const onPendingChange = vi.fn();
+    render(
       <TooltipProvider>
         <GlobalSwapProvider>
-          <BrainPicker profileId="assistant-default" />
+          <BrainPicker profileId="assistant-default" onPendingChange={onPendingChange} />
         </GlobalSwapProvider>
       </TooltipProvider>
     );
 
-    await screen.findByTestId("brain-picker-pending-suffix");
-    expect(mockToastSuccess).not.toHaveBeenCalled();
+    openPicker();
+    const row = await screen.findByText("Codex CLI");
+
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        fireEvent.click(row);
+      });
+
+      // Inflight: the mirrored callback value's label matches the default trigger's own suffix text.
+      const inflightSuffix = screen.getByTestId("brain-picker-pending-suffix").textContent;
+      expect(onPendingChange).toHaveBeenLastCalledWith({ label: inflightSuffix, kind: "inflight" });
+
+      await act(async () => {
+        vi.advanceTimersByTime(PROFILE_SWAP_CONFIRM_TIMEOUT_MS + 100);
+      });
+
+      // Uncertain: same identity check, now for the "not yet confirmed" suffix.
+      const uncertainSuffix = screen.getByTestId("brain-picker-pending-suffix").textContent;
+      expect(onPendingChange).toHaveBeenLastCalledWith({
+        label: uncertainSuffix,
+        kind: "uncertain",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
+
+// Phase 109 Plan 06 REMOVAL NOTE (D-08 site 7, deliberate — decided per this plan's own
+// <read_first> instruction, not discovered as a red suite after the edit): the two tests that
+// used to live in this describe block ("genuinely-landed toast tolerates a model-id vendor-prefix
+// mismatch") asserted the D-08 comparator's tolerance against `mockActiveEngines` (TELEMETRY)
+// driving the success toast — that was correct for the pre-Plan-06 interim implementation
+// (`handleProfileDispatch`'s own local effect, deleted this plan), which confirmed a swap against
+// `activeEngine.model`. Plan 106's D-05 substitution moves the confirm source to
+// `profileOverrides[profileId].model` (the swap.state OVERRIDE SLOT) — a value the server echoes
+// back literally equal to whatever `entry.id` was dispatched, with no intervening format
+// resolution step the way a telemetry row has. The vendor-prefix mismatch class this test guarded
+// against is therefore structurally unreachable at the new confirm site: there is no live
+// producer of a "confirmed" override in a different id format than what was requested. The
+// equivalent guarantee — a readback naming a genuinely different model does NOT confirm, paired
+// with a control where a matching readback DOES — is now covered directly against the real
+// confirm source in `useProfileSwap.test.ts` ("an ok ack moves pending -> confirming; the
+// readback confirms only on a matching model"). Rewriting this block to assert against
+// `mockActiveEngines` would test a mechanism the hook no longer uses; leaving it in place with no
+// change would silently keep passing for the wrong reason (telemetry changes no longer drive
+// confirmation at all, so "the toast doesn't fire" would trivially hold regardless of vendor
+// prefix). Removed here rather than left as a misleading green.
 
 describe("BrainPicker — cmdk duplicate-value guard", () => {
   it("renders two same-name catalogue entries as independently selectable items with distinct values", async () => {
@@ -677,7 +723,10 @@ describe("BrainPicker — composition API (103-06)", () => {
     fireEvent.click(await screen.findByText("Codex CLI"));
 
     await waitFor(() =>
-      expect(onPendingChange).toHaveBeenCalledWith("· switching to Codex CLI…")
+      expect(onPendingChange).toHaveBeenCalledWith({
+        label: "· switching to Codex CLI…",
+        kind: "inflight",
+      })
     );
 
     resolveDispatch(okAck());

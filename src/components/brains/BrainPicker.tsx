@@ -26,13 +26,16 @@
  * `DashboardLayout.tsx` and the Skills palette owns its own separate binding; this picker opens
  * by click only.
  *
- * Pending treatment (D-15): the trigger keeps rendering the actually-active engine (Phase 109
- * D-06: the full resolved precedence chain, `resolveActiveBrain`, not raw `useActiveEngine()`
- * telemetry alone) and layers a purely additive "switching to X…" suffix on top — the base
- * label is never touched optimistically. On a failed dispatch the suffix simply drops; there is
- * nothing to roll back because the UI never claimed the swap had landed. The real success toast
- * fires from a separate effect that watches the reactive engine query for confirmation, never
- * from the dispatch ack alone (D-14).
+ * Pending treatment (Phase 109 Plan 06, D-05): the trigger keeps rendering the actually-active
+ * engine (D-06: the full resolved precedence chain, `resolveActiveBrain`, not raw
+ * `useActiveEngine()` telemetry alone) and layers a purely additive suffix on top, driven entirely
+ * by `useProfileSwap(profileId)` — the one shared, server-confirmed five-state outcome machine
+ * (`pending -> confirming -> confirmed`, with `accepted` as a bounded honest fallback and `error`
+ * from the ack) every per-profile render surface in this phase reads. This component owns no swap
+ * state of its own and holds no second, competing implementation of it (Task 1's whole reason for
+ * existing as a hook, not inline state here). The base label is never touched optimistically; on a
+ * failed dispatch the suffix simply drops. Every toast (switched / not-yet-confirmed / failed)
+ * fires from the hook itself, never from this component.
  *
  * Composition API (103-06): optional `trigger` / `open` / `onOpenChange` / `onPendingChange` props
  * let a consumer (`BrainHeaderBadge`) supply its own accessible trigger element and read pending
@@ -68,7 +71,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -91,7 +94,7 @@ import { useActiveEngine } from "@/hooks/useActiveEngine";
 import { useGlobalBrainOverride, useProfileBrainOverrides, resolveActiveBrain } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { useBrainCatalogue, type BrainCatalogueEntry } from "@/hooks/useBrainCatalogue";
-import { useCommandDispatch } from "@/hooks/useCommandDispatch";
+import { useProfileSwap } from "@/hooks/useProfileSwap";
 import { useGlobalSwap } from "@/contexts/GlobalSwapContext";
 import {
   buildModelNameMap,
@@ -166,25 +169,24 @@ export interface BrainPickerProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   /**
-   * Fires whenever the picker's own in-flight pending-swap suffix (D-15) changes, formatted
-   * exactly as the default trigger renders it (`"· switching to {name}…"`, or `null` when idle).
-   * Lets a consumer supplying a custom `trigger` mirror the real pending state into its own visible
-   * label via a plain callback — never by scraping the DOM for `data-testid="brain-picker-pending-
-   * suffix"`, which is the bug this API replaces.
+   * Fires whenever `useProfileSwap`'s in-flight/uncertain suffix changes, formatted exactly as the
+   * default trigger renders it. Lets a consumer supplying a custom `trigger` mirror the real
+   * pending state into its own visible label via a plain callback — never by scraping the DOM,
+   * which is the bug this API originally replaced (103-06).
+   *
+   * Phase 109 Plan 06: the shape widened from a bare `string | null` to `{ label, kind } | null` —
+   * `kind` distinguishes "inflight" (pending/confirming, the pulsing dot) from "uncertain"
+   * (`accepted`, the bounded-timeout honesty state — a static `AlertTriangle`, never a pulsing dot,
+   * per 109-UI-SPEC.md §C). A bare string could not carry that distinction, and `accepted` must be
+   * visually distinguishable from in-flight on a mirrored trigger too, not just the default one.
+   * The default trigger below derives its own dot/icon from this SAME computed value, so the two
+   * can never disagree (the mirrored value and the default trigger's own DOM must never drift,
+   * per this prop's original guarantee).
    */
-  onPendingChange?: (pendingLabel: string | null) => void;
+  onPendingChange?: (pending: { label: string; kind: "inflight" | "uncertain" } | null) => void;
 }
 
 type PickerScope = "profile" | "global";
-
-/**
- * Bound on the per-profile "This profile" dispatch, mirroring `GlobalSwapModal`'s
- * `GLOBAL_SWAP_DISPATCH_TIMEOUT_MS` (T-109-08). `AstridrWSContext.sendCommand` can queue a command
- * with no timeout of its own when the socket is not OPEN, so `await dispatch(...)` could otherwise
- * hang forever — leaving the picker's pending-swap suffix stuck indefinitely. Exported for direct
- * test control (fake timers).
- */
-export const PROFILE_SWAP_DISPATCH_TIMEOUT_MS = 15000;
 
 const GROUP_ORDER: { group: CatalogueEntry["group"]; label: string }[] = [
   { group: "subscription", label: "Subscription" },
@@ -209,14 +211,12 @@ export function BrainPicker({
   const open = isOpenControlled ? openProp : uncontrolledOpen;
   const [scope, setScope] = useState<PickerScope>("profile");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [pendingTarget, setPendingTarget] = useState<CatalogueEntry | null>(null);
 
   // Consumed at most once, ever, across this component's lifetime — the mixed-badge contextual
   // default (D-08) is not a preference that can re-arm itself.
   const consumedEntryScope = useRef(false);
 
   const activeEngines = useActiveEngine();
-  const activeEngine = activeEngines[profileId] ?? null;
   const allProfiles = useProfileConfigs();
   // D-02: the ONE swap.catalogue fetcher, serving BOTH scopes — no second, scope-conditional
   // catalogue source. The hook's own generation guard supersedes a stale in-flight response on
@@ -247,41 +247,10 @@ export function BrainPicker({
   // `GlobalSwapContext` instead of mounting/owning a `GlobalSwapModal` of its own — see this file's
   // and that module's docstrings.
   const { openGlobalSwap } = useGlobalSwap();
-  const { dispatch } = useCommandDispatch();
-
-  /**
-   * D-01's dispatch seam for the "This profile" branch (T-109-08): the same bounded
-   * `Promise.race` + timeout + `finally`-clearTimeout wrapper `GlobalSwapModal.tsx`'s own
-   * `dispatchBounded` already ships for the global axis, so a hang or rejection settles into an
-   * honest error instead of leaving the picker's pending state stuck forever.
-   */
-  async function dispatchBounded(
-    cmd: Record<string, unknown>
-  ): Promise<{ status: "ok" | "error"; error?: string }> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      return await Promise.race([
-        dispatch(cmd).then((ack) => ({ status: ack.status, error: ack.error })),
-        new Promise<{ status: "error"; error: string }>((resolve) => {
-          timer = setTimeout(
-            () =>
-              resolve({
-                status: "error",
-                error: "no response from Ástríðr — the command was never delivered",
-              }),
-            PROFILE_SWAP_DISPATCH_TIMEOUT_MS
-          );
-        }),
-      ]);
-    } catch (err) {
-      return {
-        status: "error",
-        error: err instanceof Error ? err.message : "the command could not be delivered",
-      };
-    } finally {
-      if (timer) clearTimeout(timer);
-    }
-  }
+  // Phase 109 Plan 06: the ONE per-profile swap outcome machine — this component holds no swap
+  // state of its own (Task 1's whole reason for existing as a hook). `outcome`/`profileSwapTarget`
+  // drive the trigger's suffix below; `swapTo` is the "This profile" branch of `handleSelect`.
+  const { outcome: swapOutcome, target: profileSwapTarget, swapTo } = useProfileSwap(profileId);
 
   const handleOpenChange = (next: boolean) => {
     if (!isOpenControlled) setUncontrolledOpen(next);
@@ -300,57 +269,32 @@ export function BrainPicker({
     }
   };
 
-  // D-14: the real per-profile success toast fires only once the reactive engine query confirms
-  // the switch actually landed — never from the dispatch ack alone, which means "accepted," not
-  // "switched."
-  useEffect(() => {
-    if (!pendingTarget) return;
-    // D-08 site 7 (highest-impact site, not in the decision's original four-item list): the
-    // confirmed engine can come back in a DIFFERENT id format than the dispatched target (e.g.
-    // `pendingTarget.id` is a bare catalogue id, but the confirming telemetry row reports the
-    // vendor-prefixed form). A raw `===` here means this toast — the operator's only confirmation
-    // that a per-profile swap actually landed — silently never fires for an `inherited`-mode
-    // profile, leaving the pending suffix stuck until some unrelated engine change clears it.
-    if (activeEngine && modelIdsMatch(activeEngine.model, pendingTarget.id)) {
-      toast.success(`${profileId} switched to ${pendingTarget.name}.`);
-      setPendingTarget(null);
+  // Phase 109 Plan 06/109-UI-SPEC.md §C: the one place the outcome machine's five states collapse
+  // into a suffix descriptor. `pending`/`confirming` deliberately render identically (kind
+  // "inflight" — the pulsing dot); `accepted` is the one state that must read as UNCERTAIN, never
+  // in-progress or success (kind "uncertain" — a static AlertTriangle). `confirmed`/`error` render
+  // no suffix at all — the base label (via `resolvedTrigger` above) is the only thing that changes.
+  // Gated on `profileSwapTarget` too: the hook's own idle state is `{status:"pending"}`/`target:
+  // null` before any swap has ever started, and that must never render a suffix.
+  const pendingInfo = useMemo<{ label: string; kind: "inflight" | "uncertain" } | null>(() => {
+    if (!profileSwapTarget) return null;
+    if (swapOutcome.status === "pending" || swapOutcome.status === "confirming") {
+      return { label: `· switching to ${profileSwapTarget.name}…`, kind: "inflight" };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeEngine?.model]);
+    if (swapOutcome.status === "accepted") {
+      return { label: "· not yet confirmed", kind: "uncertain" };
+    }
+    return null;
+  }, [swapOutcome, profileSwapTarget]);
 
-  // Mirrors the pending suffix out to a custom-trigger consumer (see BrainPickerProps.onPendingChange
-  // doc) — formatted identically to the string the default trigger's own DOM renders below, so a
-  // consumer's display never disagrees with what the default trigger would have shown.
+  // Mirrors the pending/uncertain suffix out to a custom-trigger consumer (see
+  // BrainPickerProps.onPendingChange doc) — formatted identically to what the default trigger's
+  // own DOM renders below, so a consumer's display never disagrees with what the default trigger
+  // would have shown.
   useEffect(() => {
-    onPendingChange?.(pendingTarget ? `· switching to ${pendingTarget.name}…` : null);
+    onPendingChange?.(pendingInfo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingTarget]);
-
-  const handleProfileDispatch = useCallback(
-    async (entry: CatalogueEntry) => {
-      setPendingTarget(entry);
-      handleOpenChange(false);
-      // D-01: the real, server-registered swap.set with profile_id — plan 109-06 replaces this
-      // whole ad-hoc pending-state block with the 5-state useProfileSwap machine and must not find
-      // a second, competing implementation; this is the interim consumer.
-      const ack = await dispatchBounded({
-        type: "swap.set",
-        target: "brain",
-        value: entry.id,
-        restore: false,
-        profile_id: profileId,
-      });
-      if (ack.status === "error") {
-        setPendingTarget(null);
-        const stillOn = activeEngine?.model ?? "its current brain";
-        toast.error(
-          `Couldn't switch to ${entry.name} — ${ack.error ?? "unknown error"}. ${profileId} is still on ${stillOn}.`
-        );
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [profileId, activeEngine, dispatch]
-  );
+  }, [pendingInfo]);
 
   /**
    * 103-17 (gap closure, OBS 8): the live 2026-07-29 checkpoint found the global-swap confirm
@@ -422,9 +366,13 @@ export function BrainPicker({
         handleOpenChange(false);
         return;
       }
-      void handleProfileDispatch(entry);
+      // Phase 109 Plan 06: dispatch through the one shared outcome machine — the popover still
+      // closes immediately (preserved from the pre-Plan-06 behavior), which is exactly why the
+      // hook's own "accepted" state fires a toast: the operator may already be looking elsewhere.
+      swapTo(entry);
+      handleOpenChange(false);
     },
-    [scope, handleProfileDispatch, openGlobalSwap, globalSwapProfiles]
+    [scope, swapTo, openGlobalSwap, globalSwapProfiles]
   );
 
   /**
@@ -476,19 +424,25 @@ export function BrainPicker({
             aria-label={`Active brain: ${baseLabel}`}
             className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
           >
-            {pendingTarget && (
+            {pendingInfo?.kind === "inflight" && (
               <span
                 aria-hidden="true"
                 className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
               />
             )}
+            {pendingInfo?.kind === "uncertain" && (
+              <AlertTriangle
+                aria-hidden="true"
+                className="h-3.5 w-3.5 shrink-0 text-(--status-warn)"
+              />
+            )}
             <span data-testid="brain-picker-base-label">{baseLabel}</span>
-            {pendingTarget && (
+            {pendingInfo && (
               <span
                 data-testid="brain-picker-pending-suffix"
                 className="text-xs text-muted-foreground"
               >
-                · switching to {pendingTarget.name}…
+                {pendingInfo.label}
               </span>
             )}
           </button>
