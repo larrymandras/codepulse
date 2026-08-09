@@ -185,3 +185,12 @@ None — no external service configuration required. The astridr container will 
 ---
 *Phase: 109-per-agent-engine-ui*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+- FOUND: `C:/Users/mandr/codepulse/.planning/phases/109-per-agent-engine-ui/109-01-SUMMARY.md`
+- FOUND: `C:/Users/mandr/astridr-repo/astridr/providers/router.py`
+- FOUND: `C:/Users/mandr/astridr-repo/astridr/engine/control_verbs/dispatch.py`
+- FOUND: `C:/Users/mandr/astridr-repo/astridr/api/ws_commands.py`
+- FOUND (astridr-repo): `10503e4f`, `effb7a48`, `411e0253`, `8c4842f1`
+- FOUND (codepulse): `535c6891`
