@@ -19,9 +19,8 @@
  *
  * D-03: the ack also carries `default_profile_id` (Ástríðr's own resolved chat-channel default,
  * `astridr/engine/bootstrap/wiring.py`, threaded through by 109-01) — the authoritative value the
- * header badge and Chat's composer pill address, replacing the deleted `getDefaultProfileId()`
- * seam and its Convex-ordering fallback (`profiles[0]?.profileId`, D-03's explicitly rejected
- * option).
+ * header badge and Chat's composer pill address, replacing the deleted per-profile-adapter seam
+ * and its Convex `profileConfigs`-ordering fallback (D-03's explicitly rejected option).
  */
 
 import { useEffect, useRef, useState } from "react";

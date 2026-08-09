@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { PageHeader } from "@/components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../components/ui/sheet";
 import { ScrollArea } from "../components/ui/scroll-area";
-import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "../lib/brainsApi";
+import { useBrainCatalogue } from "../hooks/useBrainCatalogue";
 import { PROVIDER_COLORS } from "../lib/providers";
 import type { AgentProfile, Avatar } from "../types";
 
@@ -215,25 +215,13 @@ export function AgentProfileRows({
   onEdit: (profile: AgentProfile | null) => void;
 }) {
   const activeEngines = useActiveEngine();
-  const [engineCatalogue, setEngineCatalogue] = useState<CatalogueEntry[] | null>(null);
+  // Phase 109 D-01/D-02: the ONE swap.catalogue fetcher — display-metadata resolution only
+  // (provider-identity dot color), never the engine truth itself, which comes exclusively from
+  // useActiveEngine above (D-14). The engine LABEL itself stays on raw telemetry (`engine.model`
+  // below) per this plan's explicit "do not touch Settings' D-14 label source" instruction — that
+  // is plan 109-04's job.
+  const { entries: engineCatalogue } = useBrainCatalogue();
   const [pendingByProfile, setPendingByProfile] = useState<Record<string, string | null>>({});
-
-  // Display-metadata resolution only (provider-identity dot color) — never the engine truth
-  // itself, which comes exclusively from useActiveEngine above (D-14).
-  useEffect(() => {
-    let cancelled = false;
-    brainsApi
-      .getCatalogue()
-      .then((list) => {
-        if (!cancelled) setEngineCatalogue(list);
-      })
-      .catch(() => {
-        /* honest degrade: the provider dot falls back to a neutral color below */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   if (profileConfigs.length === 0) {
     return (
@@ -310,14 +298,6 @@ export function AgentProfileRows({
                   >
                     <Pin className="h-3 w-3" aria-hidden="true" />
                     pinned default
-                  </span>
-                )}
-                {BRAINS_STUB_ACTIVE && (
-                  <span
-                    data-testid={`settings-engine-stub-${c.profileId}`}
-                    className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
-                  >
-                    STUB
                   </span>
                 )}
               </p>

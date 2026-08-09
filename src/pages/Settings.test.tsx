@@ -29,19 +29,16 @@ vi.mock("../hooks/useActiveEngine", () => ({
   useActiveEngine: () => mockActiveEngineMap,
 }));
 
-const mockGetCatalogue = vi.fn();
-let stubActive = false;
-
-vi.mock("../lib/brainsApi", () => ({
-  brainsApi: {
-    isStub: true,
-    getCatalogue: (...args: unknown[]) => mockGetCatalogue(...args),
-    dispatchSwap: vi.fn(),
-    getDefaultProfileId: vi.fn(),
-  },
-  get BRAINS_STUB_ACTIVE() {
-    return stubActive;
-  },
+// Phase 109 D-01/D-02: the ONE swap.catalogue fetcher, mocked directly — replaces the
+// pre-Phase-109 per-profile adapter and build-time stub flag mocks.
+let mockCatalogueEntries: { id: string; name: string; vendor?: string }[] | null = [];
+vi.mock("../hooks/useBrainCatalogue", () => ({
+  useBrainCatalogue: () => ({
+    entries: mockCatalogueEntries,
+    defaultProfileId: "",
+    error: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 let lastPickerProps: { profileId: string; trigger?: ReactNode } | null = null;
@@ -54,9 +51,7 @@ vi.mock("../components/brains/BrainPicker", () => ({
 
 beforeEach(() => {
   mockActiveEngineMap = {};
-  mockGetCatalogue.mockReset();
-  mockGetCatalogue.mockResolvedValue([]);
-  stubActive = false;
+  mockCatalogueEntries = [];
   lastPickerProps = null;
 });
 
@@ -210,17 +205,8 @@ describe("AgentProfileRows — Swap affordance is distinct from Edit (103-07-T1)
   });
 });
 
-describe("AgentProfileRows — stub indicator (D-16)", () => {
-  it("renders the STUB chip on the row when the stub adapter is active", () => {
-    stubActive = true;
-    mockActiveEngineMap = { personal: { model: "claude-sonnet-5", mode: "inherited" } };
-    renderRows({ profileConfigs: [makeConfig("personal")] });
-
-    expect(screen.getByTestId("settings-engine-stub-personal")).toBeInTheDocument();
-  });
-
-  it("omits the STUB chip when the stub adapter is not active", () => {
-    stubActive = false;
+describe("AgentProfileRows — no stub chrome anywhere (Phase 109 D-01)", () => {
+  it("never renders a build-time-stub indicator on any row, under any condition", () => {
     mockActiveEngineMap = { personal: { model: "claude-sonnet-5", mode: "inherited" } };
     renderRows({ profileConfigs: [makeConfig("personal")] });
 

@@ -1,6 +1,10 @@
 /**
  * BrainHeaderBadge.test.tsx — 103-06-T1, rewritten under 103-06 for the composition-API rewrite.
  * Extended under 103-08 (user-authorized scope addition) to cover the live-global-engine fallback.
+ * Rewritten again under Phase 109 Plan 03 (D-01/D-03) for the seam retirement: the badge's
+ * catalogue and `default_profile_id` now come from `@/hooks/useBrainCatalogue`, mocked directly
+ * below (controllable `entries`/`defaultProfileId`) — replacing the pre-Phase-109 per-profile
+ * adapter and build-time-stub-flag mocks entirely. There is no such flag left to cover.
  *
  * `@/components/brains/BrainPicker` is mocked entirely — this file tests BrainHeaderBadge's OWN
  * rendering/composition logic (mixed-state honesty, aria-label, pulse dot, session/pinned line,
@@ -112,10 +116,6 @@ vi.mock("@/components/brains/BrainPicker", () => ({
   },
 }));
 
-const mockGetCatalogue = vi.fn();
-const mockGetDefaultProfileId = vi.fn();
-let stubActive = false;
-
 // The display-name helpers are pure functions with no I/O, so they are wired to the REAL
 // implementations via importOriginal rather than stubbed — a stub returning the raw id would
 // silently pass the very cosmetic regression they exist to prevent (UAT 2026-07-29).
@@ -124,17 +124,24 @@ vi.mock("@/lib/brainsApi", async (importOriginal) => {
   return {
     resolveModelDisplayName: actual.resolveModelDisplayName,
     buildModelNameMap: actual.buildModelNameMap,
-    brainsApi: {
-      isStub: true,
-      getCatalogue: (...args: unknown[]) => mockGetCatalogue(...args),
-      dispatchSwap: vi.fn(),
-      getDefaultProfileId: (...args: unknown[]) => mockGetDefaultProfileId(...args),
-    },
-    get BRAINS_STUB_ACTIVE() {
-      return stubActive;
-    },
   };
 });
+
+// Phase 109 D-01/D-03: the ONE swap.catalogue fetcher, mocked directly (controllable
+// `entries`/`defaultProfileId`) — replaces the pre-Phase-109 per-profile adapter's two separate
+// mocked methods. `useGlobalModelNames` (imported from `@/hooks/useResolvedBrain`, unmocked in
+// this file) is itself a thin derivation over this same hook, so mocking it here also drives that
+// derivation.
+let mockCatalogueEntries: { id: string; name: string; vendor?: string }[] | null = [];
+let mockDefaultProfileId = "assistant-default";
+vi.mock("@/hooks/useBrainCatalogue", () => ({
+  useBrainCatalogue: () => ({
+    entries: mockCatalogueEntries,
+    defaultProfileId: mockDefaultProfileId,
+    error: false,
+    refetch: vi.fn(),
+  }),
+}));
 
 const mockUseQuery = vi.fn();
 vi.mock("convex/react", () => ({
@@ -159,13 +166,10 @@ beforeAll(() => {
 
 beforeEach(() => {
   mockOnPendingChange = undefined;
-  mockGetCatalogue.mockReset();
-  mockGetDefaultProfileId.mockReset();
-  mockGetCatalogue.mockResolvedValue([]);
-  mockGetDefaultProfileId.mockResolvedValue("assistant-default");
+  mockCatalogueEntries = [];
+  mockDefaultProfileId = "assistant-default";
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue(undefined);
-  stubActive = false;
   mockAstridrWSThrows = false;
   capturedSwapStateCallback = undefined;
   mockUnsubscribe.mockReset();
@@ -300,22 +304,12 @@ describe("BrainHeaderBadge — no engine reported", () => {
 });
 
 describe("BrainHeaderBadge — confirmed-live pulse dot", () => {
-  it("renders the confirmed-live pulse dot for a server-confirmed, non-pending, non-stub reading", async () => {
+  it("renders the confirmed-live pulse dot for a server-confirmed, non-pending reading", async () => {
     seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
     const { container } = renderBadge();
 
     await screen.findByTestId("brain-header-badge-label");
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
-  });
-
-  it("does not render the pulse dot while the stub adapter is active", async () => {
-    stubActive = true;
-    seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
-    const { container } = renderBadge();
-
-    await screen.findByTestId("brain-header-badge-label");
-    expect(container.querySelector(".animate-pulse")).not.toBeInTheDocument();
-    expect(screen.getByTestId("brain-header-badge-stub-chip")).toBeInTheDocument();
   });
 
   it("does not render the pulse dot while a swap is pending", async () => {
@@ -380,7 +374,7 @@ describe("BrainHeaderBadge — trigger composition (103-06)", () => {
     expect(screen.getAllByRole("button", { name: /Active brain:/ })).toHaveLength(1);
   });
 
-  it("passes the effective profileId through to BrainPicker unchanged", async () => {
+  it("passes Ástríðr's own default_profile_id (from useBrainCatalogue) through to BrainPicker as the effective profileId", async () => {
     seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
     renderBadge();
 
@@ -388,6 +382,37 @@ describe("BrainHeaderBadge — trigger composition (103-06)", () => {
     expect(screen.getByTestId("mock-brain-picker")).toHaveAttribute(
       "data-profile-id",
       "assistant-default"
+    );
+  });
+});
+
+describe("BrainHeaderBadge — default_profile_id has no Convex-ordering fallback (D-03)", () => {
+  it("addresses profiles[0].profileId's profile ONLY through the paired control below — with default_profile_id absent, the picker addresses NO profile at all", async () => {
+    mockDefaultProfileId = "";
+    seedEngines(
+      [makeEngine("assistant-default", "anthropic-sonnet-5")],
+      ["assistant-default", "consulting"]
+    );
+    renderBadge();
+
+    await screen.findByTestId("brain-header-badge-label");
+    // The rejected D-03 option was `profiles[0]?.profileId` — here that would be
+    // "assistant-default". This assertion fails if that fallback is ever reintroduced.
+    expect(screen.getByTestId("mock-brain-picker")).toHaveAttribute("data-profile-id", "");
+  });
+
+  it("CONTROL: with a real default_profile_id present, the picker DOES address that profile — proves the test above is a real absence, not a vacuous always-empty render", async () => {
+    mockDefaultProfileId = "consulting";
+    seedEngines(
+      [makeEngine("assistant-default", "anthropic-sonnet-5")],
+      ["assistant-default", "consulting"]
+    );
+    renderBadge();
+
+    await screen.findByTestId("brain-header-badge-label");
+    expect(screen.getByTestId("mock-brain-picker")).toHaveAttribute(
+      "data-profile-id",
+      "consulting"
     );
   });
 });

@@ -540,15 +540,21 @@ describe("BrainPicker — group rendering (D-02/D-13: only 'API' is reachable li
 });
 
 describe("BrainPicker — no stub chrome anywhere (D-01)", () => {
-  it("never renders a STUB chip on the trigger or a stub banner in the popover, under any condition", async () => {
+  it("never renders a build-time-stub indicator on the trigger or in the popover, under any condition", async () => {
     renderPicker();
 
+    // The old D-16 chip's own testid — kept as a belt-and-suspenders check even though the
+    // component no longer renders it under any prop combination.
     expect(screen.queryByTestId("brain-picker-trigger-stub-chip")).not.toBeInTheDocument();
+    // Structural completeness: the default trigger button renders exactly its two designed
+    // children (base label, optional pending suffix) and nothing else — this catches ANY
+    // unexpected extra chip/badge appearing on the trigger, not just one spelled a specific way.
+    const trigger = screen.getByRole("button", { name: /Active brain/ });
+    expect(trigger.children).toHaveLength(1); // base label only; no pending suffix, no chip
 
     openPicker();
     await screen.findByText("Codex CLI");
     expect(screen.queryByText(/stub brain data/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("STUB")).not.toBeInTheDocument();
   });
 });
 

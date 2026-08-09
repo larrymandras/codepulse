@@ -97,12 +97,15 @@ vi.mock("sonner", () => ({
 
 // ─── 103-07-T2: composer brain pill mocks ─────────────────────────────────────
 //
-// useActiveEngine, brainsApi, and BrainPicker are mocked directly (rather than exercising the
-// real Convex-backed hook / real cmdk Popover) — this file tests Chat.tsx's OWN composition of
-// the pill (label sourcing, session/pinned line, pending mirroring, trigger passthrough), not
-// BrainPicker's own internals (covered by BrainPicker.test.tsx) or useActiveEngine's own join
-// logic (covered by useActiveEngine.test.ts). Mirrors the exact idiom BrainHeaderBadge.test.tsx
-// already established for the same composition-API shape.
+// useActiveEngine, useBrainCatalogue, and BrainPicker are mocked directly (rather than exercising
+// the real Convex-backed hook / real WS catalogue fetch / real cmdk Popover) — this file tests
+// Chat.tsx's OWN composition of the pill (label sourcing, session/pinned line, pending mirroring,
+// trigger passthrough), not BrainPicker's own internals (covered by BrainPicker.test.tsx) or
+// useActiveEngine's own join logic (covered by useActiveEngine.test.ts). Mirrors the exact idiom
+// BrainHeaderBadge.test.tsx already established for the same composition-API shape. Phase 109 D-01/
+// D-03 retired the pre-Phase-109 per-profile adapter and its build-time stub flag, which this file
+// used to mock as three separate seams — useBrainCatalogue() now supplies both live values (the
+// catalogue and the default profile id) from ONE mocked hook.
 type MockEngine = {
   model: string;
   mode: "session" | "pinned" | "inherited";
@@ -125,10 +128,6 @@ vi.mock("@/hooks/useActiveEngine", async (importOriginal) => {
   };
 });
 
-const mockGetDefaultProfileId = vi.fn();
-const mockGetCatalogue = vi.fn();
-let stubActive = false;
-
 // The display-name helpers are pure functions with no I/O, so they are wired to the REAL
 // implementations via importOriginal rather than stubbed — a stub returning the raw id would
 // silently pass the very cosmetic regression they exist to prevent (UAT 2026-07-29).
@@ -137,22 +136,22 @@ vi.mock("@/lib/brainsApi", async (importOriginal) => {
   return {
     resolveModelDisplayName: actual.resolveModelDisplayName,
     buildModelNameMap: actual.buildModelNameMap,
-    brainsApi: {
-      isStub: true,
-      getCatalogue: (...args: unknown[]) => mockGetCatalogue(...args),
-      dispatchSwap: vi.fn(),
-      getDefaultProfileId: (...args: unknown[]) => mockGetDefaultProfileId(...args),
-    },
-    get BRAINS_STUB_ACTIVE() {
-      return stubActive;
-    },
   };
 });
-// Defaults applied once at module load — `vi.clearAllMocks()` (used throughout this file's
-// existing describe blocks) clears call history but not a previously-set mockResolvedValue, so
-// these hold for every test unless a test explicitly overrides them.
-mockGetDefaultProfileId.mockResolvedValue("assistant-default");
-mockGetCatalogue.mockResolvedValue([]);
+
+// Phase 109 D-01/D-03: the ONE swap.catalogue fetcher, mocked directly. Module-load defaults
+// below hold for every test unless a test explicitly reassigns them — `vi.clearAllMocks()` (used
+// throughout this file's existing describe blocks) does not touch these plain `let` bindings.
+let mockCatalogueEntries: { id: string; name: string; vendor?: string }[] | null = [];
+let mockDefaultProfileId = "assistant-default";
+vi.mock("@/hooks/useBrainCatalogue", () => ({
+  useBrainCatalogue: () => ({
+    entries: mockCatalogueEntries,
+    defaultProfileId: mockDefaultProfileId,
+    error: false,
+    refetch: vi.fn(),
+  }),
+}));
 
 let lastBrainPickerProps: {
   profileId: string;
@@ -507,16 +506,15 @@ describe("Chat — swap badge reconnect re-pull (WR-07)", () => {
 });
 
 // ─── 103-07-T2: composer brain pill (D-05 corrected host) ──────────────────────
-describe("Chat — composer brain pill (103-07-T2, D-05/D-15/D-16)", () => {
+describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     registeredEventHandlers.clear();
     mockStatus = "connected";
     mockActiveEngineMap = {};
-    stubActive = false;
     lastBrainPickerProps = null;
-    mockGetDefaultProfileId.mockResolvedValue("assistant-default");
-    mockGetCatalogue.mockResolvedValue([]);
+    mockCatalogueEntries = [];
+    mockDefaultProfileId = "assistant-default";
   });
 
   function renderPlainChat() {
@@ -544,12 +542,20 @@ describe("Chat — composer brain pill (103-07-T2, D-05/D-15/D-16)", () => {
     expect(pill.compareDocumentPosition(textarea!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("scopes the pill to the contract's default_profile_id via getDefaultProfileId()", async () => {
+  it("scopes the pill to Ástríðr's own default_profile_id (via useBrainCatalogue), never a Convex-ordering fallback (D-03)", async () => {
     mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
     renderPlainChat();
 
-    await waitFor(() => expect(mockGetDefaultProfileId).toHaveBeenCalled());
     await waitFor(() => expect(lastBrainPickerProps?.profileId).toBe("assistant-default"));
+  });
+
+  it("scopes the pill to \"\" (never a fabricated profile) when default_profile_id is absent", async () => {
+    mockDefaultProfileId = "";
+    mockActiveEngineMap = {};
+    renderPlainChat();
+
+    await screen.findByTestId("mock-chat-brain-picker");
+    expect(lastBrainPickerProps?.profileId).toBe("");
   });
 
   it("renders the live reported engine as the pill's label", async () => {
@@ -620,22 +626,13 @@ describe("Chat — composer brain pill (103-07-T2, D-05/D-15/D-16)", () => {
     expect(screen.queryByTestId("chat-brain-pill-session")).not.toBeInTheDocument();
   });
 
-  it("renders the dashed STUB chip when the stub adapter is active, and omits it otherwise", async () => {
-    stubActive = true;
+  it("never renders a STUB chip anywhere on the pill (Phase 109 D-01: the build-time stub seam no longer exists)", async () => {
     mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
-    const { rerender } = renderPlainChat();
+    renderPlainChat();
 
-    expect(await screen.findByTestId("chat-brain-pill-stub-chip")).toBeInTheDocument();
-
-    stubActive = false;
-    rerender(
-      <MemoryRouter initialEntries={[{ pathname: "/chat" }]}>
-        <Chat />
-      </MemoryRouter>
-    );
-    await waitFor(() =>
-      expect(screen.queryByTestId("chat-brain-pill-stub-chip")).not.toBeInTheDocument()
-    );
+    await screen.findByTestId("chat-brain-pill-label");
+    expect(screen.queryByTestId("chat-brain-pill-stub-chip")).not.toBeInTheDocument();
+    expect(screen.queryByText("STUB")).not.toBeInTheDocument();
   });
 });
 

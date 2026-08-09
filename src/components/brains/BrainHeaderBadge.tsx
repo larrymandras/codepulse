@@ -35,13 +35,13 @@
  * position but still descendants of `<Tooltip>` once mounted.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Clock, Pin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrainPicker } from "@/components/brains/BrainPicker";
+import { useBrainCatalogue } from "@/hooks/useBrainCatalogue";
 import { useGlobalModelNames, useResolvedBrain } from "@/hooks/useResolvedBrain";
-import { useProfileConfigs } from "@/hooks/useProfileConfigs";
-import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry, resolveModelDisplayName } from "@/lib/brainsApi";
+import { resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { cn } from "@/lib/utils";
 
@@ -58,39 +58,18 @@ export function BrainHeaderBadge() {
   // Control Center's `BrainControl` read, so this badge cannot disagree with them (BSC-01).
   const resolved = useResolvedBrain();
   const globalModelNames = useGlobalModelNames();
-  const profiles = useProfileConfigs();
 
-  const [catalogue, setCatalogue] = useState<CatalogueEntry[] | null>(null);
-  const [defaultProfileId, setDefaultProfileId] = useState("");
+  // Phase 109 D-01/D-03: the catalogue and Ástríðr's own resolved `default_profile_id` now come
+  // from the ONE swap.catalogue fetcher (display-metadata resolution — provider identity dot,
+  // dispatch target profile — never the engine truth itself, which comes exclusively from
+  // useResolvedBrain above). There is NO Convex `profileConfigs`-ordering fallback here — that
+  // ordering is different from Ástríðr's own resolved config, so it could address a per-profile
+  // swap at a profile the operator never named (D-03's explicitly rejected option). When
+  // `defaultProfileId` is empty, `effectiveProfileId` is honestly empty too.
+  const { entries: catalogue, defaultProfileId } = useBrainCatalogue();
+  const effectiveProfileId = defaultProfileId;
+
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
-
-  // The catalogue and default-profile-id reads share the D-16 seam every per-profile brain
-  // surface uses — this is display-metadata resolution (provider identity dot, dispatch target
-  // profile), never the engine truth itself, which comes exclusively from useActiveEngine above.
-  useEffect(() => {
-    let cancelled = false;
-    brainsApi
-      .getCatalogue()
-      .then((list) => {
-        if (!cancelled) setCatalogue(list);
-      })
-      .catch(() => {
-        /* honest degrade: dot falls back to a neutral color below */
-      });
-    brainsApi
-      .getDefaultProfileId()
-      .then((id) => {
-        if (!cancelled && id) setDefaultProfileId(id);
-      })
-      .catch(() => {
-        /* honest degrade: falls back to the first known profile below */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const effectiveProfileId = defaultProfileId || profiles[0]?.profileId || "";
 
   const vendorForModel = (modelId: string): string | undefined =>
     catalogue?.find((e) => e.id === modelId)?.vendor;
@@ -120,11 +99,10 @@ export function BrainHeaderBadge() {
   // assistive tech.
   const ariaLabel = `Active brain: ${baseLabel}${isGlobal ? " (global)" : ""}`;
 
-  // Confirmed-live pulse (UI-SPEC "Accent" table item 4): a global reading is live regardless of
-  // the D-16 stub flag (VITE_BRAINS_STUB gates only the per-profile seam); a profile reading is
-  // gated on the stub flag as before. Never pulses while a swap is pending.
-  const isConfirmedLive =
-    !pendingLabel && (isGlobal || (isProfile && !BRAINS_STUB_ACTIVE));
+  // Confirmed-live pulse (UI-SPEC "Accent" table item 4): Phase 109 D-01 retired the build-time
+  // stub seam entirely — every reading source is live now, so this simplifies to "a global or
+  // profile reading, with no swap pending."
+  const isConfirmedLive = !pendingLabel && (isGlobal || isProfile);
 
   return (
     <TooltipProvider>
@@ -201,14 +179,6 @@ export function BrainHeaderBadge() {
                 >
                   <Pin className="h-3 w-3" aria-hidden="true" />
                   pinned default
-                </span>
-              )}
-              {BRAINS_STUB_ACTIVE && (
-                <span
-                  data-testid="brain-header-badge-stub-chip"
-                  className="hidden rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground sm:inline"
-                >
-                  STUB
                 </span>
               )}
             </button>

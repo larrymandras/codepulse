@@ -53,7 +53,8 @@ import {
   useGlobalModelNames,
   useResolvedBrain,
 } from "@/hooks/useResolvedBrain";
-import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry, resolveModelDisplayName } from "@/lib/brainsApi";
+import { useBrainCatalogue } from "@/hooks/useBrainCatalogue";
+import { resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
@@ -116,9 +117,10 @@ function FollowUpCountdownBar({ active, durationMs }: { active: boolean; duratio
 //
 // D-05's host correction (103-CONTEXT.md, 2026-07-28): the pill lives HERE, on Chat.tsx's own
 // inline composer — not on ChatInput.tsx (imported only by the unrelated InsightsChat.tsx). This
-// page is single-persona and carries no profile switcher, so the pill scopes to the contract's
-// `default_profile_id` (103-CONTRACT.md §3) via brainsApi.getDefaultProfileId() — never an
-// invented CodePulse-side active-profile mechanism.
+// page is single-persona and carries no profile switcher, so the pill scopes to Ástríðr's own
+// resolved `default_profile_id` (103-CONTRACT.md §3), reported on the `swap.catalogue` ack and
+// read via `useBrainCatalogue()` (Phase 109 D-01/D-03) — never an invented CodePulse-side
+// active-profile mechanism, and never the Convex `profileConfigs` ordering fallback D-03 rejected.
 //
 // This page already renders BrainControl (the LIVE global runtime axis, seeded via the shared
 // `useGlobalBrainOverride` — see `src/hooks/useResolvedBrain.ts` — above) inside
@@ -152,27 +154,18 @@ function pillTitle(source: "global" | "profile" | "mixed" | "lastTurn" | "none")
   }
 }
 
-function BrainComposerPill({ profileId }: { profileId: string }) {
+function BrainComposerPill() {
+  // Phase 109 D-01/D-03: ONE useBrainCatalogue() call supplies both the display-metadata
+  // catalogue (provider-identity dot color — never the engine truth itself, which comes
+  // exclusively from useResolvedBrain below, D-14) AND the dispatch-scope profileId (Ástríðr's own
+  // resolved default_profile_id), replacing what were previously two separate WS round trips
+  // against the retired D-16 seam (one for the catalogue here, one for the default profile id at
+  // this component's former call site in Chat()). No Convex-ordering fallback — an unresolved
+  // defaultProfileId reads as "" and useResolvedBrain("") honestly falls through to its own "none"
+  // rung.
+  const { entries: catalogue, defaultProfileId: profileId } = useBrainCatalogue();
   const resolved = useResolvedBrain(profileId);
-  const [catalogue, setCatalogue] = useState<CatalogueEntry[] | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
-
-  // Display-metadata resolution only (provider-identity dot color) — never the engine truth
-  // itself, which comes exclusively from useResolvedBrain above (D-14).
-  useEffect(() => {
-    let cancelled = false;
-    brainsApi
-      .getCatalogue()
-      .then((list) => {
-        if (!cancelled) setCatalogue(list);
-      })
-      .catch(() => {
-        /* honest degrade: the dot falls back to a neutral color below */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const globalModelNames = useGlobalModelNames();
   const vendor = catalogue?.find((e) => e.id === resolved.model)?.vendor;
@@ -239,14 +232,6 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
               className="flex items-center gap-0.5 text-xs text-muted-foreground"
             >
               <Pin className="h-3 w-3" aria-hidden="true" />
-            </span>
-          )}
-          {BRAINS_STUB_ACTIVE && (
-            <span
-              data-testid="chat-brain-pill-stub-chip"
-              className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
-            >
-              STUB
             </span>
           )}
         </button>
@@ -559,26 +544,6 @@ export default function Chat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handoff, status]);
 
-  // ── Brain composer pill scope (103-07-T2, D-05 corrected host) ──────────
-  // Resolved once via the D-16 seam's getDefaultProfileId() (103-CONTRACT.md §3) — never a
-  // locally invented default. An empty string until resolved simply renders the pill against no
-  // known profile yet (useResolvedBrain reads "Auto" honestly rather than guessing).
-  const [brainDefaultProfileId, setBrainDefaultProfileId] = useState("");
-  useEffect(() => {
-    let cancelled = false;
-    brainsApi
-      .getDefaultProfileId()
-      .then((id) => {
-        if (!cancelled && id) setBrainDefaultProfileId(id);
-      })
-      .catch(() => {
-        /* honest degrade: the pill stays scoped to "" (Auto) below */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // ── Input / scroll ──────────────────────────────────────────────────────
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -694,7 +659,7 @@ export default function Chat() {
       {/* Brain composer pill (103-07-T2) — new row above the composer, does not touch the
           textarea/send row below it. */}
       <div className="flex items-center gap-2 px-3 pt-2">
-        <BrainComposerPill profileId={brainDefaultProfileId} />
+        <BrainComposerPill />
       </div>
 
       {/* Input */}

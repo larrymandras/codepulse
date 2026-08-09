@@ -13,9 +13,9 @@
  * source per 103-12-PLAN.md's interfaces section. `@/lib/brainsApi` is ALSO mocked, even though the
  * component no longer imports it at all post-103-12 — this is deliberate: it is the anti-stub-
  * masking proof surface. `expect(mockDispatchSwap).not.toHaveBeenCalled()` asserted after every
- * dispatch test is the direct 103-CONTRACT.md §8 compliance check (no per-profile
- * `gateway.model.set` fan-out for the global axis) and would catch a regression that reintroduced
- * the fan-out this plan deletes.
+ * dispatch test is the direct 103-CONTRACT.md §8 compliance check (no legacy per-profile dispatch
+ * fan-out for the global axis) and would catch a regression that reintroduced the fan-out this
+ * plan deletes.
  *
  * ── Moved/retired coverage from the pre-103-12 suite (per 103-12-PLAN.md's explicit instruction
  * to record this, not silently drop it) ──

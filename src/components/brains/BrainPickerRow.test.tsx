@@ -17,12 +17,12 @@ import {
 } from "./BrainPickerRow";
 import type { CatalogueEntry } from "@/lib/brainsApi";
 
-// Phase 109 Plan 03 (D-01): `@/lib/brainsFixtures.ts` (the D-16 stub seam's fixture set) was
-// deleted along with the stub adapter it existed to serve. `BrainPickerRow` itself is a pure
-// presentational component with no dependency on that seam — it only needs `CatalogueEntry`-shaped
-// data — so this file now owns its own small, self-contained fixture set covering exactly the same
-// cost-tier/quota/billing/health branches the original stub fixtures covered (mirrors the coverage
-// notes the deleted file used to carry).
+// Phase 109 Plan 03 (D-01): the D-16 stub seam's fixture module was deleted along with the stub
+// adapter it existed to serve. `BrainPickerRow` itself is a pure presentational component with no
+// dependency on that seam — it only needs `CatalogueEntry`-shaped data — so this file now owns its
+// own small, self-contained fixture set covering exactly the same cost-tier/quota/billing/health
+// branches the original stub fixtures covered (mirrors the coverage notes the deleted module used
+// to carry).
 const TEST_CATALOGUE: CatalogueEntry[] = [
   {
     id: "claude-cli-sonnet5",
