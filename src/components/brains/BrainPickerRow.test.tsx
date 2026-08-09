@@ -129,9 +129,16 @@ beforeAll(() => {
 function renderRow(overrides: Partial<React.ComponentProps<typeof BrainPickerRow>> = {}) {
   const onSelect = vi.fn();
   const onExpandChange = vi.fn();
+  const entry = overrides.entry ?? TEST_CATALOGUE[0];
   const props = {
-    entry: TEST_CATALOGUE[0],
+    entry,
     isExpanded: false,
+    // Phase 109 Plan 07: `needsConfirm` is now a REQUIRED prop the real `BrainPicker.tsx` computes
+    // via its hoisted `shouldConfirmCost`. This file tests `BrainPickerRow` in isolation, so the
+    // default here reproduces the pre-Plan-07 local computation (`needsCostConfirm(entry)`) exactly
+    // — every existing test below that doesn't explicitly override `needsConfirm` keeps its prior
+    // behavior unchanged.
+    needsConfirm: needsCostConfirm(entry),
     onExpandChange,
     onSelect,
     ...overrides,
@@ -318,6 +325,7 @@ describe("BrainPickerRow — health dot (WR-03: presentational, no nested tab st
         <BrainPickerRow
           entry={findEntry("anthropic-sonnet-5")}
           isExpanded={false}
+          needsConfirm={false}
           onExpandChange={vi.fn()}
           onSelect={vi.fn()}
         />
@@ -377,6 +385,7 @@ describe("BrainPickerRow — expensive/unknown-tier inline confirm", () => {
         <BrainPickerRow
           entry={expensiveEntry}
           isExpanded={true}
+          needsConfirm={true}
           onExpandChange={onExpandChange}
           onSelect={onSelect}
         />

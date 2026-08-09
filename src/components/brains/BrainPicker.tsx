@@ -375,14 +375,34 @@ export function BrainPicker({
   );
 
   /**
+   * shouldConfirmCost — the ONE hoisted, scope-aware confirm gate (Phase 109 Plan 07, D-09/D-13,
+   * UI-SPEC §F revision 3). `needsCostConfirm` (`BrainPickerRow.tsx`) stays the pure,
+   * scope-independent "is this entry cost-sensitive at all" predicate; this wrapper is what decides
+   * whether that friction should actually APPEAR at the picker's currently active scope. At "All
+   * profiles" scope the inline expand-to-confirm must NEVER appear — `GlobalSwapModal` already owns
+   * its own `needsCostWarning` line, and UI-SPEC §3 forbids stacking two friction surfaces for one
+   * decision. Consumed at BOTH sites below — the row-rendering loop's `needsConfirm` prop AND
+   * `handleActivate`'s confirm branch — so a mouse click and a keyboard activation on the same row
+   * can never disagree about whether confirmation is required. This is the single formula; neither
+   * consumer is allowed to compute a second one that merely happens to agree.
+   */
+  const shouldConfirmCost = useCallback(
+    (entry: CatalogueEntry) => scope !== "global" && needsCostConfirm(entry),
+    [scope]
+  );
+
+  /**
    * handleActivate — the single activation entry point for BOTH input modes (103-11, CR-02):
    * `CommandItem`'s cmdk `onSelect` (keyboard Enter, driven by cmdk's own custom-event dispatch
    * to the currently arrow-highlighted item — never a bubbled click) and `BrainPickerRow`'s own
    * button (mouse click; the row stops propagation on every internal click so it never ALSO
    * reaches cmdk's bubbled click-select path, which would otherwise double-fire this function).
-   * Because both input modes call this exact function, the expand-to-confirm branch (UI-SPEC §3)
-   * and the D-15 global confirm gate (via `handleSelect`'s unchanged global-scope branch) can
-   * never drift apart between mouse and keyboard.
+   * Because both input modes call this exact function, AND because both read the SAME
+   * `shouldConfirmCost` value (never two independently-computed conditions that happen to agree),
+   * the expand-to-confirm branch (UI-SPEC §3) and the D-15 global confirm gate (via
+   * `handleSelect`'s unchanged global-scope branch) can never drift apart between mouse and
+   * keyboard, and the two confirm frictions can never stack at either scope (Phase 109 Plan 07 —
+   * this replaces the earlier scope-blind coincidence, which this same comment used to describe).
    */
   const handleActivate = useCallback(
     (entry: CatalogueEntry) => {
@@ -394,13 +414,13 @@ export function BrainPicker({
         setExpandedId(null);
         return;
       }
-      if (needsCostConfirm(entry)) {
+      if (shouldConfirmCost(entry)) {
         setExpandedId(entry.id);
         return;
       }
       handleSelect(entry);
     },
-    [expandedId, handleSelect]
+    [expandedId, handleSelect, shouldConfirmCost]
   );
 
   const groups = useMemo(() => {
@@ -525,6 +545,7 @@ export function BrainPicker({
                               : !!resolvedTrigger.model && modelIdsMatch(resolvedTrigger.model, entry.id)
                           }
                           isExpanded={expandedId === entry.id}
+                          needsConfirm={shouldConfirmCost(entry)}
                           onExpandChange={(exp) => setExpandedId(exp ? entry.id : null)}
                           onSelect={handleActivate}
                         />

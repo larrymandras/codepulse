@@ -20,10 +20,14 @@
  * health dot is purely presentational (`aria-hidden`, no `tabIndex`, no nested `TooltipTrigger`);
  * the `Tooltip` now wraps the button itself, and the health word is folded into the button's own
  * `aria-label` alongside the engine name, billing label, and quota state, so hover/focus discovery
- * and non-color redundancy both survive without a second, invalid-content-model tab stop. The
- * exported `needsCostConfirm` predicate is the single source of truth for the expand-to-confirm
- * branch — `BrainPicker.tsx`'s `handleActivate` calls the exact same function so the keyboard path
- * (cmdk `CommandItem.onSelect`) and this row's own mouse path can never decide differently.
+ * and non-color redundancy both survive without a second, invalid-content-model tab stop.
+ *
+ * Phase 109 Plan 07 (D-09/D-13, UI-SPEC §F revision 3): the expand-to-confirm branch's condition is
+ * now the required `needsConfirm` prop, computed exactly once by `BrainPicker.tsx`'s hoisted,
+ * scope-aware predicate and passed down identically to both this row's own mouse-click handler and
+ * the enclosing cmdk `CommandItem`'s keyboard-activation path — this row no longer decides that
+ * condition itself, so the two input modes can never disagree about whether a swap needs
+ * confirmation at the active scope.
  */
 
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +48,16 @@ export interface BrainPickerRowProps {
    * is expanded. Owned by the parent picker, not this row (UI-SPEC §3/§11). */
   isExpanded: boolean;
   onExpandChange: (expanded: boolean) => void;
+  /**
+   * Phase 109 Plan 07 (D-09/D-13): whether THIS row, at the picker's CURRENTLY ACTIVE scope, must
+   * expand-to-confirm before activating — computed once by `BrainPicker.tsx`'s hoisted
+   * `shouldConfirmCost(entry)` (scope-aware AND'd with the pure cost-tier predicate this file
+   * exports below), never derived locally here. Required, not optional: a row with no opinion on
+   * cost-confirmation is not a state this component can safely default, since the wrong default in
+   * either direction either strands the operator on a friction that should never appear at "All
+   * profiles" scope, or silently drops the one friction "This profile" scope depends on.
+   */
+  needsConfirm: boolean;
   /** Fires immediately for normal-tier rows; fires only after the inline
    * confirm step for expensive/unknown-tier rows. */
   onSelect: (entry: CatalogueEntry) => void;
@@ -75,10 +89,14 @@ const EXPENSIVE_TIER_COPY: Record<"expensive" | "unknown", string> = {
 };
 
 /**
- * needsCostConfirm — the single source of truth for the expand-to-confirm branch (UI-SPEC §3).
- * Exported so `BrainPicker.tsx`'s `handleActivate` (103-11, CR-02) can make the exact same
- * decision for the keyboard path (`CommandItem.onSelect`) that this row makes for the mouse path
- * — the condition itself must never be duplicated/inlined a second time.
+ * The pure, SCOPE-INDEPENDENT "is this entry cost-sensitive at all" predicate (UI-SPEC §3) —
+ * exported for direct unit testing. Phase 109 Plan 07 (D-09/D-13, UI-SPEC §F revision 3): this row
+ * no longer calls this function itself for its own gating — `BrainPicker.tsx`'s hoisted
+ * `shouldConfirmCost` is the only caller, AND-ing this predicate's result with a scope check
+ * (`scope !== "global"`) exactly once, and passing the outcome down as the `needsConfirm` prop
+ * consumed identically by both the mouse path (this row's button) and the keyboard path (cmdk
+ * `CommandItem.onSelect`). This function's own body stays unchanged — only where it is called from
+ * moved.
  */
 export function needsCostConfirm(entry: CatalogueEntry): boolean {
   return entry.costTier === "expensive" || entry.costTier === "unknown";
@@ -121,11 +139,11 @@ export function BrainPickerRow({
   isCurrent = false,
   isExpanded,
   onExpandChange,
+  needsConfirm,
   onSelect,
 }: BrainPickerRowProps) {
   const liveHealth = useProviderHealth();
   const healthStatus = resolveHealthStatus(entry, liveHealth);
-  const needsConfirm = needsCostConfirm(entry);
   // Rule 1/2 fix (Phase 109 Plan 07, T-109-18's own "no hardcoded hex" gate): the fallback for a
   // vendor missing from PROVIDER_COLORS now reads a CSS var, matching BrainHeaderBadge.tsx:88's
   // established `var(--muted-foreground)` fallback for the same lookup — no hex literal survives.

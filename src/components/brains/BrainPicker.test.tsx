@@ -53,12 +53,31 @@
 
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act, cleanup } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalSwapProvider } from "@/contexts/GlobalSwapContext";
 import type { BrainCatalogueEntry } from "@/hooks/useBrainCatalogue";
 import { PROFILE_SWAP_CONFIRM_TIMEOUT_MS } from "@/hooks/useProfileSwap";
 import { BrainPicker } from "./BrainPicker";
+
+// Phase 109 Plan 07 (D-09/D-13): the real `mapCatalogueVendorToBilling` never returns
+// `costTier: "expensive"` for any live-catalogue-shaped vendor (D-13's rule only ever produces
+// "normal" for a mapped vendor or "unknown" for an unclassified one) — so the mouse/keyboard
+// parity test below, which must cover all THREE costTier values per UI-SPEC §F revision 3, wraps
+// the real implementation and special-cases one synthetic test-only vendor to reach "expensive".
+// Every other vendor (including "", "anthropic", and every vendor this file's other describe
+// blocks already use) passes straight through to the real, unmocked implementation.
+const PARITY_EXPENSIVE_VENDOR = "test-parity-expensive-vendor";
+vi.mock("@/lib/catalogueBilling", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/catalogueBilling")>();
+  return {
+    ...actual,
+    mapCatalogueVendorToBilling: (vendor: string | undefined) =>
+      vendor === PARITY_EXPENSIVE_VENDOR
+        ? { group: "api" as const, billing: "api" as const, costTier: "expensive" as const }
+        : actual.mapCatalogueVendorToBilling(vendor),
+  };
+});
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -904,6 +923,117 @@ describe("BrainPicker — keyboard activation (103-11, CR-02)", () => {
     const modal = await screen.findByTestId("global-swap-modal");
     expect(modal).toHaveAttribute("data-target-id", "codex-cli");
     expect(mockDispatch).not.toHaveBeenCalled();
+  });
+});
+
+// ── Phase 109 Plan 07: mouse/keyboard parity for the hoisted, scope-aware confirm gate ────────
+//
+// UI-SPEC §F revision 3: `shouldConfirmCost` is now the ONE formula both input paths read (never
+// two independently-computed conditions that happen to agree). A test of either path ALONE cannot
+// detect the defect class this fix corrects — both prior revisions of this fix (a scope check
+// inside `BrainPicker.tsx`'s `handleActivate` only, and a fix that patched the wrong closure
+// entirely) would have passed a mouse-only or keyboard-only test. This is a genuine property test:
+// for every (scope, costTier) combination, the mouse-path outcome and the keyboard-path outcome are
+// compared directly TO EACH OTHER, never each to a hardcoded expectation alone.
+//
+// This test supersedes the deleted `e2e/brain-swap.spec.ts`'s original mouse/keyboard-parity
+// regression-guard purpose (103-11/CR-02) — see 109-RESEARCH.md §B.6 for why that spec was removed
+// rather than repointed; this unit-level property test is the stronger, non-live-backend-dependent
+// replacement for that one specific coverage need.
+
+type ParityScope = "profile" | "global";
+type ParityTier = "normal" | "expensive" | "unknown";
+
+const PARITY_VENDOR_BY_TIER: Record<ParityTier, string> = {
+  normal: "google",
+  expensive: PARITY_EXPENSIVE_VENDOR,
+  unknown: "",
+};
+
+interface ParityOutcome {
+  inlineConfirmShown: boolean;
+  modalOpened: boolean;
+  dispatched: boolean;
+}
+
+async function setScope(target: ParityScope) {
+  if (target === "global") {
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+  }
+}
+
+async function driveParityMouse(scope: ParityScope, tier: ParityTier): Promise<ParityOutcome> {
+  mockCatalogueEntries = [{ id: "parity-row", name: "Parity Row", vendor: PARITY_VENDOR_BY_TIER[tier] }];
+  mockDispatch.mockClear();
+  renderPicker();
+  openPicker();
+  await screen.findByText("Parity Row");
+  await setScope(scope);
+  await screen.findByText("Parity Row");
+
+  fireEvent.click(screen.getByText("Parity Row"));
+  await act(async () => {});
+
+  const outcome: ParityOutcome = {
+    inlineConfirmShown: screen.queryByText("Confirm swap") !== null,
+    modalOpened: screen.queryByTestId("global-swap-modal")?.getAttribute("data-open") === "true",
+    dispatched: mockDispatch.mock.calls.length > 0,
+  };
+  cleanup();
+  return outcome;
+}
+
+async function driveParityKeyboard(scope: ParityScope, tier: ParityTier): Promise<ParityOutcome> {
+  mockCatalogueEntries = [{ id: "parity-row", name: "Parity Row", vendor: PARITY_VENDOR_BY_TIER[tier] }];
+  mockDispatch.mockClear();
+  renderPicker();
+  openPicker();
+  await screen.findByText("Parity Row");
+  await setScope(scope);
+  await screen.findByText("Parity Row");
+
+  const search = screen.getByPlaceholderText("Search brains…");
+  fireEvent.keyDown(search, { key: "ArrowDown" });
+  fireEvent.keyDown(search, { key: "Enter" });
+  await act(async () => {});
+
+  const outcome: ParityOutcome = {
+    inlineConfirmShown: screen.queryByText("Confirm swap") !== null,
+    modalOpened: screen.queryByTestId("global-swap-modal")?.getAttribute("data-open") === "true",
+    dispatched: mockDispatch.mock.calls.length > 0,
+  };
+  cleanup();
+  return outcome;
+}
+
+describe("BrainPicker — mouse/keyboard parity for shouldConfirmCost (Phase 109 Plan 07)", () => {
+  const scopes: ParityScope[] = ["profile", "global"];
+  const tiers: ParityTier[] = ["normal", "expensive", "unknown"];
+
+  for (const scope of scopes) {
+    for (const tier of tiers) {
+      it(`scope=${scope}, costTier=${tier}: mouse and keyboard produce identical outcomes`, async () => {
+        const mouseOutcome = await driveParityMouse(scope, tier);
+        const keyboardOutcome = await driveParityKeyboard(scope, tier);
+        expect(mouseOutcome).toEqual(keyboardOutcome);
+      });
+    }
+  }
+
+  it('at "All profiles" scope with costTier "unknown", a mouse click opens the global modal and does NOT render the inline confirm — the exact stacking defect this fix corrects', async () => {
+    const outcome = await driveParityMouse("global", "unknown");
+    expect(outcome.modalOpened).toBe(true);
+    expect(outcome.inlineConfirmShown).toBe(false);
+  });
+
+  it('at "This profile" scope with costTier "expensive", both input paths show the inline confirm and neither dispatches nor opens the global modal', async () => {
+    const mouseOutcome = await driveParityMouse("profile", "expensive");
+    const keyboardOutcome = await driveParityKeyboard("profile", "expensive");
+    for (const outcome of [mouseOutcome, keyboardOutcome]) {
+      expect(outcome.inlineConfirmShown).toBe(true);
+      expect(outcome.modalOpened).toBe(false);
+      expect(outcome.dispatched).toBe(false);
+    }
   });
 });
 
