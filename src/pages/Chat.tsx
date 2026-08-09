@@ -26,6 +26,7 @@ import {
   Mic,
   MicOff,
   AlertCircle,
+  AlertTriangle,
   Eye,
   ChevronDown,
   Clock,
@@ -170,7 +171,12 @@ function BrainComposerPill() {
   // rung.
   const { entries: catalogue, defaultProfileId: profileId } = useBrainCatalogue();
   const resolved = useResolvedBrain(profileId);
-  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  // Phase 109 Plan 06: mirrors `useProfileSwap`'s five-state outcome machine via `BrainPicker`'s
+  // `onPendingChange` — `kind` distinguishes "inflight" (pending/confirming) from "uncertain"
+  // (the bounded-timeout "accepted" state, 109-UI-SPEC.md §C).
+  const [pending, setPending] = useState<{ label: string; kind: "inflight" | "uncertain" } | null>(
+    null
+  );
 
   const globalModelNames = useGlobalModelNames();
   // D-08: the catalogue's ids are bare while an `inherited`-mode resolved reading can be
@@ -193,7 +199,7 @@ function BrainComposerPill() {
   return (
     <BrainPicker
       profileId={profileId}
-      onPendingChange={setPendingLabel}
+      onPendingChange={setPending}
       trigger={
         <button
           type="button"
@@ -222,20 +228,30 @@ function BrainComposerPill() {
               Global
             </span>
           )}
-          {pendingLabel ? (
+          {pending ? (
             <>
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
-              />
+              {pending.kind === "inflight" && (
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                />
+              )}
+              {/* kind "uncertain" -- BrainPicker's onPendingChange mirrors 109-UI-SPEC.md §C's
+                  fixed "· not yet confirmed" suffix here; a static AlertTriangle, never a pulse. */}
+              {pending.kind === "uncertain" && (
+                <AlertTriangle
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 shrink-0 text-(--status-warn)"
+                />
+              )}
               <span data-testid="chat-brain-pill-pending" className="text-xs text-muted-foreground">
-                {pendingLabel}
+                {pending.label}
               </span>
             </>
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
           )}
-          {!pendingLabel &&
+          {!pending &&
             (resolved.source === "profile" || resolved.source === "override") &&
             resolved.mode === "session" && (
             <span
@@ -246,7 +262,7 @@ function BrainComposerPill() {
               {formatBrainTtl(resolved.expiresAt)}
             </span>
           )}
-          {!pendingLabel &&
+          {!pending &&
             (resolved.source === "profile" || resolved.source === "override") &&
             resolved.mode === "pinned" && (
             <span

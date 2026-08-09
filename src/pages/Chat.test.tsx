@@ -154,17 +154,19 @@ vi.mock("@/hooks/useBrainCatalogue", () => ({
   }),
 }));
 
+type MockPending = { label: string; kind: "inflight" | "uncertain" } | null;
+
 let lastBrainPickerProps: {
   profileId: string;
   trigger?: ReactNode;
-  onPendingChange?: (label: string | null) => void;
+  onPendingChange?: (pending: MockPending) => void;
 } | null = null;
 
 vi.mock("@/components/brains/BrainPicker", () => ({
   BrainPicker: (props: {
     profileId: string;
     trigger?: ReactNode;
-    onPendingChange?: (label: string | null) => void;
+    onPendingChange?: (pending: MockPending) => void;
   }) => {
     lastBrainPickerProps = props;
     return (
@@ -584,7 +586,10 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     expect(labelBefore).toBe("anthropic-sonnet-5");
 
     act(() => {
-      lastBrainPickerProps?.onPendingChange?.("· switching to Codex CLI…");
+      lastBrainPickerProps?.onPendingChange?.({
+        label: "· switching to Codex CLI…",
+        kind: "inflight",
+      });
     });
 
     expect(await screen.findByTestId("chat-brain-pill-pending")).toHaveTextContent(
@@ -601,6 +606,32 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
       expect(screen.queryByTestId("chat-brain-pill-pending")).not.toBeInTheDocument()
     );
     expect(screen.getByTestId("chat-brain-pill-label").textContent).toBe(labelBefore);
+  });
+
+  it("renders a static AlertTriangle (never a pulsing dot) for the uncertain kind, paired with a control asserting the in-flight kind renders the pulse (Phase 109 Plan 06, 109-UI-SPEC.md §C)", async () => {
+    mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
+    renderPlainChat();
+    await screen.findByTestId("chat-brain-pill-label");
+
+    act(() => {
+      lastBrainPickerProps?.onPendingChange?.({
+        label: "· switching to Codex CLI…",
+        kind: "inflight",
+      });
+    });
+    let pending = await screen.findByTestId("chat-brain-pill-pending");
+    let precedingClass = pending.previousElementSibling?.getAttribute("class") ?? "";
+    expect(precedingClass).toMatch(/status-info/);
+    expect(precedingClass).toMatch(/animate-pulse/);
+
+    act(() => {
+      lastBrainPickerProps?.onPendingChange?.({ label: "· not yet confirmed", kind: "uncertain" });
+    });
+    pending = await screen.findByTestId("chat-brain-pill-pending");
+    expect(pending).toHaveTextContent("not yet confirmed");
+    expect(pending.previousElementSibling?.tagName.toLowerCase()).toBe("svg");
+    precedingClass = pending.previousElementSibling?.getAttribute("class") ?? "";
+    expect(precedingClass).not.toMatch(/animate-pulse/);
   });
 
   it("renders the session-override line, never the pinned line, for a session-override reading", async () => {

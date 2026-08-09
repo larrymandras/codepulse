@@ -37,7 +37,7 @@
  */
 
 import { useState } from "react";
-import { Clock, Pin } from "lucide-react";
+import { AlertTriangle, Clock, Pin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrainPicker } from "@/components/brains/BrainPicker";
 import { useBrainCatalogue } from "@/hooks/useBrainCatalogue";
@@ -70,7 +70,13 @@ export function BrainHeaderBadge() {
   const { entries: catalogue, defaultProfileId } = useBrainCatalogue();
   const effectiveProfileId = defaultProfileId;
 
-  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  // Phase 109 Plan 06: mirrors `useProfileSwap`'s five-state outcome machine via `BrainPicker`'s
+  // `onPendingChange` — `kind` distinguishes "inflight" (pending/confirming, the pulsing dot) from
+  // "uncertain" (the bounded-timeout "accepted" state, a static AlertTriangle, never a pulsing
+  // dot — 109-UI-SPEC.md §C).
+  const [pending, setPending] = useState<{ label: string; kind: "inflight" | "uncertain" } | null>(
+    null
+  );
 
   // D-08: the catalogue's ids are bare ("claude-sonnet-5") while a resolved `inherited`-mode
   // reading can be vendor-prefixed ("anthropic/claude-sonnet-5") — a raw `===` here missed every
@@ -113,8 +119,10 @@ export function BrainHeaderBadge() {
 
   // Confirmed-live pulse (UI-SPEC "Accent" table item 4): Phase 109 D-01 retired the build-time
   // stub seam entirely — every reading source is live now, so this simplifies to "a global or
-  // profile reading, with no swap pending."
-  const isConfirmedLive = !pendingLabel && (isGlobal || isProfile);
+  // profile reading, with no swap pending." `!pending` (not just `!pendingLabel`) also covers the
+  // "uncertain" state (Plan 06) — an accepted-but-unconfirmed swap must not ALSO show the
+  // confirmed-live pulse, which would contradict the AlertTriangle it renders instead.
+  const isConfirmedLive = !pending && (isGlobal || isProfile);
 
   return (
     <TooltipProvider>
@@ -122,7 +130,7 @@ export function BrainHeaderBadge() {
       <BrainPicker
         profileId={effectiveProfileId}
         entryScope={isMixed || isGlobal ? "global" : undefined}
-        onPendingChange={setPendingLabel}
+        onPendingChange={setPending}
         trigger={
           <TooltipTrigger asChild>
             <button
@@ -134,6 +142,21 @@ export function BrainHeaderBadge() {
                 <span
                   aria-hidden="true"
                   className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary animate-pulse"
+                />
+              )}
+              {pending?.kind === "inflight" && (
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                />
+              )}
+              {/* kind "uncertain" -- BrainPicker's onPendingChange mirrors 109-UI-SPEC.md §C's
+                  fixed "· not yet confirmed" suffix here (no interpolated engine name, unlike the
+                  in-flight suffix); this is a static AlertTriangle, never a pulsing dot. */}
+              {pending?.kind === "uncertain" && (
+                <AlertTriangle
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 shrink-0 text-(--status-warn)"
                 />
               )}
               {isMixed ? (
@@ -173,15 +196,15 @@ export function BrainHeaderBadge() {
                   Global
                 </span>
               )}
-              {pendingLabel && (
+              {pending && (
                 <span
                   data-testid="brain-header-badge-pending"
                   className="hidden text-xs text-muted-foreground sm:inline"
                 >
-                  {pendingLabel}
+                  {pending.label}
                 </span>
               )}
-              {isProfile && !pendingLabel && resolved.mode === "session" && (
+              {isProfile && !pending && resolved.mode === "session" && (
                 <span
                   data-testid="brain-header-badge-session"
                   className="hidden items-center gap-0.5 text-xs text-(--status-info) sm:inline-flex"
@@ -190,7 +213,7 @@ export function BrainHeaderBadge() {
                   session override · expires in {formatTtl(resolved.expiresAt)}
                 </span>
               )}
-              {isProfile && !pendingLabel && resolved.mode === "pinned" && (
+              {isProfile && !pending && resolved.mode === "pinned" && (
                 <span
                   data-testid="brain-header-badge-pinned"
                   className="hidden items-center gap-0.5 text-xs text-muted-foreground sm:inline-flex"

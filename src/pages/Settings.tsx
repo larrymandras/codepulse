@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Loader2, Clock, Pin } from "lucide-react";
+import { Loader2, Clock, Pin, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
@@ -231,7 +231,12 @@ export function AgentProfileRows({
   // Phase 109 D-01/D-02: the ONE swap.catalogue fetcher — display-metadata resolution only
   // (provider-identity dot color), never the engine truth itself.
   const { entries: engineCatalogue } = useBrainCatalogue();
-  const [pendingByProfile, setPendingByProfile] = useState<Record<string, string | null>>({});
+  // Phase 109 Plan 06: mirrors `useProfileSwap`'s five-state outcome machine via `BrainPicker`'s
+  // `onPendingChange` — `kind` distinguishes "inflight" (pending/confirming) from "uncertain"
+  // (the bounded-timeout "accepted" state, 109-UI-SPEC.md §C).
+  const [pendingByProfile, setPendingByProfile] = useState<
+    Record<string, { label: string; kind: "inflight" | "uncertain" } | null>
+  >({});
 
   if (profileConfigs.length === 0) {
     return (
@@ -301,9 +306,23 @@ export function AgentProfileRows({
                 {pending && (
                   <span
                     data-testid={`settings-engine-pending-${c.profileId}`}
-                    className="text-xs text-(--status-info)"
+                    className="flex items-center gap-0.5 text-xs text-muted-foreground"
                   >
-                    {pending}
+                    {pending.kind === "inflight" && (
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                      />
+                    )}
+                    {/* kind "uncertain" -- BrainPicker's onPendingChange mirrors 109-UI-SPEC.md
+                        §C's fixed "· not yet confirmed" suffix here; a static AlertTriangle. */}
+                    {pending.kind === "uncertain" && (
+                      <AlertTriangle
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 shrink-0 text-(--status-warn)"
+                      />
+                    )}
+                    {pending.label}
                   </span>
                 )}
                 {!pending && resolvedRow.mode === "session" && (
@@ -328,8 +347,8 @@ export function AgentProfileRows({
             </div>
             <BrainPicker
               profileId={c.profileId}
-              onPendingChange={(label) =>
-                setPendingByProfile((prev) => ({ ...prev, [c.profileId]: label }))
+              onPendingChange={(next) =>
+                setPendingByProfile((prev) => ({ ...prev, [c.profileId]: next }))
               }
               trigger={
                 <button

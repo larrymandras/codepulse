@@ -14,7 +14,7 @@
  * agree could not prove the stale read was actually gone (103-07-PLAN.md's own framing).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { AgentProfileRows } from "./Settings";
 
@@ -58,10 +58,22 @@ vi.mock("../hooks/useBrainCatalogue", () => ({
   }),
 }));
 
+type MockPending = { label: string; kind: "inflight" | "uncertain" } | null;
+
 let lastPickerProps: { profileId: string; trigger?: ReactNode } | null = null;
+// Phase 109 Plan 06: keyed by profileId (not a single "last" callback) — `AgentProfileRows` mounts
+// one `BrainPicker` per row, and a test must be able to drive a specific row's pending state.
+const pendingChangeByProfile: Record<string, (pending: MockPending) => void> = {};
 vi.mock("../components/brains/BrainPicker", () => ({
-  BrainPicker: (props: { profileId: string; trigger?: ReactNode }) => {
+  BrainPicker: (props: {
+    profileId: string;
+    trigger?: ReactNode;
+    onPendingChange?: (pending: MockPending) => void;
+  }) => {
     lastPickerProps = props;
+    if (props.onPendingChange) {
+      pendingChangeByProfile[props.profileId] = props.onPendingChange;
+    }
     return <div data-testid={`mock-brain-picker-${props.profileId}`}>{props.trigger}</div>;
   },
 }));
@@ -72,6 +84,7 @@ beforeEach(() => {
   lastPickerProps = null;
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
   mockProfileOverrides = {};
+  for (const key of Object.keys(pendingChangeByProfile)) delete pendingChangeByProfile[key];
 });
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -304,5 +317,33 @@ describe("AgentProfileRows — no stub chrome anywhere (Phase 109 D-01)", () => 
     renderRows({ profileConfigs: [makeConfig("personal")] });
 
     expect(screen.queryByTestId("settings-engine-stub-personal")).not.toBeInTheDocument();
+  });
+});
+
+describe("AgentProfileRows — the bounded 'accepted, not yet confirmed' state reads as uncertain, never in-progress (Phase 109 Plan 06, 109-UI-SPEC.md §C)", () => {
+  it("renders a static AlertTriangle (never a pulsing dot) for the uncertain kind, paired with a control asserting the in-flight kind renders the pulse and no AlertTriangle", () => {
+    mockActiveEngineMap = { personal: { model: "claude-sonnet-5", mode: "inherited" } };
+    renderRows({
+      profileConfigs: [makeConfig("personal")],
+      profiles: [makeAgentProfile("personal")],
+    });
+
+    // CONTROL: in-flight — the status-info pulsing dot renders, no AlertTriangle.
+    act(() => {
+      pendingChangeByProfile.personal?.({ label: "· switching to Codex CLI…", kind: "inflight" });
+    });
+    let pending = screen.getByTestId("settings-engine-pending-personal");
+    expect(pending.querySelector('[class*="status-info"].animate-pulse')).toBeInTheDocument();
+    expect(pending.querySelector("svg.lucide-triangle-alert")).not.toBeInTheDocument();
+    expect(pending).toHaveTextContent("switching to Codex CLI");
+
+    // Uncertain — a static AlertTriangle, never a pulsing dot.
+    act(() => {
+      pendingChangeByProfile.personal?.({ label: "· not yet confirmed", kind: "uncertain" });
+    });
+    pending = screen.getByTestId("settings-engine-pending-personal");
+    expect(pending.querySelector('[class*="status-info"].animate-pulse')).not.toBeInTheDocument();
+    expect(pending.querySelector("svg.lucide-triangle-alert")).toBeInTheDocument();
+    expect(pending).toHaveTextContent("not yet confirmed");
   });
 });

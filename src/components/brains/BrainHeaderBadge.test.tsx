@@ -85,14 +85,16 @@ function emitSwapState(modelOverride: string | null) {
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-let mockOnPendingChange: ((label: string | null) => void) | undefined;
+type MockPending = { label: string; kind: "inflight" | "uncertain" } | null;
+
+let mockOnPendingChange: ((pending: MockPending) => void) | undefined;
 
 vi.mock("@/components/brains/BrainPicker", () => ({
   BrainPicker: (props: {
     profileId: string;
     entryScope?: string;
     trigger?: ReactNode;
-    onPendingChange?: (label: string | null) => void;
+    onPendingChange?: (pending: MockPending) => void;
   }) => {
     mockOnPendingChange = props.onPendingChange;
     return (
@@ -110,7 +112,9 @@ vi.mock("@/components/brains/BrainPicker", () => ({
             const btn = e.currentTarget;
             const nextPending = btn.dataset.pending !== "true";
             btn.dataset.pending = String(nextPending);
-            props.onPendingChange?.(nextPending ? "· switching to Codex CLI…" : null);
+            props.onPendingChange?.(
+              nextPending ? { label: "· switching to Codex CLI…", kind: "inflight" } : null
+            );
           }}
         >
           toggle pending
@@ -371,7 +375,7 @@ describe("BrainHeaderBadge — confirmed-live pulse dot", () => {
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
-  it("does not render the pulse dot while a swap is pending", async () => {
+  it("does not render the CONFIRMED-LIVE pulse dot while a swap is pending — the pulse that DOES render while pending is the separate, in-flight status-info one (Phase 109 Plan 06)", async () => {
     seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
     const { container } = renderBadge();
 
@@ -379,7 +383,48 @@ describe("BrainHeaderBadge — confirmed-live pulse dot", () => {
     fireEvent.click(screen.getByTestId("mock-toggle-pending"));
 
     await screen.findByTestId("brain-header-badge-pending");
-    expect(container.querySelector(".animate-pulse")).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="bg-primary"].animate-pulse')).not.toBeInTheDocument();
+  });
+});
+
+describe("BrainHeaderBadge — the bounded 'accepted, not yet confirmed' state reads as uncertain, never in-progress (Phase 109 Plan 06, 109-UI-SPEC.md §C)", () => {
+  it("renders a static AlertTriangle (never a pulsing dot) for the uncertain kind, paired with a control asserting the in-flight kind renders the pulse and no AlertTriangle", async () => {
+    seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
+    const { container } = renderBadge();
+    await screen.findByTestId("brain-header-badge-label");
+
+    // CONTROL: in-flight — the status-info pulsing dot renders, no AlertTriangle.
+    act(() => {
+      mockOnPendingChange?.({ label: "· switching to Codex CLI…", kind: "inflight" });
+    });
+    await screen.findByTestId("brain-header-badge-pending");
+    expect(container.querySelector('[class*="status-info"].animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector("svg.lucide-triangle-alert")).not.toBeInTheDocument();
+
+    // Uncertain — a static AlertTriangle, never a pulsing dot.
+    act(() => {
+      mockOnPendingChange?.({ label: "· not yet confirmed", kind: "uncertain" });
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("brain-header-badge-pending")).toHaveTextContent(
+        "not yet confirmed"
+      )
+    );
+    expect(container.querySelector('[class*="status-info"].animate-pulse')).not.toBeInTheDocument();
+    expect(container.querySelector("svg.lucide-triangle-alert")).toBeInTheDocument();
+  });
+
+  it("isConfirmedLive (the primary pulse) is false while any suffix is showing, including the uncertain state", async () => {
+    seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
+    const { container } = renderBadge();
+    await screen.findByTestId("brain-header-badge-label");
+    expect(container.querySelector('[class*="bg-primary"].animate-pulse')).toBeInTheDocument();
+
+    act(() => {
+      mockOnPendingChange?.({ label: "· not yet confirmed", kind: "uncertain" });
+    });
+    await screen.findByTestId("brain-header-badge-pending");
+    expect(container.querySelector('[class*="bg-primary"].animate-pulse')).not.toBeInTheDocument();
   });
 });
 
@@ -513,7 +558,7 @@ describe("BrainHeaderBadge — pending never lies (D-15)", () => {
     await screen.findByTestId("brain-header-badge-label");
     expect(mockOnPendingChange).toBeInstanceOf(Function);
 
-    mockOnPendingChange?.("· switching to Fable 5…");
+    mockOnPendingChange?.({ label: "· switching to Fable 5…", kind: "inflight" });
     expect(await screen.findByTestId("brain-header-badge-pending")).toHaveTextContent(
       "switching to Fable 5"
     );
