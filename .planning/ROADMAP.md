@@ -739,7 +739,7 @@ Plans:
 
 **Wave 4**
 
-- [ ] 109-05-PLAN.md — `modelIdsMatch` applied at all SEVEN model-id equality sites with a behavioral guard each (ENGINE-03; D-08)
+- [x] 109-05-PLAN.md — `modelIdsMatch` applied at all SEVEN model-id equality sites with a behavioral guard each (ENGINE-03; D-08)
 
 **Wave 5**
 
@@ -828,7 +828,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 3/9 | In Progress|  |
+| 109. Per-Agent Engine UI | 5/9 | In Progress|  |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
