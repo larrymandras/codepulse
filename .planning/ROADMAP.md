@@ -735,7 +735,7 @@ Plans:
 
 **Wave 3**
 
-- [ ] 109-04-PLAN.md — `useProfileBrainOverrides` + the override rung above global, fleet-only `lastTurn`, canonical "Not reported", confirm-column + Settings row on one resolver (ENGINE-03; D-06, D-07, D-14)
+- [x] 109-04-PLAN.md — `useProfileBrainOverrides` + the override rung above global, fleet-only `lastTurn`, canonical "Not reported", confirm-column + Settings row on one resolver (ENGINE-03; D-06, D-07, D-14)
 
 **Wave 4**
 

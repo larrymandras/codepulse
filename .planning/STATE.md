@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Completed 109-03-PLAN.md (Retire the D-16 stub seam -- useBrainCatalogue as the one swap.catalogue fetcher, real per-profile swap.set dispatch with profile_id, default_profile_id addressing on the header badge/Chat pill/Settings rows; commits cff6d866/4ee74f99/b4b8ee0f/e7634214)
-last_updated: "2026-08-09T13:44:00.000Z"
+stopped_at: Completed 109-04-PLAN.md (D-06/D-07 read-path fix -- override rung above the global override, scoped lastTurn fallback removed, one canonical "Not reported" absent string across the header badge/Chat pill/picker/confirm-modal/Settings row, LlmStatusPanel; commits 70c0c07d/d345f8d3/d245a557)
+last_updated: "2026-08-09T14:21:00.000Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 16
-  completed_plans: 10
+  completed_plans: 11
   percent: 8
 ---
 
@@ -44,9 +44,11 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 109 (per-agent-engine-ui) — EXECUTING
-Plan: 3 of 9 complete (next: Plan 4)
+Plan: 4 of 9 complete (next: Plan 5)
 Status: Executing Phase 109
-Last activity: 2026-08-09 -- Plan 109-03 complete (D-16 stub seam retired: useBrainCatalogue as the one swap.catalogue fetcher, real per-profile swap.set dispatch with profile_id, default_profile_id addressing)
+Last activity: 2026-08-09 -- Plan 109-04 complete (D-06/D-07 read-path fix: override rung above global override, scoped lastTurn fallback removed, one canonical "Not reported" absent string across every brain surface)
+
+**Plan 109-04 complete (2026-08-09).** Fixed the read path so every brain surface answers "what engine is this profile on?" the same way Ástríðr does. `useProfileBrainOverrides()` (new hook, mirrors `useGlobalBrainOverride`'s pull+push shape over `swap.state`'s `profile_overrides` map, delivered by 109-01) feeds a new top rung in `resolveActiveBrain`: a live per-profile override now wins even while a DIFFERENT global override is simultaneously active — the precedence-inversion fix (D-06). The scoped `lastTurn` fallback rung is removed (D-07): a scoped read with no telemetry and no override now returns `source:"none"` instead of rendering a different profile's most-recently-answered model as this profile's own; the fleet-wide (no-`profileId`) `lastTurn` rung is untouched. Three disagreeing absent-state strings ("No brain reported", two independent "Auto" fallbacks) are replaced by the one canonical "Not reported" (italic, muted, no dot) across `BrainHeaderBadge`, Chat's composer pill, `BrainPicker`'s trigger/confirm-modal column, Settings' per-profile row, and `LlmStatusPanel`. `BrainPicker`'s trigger base label, `isCurrent` row highlight, and the pre-swap confirm modal's per-row current-engine column now resolve through the full `resolveActiveBrain` chain instead of raw `activeEngines` telemetry — a profile pinned moments ago shows its pin immediately everywhere, never a stale pre-pin reading. Settings' per-profile engine label reads the same full chain (D-14), so it cannot disagree with the swap-history section plan 109-08 mounts beneath it. `useLastTurnModel`'s docstring, which cited a falsified premise (an emitter bug Phase 108 already fixed, and a nonexistent future astridr phase), is corrected in place. `BrainPicker.tsx:350`'s separate lowercase `"auto"` sentinel (feeds two non-user-visible consumers) is deliberately left unchanged, per the plan's own instruction — an explicit, still-open follow-up. Full suite: 281 passed | 17 skipped (unchanged file count), 3658 passed | 193 todo (baseline 3639) — 19 net new tests, zero regressions. `npx tsc --noEmit` exits 0. Executed sequentially on `master`, no worktree. See `109-04-SUMMARY.md`. Next: Plan 109-05.
 
 **Plan 109-03 complete (2026-08-09).** Deleted the entire per-profile brain-swap stub/live adapter seam (`brainsApi.ts`'s `validateGatewayModelSet`, stub/live adapters, `BRAINS_STUB_ACTIVE`, `VITE_BRAINS_STUB`, `registerBrainsWsSender`, `brainsFixtures.ts`, `BrainsWsRegistrar.tsx`, `e2e/brain-swap.spec.ts`) and replaced it with `src/hooks/useBrainCatalogue.ts` — the one `swap.catalogue` fetcher every brain surface (`BrainPicker`, `BrainHeaderBadge`, Chat's composer pill, Settings' profile rows) now reads. `BrainPicker`'s "This profile" scope dispatches the real, server-registered `swap.set` with `profile_id` (bounded via a `dispatchBounded` wrapper mirroring `GlobalSwapModal`'s own, T-109-08) instead of the never-implemented `gateway.model.set`; both picker scopes read one shared catalogue (D-02), so toggling scope no longer re-fetches. `default_profile_id` (Ástríðr's own resolved value, threaded through by plan 109-01) replaces the `profiles[0]?.profileId` Convex-ordering fallback everywhere it was read (D-03). All five STUB chips/banners are gone with no replacement. Test-count delta fully accounted for (baseline 3649 → 3639, −10, itemized per-file in `109-03-SUMMARY.md` against exactly which now-unreachable branches — D-02's flattening makes only the "API" group/`normal` cost-tier reachable through the picker's live catalogue until plan 109-07 — each dropped test corresponds to). `npx tsc --noEmit` exits 0, `npm run build` succeeds, `npx playwright test --list` lists 38 tests with no reference to the deleted spec. Executed sequentially on `master`, no worktree. See `109-03-SUMMARY.md`. Next: Plan 109-04.
 
@@ -835,6 +837,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 109]: D-03 (109-03): default_profile_id (via useBrainCatalogue) replaces the profiles[0]?.profileId Convex-ordering fallback on BrainHeaderBadge and Chat's composer pill — an unresolved default addresses no profile, never a guessed one
 - [Phase 109]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.advance-plan clobbered stopped_at/Status/Last-activity back to the 109-01 narrative — reverted from git HEAD, completed_plans 9->10 applied by hand)
 - [Phase 109]: ENGINE-03/ENGINE-04 left Pending in REQUIREMENTS.md despite this plan's frontmatter listing them — 109-CONTEXT.md's own "Claude's Discretion" section explicitly instructs "should not mark ENGINE-03/ENGINE-04 satisfied from tests alone", requiring an operator-attended live gate (mirroring ENGINE-05's Phase 108 precedent) before either flips; this plan only delivers the dispatch mechanism (Wave 2 of 7), not the full requirement (precedence fix in 109-04, the 5-state confirm machine in 109-06, and the live gate all remain)
+- [Phase 109]: D-06/D-07 (109-04): resolveActiveBrain gains a top override rung (a live per-profile pin wins even under a different active global override) and drops the scoped lastTurn fallback (a scoped read with no telemetry/override now returns "none", never another profile's model) — mirrors Ástríðr's own _resolve_model chain, correcting 103-CONTRACT.md §9's originally-inverted description
+- [Phase 109]: UI-SPEC §A/§B (109-04): one canonical "Not reported" absent string replaces three disagreeing ones (badge/pill/picker's two independent "Auto" literals); the override rung renders through the exact same JSX branch as a telemetry-sourced pinned reading — invisible to the operator by design
+- [Phase 109]: ENGINE-03/ENGINE-04 still left Pending in REQUIREMENTS.md after this plan (109-04) — the precedence fix and honest-absent-state work are code-complete and unit-tested, but the operator-attended live gate (109-CONTEXT.md's Claude's Discretion item, mirroring ENGINE-05) has not run yet; unchanged from 109-03's same note
+- [Phase 109]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.* verbs not run) — completed_plans 10->11
 
 ### Pending Todos
 
