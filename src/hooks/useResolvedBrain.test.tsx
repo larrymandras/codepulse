@@ -18,6 +18,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import {
   useGlobalBrainOverride,
+  useProfileBrainOverrides,
   resolveActiveBrain,
   useResolvedBrain,
   useLastTurnModel,
@@ -94,13 +95,20 @@ function seedEngines(snapshots: ActiveEngine[], profileIds: string[]) {
   });
 }
 
-function okAck(overrides: { model_override?: unknown; voice_override_name?: unknown } = {}) {
+function okAck(
+  overrides: {
+    model_override?: unknown;
+    voice_override_name?: unknown;
+    profile_overrides?: unknown;
+  } = {}
+) {
   return {
     type: "ack",
     request_id: "x",
     status: "ok",
     model_override: null,
     voice_override_name: null,
+    profile_overrides: {},
     ...overrides,
   };
 }
@@ -188,6 +196,111 @@ describe("useGlobalBrainOverride — snapshot on connect (WR-07 regression, THE 
   });
 });
 
+describe("useProfileBrainOverrides — snapshot on connect + swap.state push (D-05/D-06)", () => {
+  it("sends { type: 'swap.get_state' } once status is connected", async () => {
+    renderHook(() => useProfileBrainOverrides());
+    await waitFor(() => expect(mockSendCommand).toHaveBeenCalled());
+    expect(mockSendCommand).toHaveBeenCalledWith({ type: "swap.get_state" });
+  });
+
+  it("hydrates the per-profile override map from the swap.get_state ack", async () => {
+    mockSendCommand.mockResolvedValue(
+      okAck({
+        profile_overrides: {
+          "assistant-default": { model: "claude-opus-4-8", source: "operator" },
+        },
+      })
+    );
+    const { result } = renderHook(() => useProfileBrainOverrides());
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        "assistant-default": { model: "claude-opus-4-8", source: "operator" },
+      })
+    );
+  });
+
+  it("a profile absent from the ack's profile_overrides has no entry in the map (absent, never null)", async () => {
+    mockSendCommand.mockResolvedValue(
+      okAck({ profile_overrides: { consulting: { model: "codex-cli", source: null } } })
+    );
+    const { result } = renderHook(() => useProfileBrainOverrides());
+    await waitFor(() => expect(result.current.consulting).toBeDefined());
+    expect(result.current["assistant-default"]).toBeUndefined();
+    expect("assistant-default" in result.current).toBe(false);
+  });
+
+  it("updates the map from a live swap.state push", async () => {
+    const { result } = renderHook(() => useProfileBrainOverrides());
+    await waitFor(() => expect(mockSendCommand).toHaveBeenCalled());
+    expect(capturedSwapStateCallback).toBeDefined();
+
+    act(() => {
+      capturedSwapStateCallback?.({
+        event_type: "swap.state",
+        data: { profile_overrides: { consulting: { model: "codex-cli", source: null } } },
+      });
+    });
+
+    await waitFor(() =>
+      expect(result.current).toEqual({ consulting: { model: "codex-cli", source: null } })
+    );
+  });
+
+  it("drops an entry whose model is a non-string, paired with a control entry in the same payload that IS valid and IS kept (T-103-32)", async () => {
+    mockSendCommand.mockResolvedValue(
+      okAck({
+        profile_overrides: {
+          "assistant-default": { model: 12345, source: "operator" },
+          consulting: { model: "codex-cli", source: null },
+        },
+      })
+    );
+    const { result } = renderHook(() => useProfileBrainOverrides());
+    await waitFor(() =>
+      expect(result.current).toEqual({ consulting: { model: "codex-cli", source: null } })
+    );
+    expect(result.current["assistant-default"]).toBeUndefined();
+  });
+
+  it("leaves the prior value in place on a non-ok ack, rather than clearing a real reading", async () => {
+    mockSendCommand.mockResolvedValueOnce(
+      okAck({
+        profile_overrides: {
+          "assistant-default": { model: "claude-opus-4-8", source: "operator" },
+        },
+      })
+    );
+    const { result, rerender } = renderHook(() => useProfileBrainOverrides());
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        "assistant-default": { model: "claude-opus-4-8", source: "operator" },
+      })
+    );
+
+    mockSendCommand.mockResolvedValueOnce({ type: "ack", request_id: "x", status: "error", error: "boom" });
+    mockStatus = "disconnected";
+    rerender();
+    mockStatus = "connected";
+    rerender();
+
+    await waitFor(() => expect(mockSendCommand).toHaveBeenCalledTimes(2));
+    expect(result.current).toEqual({
+      "assistant-default": { model: "claude-opus-4-8", source: "operator" },
+    });
+  });
+
+  it("degrades to an empty map without throwing when rendered outside AstridrWSProvider", () => {
+    mockAstridrWSThrows = true;
+    let hookResult: ReturnType<typeof useProfileBrainOverrides> | undefined;
+    expect(() => {
+      const { result } = renderHook(() => useProfileBrainOverrides());
+      hookResult = result.current;
+    }).not.toThrow();
+    expect(hookResult).toEqual({});
+    expect(mockSendCommand).not.toHaveBeenCalled();
+  });
+});
+
 describe("useResolvedBrain — pre-existing override, ZERO swap.state events (2026-07-28 live regression)", () => {
   it("resolves { source: 'global', model } from the swap.get_state ack alone, with no swap.state event ever emitted", async () => {
     mockSendCommand.mockResolvedValue(
@@ -206,6 +319,54 @@ describe("useResolvedBrain — pre-existing override, ZERO swap.state events (20
 });
 
 describe("resolveActiveBrain (pure)", () => {
+  it("D-06: a pinned profile override wins even while a DIFFERENT global override is simultaneously active (precedence-inversion fix)", () => {
+    const result = resolveActiveBrain({
+      globalOverride: "claude-haiku-4-5-20251001",
+      activeEngines: {},
+      profileId: "assistant-default",
+      profileOverrides: {
+        "assistant-default": { model: "claude-opus-4-8", source: "operator" },
+      },
+    });
+    expect(result).toEqual({
+      source: "override",
+      model: "claude-opus-4-8",
+      mode: "pinned",
+      distinctModels: ["claude-opus-4-8"],
+    });
+  });
+
+  it("CONTROL: with the SAME global override active but NO profile override for this profile, returns source:'global' — precedence below the new rung is unchanged", () => {
+    const result = resolveActiveBrain({
+      globalOverride: "claude-haiku-4-5-20251001",
+      activeEngines: {},
+      profileId: "assistant-default",
+      profileOverrides: {},
+    });
+    expect(result).toEqual({
+      source: "global",
+      model: "claude-haiku-4-5-20251001",
+      distinctModels: [],
+    });
+  });
+
+  it("D-06: a profile override also wins over that profile's own telemetry when no global override is active", () => {
+    const activeEngines: ActiveEngineMap = {
+      "assistant-default": makeEngine("assistant-default", "anthropic-sonnet-5"),
+    };
+    const result = resolveActiveBrain({
+      globalOverride: null,
+      activeEngines,
+      profileId: "assistant-default",
+      profileOverrides: {
+        "assistant-default": { model: "claude-opus-4-8", source: null },
+      },
+    });
+    expect(result.source).toBe("override");
+    expect(result.model).toBe("claude-opus-4-8");
+    expect(result.mode).toBe("pinned");
+  });
+
   it("global beats profile even when telemetry is present for that exact profile (BSC-01 trap)", () => {
     const activeEngines: ActiveEngineMap = {
       "assistant-default": makeEngine("assistant-default", "anthropic-sonnet-5"),
@@ -270,11 +431,10 @@ describe("resolveActiveBrain (pure)", () => {
     expect(result.model).toBeNull();
   });
 
-  // 2026-07-31 live finding: per-profile telemetry (activeEngineSnapshots) is permanently empty
-  // because astridr-repo's router.py emitter never sends profileId/uses a different key name
-  // than the Convex ingest expects (untracked "Astridr Phase 184.1" per 103-CONTRACT.md) — so in
-  // production, activeEngines is ALWAYS {} and every profile/mixed reading falls straight to
-  // "none" today. lastTurnModel is the fallback that keeps the badge honest instead of blank.
+  // Historical note, corrected (see useLastTurnModel's own docstring): this test originally
+  // documented per-profile telemetry as "permanently empty" due to an emitter bug fixed by Phase
+  // 108's D-01/D-11. The rung stays in place regardless, because D-03's boot seed makes it nearly
+  // (not entirely) unreachable, and it costs nothing where it stays honest (D-07, FLEET-only).
   it("falls back to lastTurn (fleet-wide) when nothing is reported at all and a last-turn model is known", () => {
     const result = resolveActiveBrain({
       globalOverride: null,
@@ -285,11 +445,21 @@ describe("resolveActiveBrain (pure)", () => {
     expect(result.model).toBe("claude-sonnet-5");
   });
 
-  it("falls back to lastTurn for a supplied profileId with no reported engine but a known last-turn model", () => {
+  it("D-07: a scoped (profileId supplied) read with no telemetry and no override returns 'none', NOT lastTurn — even when a last-turn model is known (another profile's model is not this profile's engine)", () => {
     const result = resolveActiveBrain({
       globalOverride: null,
       activeEngines: { "assistant-default": null },
       profileId: "assistant-default",
+      lastTurnModel: "claude-sonnet-5",
+    });
+    expect(result.source).toBe("none");
+    expect(result.model).toBeNull();
+  });
+
+  it("CONTROL: the FLEET read (no profileId) with the SAME lastTurnModel still returns 'lastTurn' — proves the D-07 restriction is scope-specific, not a removal of the rung", () => {
+    const result = resolveActiveBrain({
+      globalOverride: null,
+      activeEngines: {},
       lastTurnModel: "claude-sonnet-5",
     });
     expect(result.source).toBe("lastTurn");
