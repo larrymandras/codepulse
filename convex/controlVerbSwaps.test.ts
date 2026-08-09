@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { record } from "./controlVerbSwaps";
+import { record, listGlobal, listByScope } from "./controlVerbSwaps";
 // isBrainSwap/SWAP_HISTORY_CAP moved to controlVerbSwapsFilters.ts (2026-08-07, bundling defect
 // fix — see 108-REVIEW.md); controlVerbSwaps.ts no longer defines or re-exports either, so this
 // test file imports them from their one remaining source, same as controlVerbSwaps.ts itself does.
@@ -187,5 +187,58 @@ describe("listByScope — scope filter present (source-level guard, not behavior
 
     expect(body).toMatch(/\.withIndex\(\s*"by_scope"/);
     expect(body).toMatch(/q\.eq\(\s*"scope"\s*,\s*args\.profileId\s*\)/);
+  });
+});
+
+// Phase 109 (TELE-02, D-11): listGlobal is the new bounded query matching
+// absent-scope (global) rows. D-11's own text says "reading the same
+// by_scope index at scope: null" — implementing that literally returns zero
+// rows forever, silently, because a stored global row's scope key is ABSENT,
+// never present-with-null (runtimeIngest.ts's normalizeOptional strips null
+// to undefined before storage; Convex's v.optional(...) rejects an explicit
+// null outright). The mutation-proof block below is the guard against that
+// exact regression reappearing.
+describe("listGlobal — bounded query matching absent-scope (global) rows (Phase 109, D-11)", () => {
+  const controlVerbSwapsPath = path.resolve(__dirname, "./controlVerbSwaps.ts");
+
+  it("declares listGlobal as query({ args: {}, ... }) — a read, taking no arguments", () => {
+    const exportArgs = (listGlobal as unknown as { exportArgs: () => string }).exportArgs;
+    const schema = JSON.parse(exportArgs());
+    // Convex serializes an empty `args: {}` object validator as an "object"
+    // fieldType with an empty `value` map — proves no argument crept in,
+    // reading the LIVE validator object, not a hand-typed literal (same
+    // idiom as the record-args-shape block above).
+    expect(schema.type).toBe("object");
+    expect(Object.keys(schema.value)).toEqual([]);
+  });
+
+  it("does not widen listByScope's exported validator shape (unchanged signature)", () => {
+    const exportArgs = (listByScope as unknown as { exportArgs: () => string }).exportArgs;
+    const schema = JSON.parse(exportArgs());
+    expect(Object.keys(schema.value)).toEqual(["profileId"]);
+    expect(schema.value.profileId.optional).toBe(false);
+  });
+
+  it("matches on q.eq('scope', undefined), never q.eq('scope', null) (comment-stripped source)", () => {
+    const source = stripCommentLines(readFileSync(controlVerbSwapsPath, "utf-8"));
+    expect(source).toMatch(/q\.eq\(\s*"scope"\s*,\s*undefined\s*\)/);
+    expect(source).not.toMatch(/q\.eq\(\s*"scope"\s*,\s*null\s*\)/);
+  });
+
+  it("is registered with query(, not internalMutation/mutation — record stays the file's only internalMutation( (CR-01 regression guard)", () => {
+    const source = stripCommentLines(readFileSync(controlVerbSwapsPath, "utf-8"));
+    expect(source).toMatch(/listGlobal\s*=\s*query\(/);
+    const internalMutationMatches = source.match(/=\s*internalMutation\(/g) ?? [];
+    expect(internalMutationMatches.length).toBe(1);
+    expect(source).not.toMatch(/=\s*mutation\(/);
+  });
+
+  it("takes SWAP_HISTORY_CAP and never .collect()s, in listGlobal's own body", () => {
+    const source = stripCommentLines(readFileSync(controlVerbSwapsPath, "utf-8"));
+    const listGlobalStart = source.indexOf("export const listGlobal");
+    expect(listGlobalStart).toBeGreaterThan(-1);
+    const body = source.slice(listGlobalStart, listGlobalStart + 400);
+    expect(body).toMatch(/\.take\(SWAP_HISTORY_CAP\)/);
+    expect(source).not.toMatch(/\.collect\(\)/);
   });
 });

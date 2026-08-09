@@ -85,3 +85,36 @@ export const listByScope = query({
       .take(SWAP_HISTORY_CAP);
   },
 });
+
+/**
+ * listGlobal — Returns the most recent GLOBAL swap-history rows (Phase 109,
+ * TELE-02, D-11), newest first, bounded by SWAP_HISTORY_CAP over the same
+ * by_scope index listByScope uses — never an unbounded collect on this
+ * append-only table (T-108-12/T-109-05).
+ *
+ * D-11's own decision text says "reading the same by_scope index at
+ * scope: null" — that is WRONG if implemented literally, and this comment
+ * exists so a future editor does not "fix" the line below back to it. A
+ * stored global-swap document never has scope: null:
+ * `runtimeIngest.ts`'s `resolveControlVerbSwapEvent` runs every incoming
+ * value through `normalizeOptional()`, which converts an explicit `null` to
+ * `undefined` before `record` is called — `record`'s own `scope` arg is
+ * `v.optional(v.string())`, and Convex's `v.optional(...)` accepts an
+ * omitted key or `undefined` but REJECTS an explicit `null` outright. So a
+ * global swap row's `scope` key is simply ABSENT, never present-with-null.
+ * Convex indexes an absent field only under `undefined` — `q.eq("scope",
+ * undefined)` matches it; `q.eq("scope", null)` matches zero rows, forever,
+ * with no error, which is indistinguishable from "no global swaps yet."
+ * See docs.convex.dev/database/types: an index query on `undefined` matches
+ * documents missing that field, and `undefined < null < all other values`.
+ */
+export const listGlobal = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("controlVerbSwaps")
+      .withIndex("by_scope", (q) => q.eq("scope", undefined))
+      .order("desc")
+      .take(SWAP_HISTORY_CAP);
+  },
+});
