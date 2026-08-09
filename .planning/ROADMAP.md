@@ -727,7 +727,7 @@ Plans:
 **Wave 1**
 
 - [x] 109-01-PLAN.md — astridr: `ModelRouter` override enumerators + `profile_overrides` on `build_swap_state_payload` + `default_profile_id` on the `swap.catalogue` ack (ENGINE-03, ENGINE-04; D-03, D-05)
-- [ ] 109-02-PLAN.md — codepulse Convex: bounded `listGlobal` (matches absent `scope`, not `null`) + `mergeSwapHistory` on the WR-02-safe side + 103-CONTRACT.md §3/§8/§9 corrected in place (TELE-02; D-11)
+- [x] 109-02-PLAN.md — codepulse Convex: bounded `listGlobal` (matches absent `scope`, not `null`) + `mergeSwapHistory` on the WR-02-safe side + 103-CONTRACT.md §3/§8/§9 corrected in place (TELE-02; D-11)
 
 **Wave 2**
 
@@ -828,7 +828,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 1/9 | In Progress|  |
+| 109. Per-Agent Engine UI | 2/9 | In Progress|  |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
