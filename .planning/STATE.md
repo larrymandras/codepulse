@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Completed 109-07-PLAN.md
-last_updated: "2026-08-09T15:51:24.761Z"
+stopped_at: Completed 109-08-PLAN.md
+last_updated: "2026-08-09T16:13:41.344Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 8
 ---
 
@@ -44,7 +44,7 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 109 (per-agent-engine-ui) — EXECUTING
-Plan: 7 of 9 complete (next: Plan 8)
+Plan: 8 of 9 complete (next: Plan 9)
 Status: Ready to execute
 Last activity: 2026-08-09
 
@@ -849,6 +849,9 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 109]: onPendingChange widened from string|null to {label,kind:inflight|uncertain}|null so the accepted (bounded-timeout) state can render distinctly from in-progress on every mirrored per-profile brain surface, per 109-UI-SPEC.md section C.
 - [Phase 109]: D-13 implemented: anthropic maps to anthropic_direct; every other non-empty vendor is the OpenRouter catch-all; unclassified detection is by vendor emptiness, never getBillingType's api fallback
 - [Phase 109]: shouldConfirmCost hoisted into one formula in BrainPicker.tsx, consumed identically by the row-render loop and handleActivate; needsCostConfirm stays the pure scope-independent predicate
+- [Phase 109]: Filter brain swaps before merging (not after) so totalCount never counts voice rows the list won't render
+- [Phase 109]: SwapHistoryList drops the old 'Recent swaps' label since the outer Collapsible trigger now carries the section heading
+- [Phase 109]: Badge and disclosure count each call useCombinedSwapHistory independently rather than prop-threading, relying on Convex's client-side query dedup
 
 ### Pending Todos
 
@@ -890,11 +893,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 109 P05 | 15min | 3 tasks | 14 files |
 | Phase 109 P06 | 55min | 3 tasks | 10 files |
 | Phase 109 P07 | 12min | 3 tasks | 7 files |
+| Phase 109 P08 | 10min | 3 tasks | 8 files |
 
 ## Session Continuity
 
-Last session: 2026-08-09T15:51:24.747Z
-Stopped at: Completed 109-07-PLAN.md
+Last session: 2026-08-09T16:13:41.329Z
+Stopped at: Completed 109-08-PLAN.md
 
 --- Prior (superseded by the above) --- Completed 109-01-PLAN.md (Astridr D-05 profile_overrides + D-03 default_profile_id, feature/brain-swap commits 10503e4f/effb7a48/411e0253/8c4842f1)
 

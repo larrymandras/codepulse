@@ -138,3 +138,11 @@ None — no external service configuration required. This plan is CodePulse-only
 ---
 *Phase: 109-per-agent-engine-ui*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+- FOUND: `src/hooks/useControlVerbSwaps.ts`, `src/hooks/useControlVerbSwaps.test.ts`
+- FOUND: `src/components/brains/SwapHistoryList.tsx`, `src/components/brains/SwapHistoryList.test.tsx`
+- FOUND: `src/components/brains/GlobalSwapModal.tsx`, `src/components/brains/GlobalSwapModal.test.tsx`
+- FOUND: `src/pages/Settings.tsx`, `src/pages/Settings.test.tsx`
+- FOUND commits: `7c1e917e`, `fadd8ac9`, `f88951f3`, `adeb2118`
