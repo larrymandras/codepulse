@@ -216,3 +216,14 @@ None — no external service configuration required. This plan is CodePulse-only
 ---
 *Phase: 109-per-agent-engine-ui*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+- FOUND: `src/hooks/useBrainCatalogue.ts`, `src/hooks/useBrainCatalogue.test.ts`
+- FOUND: `src/lib/brainsApi.ts`, `src/lib/brainsApi.test.ts`
+- FOUND: `src/hooks/useResolvedBrain.ts`, `src/App.tsx`, `playwright.config.ts`
+- FOUND: `src/components/brains/BrainPicker.tsx`, `src/components/brains/BrainHeaderBadge.tsx`
+- FOUND: `src/pages/Chat.tsx`, `src/pages/Settings.tsx`
+- FOUND: `.planning/phases/109-per-agent-engine-ui/109-03-SUMMARY.md`
+- CONFIRMED DELETED: `src/lib/brainsFixtures.ts`, `src/components/brains/BrainsWsRegistrar.tsx`/`.test.tsx`, `e2e/brain-swap.spec.ts`
+- FOUND commits: `cff6d866`, `4ee74f99`, `b4b8ee0f`, `e7634214`

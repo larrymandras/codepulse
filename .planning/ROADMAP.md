@@ -731,7 +731,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 109-03-PLAN.md — retire the D-16 stub seam whole: flag/adapter/fixtures/registrar/validator/e2e spec deleted, one `useBrainCatalogue`, real scoped `swap.set` dispatch (ENGINE-03, ENGINE-04; D-01, D-02, D-04)
+- [x] 109-03-PLAN.md — retire the D-16 stub seam whole: flag/adapter/fixtures/registrar/validator/e2e spec deleted, one `useBrainCatalogue`, real scoped `swap.set` dispatch (ENGINE-03, ENGINE-04; D-01, D-02, D-04)
 
 **Wave 3**
 
@@ -828,7 +828,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 2/9 | In Progress|  |
+| 109. Per-Agent Engine UI | 3/9 | In Progress|  |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
