@@ -87,6 +87,11 @@ npx convex env set FORGE_INGEST_API_KEY '<your-secret-key>'
 # FORGE_LOG_INGEST_URL=<site-origin>/forge-log-ingest
 # FORGE_FILE_INGEST_URL=<site-origin>/forge-file-ingest
 
-# Verify what is set:
-npx convex env list
+# Verify what is set (names only — NEVER run this bare):
+npx convex env list | cut -d= -f1
 ```
+
+> The bare `npx convex env list` prints `NAME=VALUE` for every variable against the
+> self-hosted backend, dumping live secrets into the terminal/transcript. The `cut` filter is
+> mandatory whenever you only need to confirm a name is present. (The retired cloud
+> deployment masked values; self-hosted does not — verified 2026-08-10.)

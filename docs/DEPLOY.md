@@ -46,8 +46,14 @@ Set it there (no `--prod`, since there is no prod deploy):
 
 ```bash
 npx convex env set CODEPULSE_ALLOWED_ORIGIN 'http://localhost:5173'
-npx convex env list   # confirm CODEPULSE_ALLOWED_ORIGIN appears
+npx convex env list | cut -d= -f1   # confirm CODEPULSE_ALLOWED_ORIGIN appears
 ```
+
+> **Never run a bare `npx convex env list`.** Against the self-hosted backend it prints
+> `NAME=VALUE` for every variable, dumping live secrets into your terminal and, if run by an
+> agent, into the session transcript. Always pipe through `cut -d= -f1` when you only need to
+> confirm a name is present. (The retired cloud deployment masked values; self-hosted does
+> not — verified 2026-08-10.)
 
 Fallback: **Convex Dashboard → your deployment → Settings → Environment Variables**.
 
