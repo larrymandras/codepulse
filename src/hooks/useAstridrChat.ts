@@ -593,7 +593,50 @@ export function useAstridrChat() {
         /* run may already be over — the interrupt still happened locally */
       });
     }
-    setMessages((prev) => prev.map((msg) => (msg.streaming ? { ...msg, streaming: false } : msg)));
+    // D-01 (188.4-01): flip every OTHER streaming message to streaming:false
+    // (unchanged behavior), but an assistant message that is streaming AND
+    // carries neither content NOR blocks — the merge-path placeholder
+    // appended by sendMessage (:232-235) with nothing having streamed into
+    // it yet — is REMOVED outright instead of left rendering an empty
+    // bubble. Checks BOTH content and blocks: a control-verb fast-path reply
+    // (content:"" but WITH blocks, the run.blocks-only shape at :285-307)
+    // must survive untouched, only flipped like every other streaming
+    // message. Not scoped by `reason` — a barge-in interrupts a reply that
+    // already has content, so the empty predicate alone never reaches it;
+    // adding a reason check would miss the flush-send path and be
+    // over-engineering (188.4-CONTEXT.md § D-01).
+    setMessages((prev) => {
+      const prunedIds: string[] = [];
+      const next: typeof prev = [];
+      for (const msg of prev) {
+        if (!msg.streaming) {
+          next.push(msg);
+          continue;
+        }
+        const isEmptyAssistant =
+          msg.role === "assistant" &&
+          !(msg.content && msg.content.length > 0) &&
+          !(msg.blocks && msg.blocks.length > 0);
+        if (isEmptyAssistant) {
+          prunedIds.push(msg.id);
+          continue;
+        }
+        next.push({ ...msg, streaming: false });
+      }
+      if (typeof window !== "undefined") {
+        const buf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
+          .__astridrVoiceTrace ??= []);
+        for (const id of prunedIds) {
+          buf.push({
+            t: new Date().toISOString().slice(11, 23),
+            ev: "interrupt.pruned-empty-assistant",
+            d: { reason, id, count: prunedIds.length },
+          });
+          if (buf.length > 500) buf.shift();
+        }
+      }
+      return next;
+    });
     setStreaming(false);
     activeSessionRef.current = null;
     streamingTextRef.current = "";
