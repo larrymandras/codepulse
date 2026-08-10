@@ -64,6 +64,9 @@ const MeetingBot = lazy(() => import("./pages/MeetingBot"));
 // Skills browser
 const Skills = lazy(() => import("./pages/Skills"));
 
+// Phase 116: Galdr prompt library
+const Galdr = lazy(() => import("./pages/Galdr"));
+
 // Phase 72: Tool / Capability Galaxy
 const ToolGalaxy = lazy(() => import("./pages/ToolGalaxy"));
 
@@ -135,6 +138,8 @@ export default function App() {
               {/* Phase 56: Command Center pages */}
               <Route path="/chat" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Chat...</div>}><Chat /></Suspense>} />
               <Route path="/skills" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Skills...</div>}><Skills /></Suspense>} />
+              {/* Phase 116: Galdr prompt library */}
+              <Route path="/galdr" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Galdr...</div>}><Galdr /></Suspense>} />
               <Route path="/live-run" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Live Run...</div>}><LiveRun /></Suspense>} />
               <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
               <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />

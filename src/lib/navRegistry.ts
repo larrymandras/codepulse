@@ -49,6 +49,7 @@ import {
   MessageSquareText,
   Gauge,
   Wrench,
+  Sparkles,
 } from "lucide-react";
 
 export const iconComponents: Record<string, React.ElementType> = {
@@ -92,6 +93,7 @@ export const iconComponents: Record<string, React.ElementType> = {
   "message-square-text": MessageSquareText,
   gauge: Gauge,   // Phase 93 — Quality page
   wrench: Wrench,   // Phase 105 — Tools page
+  sparkles: Sparkles,   // Phase 116 — Galdr page
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -123,6 +125,8 @@ export const navGroups: NavGroupConfig[] = [
       { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
       { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
       { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
+      // Adjacent to Skills on purpose: both are curated-content-library tools.
+      { to: "/galdr", label: "Galdr", icon: "sparkles", group: "COMMAND" },
       { to: "/reminders", label: "Reminders", icon: "clock", group: "COMMAND" },
       { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "COMMAND" },
       { to: "/forge", label: "Forge", icon: "flame", group: "COMMAND" },

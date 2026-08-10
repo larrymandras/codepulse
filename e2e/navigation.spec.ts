@@ -19,6 +19,17 @@ test.describe('Sidebar navigation', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 
+  // Phase 116: proves the nav-registry entry actually renders as a reachable
+  // link. No unit test can show that -- the registry is data, and a typo in the
+  // route or a missing iconComponents key both leave the entry looking correct
+  // in the registry while producing no working link.
+  test('navigates to galdr page', async ({ page }) => {
+    await page.goto('/');
+    const galdrLink = page.locator('a[href="/galdr"]').first();
+    await galdrLink.click();
+    await expect(page).toHaveURL('/galdr');
+  });
+
   test('navigates to alerts page', async ({ page }) => {
     await page.goto('/');
     const alertsLink = page.locator('a[href="/alerts"]').first();
