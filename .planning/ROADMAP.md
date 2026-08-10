@@ -778,8 +778,8 @@ Plans:
 
 **Wave 1**
 
-- [ ] 110-01-PLAN.md — pure prune-chain helpers (`partitionBatchForPrune`, `resolveRotationStart`, `planRotationWrite`) with the Pitfall-1 all-skipped-batch regression, mutation-tested (DUR-01; D-02, D-05, D-06)
-- [ ] 110-02-PLAN.md — **`autonomous: false`**: control-paired knob probe of the live backend, upstream `#495`/`#522`/`#525` status re-verified at write-up time, `110-MEMORY-EVIDENCE.md` + the D-11 CLAUDE.md bullet (DUR-03; D-09, D-10, D-11)
+- [x] 110-01-PLAN.md — pure prune-chain helpers (`partitionBatchForPrune`, `resolveRotationStart`, `planRotationWrite`) with the Pitfall-1 all-skipped-batch regression, mutation-tested (DUR-01; D-02, D-05, D-06)
+- [x] 110-02-PLAN.md — **`autonomous: false`**: control-paired knob probe of the live backend, upstream `#495`/`#522`/`#525` status re-verified at write-up time, `110-MEMORY-EVIDENCE.md` + the D-11 CLAUDE.md bullet (DUR-03; D-09, D-10, D-11)
 
 **Wave 2**
 
@@ -856,7 +856,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
-| 110. Convex Durability | 0/TBD | Not started | - |
+| 110. Convex Durability | 2/6 | In Progress|  |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
 | 113. Debt Sweep | 0/TBD | Not started | - |

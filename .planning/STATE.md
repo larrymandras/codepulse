@@ -4,8 +4,8 @@ milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
 stopped_at: Phase 110 context gathered
-last_updated: "2026-08-10T18:42:33.299Z"
-last_activity: 2026-08-10 -- Phase 116 7/8 plans; galdr skill installed + pushed, live round trip verified; only 116-08 remains
+last_updated: "2026-08-10T20:34:06.038Z"
+last_activity: 2026-08-10 -- Phase 110 execution started
 progress:
   total_phases: 12
   completed_phases: 2
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 116 — galdr-prompt-library
+**Current focus:** Phase 110 — convex-durability
 
 **Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
@@ -49,10 +49,12 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 116 (galdr-prompt-library) — EXECUTING, PAUSED at the 116-05 checkpoint
-Plan: 4 of 8 complete (116-01..116-04; waves 1-3)
-Status: Backend + HTTP surface built and green. Waves 4-6 are gated on Larry: 116-05 is a blocking human-verify deploy to the live self-hosted Convex instance, and GALDR_API_KEY is not yet set on the backend.
-Last activity: 2026-08-10 -- Phase 116 waves 1-3 executed (116-01..04), halted before the 116-05 deploy checkpoint
+Phase: 110 (convex-durability) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 110, waves 1-4 only. Wave 5 (110-06) is deferred by a structural time gate: it must observe a real 09:00 UTC `retention-prune` cron fire against the code deployed in 110-04, and hand-triggering the cron is forbidden by the plan. Earliest possible: 2026-08-11 09:00 UTC.
+Last activity: 2026-08-10 -- Phase 110 execution started
+
+**Phase 116 (galdr-prompt-library) reached 8/8 plans on 2026-08-10, in a CONCURRENT session running in this same checkout while Phase 110 executed — it is NOT verified yet.** All eight SUMMARY.md files are committed (`git ls-files .planning/phases/116-galdr-prompt-library/*SUMMARY.md` → 8), through `2fc72bb8 docs(116-08): summary for the galdr page plan — phase 116 complete (8/8)`. No `116-VERIFICATION.md` exists, so 116 has not passed `verify_phase_goal` and must not be marked complete in ROADMAP on the strength of the summaries alone. The earlier blockers recorded here (116-05's blocking deploy checkpoint, `GALDR_API_KEY` unset) were resolved by that session, not by this one — this note is derived from git, not from its report. (Restored by hand 2026-08-10: `gsd-sdk query state.begin-phase --phase 110` overwrote this block with a bare "Executing Phase 110" — the same documented state.* clobber recorded in the Phase 110 paragraph below, which happened to `state.planned-phase` two days earlier. Only the Current Position block was affected; frontmatter counters were not touched, verified by `git diff`.)
 
 **Phase 110 (Convex Durability) PLANNED (2026-08-10).** 6 plans across 5 waves, verified by gsd-plan-checker with **0 blockers, 2 warnings** (both documentation hygiene, both resolved before commit) — see `110-PLAN-REVIEW.md`. Requirements DUR-01/02/03 all covered; the blocking decision-coverage gate returns `total: 11, covered: 11` for D-01..D-11. Wave shape: 110-01 (cursor/rotation helpers) and 110-02 (DUR-03 root-cause write-up) in wave 1, both independent; 110-03 (predicate + comment sweep) wave 2; then 110-04 deploy → 110-05 health-check → 110-06 live evidence, waves 3-5, all `autonomous: false` because DUR-02's evidence requires a **real 09:00 UTC nightly prune run** against deployed code. Planning surfaced one latent bug not in CONTEXT.md: `retention.ts:159-165` sources `lastCreationTime` only from *deleted* docs, so introducing D-02's skip-predicate would pin the cursor and re-read the same 200 rows until the nightly cap — reviving the 2026-07-30 head-rescan incident. 110-03 Task 1.C ships the fix atomically with the predicate; 110-01 Task 2 adds an all-skipped-batch regression test. DUR-03's framing also corrected: upstream `convex-backend#495` carries an **open, unmerged** PR #522, so the write-up records three states (no knob / known cause / available-but-unmerged fix) and must re-verify issue + PR merge state at write-up time. **Note:** `gsd-sdk query state.planned-phase` was run and clobbered the Phase 116 "Current Position" narrative with the bare string "Ready to execute" — the documented state.* defect (see the 2026-07-31 comment below re: Phase 103). STATE.md was restored from HEAD and only `total_plans` (25→31, +6) plus this paragraph were re-applied by hand; Phase 116's live blocking status was preserved verbatim, and `last_activity` was deliberately left as the 116 session's own more-recent value rather than stomped. Next: `/gsd:execute-phase 110`.
 
