@@ -4,14 +4,14 @@ milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
 stopped_at: Completed Phase 109 (10/10) — ENGINE-03, ENGINE-04 and TELE-02 all signed against the live stack
-last_updated: "2026-08-10T15:05:00.000Z"
-last_activity: 2026-08-10
+last_updated: "2026-08-10T15:11:27.087Z"
+last_activity: 2026-08-10 -- Phase 116 execution started
 progress:
-  total_phases: 6
+  total_phases: 12
   completed_phases: 2
-  total_plans: 17
+  total_plans: 25
   completed_plans: 17
-  percent: 33
+  percent: 17
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -31,7 +31,9 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 109 — per-agent-engine-ui **COMPLETE (10/10, 2026-08-10)**. All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final probe scoreboard A–H: **all pass**. The live gate (109-09) found one real defect that the whole green suite, the code review and the phase verifier had passed over — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard that spans the StrictMode mount→cleanup→remount boundary — proven RED first — and re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`.
+**Current focus:** Phase 116 — galdr-prompt-library
+
+**Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
 **Open follow-ups from Phase 109 (not in its scope, both substantiated):** (1) Settings' `New Profile` writes the `agentProfiles` table while the Agent Profiles card renders `profileConfigs`, so a profile created there succeeds and is then invisible in the section it was created from. (2) `Settings.tsx:239` and `convex/profiles.ts:113` both justify ignoring `agentProfiles` because it has "zero rows in production" — the live self-hosted instance returns **3993**; the rendering decision may still be right but its stated justification is false.
 
@@ -47,10 +49,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 109 (per-agent-engine-ui) — EXECUTING
-Plan: 8 of 9 complete (next: Plan 9)
-Status: Ready to execute
-Last activity: 2026-08-09
+Phase: 116 (galdr-prompt-library) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 116
+Last activity: 2026-08-10 -- Phase 116 execution started
 
 **Plan 109-07 complete (2026-08-09).** Restored real grouping/billing metadata to the picker from CodePulse's own `PROVIDER_BILLING` registry and fixed the confirm-gate collision it exposed. `mapCatalogueVendorToBilling` (new, `src/lib/catalogueBilling.ts`) implements D-13's corrected rule: `"anthropic"` maps to the `anthropic_direct` registry entry; every other non-empty vendor (the OpenRouter routing-slug family) is billed as the OpenRouter catch-all; only an empty/missing vendor reaches `group:"unclassified"`/`costTier:"unknown"` — detection is by emptiness, never by calling the registry's own unmapped-provider fallback, which would make "unclassified" undetectable. `normalizeCatalogueEntry` (`BrainPicker.tsx`) no longer hardcodes `group:"api", billing:"api", costTier:"normal"` for every row. `GROUP_ORDER` gains a fourth, last "Unclassified" entry with a deliberately irregular full-word "UNCLASSIFIED" chip (dashed `--status-warn` border). Because `costTier:"unknown"` now reaches live entries, `needsCostConfirm` can fire for the first time — exposing a mouse/keyboard confirm-gate collision UI-SPEC §F revision 3 already specified the fix for: `BrainPicker.tsx` now computes one hoisted `shouldConfirmCost = scope !== "global" && needsCostConfirm(entry)` and passes it to `BrainPickerRow` as a required `needsConfirm` prop, consumed identically by both the row's own mouse click and the enclosing cmdk keyboard path — the row no longer decides that condition itself. A six-combination (scope × costTier) mouse/keyboard parity test proves the two paths agree in every case, including the specific stacking defect (global scope + unknown cost-tier: modal opens, inline confirm never appears). Rule 1 fix folded in: `BrainPickerRow`'s hardcoded hex vendor-dot fallback (`#6b7280`) replaced with `var(--muted-foreground)`, matching `BrainHeaderBadge`'s existing pattern. `CatalogueEntry["group"]` widened in `src/lib/brainsApi.ts` (named by the plan's own task text but omitted from its declared file list — documented as a deviation). Full suite: 283 passed | 17 skipped (baseline 282/17), 3717 passed | 193 todo (baseline 3699/193) — 18 net new tests, zero regressions. `npx tsc --noEmit` exits 0. No file belonging to plan 109-08's declared scope was touched. Executed sequentially on `master`, no worktree. See `109-07-SUMMARY.md`. Next: Plan 109-08.
 
