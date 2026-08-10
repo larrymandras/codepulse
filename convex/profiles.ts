@@ -196,6 +196,55 @@ export const listConfigs = query({
   },
 });
 
+/**
+ * removeConfig — Phase 109-10. Deletes exactly ONE `profileConfigs` row, by its unique
+ * `profileId`.
+ *
+ * Why this exists: before it, `profileConfigs` had `upsertConfig` but no delete anywhere in
+ * `convex/` — a profile could be created and never removed. The Phase 109-09 live gate's Probe F
+ * needs a throwaway telemetry-less profile to prove the canonical "Not reported" absent state, and
+ * without a delete that throwaway would be a permanent addition to the operator's live config.
+ *
+ * Single-row, index-seeked, and keyed on a unique id — deliberately NOT a bulk delete. The
+ * self-hosted single-node instance cannot absorb mass deletes (CLAUDE.md, the 2026-07-21/22
+ * tombstone incident); this deletes at most one document per call and refuses nothing else.
+ *
+ * Audited like `upsertConfig`: the removal writes a `configChanges` row so a profile disappearing
+ * from the dashboard is traceable to an actor rather than looking like data loss.
+ */
+export const removeConfig = mutation({
+  args: {
+    profileId: v.string(),
+    changedBy: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("profileConfigs")
+      .withIndex("by_profileId", (q) => q.eq("profileId", args.profileId))
+      .first();
+
+    // Idempotent: removing an absent profile is a no-op, not an error, and writes no audit row.
+    if (!existing) return { deleted: false };
+
+    await ctx.db.insert("configChanges", {
+      configKey: personaConfigChangeKey(args.profileId),
+      oldValue: existing.modelPreferences,
+      // MUST be null, never undefined. `configChanges.newValue` is `v.any()` and therefore
+      // REQUIRED (`schema.ts:271`), while `oldValue` is `v.optional(v.any())`. Convex omits
+      // undefined-valued fields from the inserted document, so `newValue: undefined` produces a
+      // document with no `newValue` key at all and the insert fails validation — which aborts the
+      // whole mutation, leaving the row undeleted. Caught by running this against the live
+      // instance in the 109-10 gate; the source-level tests below passed the whole time.
+      newValue: null,
+      changedBy: args.changedBy ?? "dashboard",
+      changedAt: Date.now() / 1000,
+    });
+
+    await ctx.db.delete(existing._id);
+    return { deleted: true };
+  },
+});
+
 export const recordSwitch = mutation({
   args: {
     fromProfile: v.string(),

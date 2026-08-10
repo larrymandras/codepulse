@@ -987,3 +987,131 @@ probe stops here rather than proceeding.
    on the grounds it has "zero rows in production, `convex/profiles.ts:113`". The live self-hosted
    instance returns **3993** rows. The rendering decision may still be correct, but its stated
    justification is false as written.
+
+## Probe F — COMPLETE (operator authorized adding a delete path first)
+
+The one-way door was closed rather than walked through: `profiles.removeConfig` was added
+(`convex/profiles.ts`), so a throwaway profile could be created, probed, and removed cleanly.
+
+### Setup — a genuinely telemetry-less profile, proven so
+
+```
+$ npx convex run profiles:upsertConfig '{"profileId":"gate-probe-f","changedBy":"109-10-live-gate"}' --url http://127.0.0.1:3210
+$ npx convex run profiles:listConfigs  --url http://127.0.0.1:3210
+    "profileId": "gate-probe-f"        <- created
+    "profileId": "consulting"
+    "profileId": "business"
+    "profileId": "personal"
+
+$ npx convex run activeEngine:latestByProfile --url http://127.0.0.1:3210
+    "profileId": "business"
+    "profileId": "consulting"
+    "profileId": "personal"
+    (no gate-probe-f)                  <- NO telemetry, with three profiles present as the control
+                                          proving the telemetry query itself returns data
+```
+
+No override either: `swap.get_state` read `{ model_override: null, profile_overrides: {} }`
+throughout this probe.
+
+### The four surfaces
+
+| # | Surface | `gate-probe-f` | Controls, same measurement |
+|---|---|---|---|
+| 1 | Header badge | — (structurally bound to the ACTIVE profile) | — |
+| 2 | Picker, "This profile" scope | **ZERO rows carry the `isCurrent` marker** | every earlier measurement in this file had exactly ONE marked row for a profile with a resolved engine |
+| 3 | Pre-swap confirm modal, current-engine column | **`Not reported`** | `consulting` / `business` / `personal` all `Claude Sonnet 5` |
+| 4 | Settings row engine label | **`Not reported`** | `consulting` / `business` / `personal` all `anthropic/claude-sonnet-5` |
+
+Raw modal payload — subject and all three controls in ONE reading:
+
+```
+Swap all profiles to Claude Sonnet 5?
+3 profiles have a pinned default (Claude Sonnet 5) that will be shadowed while this global override is in force.
+  gate-probe-f   Not reported       ->  Claude Sonnet 5      <- SUBJECT
+  consulting     Claude Sonnet 5    ->  Claude Sonnet 5
+  business       Claude Sonnet 5    ->  Claude Sonnet 5
+  personal       Claude Sonnet 5    ->  Claude Sonnet 5
+```
+
+The modal was CANCELLED; `swap.get_state` after it still read `{ model_override: null,
+profile_overrides: {} }`, so no global swap was dispatched.
+
+Forbidden-string check on the profiles card in that state:
+
+```
+"Auto":               false
+"No brain reported":  false
+"Not reported":       present, occurrences = 1     <- exactly one, and it is gate-probe-f's
+```
+
+**Surface 2 is the sharpest reading here.** For a profile with no resolved engine the picker marks
+NO row as current — it does not fall back to marking the first row, the global, or another
+profile's model. Every other measurement in this file recorded exactly one marked row, so zero is a
+meaningful contrast rather than an empty probe.
+
+**Surface 1 is not a failure, it is a structural limit** (identical to Probe E's): the header badge
+renders the ACTIVE profile and there is no profile switcher, so it cannot be pointed at an
+arbitrary profile. Recorded as not-measurable rather than counted as a pass.
+
+**VERDICT: PASS on all three measurable surfaces.** The canonical absent state reads exactly
+`Not reported` — never "Auto", never "No brain reported", never another profile's model — with real
+values on the controls in the same measurement.
+
+### Cleanup, verified
+
+```
+$ npx convex run profiles:removeConfig '{"profileId":"gate-probe-f","changedBy":"109-10-live-gate"}'
+{ "deleted": true }
+
+$ npx convex run profiles:listConfigs
+    "profileId": "consulting"          <- controls still present: the query works, the absence is real
+    "profileId": "business"
+    "profileId": "personal"
+
+$ npx convex run profiles:removeConfig '{"profileId":"gate-probe-f"}'    (second call)
+{ "deleted": false }                   <- idempotent no-op, not an error
+```
+
+### A defect in my own new mutation, caught only by running it live
+
+The FIRST `removeConfig` call failed and the row was NOT deleted:
+
+```
+Object:    {changedAt: ..., changedBy: "109-10-live-gate", configKey: "profile.gate-probe-f.modelPreferences"}
+Validator: v.object({changedAt: v.float64(), changedBy: v.optional(v.string()),
+                     configKey: v.string(), newValue: v.any(), oldValue: v.optional(v.any())})
+```
+
+Cause: the audit insert set `newValue: undefined`. Convex OMITS undefined-valued fields, and
+`configChanges.newValue` is `v.any()` — REQUIRED, unlike `oldValue: v.optional(v.any())`
+(`schema.ts:270-271`). The document therefore had no `newValue` key, the insert failed validation,
+and the failure aborted the whole mutation, leaving the row undeleted. Fixed to `newValue: null`.
+
+**All eleven structural tests passed while this was broken.** They assert the source's SHAPE —
+index-seeked, single `.delete()`, no bulk-delete idioms, audit-before-delete ordering — and no
+amount of that can catch a runtime validator rejection. The live run is what caught it, which is
+the same premise this whole gate rests on. A regression assertion (`newValue: null` present,
+`newValue: undefined` absent) was added afterwards, and the bulk-delete guard was separately
+mutation-tested (swapping `.first()` for `.collect()` turns it red) so the suite's green is not
+taken on trust.
+
+## ENGINE-04 — both blocking conditions now cleared
+
+The sign-off section above recorded ENGINE-04 as HELD PENDING on 2026-08-10 for two stated reasons.
+Both are now resolved, each against the live stack:
+
+| Blocker as recorded | Status |
+|---|---|
+| Probe D's clear leg FAILED — suffix never cleared, no toast ever fired | **CLEARED.** Re-run on the DEV server: suffix clears (t=109458) and the success toast fires (t=109463), with the label flip landing 626 ms AFTER the ack. Root cause fixed (`fix(109-10)`) and regression-guarded by tests that span the StrictMode mount→cleanup→remount boundary — proven RED against unmodified source first. |
+| Probe F was PARTIAL — the absent state was never proven | **CLEARED.** `Not reported` proven on all three measurable surfaces against a genuinely telemetry-less profile, each with real-valued controls in the same measurement. The fourth surface is a structural limit, not a failure. |
+
+Probe scoreboard, final: A PASS · B PASS · C PASS · D **PASS on every leg** · E PASS · F **PASS**
+(3 measurable surfaces) · G PASS · H PASS.
+
+**ENGINE-04 signature: still deliberately unwritten.** Its evidence is complete and passing, but the
+109-10 plan makes this a blocking human-verify checkpoint and this file's own premise is that a
+requirement is never marked satisfied without the operator. The line belongs below, added by the
+operator or on their explicit authorization:
+
+> `ENGINE-04 — SATISFIED. Operator sign-off: <name>, <date>`
