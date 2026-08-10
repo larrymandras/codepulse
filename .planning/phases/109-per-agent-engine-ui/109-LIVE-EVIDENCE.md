@@ -816,3 +816,93 @@ should be re-verified against Probe D and signed separately.
 operator's explicit authorization given in-session on 2026-08-10, per this plan's own
 "the operator does, or explicitly authorizes it". The authorization covered signing ENGINE-03 and
 TELE-02 while holding ENGINE-04 pending, exactly as written above.
+
+---
+
+# 109-10 re-verification
+
+Run 2026-08-10 after the `unmountedRef` fix (`fix(109-10)`, commit `a3a1e681`).
+
+## Probe D re-run — on the DEV server (`:5173`), where it originally failed
+
+A production-build pass would prove nothing here: 109-09 established production was never affected.
+Settings → Connection Status read `Environment: development` for this run.
+
+Same instrumentation recipe as 109-09: a patched `WebSocket` capturing every frame plus a DOM
+observer on the profile row, both stamped from ONE `performance.now()` origin. The instrument was
+proven live before use, rather than assumed:
+
+```
+LIVENESS PROBE for the instrument itself (a read that MUST appear in the log):
+  frames_before: 0
+  frames_after:  2
+  instrument_is_live: true
+  sample: [ {t:95468, dir:"SEND", type:"swap.get_state"},
+            {t:95471, dir:"RECV", type:"ack", status:"ok"} ]
+```
+
+Swap driven through the real Settings picker (`business` → Claude Sonnet 5), never a raw dispatch:
+
+```
+t=108063  DOM    business | claude-opus-4-8 | · switching to Claude Sonnet 5…   <- suffix up, label STILL OLD
+t=108117  WS RECV ack status=ok
+t=108383  WS RECV control_verb_swap
+t=108383  WS RECV swap.state
+t=108743  DOM    business | claude-sonnet-5 | · switching to Claude Sonnet 5…   <- label flips, 626 ms AFTER the ack
+t=109458  DOM    business | claude-sonnet-5 | pinned default                    <- SUFFIX CLEARS
+t=109463  TOAST  success: "business switched to Claude Sonnet 5."
+```
+
+| Leg | Before the fix (109-09) | After the fix |
+|---|---|---|
+| suffix appears, base label holds its OLD value | PASS | **PASS** |
+| base label updates only AFTER the ack | PASS (272/364 ms) | **PASS (626 ms)** |
+| suffix CLEARS | **FAILED — never cleared** | **PASS (t=109458)** |
+| success toast fires | **FAILED — no toast ever** | **PASS (t=109463)** |
+
+An earlier attempt in the same session produced the same four legs but with an empty frame log — the
+socket was already open before the patch was installed, so that run carried no ack timestamp and
+could not support the "only AFTER the ack" claim. It was discarded and re-run with a forced
+reconnect rather than reported with a gap.
+
+**VERDICT: PASS.** The defect that failed Probe D at the 109-09 gate is fixed and verified live on
+the exact surface where it failed.
+
+## Probe F — BLOCKED, not attempted-and-passed
+
+Probe F could not be run. Clicking into the Agent Profiles area to create a throwaway
+telemetry-less profile left the page's JS thread unresponsive: every `computer`/`javascript_tool`
+call returned `Script injection timed out after 5000ms`, persisting past a 12 s wait, while the tab
+itself remained present at the correct URL.
+
+Server side was healthy throughout, so the condition is confined to the page:
+
+```
+vite 5173: 200    astridr 8181: 200    convex 3210: 200
+astridr-agent  Up 53 minutes (healthy)
+convex-backend Up 9 hours (healthy)
+```
+
+**A wrong diagnosis of my own, recorded rather than quietly dropped.** On the first occurrence I
+attributed the freeze to my own instrumentation — a `MutationObserver` on `document.body` whose
+callback re-ran a whole-document `querySelectorAll` plus `innerText` (which forces layout) on every
+mutation. That was a plausible mechanism and it was WRONG: after a reload removed the observer
+entirely, the freeze reproduced. The cause is not yet established, and no claim is made here about
+whether it is a CodePulse defect, a dev-server/HMR condition, or something in the Radix Sheet the
+"New Profile" control opens. It needs its own investigation with the operator present.
+
+**Probe F therefore remains PARTIAL, exactly as 109-09 left it. It is not rounded up.**
+
+## Requirement status after this run
+
+**ENGINE-04 — still NOT signed.** Its Probe D leg now passes live, which was the blocking failure,
+but 109-10's Task 2 acceptance also requires Probe F. Signing now would repeat precisely the pattern
+this gate exists to prevent: marking a requirement satisfied while one of its probes has not been
+run. The signature belongs in a follow-up once Probe F is unblocked.
+
+## Outstanding at the end of this run
+
+- Live routing is NOT at baseline: `business` is pinned to `claude-sonnet-5` from the Probe D
+  re-run. `consulting` and `personal` are clear. This needs a scoped restore once the page is
+  usable again.
+- The page freeze above needs diagnosis before Probe F can be attempted.
