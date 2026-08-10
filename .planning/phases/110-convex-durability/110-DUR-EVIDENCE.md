@@ -1050,6 +1050,144 @@ The orchestrator checked whether the 14→19 table change caused the TIMEOUT abo
 `retention-health.log` history, pasted verbatim:
 
 ```
+2026-07-31 05:30:40 verdict=WATCH detail=memory 25.81GiB
+2026-08-01 05:30:48 verdict=WATCH detail=memory 35.47GiB
+2026-08-02 05:30:39 verdict=WATCH detail=memory 37.52GiB
+2026-08-03 05:30:42 verdict=ALERT detail=memory 41.8GiB exceeds 40GiB
+2026-08-04 05:30:52 verdict=ALERT detail=at least one table's index-head query timed out (index rot); memory 41.7GiB exceeds 40GiB
+2026-08-05 05:30:43 verdict=ALERT detail=at least one table's index-head query timed out (index rot); memory 45.95GiB exceeds 40GiB
+2026-08-06 05:30:38 verdict=WATCH detail=memory 25.34GiB
+2026-08-07 05:30:41 verdict=OK detail=all tables caught up, no timeouts, memory/db nominal
+2026-08-08 05:30:47 verdict=OK detail=all tables caught up, no timeouts, memory/db nominal
+2026-08-09 05:30:47 verdict=OK detail=all tables caught up, no timeouts, memory/db nominal
+2026-08-10 05:30:49 verdict=OK detail=all tables caught up, no timeouts, memory/db nominal
+2026-08-10 18:01:30 verdict=ALERT tables=19 detail=at least one table's index-head query timed out (index rot); worst overhang 172.8h exceeds 72h (prune not keeping up)
+```
+
+**VERDICT:** Index-head timeouts are a pre-existing condition on this instance that tracks memory
+pressure — two prior occurrences, `2026-08-04` at 41.7 GiB and `2026-08-05` at 45.95 GiB, both
+before any Phase 110 code existed. They are not a regression introduced by probing five more
+tables. The 08-06 → 08-10 runs were clean at lower memory.
+
+Memory samples, each taken directly by the orchestrator via `docker stats --no-stream`, except the
+05:30 figure which is the health log's own:
+
+```
+05:30  16.02 GiB   (health log's OK line)
+16:44  23.57 GiB
+18:00  32.51 GiB   (during the Task 2 run)
+18:05  32.51 GiB   (flat — plateaued, not runaway)
+```
+
+Organic growth at the day's measured ~1.04 GiB/h accounts for only ~1.3 GiB of the ~8.9 GiB jump
+between 16:44 and 18:00. The wave-3 `npx convex deploy` and this plan's 19-probe run both fall in
+that window. **This is recorded as correlation with a plausible mechanism, not causation** — no
+experiment isolated it, and none was funded. Container limit is 64 GiB; the instance has run at
+45.95 GiB before without incident, and `ConvexNightlyRestart` fires at 02:00.
+
+**Part of this ALERT is the check working as designed.** The 172.8h `aggregates` overhang is real
+and expected — the new predicate has not yet run under cron — and `aggregates` was *structurally
+invisible* to every health check that ever ran before tonight. A table that cannot be seen cannot
+be alerted on. The ALERT is the first time this overhang has been observable at all.
+
+---
+
+## Task 3 — Deliberate-break test and operator sign-off
+
+### Operator decision 1 — how DUR-02 leg 2 closes
+
+Presented with: the proven three-way coverage cross-check, the `events` TIMEOUT, the log history
+above showing it is pre-existing, and the memory samples. Operator response, verbatim:
+
+```
+Record it, re-run clean tomorrow
+```
+
+Presented to them as: "Accept leg 2's coverage claim now with the TIMEOUT recorded verbatim and
+the log history showing it's pre-existing and memory-correlated, NOT introduced by the edit. Then
+take a clean zero-TIMEOUT run tomorrow morning after the 02:00 restart, in the same session as
+110-06."
+
+**Leg 2 therefore closes on COVERAGE only.** The zero-`TIMEOUT` acceptance criterion is NOT met by
+this run and is not claimed to be. A clean run is deferred to tomorrow morning, after the 02:00
+restart clears memory and before/alongside plan `110-06`. This is a recorded deviation from the
+plan's acceptance criteria, not a silent pass.
+
+### Operator decision 2 — who runs the break test
+
+Operator chose "I run it, you review the output". The test was run by the orchestrator in the
+attended main session. Transcript follows.
+
+### Break test — proving the hard-failure path fires rather than being described
+
+A snapshot was taken of the **edited** script first. Restoring from `.pre-110.bak` would have put
+back the *pre-edit* original and silently undone this entire plan — the backup and the rollback
+target are not the same file.
+
+```
+$ (Get-FileHash -Algorithm SHA256 retention-health-check.ps1).Hash        # edited script, before test
+3F579801768BADD75E5E6AF4D1DD13E220E46BC3F984730C92CD1DBB1D073492
+
+$ occurrences of 'retention:listRetentionPolicy' before : 1
+$ after injecting the bogus name                        : real 0 / bogus 1
+```
+
+```
+$ powershell -NoProfile -ExecutionPolicy Bypass -File retention-health-check.ps1
+
+2026-08-10 18:23:52 verdict=ALERT detail=policy read failed -- CLI exit 1: ✖ Failed to run function "retention:definitelyNotARealFunction9x7q2":
+Error: [Request ID: bc0a41b6a245d754] Server Error
+Could not find function for 'retention:definitelyNotARealFunction9x7q2'. Did you forget to run `npx convex dev`?
+
+Available functions:
+[... the CLI's full available-functions list ...] -- no fallback table list used
+
+EXIT CODE: 1
+```
+
+**VERDICT:** The hard-failure path is **proven to fire**, not merely described. It emitted the
+distinct policy-read-failure verdict naming the policy read as the cause, exited **non-zero**,
+probed **zero** tables, and explicitly recorded `no fallback table list used`. A health check that
+degraded silently to a stale subset while still printing a verdict is the exact defect `D-07`
+exists to remove, and this is the evidence that it cannot happen.
+
+### Restore verification
+
+```
+expected (edited script) : 3F579801768BADD75E5E6AF4D1DD13E220E46BC3F984730C92CD1DBB1D073492
+actual   (after restore) : 3F579801768BADD75E5E6AF4D1DD13E220E46BC3F984730C92CD1DBB1D073492
+                           -> byte-identical
+
+occurrences of 'retention:listRetentionPolicy' after restore : 1
+occurrences of the bogus name after restore                  : 0
+temp snapshot removed
+
+.pre-110.bak present : True
+
+Get-ScheduledTask ConvexRetentionHealthCheck  -> State = Ready
+LastRunTime  8/10/2026 5:30:01 AM
+NextRunTime  8/11/2026 5:30:00 AM      (unmodified)
+```
+
+**VERDICT:** The script is back to its post-edit state byte-for-byte, the only rollback path
+(`.pre-110.bak`) is intact, and the scheduled task was never modified — it will run the edited
+script tomorrow at 05:30 on its own.
+
+### Incidental finding
+
+The broken run's "Available functions" list ends with `galdr:list`, `galdr:lookup`,
+`galdr:createPrompt`, `galdr:recordUsage` and siblings. This independently confirms the wave-3
+deploy shipped Phase 116's galdr backend to the live instance, exactly as the operator was told it
+would before they authorized it — recorded here because that side effect was disclosed as part of
+the authorization and should be verifiable after the fact rather than taken on trust.
+
+---
+
+*Plan `110-05` complete. DUR-02 leg 2 closed on coverage, with a clean zero-TIMEOUT re-run deferred
+to tomorrow morning. DUR-02 leg 1 and the DUR-01 before/after remain open — they belong to plan
+`110-06`, which cannot start until the 09:00 UTC cron has fired against the deployed code.*
+
+```
 2026-08-03 05:30:42 verdict=ALERT detail=memory 41.8GiB exceeds 40GiB
 2026-08-04 05:30:52 verdict=ALERT ... index-head query timed out (index rot); memory 41.7GiB
 2026-08-05 05:30:43 verdict=ALERT ... index-head query timed out (index rot); memory 45.95GiB
