@@ -43,6 +43,7 @@ import type * as compactionEvents from "../compactionEvents.js";
 import type * as configVersionIngest from "../configVersionIngest.js";
 import type * as contextSnapshots from "../contextSnapshots.js";
 import type * as controlVerbSwaps from "../controlVerbSwaps.js";
+import type * as controlVerbSwapsFilters from "../controlVerbSwapsFilters.js";
 import type * as conversationImports from "../conversationImports.js";
 import type * as conversationTimeline from "../conversationTimeline.js";
 import type * as coordination from "../coordination.js";
@@ -207,6 +208,7 @@ declare const fullApi: ApiFromModules<{
   configVersionIngest: typeof configVersionIngest;
   contextSnapshots: typeof contextSnapshots;
   controlVerbSwaps: typeof controlVerbSwaps;
+  controlVerbSwapsFilters: typeof controlVerbSwapsFilters;
   conversationImports: typeof conversationImports;
   conversationTimeline: typeof conversationTimeline;
   coordination: typeof coordination;
