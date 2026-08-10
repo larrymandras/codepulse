@@ -756,7 +756,7 @@ Plans:
 
 **Wave 8**
 
-- [ ] 109-10-PLAN.md — **gap closure, `autonomous: false`**: reset `unmountedRef` on remount with a regression test that spans the StrictMode mount→cleanup→remount boundary, then re-run Probe D live on `:5173` and close Probe F's `Not reported` absent state, and sign ENGINE-04 (ENGINE-04, ENGINE-03)
+- [x] 109-10-PLAN.md — **gap closure, `autonomous: false`**: `unmountedRef` reset with a StrictMode-remount regression guard (proven RED first), then Probe D re-run live on `:5173` (all four legs) and Probe F closed via a new `profiles.removeConfig` — **ENGINE-04 signed 2026-08-10** (ENGINE-04, ENGINE-03)
 
 **UI hint**: yes
 
@@ -832,7 +832,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 9/10 | In Progress|  |
+| 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |

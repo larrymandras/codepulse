@@ -1115,3 +1115,18 @@ requirement is never marked satisfied without the operator. The line belongs bel
 operator or on their explicit authorization:
 
 > `ENGINE-04 — SATISFIED. Operator sign-off: <name>, <date>`
+
+**ENGINE-04 — SATISFIED.**
+
+`Operator sign-off: Larry Mandras, 2026-08-10` — recorded by the executing agent under the
+operator's explicit authorization given in-session on 2026-08-10, after both blocking conditions
+were cleared and re-verified live.
+
+Supported by: Probe D's full four-leg sequence on the DEV server (suffix appears with the label
+holding its OLD value → label flips 626 ms AFTER the ack → suffix clears → success toast), Probes
+B and C on the wire with the restore's absence carrying a same-payload control, Probe D's negative
+control returning an honest server-named error with nothing written, and Probe F's canonical
+`Not reported` absent state on every measurable surface.
+
+All three of this phase's requirements — ENGINE-03, ENGINE-04, TELE-02 — now carry a dated operator
+sign-off earned against the running stack, never inferred from a green unit suite.

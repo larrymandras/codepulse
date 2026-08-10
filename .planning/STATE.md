@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Completed 109-09-PLAN.md (live gate — ENGINE-03/TELE-02 signed, ENGINE-04 held; 109-10 written)
-last_updated: "2026-08-10T14:20:00.000Z"
+stopped_at: Completed Phase 109 (10/10) — ENGINE-03, ENGINE-04 and TELE-02 all signed against the live stack
+last_updated: "2026-08-10T15:05:00.000Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 17
-  completed_plans: 16
-  percent: 17
+  completed_plans: 17
+  percent: 33
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -31,7 +31,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 109 — per-agent-engine-ui. Wave 7's live gate (109-09) ran 2026-08-10: 7 probes pass, 1 partial, 1 failed leg. **ENGINE-03 and TELE-02 signed; ENGINE-04 deliberately HELD Pending** — its central server-confirmed claim is proven, but Probe D's clear leg failed with a confirmed root cause (`useProfileSwap.ts:145` never resets `unmountedRef` on remount, so StrictMode latches it and the outcome machine never leaves `pending` on dev builds; production unaffected, proven by a build control and a reverted mutation test). Next: **109-10** (wave 8, gap closure) — the one-line reset plus a regression test that spans the mount→cleanup→remount boundary, then re-run Probe D live on `:5173`, close Probe F's absent-state reading, and sign ENGINE-04. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`.
+**Current focus:** Phase 109 — per-agent-engine-ui **COMPLETE (10/10, 2026-08-10)**. All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final probe scoreboard A–H: **all pass**. The live gate (109-09) found one real defect that the whole green suite, the code review and the phase verifier had passed over — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard that spans the StrictMode mount→cleanup→remount boundary — proven RED first — and re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`.
+
+**Open follow-ups from Phase 109 (not in its scope, both substantiated):** (1) Settings' `New Profile` writes the `agentProfiles` table while the Agent Profiles card renders `profileConfigs`, so a profile created there succeeds and is then invisible in the section it was created from. (2) `Settings.tsx:239` and `convex/profiles.ts:113` both justify ignoring `agentProfiles` because it has "zero rows in production" — the live self-hosted instance returns **3993**; the rendering decision may still be right but its stated justification is false.
+
+**Next:** v14.0 continues with Phases 110 (Convex Durability), 111 (Mission Board), 112, 113 — each independent of 109.
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
