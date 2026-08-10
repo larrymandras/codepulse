@@ -213,4 +213,90 @@ section C above) cannot itself explain multi-GiB/day growth at any observed rate
 
 ---
 
-*(Task 2 continues below with the structured D-09 write-up and Verdict.)*
+## D-09 — Knob probe
+
+Raw transcript: Task 1 §A (control-paired binary grep), §B (live env, name-only), §C (upstream
+default values re-derived from `knobs.rs`), above.
+
+**Verdict:** No general-purpose memory-bounding knob was found **among the candidates probed**
+(`DOCUMENT_RETENTION_DELAY`, `UDF_CACHE_MAX_SIZE`, `MODULE_CACHE_MAX_SIZE_BYTES`,
+`INDEX_CACHE_SIZE`, `DOCUMENTS_IN_MEMORY`, the `FUNRUN_*` cache family). All six are compiled into
+this exact binary (confirmed via a control-paired `grep -a`, §A) and all default to a bounded size;
+only `DOCUMENT_RETENTION_DELAY` is actually set on the running container, and it governs tombstone
+GC timing, not a working-set cap (§B). The summed byte-sized budget of the named caches is
+~1.44 GiB (~2.44 GiB including the adjacent, not-originally-named `SHARED_UDF_CACHE_MAX_SIZE`, §C)
+— nowhere close to the observed climb (Task 1 §D: 23.31 GiB present, ~15.7 GiB of growth in a
+single 18.7h inter-restart window). This is a **scope-limited absence claim**: "no bounding knob
+was found among the candidates investigated," per RESEARCH.md's Assumption A1 — the ~1,970-line
+`knobs.rs` file has subsystems beyond these six that were not individually itemized, so this does
+not claim "no knob exists anywhere in the binary."
+
+## D-09 — Upstream root-cause status
+
+Raw transcript: Task 1 §D (live `gh issue view`/`gh pr view`), above. Re-verified this run,
+2026-08-10T20:43Z — nothing here is carried forward from RESEARCH.md.
+
+**Verdict:** `get-convex/convex-backend#495` ("index_scan materializes the entire index range...
+OOM on large tables") is `state: OPEN`, filed by a community member, not a maintainer. Its linked
+fix, **PR #522**, is also `state: OPEN` with `mergedAt: null` — **unmerged**. This is the strongest
+identified candidate mechanism: on self-hosted SQLite persistence, `index_scan` reads the entire
+matched index interval into memory before applying `.take(N)`, so any bounded-looking read against
+a wide range still costs memory proportional to the whole range. A fix exists upstream but has not
+shipped in any build — a materially different operational position than "nothing can be done,"
+and the fact most likely to change after this phase closes (re-check `#522`'s merge state before
+citing this evidence file as current beyond a few weeks out).
+
+**Scope limit, stated honestly (RESEARCH.md Assumption A2):** no live experiment in this repo
+isolated `index_scan`/`#495` as *the* cause of the observed growth — D-09 explicitly declines to
+fund the multi-day controlled attribution study that would prove causation. This write-up records
+`#495` as the strongest *candidate contributor*, not as a proven root cause.
+
+## D-09 — #525 ruled out
+
+Raw transcript: Task 1 §C (plan's letter, the `.index(`-controlled schema grep), above.
+
+**Verdict:** `get-convex/convex-backend#525` ("in-process searchlight disk cache and segment LRUs
+are uncoordinated — RAM growth...") is `state: OPEN`, also community-filed, no linked PR found.
+Its mechanism requires a table using `.searchIndex()`/`.vectorIndex()`. `convex/schema.ts` defines
+zero of either (control: `288` `.index(...)` calls in the same file, proving the grep itself works)
+— so #525 is ruled out for this deployment, not merely unconfirmed.
+
+## Already-refuted hypotheses (cited, not re-derived — `health-report.md`, 2026-08-06)
+
+- **OCC-retry theory** (the growth is caused by optimistic-concurrency retries on
+  `events.js:ingest`/`aggregates`): refuted. `health-report.md` §6 compared equivalent windows —
+  604 OCC/retry lines in a 4.8h window on 08-05 vs. **10** lines (0 on `events`/`aggregates`) in a
+  3.6h window on 08-06, with heap flat (anon Δ ≈ −3.6 MB over 5.4 min) while OCC contention was
+  effectively absent. Memory still climbed regardless.
+- **Page cache accounting for the bulk of the `docker stats` figure**: refuted as a *general*
+  explanation, not merely for this run. `health-report.md` §5 found ~20% page cache / ~80% anon
+  heap on 2026-08-06; Task 1 §D above found ~0.5% page cache / ~99.5% anon heap on 2026-08-10 —
+  the ratio is not stable, so "it's mostly page cache" cannot be relied on as the explanation
+  either day, though the underlying instruction (measure `anon`, not raw `docker stats`, before
+  treating a reading as heap growth) still holds and was re-applied here.
+
+## Verdict
+
+**Branch selected: knob-absent.** No general-purpose memory-bounding knob was found among the six
+candidates probed on this exact binary (`ghcr.io/get-convex/convex-backend@sha256:f0de0647e4...`,
+built 2026-07-21). Their summed bounded budget (~1.44–2.44 GiB) cannot explain the observed climb
+(23.31 GiB present; ~15.7 GiB of growth across one ~18.7h inter-restart window on 2026-08-10,
+notably faster than the ~0.17 GiB/h baseline on record, though a single-sample discrepancy is not
+grounds to revise that baseline). The strongest identified candidate contributor is upstream issue
+**#495** (SQLite `index_scan` materializing entire index ranges before truncation) — `state: OPEN`,
+`stateReason: ""`, filed by a community member. Its fix, **PR #522**, is `state: OPEN`,
+`mergedAt: null` — a patch exists but is unmerged, so it is in no build available to this
+deployment. Issue **#525** is ruled out (this schema has zero `.searchIndex()`/`.vectorIndex()`
+usage, confirmed with a positive `.index(` control). Both the 2026-08-05 OCC-retry hypothesis and
+the "it's mostly page cache" hypothesis are refuted/unreliable per `health-report.md` and this
+run's own heap-vs-cache breakdown.
+
+Per D-09, this is the explicitly-permitted "documented, not fixed" closure: **DUR-03 closes as
+root-cause identified and documented, not resolved.** Per D-10, no knob was found, so there is
+nothing to enable and no measured-trial decision is needed — the Task 3 checkpoint exists to
+confirm this branch selection and the CLAUDE.md wording, not to make a D-10 call.
+
+**Scope-limited wording, stated once more for the record:** this is "no bounding knob was found
+among the candidates investigated" and "#495 is the strongest candidate contributor" — not "no
+knob exists" and not "#495 is the cause." No live experiment isolated it, and D-09 declines to
+fund one.
