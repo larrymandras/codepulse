@@ -72,6 +72,11 @@ the project's existing convention for this surface.
 | Heading (`EntityRow` primary — the mission's task snippet) | 16px (`text-base`) | 500 medium (`font-medium`) | 1.5 (Tailwind default `text-base`) |
 | Display | not used | — | — no display-scale text exists on this surface |
 
+**Primary visual anchor:** the mission task snippet (`EntityRow` primary, 16px medium). It is the
+only 16px element on the surface and is what the eye must land on first — not the status badge and
+not the "finished X ago" timestamp, both of which are 12px labels subordinate to it. Nothing in this
+phase may promote a status or timing element above the task snippet in visual weight.
+
 ---
 
 ## Color
