@@ -13,6 +13,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { StrictMode, useEffect } from "react";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import {
   useProfileSwap,
@@ -403,5 +404,122 @@ describe("useProfileSwap — every timer is cleared on unmount", () => {
     expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThan(callsBeforeUnmount);
 
     clearTimeoutSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 109-10 — gap closure for the 109-09 live gate's Probe D failure.
+//
+// The live gate found that on the dev server the outcome machine never left
+// `pending`: the "· switching to …" suffix never cleared and NEITHER toast ever
+// fired. Root cause: the mount effect set `unmountedRef.current = true` in its
+// cleanup and never reset it on remount, so React StrictMode's dev-only
+// mount→cleanup→remount latched the ref `true` and both dispatch continuations
+// dead-ended at their `unmountedRef` guard before reaching `setOutcome`.
+//
+// WHY THIS FILE'S OTHER 15 CASES ARE GREEN AND MISSED IT: every one of them
+// renders the hook ONCE. `unmountedRef` is only latched by a cleanup that is
+// followed by a re-run of the effect ON THE SAME INSTANCE.
+//
+// AND WHY AN EXPLICIT unmount() + fresh renderHook() WOULD NOT REPRODUCE IT
+// EITHER: `useRef` is per-instance, so a brand-new render gets a brand-new
+// `unmountedRef` initialised to `false`. Only StrictMode's cleanup-then-re-run
+// against the SAME fiber preserves the latched ref. The boundary has to be
+// crossed the way production crosses it.
+// ---------------------------------------------------------------------------
+
+describe("useProfileSwap — StrictMode remount (109-10 regression guard)", () => {
+  it("CONTROL: StrictMode double-invokes effects in this environment, so the remount boundary is genuinely crossed", () => {
+    const effectLog: string[] = [];
+    renderHook(
+      () =>
+        useEffect(() => {
+          effectLog.push("mount");
+          return () => {
+            effectLog.push("cleanup");
+          };
+        }, []),
+      { wrapper: StrictMode }
+    );
+
+    // If this control ever fails, the regression test below is measuring nothing
+    // and must not be trusted as a passing guard.
+    expect(effectLog).toEqual(["mount", "cleanup", "mount"]);
+  });
+
+  it("re-arms after a StrictMode mount->cleanup->remount: reaches confirming, then confirmed on a matching readback, firing the success toast once", async () => {
+    const { result, rerender } = renderHook(() => useProfileSwap("assistant-default"), {
+      wrapper: StrictMode,
+    });
+
+    act(() => {
+      result.current.swapTo(ENTRY_A);
+    });
+
+    // Before the fix this stayed { status: "pending" } forever — the ack's
+    // continuation returned early at the `unmountedRef` guard.
+    await waitFor(() => expect(result.current.outcome).toEqual({ status: "confirming" }));
+
+    mockProfileOverrides = { "assistant-default": { model: "codex-cli", source: "operator" } };
+    rerender();
+
+    await waitFor(() => expect(result.current.outcome).toEqual({ status: "confirmed" }));
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+    expect(mockToastSuccess).toHaveBeenCalledWith("assistant-default switched to Codex CLI.");
+  });
+
+  it("restore() also re-arms after a StrictMode remount, confirming on absence with a still-present control profile", async () => {
+    mockProfileOverrides = {
+      "assistant-default": { model: "codex-cli", source: "operator" },
+      "other-profile": { model: "antigravity-cli", source: "operator" },
+    };
+
+    const { result, rerender } = renderHook(() => useProfileSwap("assistant-default"), {
+      wrapper: StrictMode,
+    });
+
+    act(() => {
+      result.current.restore();
+    });
+    await waitFor(() => expect(result.current.outcome).toEqual({ status: "confirming" }));
+
+    // THIS profile absent, the control profile still present in the same payload —
+    // an empty map cannot pass this.
+    mockProfileOverrides = { "other-profile": { model: "antigravity-cli", source: "operator" } };
+    rerender();
+
+    await waitFor(() => expect(result.current.outcome).toEqual({ status: "confirmed" }));
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "assistant-default restored to its own default engine."
+    );
+  });
+
+  it("GUARD INTACT: a dispatch that resolves after a genuine unmount still never advances the machine or fires a toast", async () => {
+    // The fix RESETS `unmountedRef` on mount; it must not delete the guard. If a
+    // later simplification removes the ref entirely, this case turns red.
+    let releaseDispatch: (v: unknown) => void = () => {};
+    mockDispatch.mockReturnValue(
+      new Promise((resolve) => {
+        releaseDispatch = resolve;
+      })
+    );
+
+    const { result, unmount } = renderHook(() => useProfileSwap("assistant-default"));
+
+    act(() => {
+      result.current.swapTo(ENTRY_A);
+    });
+
+    unmount();
+
+    // The ack lands only AFTER the component is genuinely gone.
+    await act(async () => {
+      releaseDispatch(okAck());
+      await Promise.resolve();
+    });
+
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockToastWarning).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 });
