@@ -783,7 +783,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 110-03-PLAN.md — `aggregates: 90` + `PRUNE_PREDICATES` + predicate-aware delete loop, rotation cursor on one patched `agentConfigs` row, `listRetentionPolicy`, self-describing terminal log line, and the 5-site stale-comment sweep (DUR-01, DUR-02; D-01, D-02, D-03, D-04, D-05, D-06)
+- [x] 110-03-PLAN.md — `aggregates: 90` + `PRUNE_PREDICATES` + predicate-aware delete loop, rotation cursor on one patched `agentConfigs` row, `listRetentionPolicy`, self-describing terminal log line, and the 5-site stale-comment sweep (DUR-01, DUR-02; D-01, D-02, D-03, D-04, D-05, D-06)
 
 **Wave 3**
 
@@ -856,7 +856,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
-| 110. Convex Durability | 2/6 | In Progress|  |
+| 110. Convex Durability | 3/6 | In Progress|  |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
 | 113. Debt Sweep | 0/TBD | Not started | - |
