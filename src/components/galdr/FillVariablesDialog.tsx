@@ -28,11 +28,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  VARIABLE_PATTERN_SOURCE,
   detectVariables,
   substituteVariables,
   unresolvedVariables,
 } from "../../../convex/galdrVariables";
+import { splitPreview } from "./previewSegments";
 
 export interface FillVariablesDialogProps {
   open: boolean;
@@ -54,36 +54,6 @@ const ACTION_LABEL: Record<FillVariablesDialogProps["mode"], string> = {
   copy: "Copy",
   chat: "Send to Chat",
 };
-
-type PreviewSegment = { text: string; unresolved: boolean };
-
-/**
- * Split the substituted body into plain and still-placeholder segments so the
- * preview can tint the leftovers without rendering any HTML.
- *
- * The pattern is built fresh from `VARIABLE_PATTERN_SOURCE` rather than defined
- * here: a `/g` RegExp carries mutable `lastIndex`, and this file must not hold a
- * second, drifting definition of what a variable IS — that is exactly the drift
- * D-09..D-12 exist to prevent.
- */
-function splitPreview(resolved: string): PreviewSegment[] {
-  const pattern = new RegExp(VARIABLE_PATTERN_SOURCE, "g");
-  const segments: PreviewSegment[] = [];
-  let cursor = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(resolved)) !== null) {
-    if (match.index > cursor) {
-      segments.push({ text: resolved.slice(cursor, match.index), unresolved: false });
-    }
-    segments.push({ text: match[0], unresolved: true });
-    cursor = match.index + match[0].length;
-  }
-  if (cursor < resolved.length) {
-    segments.push({ text: resolved.slice(cursor), unresolved: false });
-  }
-  return segments;
-}
 
 export function FillVariablesDialog({
   open,
