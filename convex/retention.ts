@@ -1,7 +1,12 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { planNextPruneStep } from "./retentionCursor";
+import {
+  planNextPruneStep,
+  partitionBatchForPrune,
+  resolveRotationStart,
+  planRotationWrite,
+} from "./retentionCursor";
 
 // Nightly retention pruning (2026-07-14, revised after the self-hosted
 // migration incidents — full history in memory note "convex-selfhosted-setup").
@@ -9,9 +14,13 @@ import { planNextPruneStep } from "./retentionCursor";
 // Policy (decided with Larry 2026-07-14): high-rate runtime firehose tables
 // keep 14 days (cut from 30 on 2026-07-17 — see the tier comment below; this
 // line said 30 until 2026-07-31 and contradicted the table); poll snapshots
-// keep 30 days; build/history event tables keep 90 days. Aggregates, llmMetrics
-// (cost history), sessions, alerts, and config/audit tables are kept forever —
-// trend dashboards keep working; only drill-down to old raw events ages out.
+// keep 30 days; build/history event tables keep 90 days. `aggregates` is
+// bounded period-aware (Phase 110 D-01): `period:"hourly"` rows age out at
+// 90 days like their build/history siblings below, while `period:"daily"`
+// rows are kept forever, protected by PRUNE_PREDICATES (below) rather than
+// by absence from this policy. llmMetrics (cost history), sessions, alerts,
+// and config/audit tables are kept forever outright — trend dashboards keep
+// working; only drill-down to old raw events ages out.
 // The historical backlog was applied OFFLINE (trim_export.py on the export zip
 // + reimport), so nightly runs only age out ~1 day of docs.
 //
@@ -76,6 +85,22 @@ export const RETENTION_DAYS: Record<string, number> = {
   // long-horizon tables.
   controlVerbSwaps: 30,
 
+  // Phase 110 D-01/D-04: `aggregates` is bounded period-aware, not simply
+  // added to the 90-day build/history tier above like its siblings. Only
+  // `period:"hourly"` rows are prunable; `period:"daily"` rows are kept
+  // forever, protected by PRUNE_PREDICATES.aggregates below rather than by
+  // absence from this map. Daily rows must survive because Phase 104
+  // re-prices dollars from daily buckets on every read — see
+  // convex/costDerived.ts's computePeriodSpend, whose own comment describes
+  // the daily/hourly split as "DISJOINT BY CONSTRUCTION". This number alone
+  // does not protect daily rows; PRUNE_PREDICATES is what does. The
+  // eligibility cut below is on `_creationTime` in MILLISECONDS, exactly like
+  // every other table here — never `bucket_start`, which is epoch SECONDS
+  // (convex/schema.ts). Measured 2026-08-10: ~1,455 hourly + 138 daily
+  // rows/day, with exactly 90 rows older than 90 days — the first nightly
+  // pass carries effectively no backlog.
+  aggregates: 90,
+
   // Phase 116 D-13: `prompts` is deliberately EXEMPT from RETENTION_DAYS — do
   // not add it as a key here. Every other new table above was bounded
   // pre-emptively because it is a firehose (gatewayQuotaSnapshots per Phase
@@ -92,6 +117,27 @@ export const RETENTION_DAYS: Record<string, number> = {
   // check, but is semantically wrong — pruneBatchV3 deletes by `_creationTime`
   // cutoff across the WHOLE table, so it would delete versions of
   // actively-edited prompts exactly as readily as abandoned ones.
+};
+
+// Phase 110 D-01/D-02/D-03: per-table predicate applied AFTER the batch query
+// below returns — never folded into the query itself, which would break the
+// `by_creation_time` cursor-seek machinery D-02 requires reusing unmodified.
+// A table absent from this map is pruned unconditionally, exactly as before
+// this phase.
+//
+// This function IS the positive guard (D-03): retention.test.ts asserts
+// against it directly, not against a comment, so an inverted or removed
+// predicate fails a test immediately instead of silently deleting
+// re-priceable daily cost history on the next nightly run.
+//
+// A second, pre-existing writer over `aggregates` already exists:
+// convex/analyticsRollup.ts's clearHistoricalBucketsPage deletes by
+// `bucket_start` through the `by_type_period_bucket` index — a different
+// index and field than this predicate's `_creationTime`-keyed nightly prune,
+// so the two never collide. Documented here so a future editor doesn't
+// rediscover it as a surprise.
+export const PRUNE_PREDICATES: Partial<Record<string, (doc: any) => boolean>> = {
+  aggregates: (doc) => doc.period !== "daily",
 };
 
 const PRUNED_TABLES = Object.keys(RETENTION_DAYS);
@@ -156,13 +202,14 @@ export const pruneBatchV3 = internalMutation({
       .order("asc")
       .take(BATCH_SIZE);
 
-    let deleted = 0;
-    let lastCreationTime: number | null = null;
-    for (const doc of batch) {
+    // Phase 110 D-02: split into delete-vs-skip via the tested helper. `lastCreationTime` is
+    // sourced from EVERY doc iterated, deleted or skipped — see partitionBatchForPrune's own
+    // docstring for why (Pitfall 1: an all-skipped batch must still advance the cursor).
+    const { toDelete, lastCreationTime } = partitionBatchForPrune(batch, PRUNE_PREDICATES[table]);
+    for (const doc of toDelete) {
       await ctx.db.delete(doc._id);
-      deleted++;
-      lastCreationTime = doc._creationTime;
     }
+    const deleted = toDelete.length;
 
     const total = args.deletedSoFar + deleted;
     const next = planNextPruneStep({
