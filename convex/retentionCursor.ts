@@ -118,3 +118,79 @@ export function planNextPruneStep(args: PlanPruneStepArgs): PruneStep {
 
   return { action: "done", tableIndex, cursorMs: 0 };
 }
+
+/**
+ * partitionBatchForPrune — the Phase 110 D-02 predicate-aware split of a batch into docs to
+ * delete vs. docs to skip, expressed as data rather than a loop side effect.
+ *
+ * ## Why `lastCreationTime` is sourced from every doc, not just the deleted ones
+ *
+ * Once a per-table predicate (Phase 110 D-02, e.g. the `aggregates` period filter) can skip a doc
+ * without deleting it, a full batch where every doc is skipped would — if `lastCreationTime` were
+ * computed only from `toDelete` — report `lastCreationTime: null`. Feed that into
+ * `planNextPruneStep` above and its `Math.max(lastCreationTime ?? cursorMs, cursorMs)` clamp at
+ * line 111 resolves to the UNCHANGED cursor: the batch reports itself as `continue-table` with the
+ * same `cursorMs` it started with, so the very next batch re-reads the same `BATCH_SIZE` rows,
+ * finds them all skipped again, and repeats — burning the whole nightly batch cap on zero
+ * progress. That is the exact head-rescan class of failure this file exists to fix (see the module
+ * docstring above), self-inflicted by a predicate instead of by a query that restarts at the head.
+ *
+ * The fix: a predicate-skipped doc still ADVANCES the cursor. `lastCreationTime` is set from every
+ * doc iterated, deleted or skipped, so it always reflects the batch's true high-water mark.
+ */
+export function partitionBatchForPrune<T extends { _id: unknown; _creationTime: number }>(
+  batch: readonly T[],
+  predicate?: (doc: T) => boolean
+): { toDelete: T[]; lastCreationTime: number | null } {
+  const toDelete: T[] = [];
+  let lastCreationTime: number | null = null;
+  for (const doc of batch) {
+    if (!predicate || predicate(doc)) {
+      toDelete.push(doc);
+    }
+    lastCreationTime = doc._creationTime;
+  }
+  return { toDelete, lastCreationTime };
+}
+
+/**
+ * resolveRotationStart — Phase 110 D-05's nightly rotation start-index resolution.
+ *
+ * Today's chain always restarts at index 0 (`startNightlyPrune` hardcodes `tableIndex: 0`), so any
+ * night the batch cap is hit, every table past the firehose head is silently skipped forever. D-05
+ * persists where the last run stopped and resumes there instead — but that persisted value is
+ * operator-editable `agentConfigs` state, and this function treats it as untrusted (D-06): a
+ * missing, non-integer, negative, or out-of-range value resolves to `0` rather than throwing or
+ * skipping tables, because a missing/malformed cursor is never worse than the pre-Phase-110 status
+ * quo of hardcoded `0`. The `< tableCount` bound is evaluated fresh on every call against whatever
+ * `RETENTION_DAYS` currently holds, so it covers both a table being added and a table being removed
+ * with no special case needed.
+ */
+export function resolveRotationStart(rawValue: unknown, tableCount: number): number {
+  if (
+    typeof rawValue === "number" &&
+    Number.isInteger(rawValue) &&
+    rawValue >= 0 &&
+    rawValue < tableCount
+  ) {
+    return rawValue;
+  }
+  return 0;
+}
+
+/**
+ * planRotationWrite — Phase 110 D-06's rotation-cursor write decision.
+ *
+ * Returns the value that should be patched into the persisted rotation cursor, or `null` meaning
+ * "write nothing." Only the two chain-TERMINAL actions ever produce a write: `"cap-reached"`
+ * persists `tableIndex` so tomorrow resumes exactly where tonight stopped (D-05); `"done"` persists
+ * `0` to wrap for a fresh full pass. The interior actions, `"continue-table"` and `"next-table"`,
+ * MUST return `null` — writing at either of those would mean one `agentConfigs` write per batch, up
+ * to `MAX_BATCHES_PER_NIGHT` writes a single night, which is exactly the per-run write growth D-08
+ * rejects for a module whose entire purpose is reducing writes to the live instance.
+ */
+export function planRotationWrite(action: PruneAction, tableIndex: number): number | null {
+  if (action === "cap-reached") return tableIndex;
+  if (action === "done") return 0;
+  return null;
+}
