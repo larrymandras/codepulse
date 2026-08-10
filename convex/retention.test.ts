@@ -15,6 +15,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { RETENTION_DAYS, PRUNE_PREDICATES } from "./retention";
+import { summarizeOverhangProbe } from "./retentionCursor";
 
 const schemaSource = readFileSync(resolve(process.cwd(), "convex/schema.ts"), "utf-8");
 
@@ -121,6 +122,97 @@ describe("RETENTION_DAYS", () => {
     const retentionSource = readFileSync(resolve(process.cwd(), "convex/retention.ts"), "utf-8");
     expect(retentionSource).toContain("D-01");
     expect(retentionSource).toContain("PRUNE_PREDICATES");
+  });
+
+  // 2026-08-10: the retention-lag probe (retention.ts oldestPrunableDoc) exists because the
+  // health-check script measured the oldest doc in a table rather than the oldest doc the PRUNER
+  // would delete. These assert the distinction the whole fix rests on.
+  describe("summarizeOverhangProbe — measures prunable lag, not index age", () => {
+    const HOUR = 3600000;
+    const cutoffMs = 1_000_000_000_000;
+    const doc = (id: string, hoursPastCutoff: number, period?: string) => ({
+      _id: id,
+      _creationTime: cutoffMs - hoursPastCutoff * HOUR,
+      ...(period ? { period } : {}),
+    });
+
+    it("reports the oldest PRUNABLE doc, not the oldest doc (the aggregates defect)", () => {
+      // The live 2026-08-10 shape in miniature: a protected daily row is the oldest doc in the
+      // table, with a genuinely-overdue hourly row behind it. The old head-read would have
+      // reported 165.4h here; the pruner's actual lag is 100h.
+      const batch = [
+        doc("daily-oldest", 165.4, "daily"),
+        doc("hourly-overdue", 100, "hourly"),
+      ];
+      const probe = summarizeOverhangProbe({
+        batch,
+        predicate: PRUNE_PREDICATES.aggregates,
+        probeLimit: 200,
+        cutoffMs,
+      });
+      expect(probe.status).toBe("overhang");
+      expect(probe.overhangHours).toBe(100);
+      expect(probe.oldestPrunableMs).toBe(batch[1]._creationTime);
+    });
+
+    it("goes caught-up once only protected rows remain — the alert this fix must let clear", () => {
+      // Exactly tomorrow's post-prune state: the 73 hourly rows are gone, 20 daily rows remain
+      // past the cutoff forever. Under the old head-read this was a permanent 165h+ ALERT.
+      const batch = [doc("d1", 165.4, "daily"), doc("d2", 140, "daily")];
+      const probe = summarizeOverhangProbe({
+        batch,
+        predicate: PRUNE_PREDICATES.aggregates,
+        probeLimit: 200,
+        cutoffMs,
+      });
+      expect(probe.status).toBe("caught-up");
+      expect(probe.overhangHours).toBe(0);
+
+      // Control: the SAME batch with no predicate is a real overhang. Without this, the assertion
+      // above would pass just as happily against a summarizer that always returns caught-up.
+      const unpredicated = summarizeOverhangProbe({ batch, probeLimit: 200, cutoffMs });
+      expect(unpredicated.status).toBe("overhang");
+      expect(unpredicated.overhangHours).toBe(165.4);
+    });
+
+    it("refuses to claim caught-up when a full window was entirely protected", () => {
+      // A prunable doc could sit just past the exhausted window, so a green here would be a
+      // verdict from a probe that could not have seen the failure.
+      const batch = Array.from({ length: 5 }, (_, i) => doc(`d${i}`, 200 - i, "daily"));
+      const probe = summarizeOverhangProbe({
+        batch,
+        predicate: PRUNE_PREDICATES.aggregates,
+        probeLimit: 5,
+        cutoffMs,
+      });
+      expect(probe.status).toBe("indeterminate");
+      expect(probe.overhangHours).toBeNull();
+
+      // Control: one doc fewer than the limit means the window was NOT exhausted, so the very
+      // same docs are a legitimate caught-up.
+      const short = summarizeOverhangProbe({
+        batch: batch.slice(0, 4),
+        predicate: PRUNE_PREDICATES.aggregates,
+        probeLimit: 5,
+        cutoffMs,
+      });
+      expect(short.status).toBe("caught-up");
+    });
+
+    it("an empty table is caught-up, and a predicate-free table behaves as before", () => {
+      expect(summarizeOverhangProbe({ batch: [], probeLimit: 200, cutoffMs }).status).toBe(
+        "caught-up"
+      );
+      // `events` and friends have no predicate — the probe must still report their real lag.
+      const probe = summarizeOverhangProbe({
+        batch: [doc("e1", 48)],
+        predicate: PRUNE_PREDICATES.events,
+        probeLimit: 200,
+        cutoffMs,
+      });
+      expect(probe.status).toBe("overhang");
+      expect(probe.overhangHours).toBe(48);
+    });
   });
 
   it("every PRUNE_PREDICATES key is a real, pruned table (silent-no-op guard)", () => {

@@ -153,6 +153,83 @@ export function partitionBatchForPrune<T extends { _id: unknown; _creationTime: 
   return { toDelete, lastCreationTime };
 }
 
+/** What an overhang probe could determine about a table's un-pruned backlog. */
+export type OverhangStatus =
+  | "overhang" // a doc the pruner WOULD delete is still sitting past the cutoff
+  | "caught-up" // every doc past the cutoff is one the pruner is meant to keep
+  | "indeterminate"; // scanned a full window of keep-forever docs; can't see past it
+
+export interface OverhangProbe {
+  status: OverhangStatus;
+  /** `_creationTime` of the oldest doc the pruner would actually delete, or null. */
+  oldestPrunableMs: number | null;
+  /** How far past the cutoff that doc is, or null when there is none. */
+  overhangHours: number | null;
+  /** Docs examined — always ≤ probeLimit, and all already past the cutoff. */
+  scanned: number;
+}
+
+/**
+ * summarizeOverhangProbe — turns a cutoff-bounded head batch into a retention-lag verdict.
+ *
+ * ## Why this exists (2026-08-10)
+ *
+ * `retention-health-check.ps1` measured lag as "how far past the cutoff is the oldest doc in the
+ * table", read straight off `by_creation_time` with no predicate. That question is only equivalent
+ * to "is the prune behind?" while every doc past the cutoff is deletable — which stopped being true
+ * the moment Phase 110 D-01 gave `aggregates` a predicate that keeps `period:"daily"` rows FOREVER.
+ *
+ * Measured on the live instance that day: 93 `aggregates` docs sat past the 90-day cutoff — 73
+ * `hourly` (deletable) and 20 `daily` (protected by design). Once a nightly run removes the 73, the
+ * oldest remaining doc is a *daily* row 165.4h past the cutoff, and it ages 24h further every day.
+ * Against a 72h FAIL threshold that is a permanent, unclearable ALERT reporting a working pruner as
+ * broken — and an alert that can never go green is one an operator learns to ignore, which costs the
+ * real alerts too.
+ *
+ * The fix is to ask the pruner's question instead of the index's: measure the oldest doc that
+ * `pruneBatchV3` WOULD delete. This shares `partitionBatchForPrune` with the pruner rather than
+ * re-deriving the rule, so a predicate change moves both together by construction — the same
+ * anti-drift reasoning D-07 applied to `RETENTION_DAYS`, which had already drifted once when it was
+ * hand-copied into the health-check script.
+ *
+ * ## Why a full window of skipped docs is `indeterminate`, not `caught-up`
+ *
+ * The batch is range-bounded by the cutoff, so a SHORT batch means every doc past the cutoff was
+ * seen: zero prunable among them is genuine caught-up. A FULL batch means the window was exhausted
+ * and a prunable doc could be sitting just past it, unseen. Calling that "caught-up" would be a
+ * green verdict derived from a probe that could not have observed the failure — so it reports
+ * `indeterminate` and lets the caller refuse to claim health rather than manufacture it.
+ */
+export function summarizeOverhangProbe<T extends { _id: unknown; _creationTime: number }>(args: {
+  batch: readonly T[];
+  predicate?: (doc: T) => boolean;
+  probeLimit: number;
+  cutoffMs: number;
+}): OverhangProbe {
+  const { batch, predicate, probeLimit, cutoffMs } = args;
+  const { toDelete } = partitionBatchForPrune(batch, predicate);
+
+  if (toDelete.length > 0) {
+    // `toDelete` preserves the batch's ascending order, so element 0 is the oldest prunable doc.
+    const oldestPrunableMs = toDelete[0]._creationTime;
+    const rawHours = (cutoffMs - oldestPrunableMs) / 3600000;
+    return {
+      status: "overhang",
+      oldestPrunableMs,
+      // Clamp at 0: a doc can land microseconds under the cutoff between the caller computing it
+      // and the read completing, and a negative "lag" is meaningless noise in an alert body.
+      overhangHours: Math.round(Math.max(rawHours, 0) * 10) / 10,
+      scanned: batch.length,
+    };
+  }
+
+  if (batch.length >= probeLimit) {
+    return { status: "indeterminate", oldestPrunableMs: null, overhangHours: null, scanned: batch.length };
+  }
+
+  return { status: "caught-up", oldestPrunableMs: null, overhangHours: 0, scanned: batch.length };
+}
+
 /**
  * resolveRotationStart — Phase 110 D-05's nightly rotation start-index resolution.
  *

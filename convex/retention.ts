@@ -6,6 +6,7 @@ import {
   partitionBatchForPrune,
   resolveRotationStart,
   planRotationWrite,
+  summarizeOverhangProbe,
 } from "./retentionCursor";
 
 // Nightly retention pruning (2026-07-14, revised after the self-hosted
@@ -346,4 +347,72 @@ export const pruneBatchV3 = internalMutation({
 export const listRetentionPolicy = internalQuery({
   args: {},
   handler: async () => RETENTION_DAYS,
+});
+
+// 2026-08-10: the retention-lag probe, moved server-side out of
+// retention-health-check.ps1.
+//
+// The script used to ask the index a question the pruner does not ask —
+// `.withIndex('by_creation_time').order('asc').take(1)`, i.e. "what is the oldest doc in this
+// table", with no predicate. D-07 had already taught that script to read RETENTION_DAYS live so it
+// could never drift from the policy; PRUNE_PREDICATES landed in the SAME phase and the script knew
+// nothing about it, so the policy was back in two places — just a different two.
+//
+// The consequence was not cosmetic. `aggregates` keeps `period:"daily"` rows forever (D-01), so the
+// oldest doc in that table is permanently past its own cutoff and ages 24h/day. Against the
+// script's 72h FAIL threshold that is an ALERT which no amount of correct pruning can ever clear.
+// Verified against the live instance on 2026-08-10: 93 docs past the cutoff, 73 hourly + 20 daily,
+// oldest daily already 165.4h over.
+//
+// Asking it HERE means the probe reuses PRUNE_PREDICATES and partitionBatchForPrune — the very
+// objects pruneBatchV3 above runs on, not copies of them — so "what the check measures" and "what
+// the pruner deletes" cannot drift apart. The query is deliberately per-table rather than a single
+// all-tables sweep: `events` index-head reads intermittently SystemTimeout on this instance under
+// memory pressure, and batching all 19 tables into one call would let that one table's timeout
+// destroy the other 18 readings.
+//
+// internalQuery for the same reason listRetentionPolicy is one (T-110-03-04): this adds no
+// publicly-callable endpoint. Read-only — it never deletes, so it is safe to run at any hour,
+// unlike the nightly chain above.
+const PROBE_LIMIT = BATCH_SIZE;
+
+export const oldestPrunableDoc = internalQuery({
+  args: { table: v.string() },
+  handler: async (ctx, args) => {
+    const days = RETENTION_DAYS[args.table];
+    if (days === undefined) {
+      // Not an error: the caller enumerates tables from listRetentionPolicy, so this can only
+      // happen if the two reads straddle a policy edit. Report it as its own status rather than
+      // throwing (which the script would see as a timeout) or returning a green (which would hide
+      // a table from the check entirely).
+      return {
+        table: args.table,
+        status: "unknown-table" as const,
+        retentionDays: null,
+        oldestPrunableMs: null,
+        overhangHours: null,
+        scanned: 0,
+      };
+    }
+
+    const cutoffMs = Date.now() - days * 86400 * 1000;
+    // Byte-for-byte the shape pruneBatchV3 uses for a table's FIRST batch (cursor 0), so this
+    // measures the exact read the pruner will perform tonight, not an approximation of it.
+    const batch = await ctx.db
+      .query(args.table as any)
+      .withIndex("by_creation_time", (q: any) =>
+        q.gte("_creationTime", 0).lt("_creationTime", cutoffMs)
+      )
+      .order("asc")
+      .take(PROBE_LIMIT);
+
+    const probe = summarizeOverhangProbe({
+      batch,
+      predicate: PRUNE_PREDICATES[args.table],
+      probeLimit: PROBE_LIMIT,
+      cutoffMs,
+    });
+
+    return { table: args.table, retentionDays: days, ...probe };
+  },
 });
