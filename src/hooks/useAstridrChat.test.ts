@@ -1015,3 +1015,116 @@ describe("useAstridrChat — interrupt() prunes the empty merge-path assistant b
     expect(survivor?.streaming).toBe(false);
   });
 });
+
+// ─── D-02 (188.4-01): a late run.blocks after interrupt() resurrects with ────
+// streaming:false, not a dangling cursor. Once D-01's prune removes the
+// merge-path placeholder, a `run.blocks` frame that arrives afterward for the
+// same session no longer finds a matching streaming message to merge into —
+// it falls into the else-branch's brand-new-message append (:395-411), whose
+// literal `streaming: true` would leave an orphaned stream-cursor with
+// nothing left to ever clear it (interrupt() already ran; no further
+// run.completed/run.error is coming for a superseded turn). This section
+// pins that the append instead reads `activeSessionRef.current !== null` —
+// true while a turn is genuinely in flight, false once interrupt() has
+// nulled it — while leaving the run.blocks session GATE (:306) untouched.
+
+describe("useAstridrChat — late run.blocks after interrupt() resurrects with streaming:false (D-02, 188.4-01)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-1" });
+  });
+
+  it("LATE-BLOCKS-AFTER-INTERRUPT-RESURRECT: a run.blocks frame whose session_id matches lastSessionRef, arriving after interrupt() pruned the placeholder, still appends but with streaming:false", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+
+    // D-01's prune removes the empty placeholder outright — nulls
+    // activeSessionRef but leaves lastSessionRef set, exactly the asymmetry
+    // this resurrect branch reads.
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    const messagesBefore = result.current.messages.length;
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "a late block arriving after interrupt" }],
+          round_num: 0,
+        },
+      });
+    });
+
+    expect(result.current.messages.length).toBe(messagesBefore + 1);
+    const appended = result.current.messages[result.current.messages.length - 1];
+    expect(appended.role).toBe("assistant");
+    expect(appended.blocks?.[0]).toMatchObject({
+      type: "text",
+      text: "a late block arriving after interrupt",
+    });
+    // The behavior under test: no dangling cursor.
+    expect(appended.streaming).toBe(false);
+  });
+
+  it("CTRL-BLOCKS-STILL-IN-FLIGHT: a run.blocks frame that hits the else-branch while a turn is genuinely in flight still appends with streaming:true", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+
+    // Force the else-branch WITHOUT completing or interrupting the turn:
+    // append a local, non-streaming assistant message (a real hook API —
+    // appendLocalAssistantMessage) so it becomes `last` and no longer
+    // matches the if-branch's (streaming && sessionId===payload.session_id)
+    // predicate. activeSessionRef stays non-null throughout — the turn is
+    // genuinely still in flight, which is the over-block this control
+    // guards: the fix must not flatten the normal streaming append.
+    act(() => {
+      result.current.appendLocalAssistantMessage("a local aside, unrelated to the streaming turn");
+    });
+    expect(result.current.isStreaming).toBe(true);
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "still streaming reply chunk" }],
+          round_num: 1,
+        },
+      });
+    });
+
+    const appended = result.current.messages[result.current.messages.length - 1];
+    expect(appended.blocks?.[0]).toMatchObject({ type: "text", text: "still streaming reply chunk" });
+    expect(appended.streaming).toBe(true);
+  });
+
+  it("CTRL-BLOCKS-UNKNOWN-SESSION-STILL-GATED: a run.blocks frame whose session_id matches NEITHER ref is still dropped after interrupt() (the gate is unchanged)", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    const messagesBefore = result.current.messages.length;
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-totally-unrelated",
+          blocks: [{ type: "text", text: "must not land" }],
+          round_num: 0,
+        },
+      });
+    });
+
+    expect(result.current.messages.length).toBe(messagesBefore);
+  });
+});

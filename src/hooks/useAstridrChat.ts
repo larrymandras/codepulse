@@ -392,13 +392,25 @@ export function useAstridrChat() {
             seen.add(s);
             return true;
           });
+          // D-02 (188.4-01): read the in-flight condition from
+          // activeSessionRef, NOT lastSessionRef and NOT the `streaming`
+          // React state (which lags a render behind). activeSessionRef is
+          // precisely the ref interrupt() nulls (:598 above), so "is it
+          // still null right now" is what makes "no turn in flight"
+          // observable at this instant — the gate ten lines above this
+          // block deliberately reads the never-cleared lastSessionRef (it
+          // answers a different question: "does this belong to the turn we
+          // just had"). A late block after an interrupt still renders (it
+          // must — suppressing it here would silence the control-verb
+          // fast-path, D-02's rejected alternative), but with no dangling
+          // stream-cursor left with nothing to clear it.
           return [
             ...updateApplied,
             {
               id: generateId(),
               role: "assistant" as const,
               blocks: fresh,
-              streaming: true,
+              streaming: activeSessionRef.current !== null,
               timestamp: Date.now(),
               sessionId: payload.session_id,
             },
