@@ -263,10 +263,253 @@ No image-SHA comparison was used anywhere as a freshness argument.
 
 ---
 
-## Probes A–H
+## Probes A–D (Task 2)
 
-> Pending — Task 2 and Task 3 are blocking human-verify checkpoints. Raw output is appended below
-> as each probe runs against the live stack.
+**How these were dispatched.** The app's dispatch rides a module-scope singleton WebSocket
+(`AstridrWSContext.tsx:140,230`) authenticated with a bearer subprotocol built from
+`VITE_ASTRIDR_API_KEY`. Rather than open a second socket (which would mean handling the API key in
+the transcript), every probe below reuses the page's OWN live socket, obtained by walking the React
+fiber tree on the CodePulse tab to the context value — the literal "browser devtools console on the
+CodePulse tab, which already holds a live socket" the plan calls for.
+
+```
+FOUND ctx keys=status,sendCommand,subscribe,subscribeEvent,reconnect status=connected fibersScanned=37
+```
+
+### Baseline, captured BEFORE any mutation
+
+```
+$ sendCommand({type:"swap.get_state"})
+{
+  "status": "ok",
+  "model_override": null,
+  "model_source": null,
+  "voice_override_id": null,
+  "voice_override_name": null,
+  "profile_overrides": {}
+}
+```
+
+A clean slate: no global override, no per-profile pins. Recorded so the gate's own mutations are
+distinguishable from pre-existing state.
+
+---
+
+### Probe A — D-03, `default_profile_id` on the live `swap.catalogue` ack
+
+```
+$ sendCommand({type:"swap.catalogue", target:"brain"})
+{
+  "ack_top_level_keys": ["type","request_id","status","target","entries","default_profile_id"],
+  "status": "ok",
+  "default_profile_id": "personal",
+  "default_profile_id_type": "string",
+  "entries_count": 361,
+  "first_two_entries": [
+    { "id": "claude-opus-4-8",  "name": "Claude Opus 4.8", "vendor": "anthropic" },
+    { "id": "claude-sonnet-5",  "name": "Claude Sonnet 5", "vendor": "anthropic" }
+  ]
+}
+```
+
+**VERDICT: PASS.** `default_profile_id` is present on the ack as a top-level field, is a non-empty
+string, and its value `personal` is one of the three real profile ids independently enumerated in
+Section 6. Not `undefined`, not `null`, not empty, not absent. Read off the wire — not inferred from
+source.
+
+---
+
+### Probe B — D-05, the set leg
+
+SUBJECT = `business` → `claude-opus-4-8` (modelA). CONTROL = `consulting` → `claude-sonnet-5` (modelB).
+
+```
+$ sendCommand({type:"swap.set", target:"brain", value:"claude-opus-4-8", restore:false, profile_id:"business"})
+{ "status": "ok", "handled": true, "spoken_reply": "Switching to Claude Opus 4 8.", "target": "brain" }
+
+$ sendCommand({type:"swap.set", target:"brain", value:"claude-sonnet-5", restore:false, profile_id:"consulting"})
+{ "status": "ok", "handled": true, "spoken_reply": "Switching to Claude Sonnet 5.", "target": "brain" }
+
+$ sendCommand({type:"swap.get_state"}).profile_overrides
+{
+  "business":   { "model": "claude-opus-4-8", "source": "codepulse-scoped-swap" },
+  "consulting": { "model": "claude-sonnet-5", "source": "codepulse-scoped-swap" }
+}
+```
+
+**VERDICT: PASS.** Both profiles present, each with its own correct and DIFFERENT model. Global
+`model_override` remained `null` throughout, so these are genuinely per-profile writes.
+
+**Shape note (recorded because the plan's wording implies a bare string).** The map's values are
+objects `{model, source}`, not bare model strings. `useProfileSwap.ts:164` reads `entry?.model`
+accordingly, so client and server agree — but any future consumer written against "the map holds a
+model string" would be wrong.
+
+---
+
+### Probe C — D-05, the restore leg (absence proof + same-payload control)
+
+```
+$ sendCommand({type:"swap.set", target:"brain", restore:true, profile_id:"business"})
+{ "status": "ok", "handled": true, "spoken_reply": "Back to my usual brain.", "target": "brain" }
+
+$ sendCommand({type:"swap.get_state"}).profile_overrides     <-- THE ONE PAYLOAD
+{
+  "consulting": { "model": "claude-sonnet-5", "source": "codepulse-scoped-swap" }
+}
+
+assertions read from THAT SAME payload:
+  SUBJECT business: key present at all?  false        <- hasOwnProperty, not a truthiness test
+  SUBJECT business value                 undefined    <- absent, NOT present-with-null
+  CONTROL consulting: key present?       true
+  CONTROL consulting value               {"model":"claude-sonnet-5","source":"codepulse-scoped-swap"}
+  map is empty (would mean broken probe) false
+  all keys                               ["consulting"]
+```
+
+**VERDICT: PASS.** SUBJECT is absent from the map — not present with `null`, not present with an
+empty string — and the CONTROL is still present with modelB **in the same payload**, which is what
+makes the absence meaningful. An empty map would have indicated a broken probe; the map was not
+empty.
+
+---
+
+### Probe D — ENGINE-04's central claim, observed in the UI
+
+#### D-negative-control — a scoped swap for a profile id that does not exist
+
+```
+$ sendCommand({type:"swap.set", target:"brain", value:"claude-opus-4-8", restore:false,
+               profile_id:"definitely-not-a-real-profile-9x7q2"})
+REJECTED
+error_message_from_server: "unknown profile_id: 'definitely-not-a-real-profile-9x7q2'"
+
+$ sendCommand({type:"swap.get_state"}).profile_overrides
+{ "consulting": { "model": "claude-sonnet-5", "source": "codepulse-scoped-swap" } }
+bogus profile leaked into map? false
+```
+
+**VERDICT: PASS.** The server refused with its own specific reason, nothing was written, and the
+CONTROL survived. An honest error, not a silent success.
+
+#### D-positive — "the label must NOT update before confirmation"
+
+Driven through the REAL picker control on Settings' `business` row, never by raw dispatch —
+dispatching through the context directly would bypass the component's pending state and produce a
+false negative on the suffix. Timings merge two independent instruments: a `MutationObserver` on the
+profile row, and a `WebSocket` wrapper capturing every frame. Both stamp from one `performance.now()`
+origin.
+
+```
+t=34075  SEND  swap.set  profile_id=business  value=claude-sonnet-5
+t=34838  DOM   "business | claude-opus-4-8 | · switching to Claude Sonnet 5…"   <- suffix up, label STILL OLD
+t=34889  RECV  ack status=ok
+t=34891  RECV  control_verb_swap
+t=34891  RECV  swap.state
+t=35161  DOM   "business | claude-sonnet-5 | · switching to Claude Sonnet 5…"   <- label flips, 272ms AFTER the ack
+```
+
+Reproduced on a second swap:
+
+```
+t=129988 SEND  swap.set  profile_id=business  value=claude-haiku-4-5-20251001
+t=130528 DOM   "business | claude-sonnet-5 | · switching to Claude Haiku 4.5…"  <- suffix up, label STILL OLD
+t=130584 RECV  ack status=ok + control_verb_swap + swap.state
+t=130948 DOM   "business | claude-haiku-4-5-20251001 | · switching to Claude Haiku 4.5…"  <- 364ms AFTER the ack
+```
+
+**VERDICT on the no-optimistic-flip claim: PASS.** In both runs the base label held its OLD value
+through the entire in-flight window and changed only after the server ack and `swap.state` arrived.
+There is no optimistic flip. This is ENGINE-04's central claim and it holds.
+
+#### D-FAILED — the suffix never clears, and no toast ever fires (dev server only)
+
+```
+39,388 ms after the label flip, on the dev server (:5173):
+
+  consulting  "consulting | claude-sonnet-5 | pinned default"                    suffix: false   <- CONTROL
+  business    "business | claude-sonnet-5 | · switching to Claude Sonnet 5…"     suffix: TRUE
+  personal    "personal | anthropic/claude-sonnet-5"                             suffix: false   <- CONTROL
+
+  visible_toasts: []
+```
+
+The two unswapped profiles carry no suffix in the same measurement, so this is specific to the
+swapped profile — not a global rendering artifact. The stuck suffix also SURVIVED a full socket
+reconnect and a fresh `swap.get_state` re-seed.
+
+After a third swap, waiting 7s (the confirm timeout is 4s):
+
+```
+  TOASTS: []      <- neither the success toast NOR the 4s "accepted, unconfirmed" warning
+```
+
+That is the discriminator: the outcome machine reached NEITHER `confirmed` NOR `accepted`. It never
+left `pending`, so `startConfirmTimeout()` was never called and no toast could fire.
+
+**ROOT CAUSE — CONFIRMED by mutation test, not inferred.**
+
+`useProfileSwap.ts:143-149` sets `unmountedRef.current = true` in its unmount cleanup but never
+resets it to `false` on (re)mount:
+
+```ts
+useEffect(() => {
+  return () => {
+    unmountedRef.current = true;
+    clearConfirmTimeout();
+  };
+}, []);
+```
+
+React `StrictMode` is enabled (`src/main.tsx:42,50`) and in development double-invokes effects
+mount→cleanup→remount, latching the ref `true` permanently. Both dispatch continuations then
+dead-end at their guard — `useProfileSwap.ts:259` and `:294`:
+
+```ts
+if (unmountedRef.current || epochRef.current !== myEpoch) return;   // never reaches setOutcome("confirming")
+```
+
+**Control 1 — production build, same code, StrictMode double-invoke absent** (`npm run build` +
+`vite preview` on :5199):
+
+```
+run 1: t=34369 suffix up (label old) -> t=34603 label flips -> t=38558 toast "business switched to
+       Claude Opus 4.8." (success) -> t=38597 SUFFIX CLEARS
+run 2: t=113043 suffix up (label old) -> t=113283 label flips -> t=113437 toast "business switched
+       to Claude Sonnet 5." (success) -> t=113441 SUFFIX CLEARS  (158 ms after the flip)
+```
+
+Run 1's clear landed ~3994 ms after the flip, close enough to the 4000 ms
+`PROFILE_SWAP_CONFIRM_TIMEOUT_MS` to suspect the timeout path; run 2 settled in 158 ms, so the fast
+readback path is what normally confirms. Run 1's delay was observed once and did NOT reproduce —
+recorded as an open observation, not a claim.
+
+**Control 2 — mutation test on the SAME dev server (:5173), StrictMode still on.** One line added,
+`unmountedRef.current = false` at the top of the mount effect:
+
+```
+t=28709  DOM  "business | claude-sonnet-5 | · switching to Claude Opus 4.8…"   <- suffix up, label old
+t=29127  DOM  "business | claude-opus-4-8 | · switching to Claude Opus 4.8…"   <- label flips
+t=29623  TOAST success "business switched to Claude Opus 4.8."
+t=29627  DOM  "business | claude-opus-4-8 | pinned default"                     <- SUFFIX CLEARS
+```
+
+The mutation was reverted immediately after the measurement; `git diff --stat src/hooks/useProfileSwap.ts`
+is empty and a grep for the marker comment returns nothing. **No fix is committed by this plan** —
+this gate's output is evidence, and the fix belongs in a gap-closure plan.
+
+**VERDICT: FAILED (dev-mode only, mechanism confirmed).**
+
+- What holds: the server-confirmed ordering (no optimistic flip), on every run, in both modes.
+- What fails: on the dev server, the swap outcome machine never leaves `pending`, so the
+  "· switching to …" suffix never clears and NEITHER the success toast NOR the honest
+  "accepted, unconfirmed" warning ever fires. The operator is left with a surface that permanently
+  claims a swap is still in flight after it has completed.
+- Scope: development builds only. The production bundle is unaffected (Control 1). This still
+  matters in practice: CodePulse runs from the Vite dev server on :5173 via the `CodePulseUI`
+  autostart task, which is the daily-driver surface.
+- Defect class check: `grep -rn "unmountedRef" src/` returns matches in `useProfileSwap.ts` ONLY —
+  no sibling instance of this pattern elsewhere in the codebase.
 
 ---
 
