@@ -67,6 +67,28 @@ describe("RETENTION_DAYS", () => {
     expect(RETENTION_DAYS).toHaveProperty("activeEngineSnapshots", 30);
   });
 
+  it("prompts and promptVersions are exempt by design (Phase 116 D-13)", () => {
+    // Absence assertions alone would pass vacuously against an empty or
+    // mis-imported RETENTION_DAYS — controlVerbSwaps is a known-present
+    // control in the same assertion style.
+    expect(Object.keys(RETENTION_DAYS)).not.toContain("prompts");
+    expect(Object.keys(RETENTION_DAYS)).not.toContain("promptVersions");
+    expect(Object.keys(RETENTION_DAYS)).toContain("controlVerbSwaps");
+
+    // Prove the absence above is a real exemption of real tables, not a typo:
+    // both tables actually exist in schema.ts.
+    expect(schemaTables.has("prompts")).toBe(true);
+    expect(schemaTables.has("promptVersions")).toBe(true);
+
+    // The exemption must be documented in place, not merely absent — read
+    // convex/retention.ts's own source the same way this file already reads
+    // convex/schema.ts's source above.
+    const retentionSource = readFileSync(resolve(process.cwd(), "convex/retention.ts"), "utf-8");
+    expect(retentionSource).toContain("D-13");
+    expect(retentionSource).toContain("prompts");
+    expect(retentionSource).toContain("promptVersions");
+  });
+
   it("still keeps the cost/trend tables forever — pruning these would break dashboards", () => {
     // Phase 104 derives dollars from `aggregates` token buckets on every read, so
     // pruning aggregates or llmMetrics would silently destroy re-priceable history

@@ -75,6 +75,23 @@ export const RETENTION_DAYS: Record<string, number> = {
   // reaching for the 90-day build/history tier reserved for higher-value
   // long-horizon tables.
   controlVerbSwaps: 30,
+
+  // Phase 116 D-13: `prompts` is deliberately EXEMPT from RETENTION_DAYS — do
+  // not add it as a key here. Every other new table above was bounded
+  // pre-emptively because it is a firehose (gatewayQuotaSnapshots per Phase
+  // 104 D-20, toolPolicyEvents per Phase 105 D-05, activeEngineSnapshots and
+  // controlVerbSwaps per Phase 108 D-10/D-14); a curated Galdr prompt library
+  // is the opposite of a firehose, and a 90-day window would silently delete
+  // a prompt for the sole offence of going a quarter unused.
+  // `promptVersions` — the table that actually grows — IS bounded, but by a
+  // different mechanism: newest-20-per-prompt, pruned inline in
+  // convex/galdr.ts's save/restore mutations, keyed by edit frequency rather
+  // than calendar age.
+  // Do NOT "fix" this by adding `prompts` or `promptVersions` here: it would
+  // be syntactically valid and would pass retention.test.ts's table-existence
+  // check, but is semantically wrong — pruneBatchV3 deletes by `_creationTime`
+  // cutoff across the WHOLE table, so it would delete versions of
+  // actively-edited prompts exactly as readily as abandoned ones.
 };
 
 const PRUNED_TABLES = Object.keys(RETENTION_DAYS);
