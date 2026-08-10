@@ -17,6 +17,13 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+// VOICE_DEBUG_ENABLED (188.4-02, D-09) — the exported alias for the private
+// VOICE_DEBUG const in useAstridrVoice.ts, gating __astridrInjectForeignSessionBlocks
+// below exactly like that file's own debug-gated window instruments.
+// Confirmed live 2026-08-10: this file previously imported nothing from
+// useAstridrVoice.ts, and useAstridrVoice.ts imports nothing from this file —
+// no import cycle (re-verified via `npx tsc --noEmit` after adding this).
+import { VOICE_DEBUG_ENABLED } from "@/hooks/useAstridrVoice";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -94,6 +101,21 @@ for (const [topic, events] of Object.entries(TOPIC_EVENT_MAP)) {
     if (!EVENT_TO_TOPICS.has(evt)) EVENT_TO_TOPICS.set(evt, new Set());
     EVENT_TO_TOPICS.get(evt)!.add(topic);
   }
+}
+
+// ─── Debug trace (188.4-02, D-08) ───────────────────────────────────────────
+// Mirrors useAstridrVoice.ts's private `trace()` helper (:207-215) exactly —
+// that function is not exported, so this file needs its own copy to push
+// onto the SAME window.__astridrVoiceTrace ring buffer, the established
+// disclosure channel for every debug-gated instrument in this phase.
+function debugTrace(ev: string, d?: unknown) {
+  if (!VOICE_DEBUG_ENABLED || typeof window === "undefined") return;
+  const entry = { t: new Date().toISOString().slice(11, 23), ev, d };
+  // eslint-disable-next-line no-console
+  console.log(`[voice] ${entry.t} ${ev}`, d ?? "");
+  const buf = (window.__astridrVoiceTrace ??= []);
+  buf.push(entry);
+  if (buf.length > 500) buf.shift();
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -462,6 +484,66 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     setStatusSync("reconnecting");
     connect();
   }, [connect, setStatusSync]);
+
+  // ─── D-08 (188.4-02) — foreign-session injector on the real event bus ──────
+  // Publishes a synthetic `run.blocks` frame through the SAME eventSubsRef
+  // fan-out (:313-317 below) a real WS frame arrives on, carrying a foreign
+  // session_id — exercising the D-10 session gate
+  // (useAstridrChat.ts:285-307), the lastSessionRef comparison, and the
+  // fail-open branch exactly as production does. This is the closest
+  // reachable substitute for the two-session setup 188.3 could not stage
+  // (188.4-CONTEXT.md D-08).
+  //
+  // Does NOT call useAstridrChat's run.blocks handler directly, and does NOT
+  // add a `publish` entry to this provider's public context value — D-08
+  // rejected the direct-call route by name: it skips the subscription/
+  // dispatch layer and would prove only the gate's logic, a WEAKER claim
+  // than the existing fixtures already make.
+  //
+  // Scope note (D-08a): this instrument makes UAT-8 reachable. It does NOT
+  // close UAT-8 by itself — that is 188.4-04's live checkpoint.
+  //
+  // Debug-gated on VOICE_DEBUG_ENABLED (imported — the private VOICE_DEBUG
+  // const in useAstridrVoice.ts is not exported), same useEffect + window
+  // attach + cleanup delete shape as __astridrForceRecognizerReset /
+  // __astridrInjectForeignFinal.
+  useEffect(() => {
+    if (!VOICE_DEBUG_ENABLED || typeof window === "undefined") return;
+    const w = window as unknown as {
+      __astridrInjectForeignSessionBlocks?: (sessionId?: string, text?: string) => void;
+    };
+    w.__astridrInjectForeignSessionBlocks = (
+      sessionId: string = "debug-foreign-session-9x7q2",
+      text: string = "[debug injected foreign-session block]"
+    ) => {
+      const eventType = "run.blocks";
+      // Shape mirrors a real backend frame: event_type + a data envelope
+      // carrying session_id/blocks (useAstridrChat.ts:286-288 unwraps
+      // `event.data ?? event`).
+      const message = {
+        event_type: eventType,
+        data: {
+          session_id: sessionId,
+          blocks: [{ type: "text", text }],
+        },
+      };
+      const eventSubs = eventSubsRef.current.get(eventType);
+      // The subscriber count matters: a zero here means the injection
+      // reached nobody, which reads identically to a correctly-gated drop
+      // unless it is recorded (T-188.4-07).
+      debugTrace("debug.inject-foreign-session-blocks", {
+        sessionId,
+        subscriberCount: eventSubs ? eventSubs.size : 0,
+        traceLengthBefore: (window.__astridrVoiceTrace ?? []).length,
+      });
+      if (eventSubs) {
+        for (const cb of eventSubs) cb(message);
+      }
+    };
+    return () => {
+      delete w.__astridrInjectForeignSessionBlocks;
+    };
+  }, []);
 
   return (
     <AstridrWSContext.Provider value={{ status, sendCommand, subscribe, subscribeEvent, reconnect }}>

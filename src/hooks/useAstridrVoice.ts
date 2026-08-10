@@ -2200,6 +2200,55 @@ export function useAstridrVoice({
     };
   }, [recognitionAbort]);
 
+  // ─── D-07 (188.4-02) — foreign-script injector at the recognizer seam ──────
+  // Synthesizes a MULTI-word, space-tokenizing foreign-script `final` exactly
+  // as handleFinalResultRef.current sees one from a real STT isFinal:true
+  // onresult event, so the injected string runs the FULL gate chain — NOT the
+  // dispatch seam (188.4-CONTEXT.md D-07 rejected that route by name: it
+  // starts downstream of every gate in question, so it can never answer
+  // whether a foreign-script string survives the chain at all).
+  //
+  // A gate stopping the string is a RESULT this instrument exists to observe,
+  // not a bug in the injector — do not "fix" the injector until it survives
+  // the chain, and do not weaken any gate to let it through. The trace below
+  // carries every precondition a reader needs to interpret a non-arrival.
+  //
+  // Default string: "오늘 서울 날씨 어때요" (Korean, "How's the weather in Seoul
+  // today?") — 4 space-separated tokens, clearing the cold `minWords = 3`
+  // floor (:615) by construction without confirming only the floor. Korean
+  // space-tokenizes; the natural "しゅう。" (Japanese) attempt in 188.3 never
+  // reached the word-count check at all because it does not (188.3-SMOKE.md
+  // :238). It is also a genuine question, so a reply that survives is itself
+  // usable evidence for the reply-language pin (D-06).
+  //
+  // confidence and durationMs are both passed undefined, matching a
+  // recognizer-sourced final: the duration gate (:1862) FAILS OPEN on an
+  // undefined durationMs, so passing a number would trip a gate this
+  // injection is not trying to test.
+  //
+  // Debug-gated exactly like __astridrForceRecognizerReset above — same
+  // useEffect + window attach + cleanup delete shape.
+  useEffect(() => {
+    if (!VOICE_DEBUG || typeof window === "undefined") return;
+    const w = window as unknown as { __astridrInjectForeignFinal?: (text?: string) => void };
+    w.__astridrInjectForeignFinal = (text: string = "오늘 서울 날씨 어때요") => {
+      const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+      trace("debug.inject-foreign-final", {
+        text,
+        wordCount,
+        state: voiceStateRef.current,
+        followUpOpen,
+        followUpArmed: followUpArmedRef.current,
+        warm: conversationWarmRef.current,
+        traceLengthBefore: (window.__astridrVoiceTrace ?? []).length,
+      });
+      handleFinalResultRef.current(text, undefined, undefined);
+    };
+    return () => {
+      delete w.__astridrInjectForeignFinal;
+    };
+  }, [followUpOpen]);
+
   return {
     voiceState,
     interimText,

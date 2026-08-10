@@ -22,6 +22,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   useAstridrVoice,
   isEchoOfReply,
@@ -30,6 +33,25 @@ import {
   appendWithOverlapCheck,
 } from "./useAstridrVoice";
 import type { AstridrChat } from "./useAstridrChat";
+
+// __dirname shim for ESM test files — precedent: useControlVerbSwaps.test.ts
+// (structural source-reading fixtures, e.g. the 188.4-02 Task 1 guard-parity
+// check below).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// The debug-gated window.__astridr* properties are attached via a local
+// `window as unknown as {...}` cast at their own call sites in
+// useAstridrVoice.ts (:2188), not a `declare global` augmentation like
+// __astridrVoiceTrace (:201-205) — so test files need the identical cast.
+function debugWindow(): {
+  __astridrForceRecognizerReset?: () => void;
+  __astridrInjectForeignFinal?: (text?: string) => void;
+} {
+  return window as unknown as {
+    __astridrForceRecognizerReset?: () => void;
+    __astridrInjectForeignFinal?: (text?: string) => void;
+  };
+}
 
 // ─── Echo fingerprint units (16:41 live-trace regressions) ───────────────────
 
@@ -2895,6 +2917,120 @@ describe("useAstridrVoice", () => {
       });
       const trace = window.__astridrVoiceTrace ?? [];
       expect(trace.some((e) => e.ev === "final.accumulator-discarded-end-phrase")).toBe(false);
+    });
+  });
+
+  // ─── __astridrForceRecognizerReset — presence/absence/guard-parity contract
+  // (188.4-02 Task 1, Wave 0). Confirmed live 2026-08-10 before this task:
+  // `grep -n 'ForceRecognizerReset|VOICE_DEBUG' useAstridrVoice.test.ts`
+  // returned NOTHING — this pre-existing instrument had zero coverage. These
+  // three fixtures close that gap AND are the CONTROL that Task 2's
+  // __astridrInjectForeignFinal fixtures and Task 3's
+  // __astridrInjectForeignSessionBlocks fixtures pattern themselves on.
+  //
+  // Residual (188.4-02 SUMMARY, for 188.4-05): VOICE_DEBUG is a hardcoded
+  // `const VOICE_DEBUG = true` with no env/global indirection point, so the
+  // `!VOICE_DEBUG` branch is never executed at test time — a `vi.resetModules()`
+  // + `vi.stubEnv()` flip attempt was tried live and left VOICE_DEBUG_ENABLED
+  // at `true`, confirming there is nothing to override. Per operator ruling
+  // R-01 (188.4-DISCUSSION-LOG.md), the flag stays hardcoded rather than
+  // becoming env-driven, so this residual is permanent, not a TODO.
+  describe("__astridrForceRecognizerReset — presence/absence/guard-parity contract (188.4-02 Task 1)", () => {
+    it("POSITIVE CONTROL: window.__astridrForceRecognizerReset is a function once the hook renders (VOICE_DEBUG hardcoded true)", () => {
+      const { unmount } = renderVoice(makeChat());
+      expect(typeof debugWindow().__astridrForceRecognizerReset).toBe("function");
+      unmount();
+    });
+
+    it("ABSENCE: window.__astridrForceRecognizerReset is undefined after the component unmounts (executes the effect's real cleanup delete, not a fresh-module claim)", () => {
+      const { unmount } = renderVoice(makeChat());
+      // Paired positive control in the SAME fixture — this assertion cannot
+      // pass vacuously against a codebase where the instrument was never
+      // written, because the line above would already have failed.
+      expect(typeof debugWindow().__astridrForceRecognizerReset).toBe("function");
+      unmount();
+      expect(debugWindow().__astridrForceRecognizerReset).toBeUndefined();
+    });
+
+    it("STRUCTURAL: the effect attaching __astridrForceRecognizerReset opens with the VOICE_DEBUG + typeof-window guard", () => {
+      const source = readFileSync(path.resolve(__dirname, "./useAstridrVoice.ts"), "utf-8");
+      const anchor = "w.__astridrForceRecognizerReset = () => {";
+      const idx = source.indexOf(anchor);
+      expect(idx).toBeGreaterThan(-1);
+      const preceding = source.slice(Math.max(0, idx - 300), idx);
+      // This is a STRUCTURAL assertion (source-text shape), not a behavioral
+      // one — Tasks 2 and 3's own guard-parity fixtures assert their new
+      // injectors' effects open with this identical token (or, for
+      // AstridrWSContext.tsx, the imported VOICE_DEBUG_ENABLED equivalent).
+      expect(preceding).toContain('if (!VOICE_DEBUG || typeof window === "undefined") return;');
+    });
+  });
+
+  // ─── __astridrInjectForeignFinal — D-07 (188.4-02 Task 2) ───────────────────
+  // The foreign-script injector at the recognizer seam. SIGNAL/CONTROL
+  // outcomes below are quoted verbatim from a live probe run before this
+  // fixture was written (188.4-02 SUMMARY): the default 4-word Korean string
+  // reaches handleFinalResultRef's own canonical `final` trace (it is NOT
+  // stopped by any gate under the hook's default idle test state — that is a
+  // RESULT, not a claim this fixture encodes as "must always happen"), and a
+  // deliberately 1-word control is stopped at `final.noise-rejected`.
+  describe("__astridrInjectForeignFinal — foreign-script recognizer-seam injector (188.4-02 Task 2, D-07)", () => {
+    it("PRESENCE: window.__astridrInjectForeignFinal is a function once the hook renders", () => {
+      const { unmount } = renderVoice(makeChat());
+      expect(typeof debugWindow().__astridrInjectForeignFinal).toBe("function");
+      unmount();
+    });
+
+    it("ABSENCE: window.__astridrInjectForeignFinal is undefined after the component unmounts", () => {
+      const { unmount } = renderVoice(makeChat());
+      expect(typeof debugWindow().__astridrInjectForeignFinal).toBe("function");
+      unmount();
+      expect(debugWindow().__astridrInjectForeignFinal).toBeUndefined();
+    });
+
+    it("STRUCTURAL: the effect attaching __astridrInjectForeignFinal opens with the same VOICE_DEBUG + typeof-window guard token as __astridrForceRecognizerReset", () => {
+      const source = readFileSync(path.resolve(__dirname, "./useAstridrVoice.ts"), "utf-8");
+      const anchor = "w.__astridrInjectForeignFinal = (text: string";
+      const idx = source.indexOf(anchor);
+      expect(idx).toBeGreaterThan(-1);
+      const preceding = source.slice(Math.max(0, idx - 300), idx);
+      expect(preceding).toContain('if (!VOICE_DEBUG || typeof window === "undefined") return;');
+    });
+
+    it("SIGNAL: the default string is exactly 4 space-separated tokens (asserted by the fixture itself, not by inspection) and reaches handleFinalResultRef's own canonical `final` trace — it entered the real gate chain rather than stopping at the injector", () => {
+      renderVoice(makeChat());
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        debugWindow().__astridrInjectForeignFinal?.();
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      const injected = trace.find((e) => e.ev === "debug.inject-foreign-final");
+      expect(injected).toBeDefined();
+      const d = injected?.d as { text?: string; wordCount?: number } | undefined;
+      expect(d?.wordCount).toBe(4);
+      expect(d?.text?.trim().split(/\s+/).filter(Boolean).length).toBe(4);
+      // Verbatim from the live probe: injector fires, then onresult, then the
+      // canonical `final` trace with the SAME injected text — proving the
+      // string reached the shared sink every real onresult(isFinal:true) also
+      // reaches. This fixture does NOT assert it survived to dispatch/send —
+      // under a different hook state a gate may stop it, and that is a
+      // publishable RESULT (188.4-CONTEXT.md D-07), not a fixture failure.
+      const finalEntry = trace.find((e) => e.ev === "final");
+      expect(finalEntry).toBeDefined();
+      expect((finalEntry?.d as { text?: string } | undefined)?.text).toBe("오늘 서울 날씨 어때요");
+    });
+
+    it("CONTROL: an explicit one-word string is stopped at final.noise-rejected — proves the fixture observes the REAL gate chain, not merely the injector's own trace line", () => {
+      const { unmount } = renderVoice(makeChat());
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        debugWindow().__astridrInjectForeignFinal?.("한");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      const rejected = trace.find((e) => e.ev === "final.noise-rejected");
+      expect(rejected).toBeDefined();
+      expect((rejected?.d as { text?: string } | undefined)?.text).toBe("한");
+      unmount();
     });
   });
 });
