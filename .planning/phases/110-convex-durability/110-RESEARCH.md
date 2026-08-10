@@ -281,16 +281,21 @@ Control pair confirms `grep -a` against the binary is a valid technique (known-p
 |---|-------|---------|---------------|
 | A1 | `SNAPSHOT_MANAGER`/MVCC in-memory version retention beyond the named "knobs" (not individually itemized in this research) is not independently ruled out as a growth contributor — only the named cache knobs (~1.5 GiB) and the two GitHub issues were investigated, not every subsystem in a 1970-line knobs file | DUR-03 / Memory-growth root cause | If wrong, DUR-03's documented root cause is incomplete rather than false — the negative evidence for the *named* knobs still stands, but "no bounding knob exists" would need re-stating as "no bounding knob was found among the candidates investigated" |
 | A2 | Issue #495 (SQLite `index_scan` materializing the whole range) is presented as the **strongest candidate contributor** to the memory-growth pattern, but no live experiment in this repo isolated it as *the* cause (D-09 explicitly rejects a multi-day attribution study as disproportionate) | DUR-03 | If wrong (i.e., #495 is a real but minor contributor and the dominant driver is something else entirely), DUR-03 still closes correctly per D-09's "documented" branch — the risk is only that the write-up overstates confidence in this specific mechanism |
-| A3 | The running container's image build date (2026-07-21, confirmed via `docker image inspect`) is assumed to contain the same `index_scan` behavior as the `main` branch commit (`f760918`) the issue was verified against, since #495's body states "not version-specific... reproduces on current main" | DUR-03 | Low risk — the issue explicitly claims version-independence, and no fix commit exists (issue is open, no linked PR) to have been picked up or missed by either build |
+| A3 | The running container's image build date (2026-07-21, confirmed via `docker image inspect`) is assumed to contain the same `index_scan` behavior as the `main` branch commit (`f760918`) the issue was verified against, since #495's body states "not version-specific... reproduces on current main" | DUR-03 | Low risk — the issue explicitly claims version-independence. **CORRECTED 2026-08-10 (orchestrator, re-confirmed by plan-checker via `gh pr view`): the "no linked PR" half of this rationale was wrong.** #495 *does* carry a linked PR — **#522**, "Fix SQLite persistence materializing entire ranges in index_scan and load_documents" — which is `state: OPEN`, `mergedAt: null`, i.e. **unmerged**. The conclusion is unchanged (an unmerged PR cannot be in any build, so neither build picked it up), but the reason matters: a fix *exists upstream*, so DUR-03 must record three states — no knob, known cause, and an available-but-unmerged patch — and re-check merge state at write-up time rather than assuming none exists. |
 
-## Open Questions
+## Open Questions (RESOLVED — both closed during planning, 2026-08-10)
 
-1. **Does the planner want a new pure helper extracted for the rotation-cursor value computation (mirroring `retentionCursor.ts`'s extraction), or is inlining acceptable inside `pruneBatchV3`?**
+Both questions below were framed as discretion, not blocking decisions, and planning took the
+recommended branch in each case. Retained for provenance; neither is outstanding.
+
+1. **[RESOLVED — extracted, as recommended]** Plan `110-01` extracts `resolveRotationStart` and
+   `planRotationWrite` as pure, independently tested helpers, matching this repo's established
+   pattern of pulling chain-decision logic out of the untestable mutation.
    - What we know: `planNextPruneStep` is the only chain-logic this repo can unit-test (no `convex-test` harness); the *rotation write* (which value to persist, at which two terminal branches) is new logic in the same spirit.
    - What's unclear: whether the planner judges this worth its own dependency-free function + test file, or whether two `if` branches inside the existing mutation are proportionate.
    - Recommendation: extract if the planner wants it independently testable (matches this repo's established pattern of pulling chain-decision logic out of the untestable mutation); inline is not wrong, just less consistent with precedent.
 
-2. **Exact evidence-file name/location for D-11's write-up.**
+2. **[RESOLVED — one file, `110-DUR-EVIDENCE.md`, as recommended]** Original question and reasoning:
    - What we know: precedent is `108-ENGINE-05-EVIDENCE.md`, `109-LIVE-EVIDENCE.md`, `107-OCC-EVIDENCE.md` — phase-number-prefixed, topic-suffixed, living in the phase directory.
    - What's unclear: whether DUR-02's "two independent pieces of live evidence pasted verbatim" and DUR-03's root-cause write-up share one file (`110-DUR-EVIDENCE.md`) or split (DUR-02 and DUR-03 evidence differ in kind — a log transcript vs. a research/GitHub-issue citation).
    - Recommendation: one file, `110-DUR-EVIDENCE.md`, with clearly separated `## DUR-02` and `## DUR-03` sections — matches how CONTEXT.md itself already groups these two decisions' evidence requirements separately while keeping them in one phase.

@@ -1,11 +1,19 @@
 ---
 phase: 110
 slug: convex-durability
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-10
+verified: 2026-08-10
 ---
+
+> **Frontmatter semantics —** `nyquist_compliant: true` records that the *plan set* satisfies the
+> sampling contract below: the plan-checker independently re-derived Dimension 8 (8a–8d) across all
+> six PLAN.md files and confirmed every task carries an automated verify command, no watch-mode flags
+> appear, and no run of 3 consecutive implementation tasks lacks an automated verify.
+> `wave_0_complete` stays **false** deliberately — the Wave 0 test files below do not exist yet; they
+> are *planned*, not written. It flips to true only when those assertions actually exist and run.
 
 # Phase 110 — Validation Strategy
 
@@ -87,12 +95,18 @@ map below is the binding contract each task must map onto.*
 
 ## Validation Sign-Off
 
-- [ ] All tasks have an automated verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all ❌ MISSING references above
-- [ ] No watch-mode flags in any command
-- [ ] Feedback latency < 30s for the automated tier
-- [ ] Every live leg carries its **control** (an absence/"caught up" reading proves nothing without one)
-- [ ] `nyquist_compliant: true` set in frontmatter
+Ticked items were verified by the gsd-plan-checker against all six PLAN.md files on 2026-08-10
+(`110-PLAN-REVIEW.md`), not self-asserted.
 
-**Approval:** pending
+- [x] All tasks have an automated verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all ❌ MISSING references above — each is claimed by a plan task
+- [x] No watch-mode flags in any command
+- [ ] Feedback latency < 30s for the automated tier — **not measured.** The estimate above is
+      inherited from project norms, not timed on this suite. Tick after the first Wave 1 run
+      actually times `npx vitest run convex/retention.test.ts convex/retentionCursor.test.ts`.
+- [x] Every live leg carries its **control** (an absence/"caught up" reading proves nothing without one)
+- [x] `nyquist_compliant: true` set in frontmatter
+
+**Approval:** plans approved 2026-08-10 (0 blockers, 2 warnings — both documentation hygiene, both
+resolved). Execution-dependent items above remain open by design.
