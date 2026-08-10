@@ -124,3 +124,12 @@ None - no external service configuration required.
 ---
 *Phase: 116-galdr-prompt-library*
 *Completed: 2026-08-10*
+
+## Self-Check: PASSED
+
+- FOUND: convex/galdr.ts
+- FOUND: convex/__tests__/galdr.test.ts
+- FOUND: .planning/phases/116-galdr-prompt-library/116-03-SUMMARY.md
+- FOUND commit: 294145f1 (feat: galdr.ts)
+- FOUND commit: 3d9456bc (test: galdr.test.ts)
+- FOUND commit: a74bdc81 (docs: this summary)
