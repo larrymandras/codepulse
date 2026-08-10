@@ -5,12 +5,12 @@ milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
 stopped_at: Completed Phase 109 (10/10) — ENGINE-03, ENGINE-04 and TELE-02 all signed against the live stack
 last_updated: "2026-08-10T15:11:27.087Z"
-last_activity: 2026-08-10 -- Phase 116 execution started
+last_activity: 2026-08-10 -- Phase 116 waves 1-3 complete (4/8 plans), paused at 116-05 deploy checkpoint
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 25
-  completed_plans: 17
+  completed_plans: 21
   percent: 17
 ---
 
@@ -49,10 +49,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 116 (galdr-prompt-library) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 116
-Last activity: 2026-08-10 -- Phase 116 execution started
+Phase: 116 (galdr-prompt-library) — EXECUTING, PAUSED at the 116-05 checkpoint
+Plan: 4 of 8 complete (116-01..116-04; waves 1-3)
+Status: Backend + HTTP surface built and green. Waves 4-6 are gated on Larry: 116-05 is a blocking human-verify deploy to the live self-hosted Convex instance, and GALDR_API_KEY is not yet set on the backend.
+Last activity: 2026-08-10 -- Phase 116 waves 1-3 executed (116-01..04), halted before the 116-05 deploy checkpoint
 
 **Plan 109-07 complete (2026-08-09).** Restored real grouping/billing metadata to the picker from CodePulse's own `PROVIDER_BILLING` registry and fixed the confirm-gate collision it exposed. `mapCatalogueVendorToBilling` (new, `src/lib/catalogueBilling.ts`) implements D-13's corrected rule: `"anthropic"` maps to the `anthropic_direct` registry entry; every other non-empty vendor (the OpenRouter routing-slug family) is billed as the OpenRouter catch-all; only an empty/missing vendor reaches `group:"unclassified"`/`costTier:"unknown"` — detection is by emptiness, never by calling the registry's own unmapped-provider fallback, which would make "unclassified" undetectable. `normalizeCatalogueEntry` (`BrainPicker.tsx`) no longer hardcodes `group:"api", billing:"api", costTier:"normal"` for every row. `GROUP_ORDER` gains a fourth, last "Unclassified" entry with a deliberately irregular full-word "UNCLASSIFIED" chip (dashed `--status-warn` border). Because `costTier:"unknown"` now reaches live entries, `needsCostConfirm` can fire for the first time — exposing a mouse/keyboard confirm-gate collision UI-SPEC §F revision 3 already specified the fix for: `BrainPicker.tsx` now computes one hoisted `shouldConfirmCost = scope !== "global" && needsCostConfirm(entry)` and passes it to `BrainPickerRow` as a required `needsConfirm` prop, consumed identically by both the row's own mouse click and the enclosing cmdk keyboard path — the row no longer decides that condition itself. A six-combination (scope × costTier) mouse/keyboard parity test proves the two paths agree in every case, including the specific stacking defect (global scope + unknown cost-tier: modal opens, inline confirm never appears). Rule 1 fix folded in: `BrainPickerRow`'s hardcoded hex vendor-dot fallback (`#6b7280`) replaced with `var(--muted-foreground)`, matching `BrainHeaderBadge`'s existing pattern. `CatalogueEntry["group"]` widened in `src/lib/brainsApi.ts` (named by the plan's own task text but omitted from its declared file list — documented as a deviation). Full suite: 283 passed | 17 skipped (baseline 282/17), 3717 passed | 193 todo (baseline 3699/193) — 18 net new tests, zero regressions. `npx tsc --noEmit` exits 0. No file belonging to plan 109-08's declared scope was touched. Executed sequentially on `master`, no worktree. See `109-07-SUMMARY.md`. Next: Plan 109-08.
 
