@@ -774,7 +774,30 @@ Plans:
   2. Operator can observe a complete nightly prune pass across *every* table in `RETENTION_DAYS` (aggregates included) on the live self-hosted instance — confirmed from the running system, not just read from code.
   3. The convex-backend memory-growth root cause is documented with supporting evidence, or genuinely fixed — and `ConvexNightlyRestart` is recorded as a deliberate, understood mitigation rather than an unexplained workaround. *(Does not presuppose a code fix exists — DUR-03 may legitimately close as "root cause identified and documented.")*
 
-**Plans**: TBD
+**Plans**: 6 plans in 5 waves
+
+**Wave 1**
+
+- [ ] 110-01-PLAN.md — pure prune-chain helpers (`partitionBatchForPrune`, `resolveRotationStart`, `planRotationWrite`) with the Pitfall-1 all-skipped-batch regression, mutation-tested (DUR-01; D-02, D-05, D-06)
+- [ ] 110-02-PLAN.md — **`autonomous: false`**: control-paired knob probe of the live backend, upstream `#495`/`#522`/`#525` status re-verified at write-up time, `110-MEMORY-EVIDENCE.md` + the D-11 CLAUDE.md bullet (DUR-03; D-09, D-10, D-11)
+
+**Wave 2**
+
+- [ ] 110-03-PLAN.md — `aggregates: 90` + `PRUNE_PREDICATES` + predicate-aware delete loop, rotation cursor on one patched `agentConfigs` row, `listRetentionPolicy`, self-describing terminal log line, and the 5-site stale-comment sweep (DUR-01, DUR-02; D-01, D-02, D-03, D-04, D-05, D-06)
+
+**Wave 3**
+
+- [ ] 110-04-PLAN.md — **`autonomous: false`**: pre-deploy baseline with its absence controls, operator-authorized production deploy to `127.0.0.1:3210`, deployed-policy readback cross-checked by key count (DUR-01, DUR-02; D-01, D-06, D-08)
+
+**Wave 4**
+
+- [ ] 110-05-PLAN.md — **`autonomous: false`**: `retention-health-check.ps1`'s 14-entry hand-copied policy deleted for a live read with a hard non-zero exit on failure; DUR-02 leg 2 captured with a three-way table-count control (DUR-02; D-07, D-08)
+
+**Wave 5**
+
+- [ ] 110-06-PLAN.md — **`autonomous: false`, gated on a real 09:00 UTC cron run**: DUR-02 leg 1 pulled from container logs with both bounds and both controls, DUR-01 daily-survival confirmed against the pre-deploy baseline with its hourly control (DUR-01, DUR-02; D-01, D-05, D-06, D-08)
+
+**UI hint**: no
 
 ---
 
