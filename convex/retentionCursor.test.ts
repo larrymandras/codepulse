@@ -12,7 +12,13 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { planNextPruneStep, type PlanPruneStepArgs } from "./retentionCursor";
+import {
+  planNextPruneStep,
+  partitionBatchForPrune,
+  resolveRotationStart,
+  planRotationWrite,
+  type PlanPruneStepArgs,
+} from "./retentionCursor";
 
 const BATCH_SIZE = 200;
 const MAX_BATCHES = 600;
@@ -129,5 +135,119 @@ describe("planNextPruneStep — the cursor must never re-scan its own tombstones
     const s = step({ batchLength: 3, cursorMs: 999_999, tableIndex: 0 });
     expect(s.action).toBe("next-table");
     expect(s.cursorMs).toBe(0);
+  });
+});
+
+// Phase 110 D-02: fake docs need only the two fields partitionBatchForPrune's generic bound
+// requires. String ids, no Convex types imported — this file stays as dependency-free as the
+// module it tests.
+function fakeBatch(n: number, startMs = 1_000, stepMs = 1_000) {
+  return Array.from({ length: n }, (_, i) => ({
+    _id: `doc-${i}`,
+    _creationTime: startMs + i * stepMs,
+  }));
+}
+
+describe("partitionBatchForPrune — Phase 110 D-02 predicate-aware batch split", () => {
+  it("with no predicate, puts every doc in toDelete and reports the last doc's timestamp", () => {
+    const batch = fakeBatch(5);
+    const { toDelete, lastCreationTime } = partitionBatchForPrune(batch);
+    expect(toDelete).toEqual(batch);
+    expect(lastCreationTime).toBe(batch[batch.length - 1]._creationTime);
+  });
+
+  it("Pitfall-1 regression: a full batch where the predicate rejects every doc still reports a non-null lastCreationTime", () => {
+    const batch = fakeBatch(BATCH_SIZE);
+    const { toDelete, lastCreationTime } = partitionBatchForPrune(batch, () => false);
+    expect(toDelete).toHaveLength(0);
+    expect(lastCreationTime).toBe(batch[BATCH_SIZE - 1]._creationTime);
+  });
+
+  it("Pitfall-1 regression, end-to-end: an all-skipped batch's real result still advances planNextPruneStep's cursor despite zero deletions", () => {
+    const batch = fakeBatch(BATCH_SIZE);
+    const startCursor = batch[0]._creationTime;
+    const { lastCreationTime } = partitionBatchForPrune(batch, () => false);
+    const next = planNextPruneStep({
+      batchLength: batch.length,
+      lastCreationTime,
+      cursorMs: startCursor,
+      tableIndex: 0,
+      tableCount: 14,
+      batchesUsed: 0,
+      maxBatches: MAX_BATCHES,
+      batchSize: BATCH_SIZE,
+    });
+    expect(next.action).toBe("continue-table");
+    expect(next.cursorMs).toBeGreaterThan(startCursor);
+  });
+
+  it("the negative control proving the test above is not vacuous: feeding a null lastCreationTime (the pre-fix behavior) into the same planNextPruneStep call leaves the cursor UNCHANGED", () => {
+    // Guard the guard, matching convex/retention.test.ts's harness-liveness convention: if this
+    // control ever showed the cursor advancing, planNextPruneStep would no longer be defending
+    // against a null lastCreationTime at all, and the regression test above would prove nothing.
+    const batch = fakeBatch(BATCH_SIZE);
+    const startCursor = batch[0]._creationTime;
+    const next = planNextPruneStep({
+      batchLength: batch.length,
+      lastCreationTime: null,
+      cursorMs: startCursor,
+      tableIndex: 0,
+      tableCount: 14,
+      batchesUsed: 0,
+      maxBatches: MAX_BATCHES,
+      batchSize: BATCH_SIZE,
+    });
+    expect(next.cursorMs).toBe(startCursor);
+  });
+
+  it("splits a mixed batch correctly and still reports the final doc's timestamp even when the final doc is skipped", () => {
+    const batch = fakeBatch(4); // _creationTime: 1000, 2000, 3000, 4000
+    const { toDelete, lastCreationTime } = partitionBatchForPrune(
+      batch,
+      (doc) => doc._creationTime !== 4000 // reject only the last doc
+    );
+    expect(toDelete.map((d) => d._creationTime)).toEqual([1000, 2000, 3000]);
+    expect(lastCreationTime).toBe(4000);
+  });
+
+  it("returns an empty toDelete and a null lastCreationTime for an empty batch", () => {
+    const { toDelete, lastCreationTime } = partitionBatchForPrune([]);
+    expect(toDelete).toEqual([]);
+    expect(lastCreationTime).toBeNull();
+  });
+});
+
+describe("resolveRotationStart — Phase 110 D-05/D-06 rotation-start resolution", () => {
+  it("returns the raw value for an in-range integer", () => {
+    expect(resolveRotationStart(5, 14)).toBe(5);
+    expect(resolveRotationStart(0, 14)).toBe(0);
+    expect(resolveRotationStart(13, 14)).toBe(13);
+  });
+
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+    ["NaN", NaN],
+    ["a non-number string", "3"],
+    ["a non-integer", 2.5],
+    ["a negative number", -1],
+    ["a value equal to tableCount", 14],
+  ])("resolves %s to 0 rather than throwing or skipping tables", (_label, rawValue) => {
+    expect(resolveRotationStart(rawValue, 14)).toBe(0);
+  });
+});
+
+describe("planRotationWrite — Phase 110 D-06 rotation write decision", () => {
+  it("returns tableIndex for cap-reached, so tomorrow resumes exactly where tonight stopped", () => {
+    expect(planRotationWrite("cap-reached", 7)).toBe(7);
+  });
+
+  it("returns 0 for done, wrapping for a fresh full pass", () => {
+    expect(planRotationWrite("done", 7)).toBe(0);
+  });
+
+  it("returns null at both interior actions — no per-batch agentConfigs write can be introduced", () => {
+    expect(planRotationWrite("continue-table", 7)).toBeNull();
+    expect(planRotationWrite("next-table", 7)).toBeNull();
   });
 });
