@@ -787,7 +787,7 @@ Plans:
 
 **Wave 3**
 
-- [ ] 110-04-PLAN.md — **`autonomous: false`**: pre-deploy baseline with its absence controls, operator-authorized production deploy to `127.0.0.1:3210`, deployed-policy readback cross-checked by key count (DUR-01, DUR-02; D-01, D-06, D-08)
+- [x] 110-04-PLAN.md — **`autonomous: false`**: pre-deploy baseline with its absence controls, operator-authorized production deploy to `127.0.0.1:3210`, deployed-policy readback cross-checked by key count (DUR-01, DUR-02; D-01, D-06, D-08)
 
 **Wave 4**
 
@@ -856,7 +856,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
-| 110. Convex Durability | 3/6 | In Progress|  |
+| 110. Convex Durability | 4/6 | In Progress|  |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
 | 113. Debt Sweep | 0/TBD | Not started | - |
