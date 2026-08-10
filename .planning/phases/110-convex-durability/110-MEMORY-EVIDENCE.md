@@ -195,14 +195,25 @@ explained (D-09 declines to fund the attribution work that would explain the var
 
 **Implied current-cycle rate, against the last recorded restart baseline** (`restart-convex.log`,
 `.planning/phases/110-convex-durability/110-CONTEXT.md`'s D-10 citation):
-- Last restart: `2026-08-10 02:00:37`, memory after = `8181 MiB`
-- This reading: `2026-08-10 20:43:48` UTC-equivalent local, memory = `23.31 GiB` = `23,869 MiB`
-- Elapsed: `18h 43m` ≈ `18.72h`
-- Growth: `23,869 − 8,181 = 15,688 MiB` over `18.72h` ≈ **0.82 GiB/h**
+
+**Correction (orchestrator spot-check, applied post-hoc — this is itself DUR-03 evidence, not
+silently overwritten):** the derivation below originally subtracted the `restart-convex.log`
+timestamp directly against the `date -u` UTC timestamp above without reconciling clocks.
+`restart-convex.log` is written by a local Windows scheduled task in **local** time; this machine
+runs Eastern Daylight Time, confirmed live (`date -u` → `...T21:11:02Z` vs `date` → `...17:11:02-0400`,
+a 4h offset). Treating `02:00:37` local as if it were already UTC inflated the elapsed window by
+exactly that 4h offset (18.72h instead of the true 14.72h) and understated the rate (~0.82 GiB/h
+instead of the true ~1.04 GiB/h). Reconciled to a single timezone below — both timestamps converted
+to UTC — so the window is now apples-to-apples.
+
+- Last restart (`restart-convex.log`, local EDT/UTC-4): `2026-08-10 02:00:37` → UTC: `2026-08-10 06:00:37`, memory after = `8181 MiB`
+- This reading (`date -u`, already UTC): `2026-08-10 20:43:48`, memory = `23.31 GiB` = `23,869 MiB`
+- Elapsed (both in UTC): `06:00:37` → `20:43:48` = `14h 43m 11s` ≈ `14.72h`
+- Growth: `23,869 − 8,181 = 15,688 MiB` over `14.72h` ≈ **1.04 GiB/h**
 
 This is materially **higher** than the `~0.17 GiB/h` baseline `health-report.md` and CONTEXT.md's
 D-10 cite (measured over a longer, multi-day 2026-07-30→08-06 window). Recorded honestly as a
-discrepancy, not smoothed over: this single ~18.7h sample does not overturn a multi-day baseline,
+discrepancy, not smoothed over: this single ~14.7h sample does not overturn a multi-day baseline,
 and D-09 explicitly declines to fund the multi-day controlled study that would settle whether
 today's rate is a new steady state, a transient (this container has been running continuously
 since the 08-06 recreate, i.e. this is its 5th consecutive nightly-restart cycle, one cycle deeper
@@ -226,7 +237,7 @@ only `DOCUMENT_RETENTION_DELAY` is actually set on the running container, and it
 GC timing, not a working-set cap (§B). The summed byte-sized budget of the named caches is
 ~1.44 GiB (~2.44 GiB including the adjacent, not-originally-named `SHARED_UDF_CACHE_MAX_SIZE`, §C)
 — nowhere close to the observed climb (Task 1 §D: 23.31 GiB present, ~15.7 GiB of growth in a
-single 18.7h inter-restart window). This is a **scope-limited absence claim**: "no bounding knob
+single 14.7h inter-restart window, timezone-reconciled). This is a **scope-limited absence claim**: "no bounding knob
 was found among the candidates investigated," per RESEARCH.md's Assumption A1 — the ~1,970-line
 `knobs.rs` file has subsystems beyond these six that were not individually itemized, so this does
 not claim "no knob exists anywhere in the binary."
@@ -280,9 +291,9 @@ zero of either (control: `288` `.index(...)` calls in the same file, proving the
 **Branch selected: knob-absent.** No general-purpose memory-bounding knob was found among the six
 candidates probed on this exact binary (`ghcr.io/get-convex/convex-backend@sha256:f0de0647e4...`,
 built 2026-07-21). Their summed bounded budget (~1.44–2.44 GiB) cannot explain the observed climb
-(23.31 GiB present; ~15.7 GiB of growth across one ~18.7h inter-restart window on 2026-08-10,
-notably faster than the ~0.17 GiB/h baseline on record, though a single-sample discrepancy is not
-grounds to revise that baseline). The strongest identified candidate contributor is upstream issue
+(23.31 GiB present; ~15.7 GiB of growth across one ~14.7h inter-restart window on 2026-08-10,
+timestamps reconciled to UTC — see the correction in Task 1 §D — notably faster than the
+~0.17 GiB/h baseline on record, though a single-sample discrepancy is not grounds to revise that baseline). The strongest identified candidate contributor is upstream issue
 **#495** (SQLite `index_scan` materializing entire index ranges before truncation) — `state: OPEN`,
 `stateReason: ""`, filed by a community member. Its fix, **PR #522**, is `state: OPEN`,
 `mergedAt: null` — a patch exists but is unmerged, so it is in no build available to this
