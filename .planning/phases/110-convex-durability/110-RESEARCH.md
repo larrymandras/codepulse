@@ -295,7 +295,12 @@ recommended branch in each case. Retained for provenance; neither is outstanding
    - What's unclear: whether the planner judges this worth its own dependency-free function + test file, or whether two `if` branches inside the existing mutation are proportionate.
    - Recommendation: extract if the planner wants it independently testable (matches this repo's established pattern of pulling chain-decision logic out of the untestable mutation); inline is not wrong, just less consistent with precedent.
 
-2. **[RESOLVED — one file, `110-DUR-EVIDENCE.md`, as recommended]** Original question and reasoning:
+2. **[RESOLVED — SPLIT into two files; the planner took the alternative branch, NOT this section's recommendation]**
+   Actual outcome, verified against the shipped plans: **`110-DUR-EVIDENCE.md`** holds the DUR-01/DUR-02
+   live evidence (written by plans `110-04`, `110-05`, `110-06`), and **`110-MEMORY-EVIDENCE.md`** holds
+   the DUR-03 memory root-cause write-up (plan `110-02`). This matches the split rationale sketched below
+   — a log transcript and a research/GitHub-issue citation differ in kind — and it also keeps `110-02`,
+   which shares no file with any other plan, genuinely independent in wave 1. Original question and reasoning:
    - What we know: precedent is `108-ENGINE-05-EVIDENCE.md`, `109-LIVE-EVIDENCE.md`, `107-OCC-EVIDENCE.md` — phase-number-prefixed, topic-suffixed, living in the phase directory.
    - What's unclear: whether DUR-02's "two independent pieces of live evidence pasted verbatim" and DUR-03's root-cause write-up share one file (`110-DUR-EVIDENCE.md`) or split (DUR-02 and DUR-03 evidence differ in kind — a log transcript vs. a research/GitHub-issue citation).
    - Recommendation: one file, `110-DUR-EVIDENCE.md`, with clearly separated `## DUR-02` and `## DUR-03` sections — matches how CONTEXT.md itself already groups these two decisions' evidence requirements separately while keeping them in one phase.
