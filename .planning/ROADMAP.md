@@ -860,13 +860,20 @@ Plans:
 
 ### Phase 116: Galdr prompt library
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 115
-**Plans:** 0 plans
+**Goal:** Galdr is a live, Convex-spined prompt library: a prompt saved from one Claude Code session is fetchable by slug from any other session with every `{{variable}}` filled in before injection, and the same library is browsable, editable and versioned at `/galdr` in CodePulse.
+**Requirements**: none mapped — this is a design-doc-driven phase (`docs/proposals/2026-08-07-seidr-suite-design.md` §4.1). The acceptance-bearing units are the 16 locked decisions D-01..D-16 in `116-CONTEXT.md`; plans are traced to those instead of REQ-IDs.
+**Depends on:** Nothing. (The "Phase 115" line here was an auto-generated stub artifact — the execution-order note above records that 116-119 are independent of everything; 116 -> 117 -> 118 -> 119 is daily-value preference, not dependency.)
+**Plans:** 8 plans in 6 waves
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 116 to break down)
+- [ ] 116-01-PLAN.md — schema tables, D-13 retention exemption, `validateGaldrAuth` (wave 1)
+- [ ] 116-02-PLAN.md — shared pure `{{variable}}` + slug contract (wave 1)
+- [ ] 116-03-PLAN.md — `convex/galdr.ts` domain module: collision refusal, append-only versions, count-cap prune, archive (wave 2)
+- [ ] 116-04-PLAN.md — four bearer-authed HTTP routes with no CORS and no OPTIONS (wave 3)
+- [ ] 116-05-PLAN.md — [BLOCKING] deploy the schema to the live self-hosted instance (wave 4)
+- [ ] 116-06-PLAN.md — FillVariablesDialog, SendSplitButton, PromptEditorDrawer (wave 5)
+- [ ] 116-07-PLAN.md — the `/galdr` + `/galdr-save` Claude Code skill and its install (wave 5)
+- [ ] 116-08-PLAN.md — `/galdr` page, nav registry entry, route, e2e (wave 6)
 
 ### Phase 117: Bifrost link hub
 
