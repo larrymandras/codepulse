@@ -513,9 +513,286 @@ this gate's output is evidence, and the fix belongs in a gap-closure plan.
 
 ---
 
+## Probes E–H (Task 3)
+
+**Surface used.** Probes E–H were run against the PRODUCTION build served by `vite preview` on
+:5199 (`Environment: production` visible in Settings → Connection Status). The dev-mode defect
+recorded under Probe D leaves a permanent pending suffix that would contaminate every label reading
+here; the production surface is the honest place to measure whether the FEATURE resolves correctly.
+The two-override state below was created once and every probe reads from it.
+
+```
+$ swap.set value="claude-opus-4-8" restore:false profile_id:"business"       -> ok
+$ swap.set value="claude-haiku-4-5-20251001" restore:false                   -> ok   (UNSCOPED = global)
+
+$ swap.get_state
+{
+  "model_override": "claude-haiku-4-5-20251001",       <- modelC, the GLOBAL
+  "model_source": "voice-swap",
+  "profile_overrides": {
+    "consulting": { "model": "claude-sonnet-5",  "source": "codepulse-scoped-swap" },
+    "business":   { "model": "claude-opus-4-8",  "source": "codepulse-scoped-swap" }   <- modelA, the PIN
+  }
+}
+```
+
+SUBJECT = `business`, pinned to modelA `claude-opus-4-8`.
+CONTROL = `personal`, UNPINNED (absent from `profile_overrides`), so it must resolve to modelC.
+
+---
+
+### Probe E — D-06, the precedence inversion, with a control on each surface
+
+| # | Surface | SUBJECT `business` (pinned) | CONTROL `personal` (unpinned) |
+|---|---|---|---|
+| 1 | Header badge | — (bound to the active profile; see note) | **`Claude Haiku 4.5` + `GLOBAL` qualifier** = modelC |
+| 2 | Picker, "This profile" scope | **`Claude Opus 4.8`** = modelA | — (scope control below) |
+| 3 | Pre-swap confirm modal, current-engine column | **`Claude Opus 4.8`** = modelA | **`Claude Haiku 4.5`** = modelC |
+| 4 | Settings row engine label | **`claude-opus-4-8`** = modelA | **`claude-haiku-4-5-20251001`** = modelC |
+
+**Surface 4 + its control, one screenshot, same state:**
+
+```
+consulting   claude-sonnet-5             pinned default
+business     claude-opus-4-8             pinned default     <- SUBJECT: modelA (the pin), NOT modelC
+personal     claude-haiku-4-5-20251001                      <- CONTROL: modelC (the global)
+header       Claude Haiku 4.5  GLOBAL
+```
+
+**Surface 2, and the control that makes it mean something.** The picker's true current-engine marker
+is `isCurrent` → `bg-primary/10` (`BrainPickerRow.tsx:192`), NOT cmdk's `aria-selected`, which
+merely tracks the keyboard cursor and sat on the first row. Read from the DOM, exactly one picker
+row carried the real marker in each scope:
+
+```
+scope = "This profile"  (data-state on)   -> isCurrent marker on: "Claude Opus 4.8"   (modelA, the PIN)
+scope = "All profiles"  (data-state on)   -> isCurrent marker on: "Claude Haiku 4.5"  (modelC, the GLOBAL)
+```
+
+The marker MOVES with scope in one unchanged two-override state. That is the control: it proves the
+marker tracks the resolved value rather than sitting on a fixed row, and it proves the global rung is
+not broken — so "the profile shows modelA" cannot be explained by the global rung being dead.
+
+**Surface 3, raw modal text (subject and control in the same payload):**
+
+```
+Swap all profiles to Claude Sonnet 5?
+3 profiles have a pinned default (Claude Sonnet 5) that will be shadowed while this global override is in force.
+  consulting   Claude Sonnet 5    ->  Claude Sonnet 5
+  business     Claude Opus 4.8    ->  Claude Sonnet 5      <- SUBJECT: modelA
+  personal     Claude Haiku 4.5   ->  Claude Sonnet 5      <- CONTROL: modelC
+```
+
+The modal was CANCELLED, not confirmed — no global swap was dispatched from it.
+
+**Note on surface 1.** The header badge renders the ACTIVE profile, so it cannot show SUBJECT and
+CONTROL at once. In the two-override state it read `Claude Haiku 4.5` with an explicit `GLOBAL`
+qualifier — the correct CONTROL reading for an unpinned active profile, and correctly QUALIFIED
+rather than silently presenting a global value as the profile's own.
+
+**A suspected defect investigated and DROPPED.** The modal's warning says "3 profiles have a pinned
+default (Claude Sonnet 5)" while only TWO profiles held swap overrides, which looked wrong. It is
+correct: `pinnedCount`/`shadowedDefaultNames` derive from each profile's CONFIGURED default
+(`GlobalSwapModal.tsx:389-398`, reading `configuredDefault`), not from the swap override, and the
+live config confirms all three share one:
+
+```
+$ npx convex run profiles:listConfigs --url http://127.0.0.1:3210 --admin-key "..."
+  consulting -> modelPreferences.primary = "anthropic/claude-sonnet-5"
+  business   -> modelPreferences.primary = "anthropic/claude-sonnet-5"
+  personal   -> modelPreferences.primary = "anthropic/claude-sonnet-5"
+```
+
+`pinnedCount = 3` and the deduped name `(Claude Sonnet 5)` are both accurate. Recorded rather than
+silently dropped, per the zero-false-positive rule.
+
+**VERDICT: PASS.** Every surface that can show the SUBJECT shows modelA (the pin); every control
+shows modelC (the global). The pin outranks the global, and the global rung is independently proven
+alive in the same measurement.
+
+---
+
+### Probe F — the honest absent state
+
+**VERDICT: PARTIAL — could not be constructed on this stack; NOT rounded up to a pass.**
+
+The probe needs a profile with no telemetry AND no override. After teardown returned the server to
+`model_override: null` / `profile_overrides: {}`, all three real profiles carry live telemetry and
+therefore render a real value:
+
+```
+SERVER: { "model_override": null, "profile_overrides": {} }
+consulting   anthropic/claude-sonnet-5
+business     anthropic/claude-sonnet-5
+personal     anthropic/claude-sonnet-5
+```
+
+What CAN be recorded:
+
+- The forbidden fallbacks are absent from the profiles card in this state: `"Auto"` false,
+  `"No brain reported"` false. No profile displays another profile's model — each row's value
+  matches its own telemetry.
+- The exact string `Not reported` WAS observed live on the header badge at gate start, before any
+  swap had been dispatched (clean `{}`/`null` state, dashboard screenshot at gate open) — the absent
+  state rendering correctly on one surface.
+
+What is NOT proven: the full four-surface reading of `Not reported` for a genuinely telemetry-less
+profile. Constructing it requires creating a throwaway profile in the live Ástríðr config, outside
+what this session was authorized to mutate. Carried to the gap-closure plan.
+
+---
+
+### Probe G — D-11, `listGlobal` against the live self-hosted instance
+
+**SUBJECT** — after dispatching the real UNSCOPED swap above:
+
+```
+$ npx convex run controlVerbSwaps:listGlobal --url http://127.0.0.1:3210 --admin-key "..."
+[
+  {
+    "_creationTime": 1786370644587.1873,
+    "_id": "ms7tfm2x8cjw41d88n8fmqxrfn8c7nqx",
+    "channel": "codepulse-control-center",
+    "path": "claude-native",
+    "providerAffinity": ["anthropic_advisor","anthropic_direct","gemini","grok","gemini_openrouter","openrouter"],
+    "resolved": "claude-haiku-4-5-20251001",
+    "target": "claude-haiku-4-5-20251001",
+    "timestamp": 1786370641.10451,
+    "verb": "swap_model"
+  },
+  ... (further rows, none carrying a `scope` field)
+]
+```
+
+Non-empty, and the top row IS the swap just dispatched (modelC). No row carries a `scope` field —
+these are the unscoped rows the query is meant to match.
+
+**CONTROL — mandatory, same session, same instance:**
+
+```
+$ npx convex run controlVerbSwaps:listByScope '{"profileId":"business"}' --url http://127.0.0.1:3210 --admin-key "..."
+[
+  {
+    "_creationTime": 1786370644574.2788,
+    "_id": "ms7n6ngxwbxp3y8hz0a4pc6wm98c66se",
+    "resolved": "claude-opus-4-8",
+    "scope": "business",                          <- carries scope; listGlobal's rows do not
+    "target": "claude-opus-4-8",
+    "timestamp": 1786370641.1027298,
+    "verb": "swap_model"
+  },
+  ...
+]
+```
+
+**Unit sanity, so no recency claim passes vacuously:**
+
+```
+_creationTime 1786370644587 as ms       -> 2026-08-10T14:04:04.587Z
+timestamp     1786370641.10 as seconds  -> 2026-08-10T14:04:01.104Z
+today is                                   2026-08-10T14:08:14.112Z
+```
+
+Both land ~4 minutes before the read — these are this session's own dispatches. `_creationTime` is
+epoch MILLIseconds, `timestamp` is epoch SECONDS.
+
+**VERDICT: PASS.** The phase's highest-risk item, and the control did real work: the two queries
+return disjoint, correctly-shaped row sets (`scope` absent vs `scope: "business"`) from the same
+explicitly-targeted `127.0.0.1:3210` instance with the same admin key. A wrong `null`/`undefined`
+choice, a wrong backend, or a bad key would each have produced `[]`, and the known-present control
+makes that indistinguishable-empty outcome impossible to misread as "no global swaps yet".
+
+---
+
+### Probe H — D-10/D-12, the combined history on screen
+
+Settings → `business` → "Swap history" expanded (`aria-expanded: true` asserted, not assumed).
+
+**With the pin in force:**
+
+```
+Swap history (17)
+This profile is pinned — global swaps below did not change its engine.
+10:04 AM | GLOBAL | claude-haiku-4-5-20251001 → claude-haiku-4-5-20251001 | Switched   <- Probe G's global row, MARKED
+10:04 AM |          claude-opus-4-8 → claude-opus-4-8                     | Switched   <- business's own scoped row, UNMARKED
+09:59 AM |          claude-opus-4-8 → claude-opus-4-8                     | Switched
+09:48 AM |          — → —                                                | Restored
+02:11 PM | GLOBAL | — → —                                                | Restored
+...
+Showing 17 swaps (per-profile + global).
+
+count badge: 17     rendered rows: 17     marked GLOBAL: 8     unmarked scoped: 9   (8 + 9 = 17)
+```
+
+**The pinned-note contrast — this probe's absence proof.** Clearing ONLY the pin, disclosure left open:
+
+```
+BEFORE  badge 17 | 17 rows | 8 GLOBAL | pinned note PRESENT | engine label claude-opus-4-8
+AFTER   badge 18 | 18 rows | 8 GLOBAL | pinned note ABSENT  | engine label claude-haiku-4-5-20251001
+        new top row: 10:09 AM | — → — | Restored
+        caption: "Showing 18 swaps (per-profile + global)."
+SERVER after: profile_overrides = { "consulting": {...} }   (business gone), model_override unchanged
+```
+
+The note DISAPPEARED while the rows REMAINED and in fact grew by the restore's own row. That
+contrast proves the note is derived live from the override state rather than reconstructed from the
+history rows — had it been reconstructed, rows that still exist would have kept it on screen. As a
+bonus, the engine label fell through from the pin to the GLOBAL override the moment the pin cleared,
+which is Probe E's precedence chain observed from the other direction.
+
+**Count accuracy:** the badge equals the rendered row count exactly (17→17, 18→18), and the caption
+states the composition (`per-profile + global`) rather than letting a truncated list look complete.
+
+**VERDICT: PASS.**
+
+**Measurement error caught and corrected, recorded for honesty.** A first attempt at this contrast
+selected the FIRST `Swap history (…)` button on the page — `consulting`'s, which was collapsed — and
+reported `rows: 0, pinned_note: false` for both readings. That "before" contradicted the 17-row
+reading taken moments earlier, which is what exposed it. The measurement was redone with a selector
+scoped strictly to the `business` block. The invalid numbers are used nowhere above.
+
+---
+
+## Teardown — live routing state returned to baseline
+
+```
+$ swap.set restore:true                          (global)      -> ok
+$ swap.set restore:true profile_id:"consulting"                -> ok
+$ swap.set restore:true profile_id:"business"                  -> ok  (during Probe H)
+
+$ swap.get_state
+{ "model_override": null, "profile_overrides": {} }
+```
+
+Identical to the baseline captured before any probe ran. Every swap this gate dispatched has been
+reverted; nothing was left pinned.
+
+---
+
 ## Per-requirement verdicts
 
-> Pending Task 3.
+| Requirement | Verdict | Supported by |
+|---|---|---|
+| **ENGINE-03** | **SATISFIED** | Probe A (D-03 `default_profile_id` on the live ack); Probe E (D-06 precedence proven on every available surface, each against a control showing the opposite); Probe B (per-profile override map present and correct on the wire) |
+| **ENGINE-04** | **SATISFIED WITH ONE DEFECT OUTSTANDING** | Central claim PASSES: Probe D shows the label held its old value and changed only 272 ms / 364 ms AFTER the ack, on two instrumented runs — server-confirmed, never optimistic. Probes B/C prove the confirm and restore reads on the wire, the restore's absence carrying a same-payload control. Probe D's negative control shows an honest server-named error with nothing written. OUTSTANDING: on dev builds the outcome machine never leaves `pending`, so the pending suffix never clears and neither toast fires (root cause confirmed by mutation test; production unaffected). |
+| **TELE-02** | **SATISFIED** | Probe G (`listGlobal` returns real unscoped rows from the self-hosted instance, proven against a known-present scoped control); Probe H (combined history renders with correct `GLOBAL` marking, a true count badge, and a live-derived pinned note proven by its present-then-absent contrast) |
+
+**Probe scoreboard:** A PASS · B PASS · C PASS · D PASS on the central claim, FAILED on the clear
+leg · E PASS · F PARTIAL (not constructible on this stack, not rounded up) · G PASS · H PASS.
+
+**What must not be read into this.** ENGINE-04's requirement text is about server-confirmed rather
+than optimistic updates, and that specific property is proven. The outstanding defect is in the
+pending-state teardown surrounding it, and it is dev-only — but dev is the daily-driver surface
+here, so it is real work, not a footnote.
+
+## Gap-closure items for a follow-up plan
+
+1. **`useProfileSwap` never resets `unmountedRef` on remount** (`useProfileSwap.ts:143-149`) — the
+   confirmed root cause of Probe D's failure. Fix is one line plus a regression test that fails
+   without it; the test must span the StrictMode mount→cleanup→remount boundary, since a
+   single-mount test passes either way.
+2. **Probe F left PARTIAL** — needs a telemetry-less profile to prove the `Not reported` absent
+   state across all four surfaces.
 
 ## Operator sign-off
 
