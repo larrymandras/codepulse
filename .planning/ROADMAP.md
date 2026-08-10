@@ -815,7 +815,17 @@ Plans:
   2. ~~Tool activity on a mission renders as humanized labels ("reading Gmail…", "Write index.html") rather than raw tool/function names.~~ **Deferred to the emitter phase (D-03)** — no join key exists between a mission and its tool rows.
   3. No per-mission cost, confirm-card, or squad-grouping affordance appears anywhere on the board — each stays fully absent rather than showing as empty or zeroed. **Extended (D-06/D-07):** this applies to *every* consumer of `subagentJobs`, not just `JobsPanel` — including `ActiveAgentsPanel` (`Chat.tsx:1054`), which filters `status === "running"` against a table that never receives one and therefore renders "No agents running." permanently and unconditionally.
 
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
+
+**Wave 1** (parallel, no file overlap)
+
+- [ ] 111-01-PLAN.md — JobsPanel becomes a mission history surface: prune the queued/running icon map, replace the dual-meaning elapsed formatter with a single-meaning "finished X ago" incl. a day tier, strip the pulsing dot and BACKGROUND JOBS label, hex→token fix, plus a new JobsPanel.test.tsx (MISSION-01, MISSION-03; D-05, D-08, D-09, D-10, D-13)
+- [ ] 111-02-PLAN.md — delete ActiveAgentsPanel outright (component, test, import, mount + its SectionErrorBoundary) and repair Chat.test.tsx's six exposed seven-panel claims (MISSION-03; D-01, D-07, D-13)
+
+**Wave 2**
+
+- [ ] 111-03-PLAN.md — **`autonomous: false`**: correct REQUIREMENTS.md so the traceability table stops asserting what Phase 111 cannot deliver, plant SEED-007 to own the deferred emitter work, audit both non-goals with controls, and an operator checkpoint against the running app (MISSION-03; D-02, D-03, D-04, D-06, D-11, D-12)
+
 **UI hint**: yes
 
 ---
