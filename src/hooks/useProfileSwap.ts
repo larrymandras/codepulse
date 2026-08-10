@@ -141,6 +141,16 @@ export function useProfileSwap(profileId: string): UseProfileSwapResult {
   }
 
   useEffect(() => {
+    // Re-arm on every (re)mount. React StrictMode double-invokes effects in development
+    // (mount -> cleanup -> mount) against the SAME fiber, so `unmountedRef` — a per-instance
+    // `useRef` that survives that cycle — stays `true` after the cleanup unless it is reset
+    // here. Without this line the machine never leaves `pending` on dev builds: both dispatch
+    // continuations below return early at their `unmountedRef` guard, so the pending suffix
+    // never clears and NEITHER the success nor the "accepted, unconfirmed" toast ever fires.
+    // Found by the Phase 109-09 live gate (Probe D); regression-guarded by the StrictMode
+    // remount cases in this hook's test file. Production was never affected — StrictMode's
+    // double-invoke is development-only.
+    unmountedRef.current = false;
     return () => {
       unmountedRef.current = true;
       clearConfirmTimeout();
