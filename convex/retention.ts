@@ -145,17 +145,37 @@ const BATCH_SIZE = 200;
 const RESCHEDULE_DELAY_MS = 3000;
 const MAX_BATCHES_PER_NIGHT = 600; // hard ceiling ~120k docs/night across the run
 
+// Phase 110 D-05/D-06: the single persisted `agentConfigs` row the nightly chain
+// rotates its start index through. Patched (never inserted-per-run) — see the
+// get-existing-or-patch idiom below, copied from convex/webhookDelivery.ts's
+// setChannel. Do NOT copy convex/aggregates.ts's backfill cursors instead: those
+// are insert-only and grow one row per invocation, which is correct for a rare
+// operator-run backfill but would add ~365 rows/year here — the exact unbounded
+// growth this whole phase exists to prevent.
+const ROTATION_CURSOR_KEY = "retention.rotationCursor";
+
 export const startNightlyPrune = internalMutation({
   args: {},
   handler: async (ctx) => {
     const nowMs = Date.now();
+    // D-05: resume where the last capped run stopped instead of always restarting
+    // at index 0 (which, pre-Phase-110, meant the firehose head starved every
+    // table past it on any night the batch cap was hit). D-06/T-110-03-01: the
+    // persisted value is untrusted — resolveRotationStart bounds-checks it fresh
+    // against PRUNED_TABLES.length on every call and never throws.
+    const existingCursor = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", ROTATION_CURSOR_KEY))
+      .first();
+    const startIndex = resolveRotationStart(existingCursor?.value, PRUNED_TABLES.length);
     await ctx.scheduler.runAfter(0, internal.retention.pruneBatchV3, {
-      tableIndex: 0,
+      tableIndex: startIndex,
+      startIndex,
       nowMs,
       deletedSoFar: 0,
       batchesUsed: 0,
     });
-    console.log("retention: nightly prune started");
+    console.log(`retention: nightly prune started (start index ${startIndex})`);
   },
 });
 
@@ -173,8 +193,18 @@ export const pruneBatchV3 = internalMutation({
      * is correct for a table's first batch.
      */
     cursorMs: v.optional(v.number()),
+    /**
+     * Phase 110 D-05/D-06: the table index THIS RUN started at, threaded unchanged through
+     * every reschedule so the terminal log lines can report it. Optional for the same reason
+     * cursorMs is optional — an already-scheduled job from the pre-Phase-110 signature must
+     * still validate; a required arg would fail them. Resolved as `args.startIndex ??
+     * args.tableIndex` below, which for a legacy job reports it as starting exactly where it
+     * is — always 0 pre-rotation, since startNightlyPrune hardcoded that until this plan.
+     */
+    startIndex: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const startIndex = args.startIndex ?? args.tableIndex;
     const table = PRUNED_TABLES[args.tableIndex];
     if (!table) return;
     if (args.batchesUsed >= MAX_BATCHES_PER_NIGHT) {
@@ -223,12 +253,41 @@ export const pruneBatchV3 = internalMutation({
       batchSize: BATCH_SIZE,
     });
 
+    // Phase 110 D-06: the rotation cursor writes ONLY at the two chain-terminal actions —
+    // planRotationWrite returns null for "continue-table"/"next-table", so the interior of a
+    // run never writes agentConfigs (that would be up to MAX_BATCHES_PER_NIGHT writes/night,
+    // which D-08 rejects for a module whose whole purpose is reducing writes to the live
+    // instance). Done once, here, before either terminal branch below — not duplicated per
+    // branch.
+    const rotationWrite = planRotationWrite(next.action, args.tableIndex);
+    if (rotationWrite !== null) {
+      const existingCursor = await ctx.db
+        .query("agentConfigs")
+        .withIndex("by_key", (q) => q.eq("configKey", ROTATION_CURSOR_KEY))
+        .first();
+      if (existingCursor) {
+        await ctx.db.patch(existingCursor._id, {
+          value: rotationWrite,
+          updatedAt: Date.now() / 1000,
+        });
+      } else {
+        await ctx.db.insert("agentConfigs", {
+          configKey: ROTATION_CURSOR_KEY,
+          value: rotationWrite,
+          source: "runtime",
+          updatedAt: Date.now() / 1000,
+        });
+      }
+    }
+
     if (next.action === "cap-reached") {
       // Report the count here too: this path returns BEFORE the per-table "done" log below, so
       // without it a capped run deletes silently and the next morning's check cannot tell whether
       // the run did any work or stalled. (Found 2026-07-30 by actually running a capped batch.)
+      // Phase 110 D-05: the appended start index lets a capped run's log line be read against
+      // the NEXT run's start-index log line to confirm the resume actually happened.
       console.log(
-        `retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) hit at ${table} after pruning ${total} docs; remainder deferred to tomorrow`
+        `retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) hit at ${table} after pruning ${total} docs; remainder deferred to tomorrow (start index ${startIndex})`
       );
       return;
     }
@@ -240,6 +299,7 @@ export const pruneBatchV3 = internalMutation({
         deletedSoFar: total,
         batchesUsed: args.batchesUsed + 1,
         cursorMs: next.cursorMs,
+        startIndex,
       });
       return;
     }
@@ -253,10 +313,37 @@ export const pruneBatchV3 = internalMutation({
         deletedSoFar: 0,
         batchesUsed: args.batchesUsed + 1,
         cursorMs: next.cursorMs,
+        startIndex,
       });
       return;
     }
 
-    console.log("retention: all tables pruned");
+    // Phase 110 D-05/T-110-03-05: with rotation, a run no longer always starts at index 0, so
+    // this bare message alone would claim a complete pass for a run that only covered the tail
+    // of the table list — and DUR-02's evidence leg rests on exactly this line. The appended
+    // start index and coverage counts make the claim self-describing and falsifiable.
+    console.log(
+      `retention: all tables pruned (start index ${startIndex}, covered ${PRUNED_TABLES.length - startIndex} of ${PRUNED_TABLES.length} tables)`
+    );
   },
+});
+
+// Phase 110 D-07: a read of the SAME object pruneBatchV3 iterates over above — not a copy. Exists
+// so retention-health-check.ps1 can read the live policy instead of hand-copying it into its own
+// $RetentionDays hashtable (which has already drifted from RETENTION_DAYS once — see
+// 110-PATTERNS.md's D-07 evidence). A copy of this table in any other file is a bug.
+//
+// Shipped as internalQuery, the secure default (T-110-03-04): this phase adds no new
+// publicly-callable endpoint. Plan defect resolved by the 110-03 orchestrator: the task
+// description that produced this comment originally called for verifying CLI reachability here
+// via `npx convex run retention:listRetentionPolicy` against the deployed backend — but nothing
+// in this phase is deployed yet (deploy is plan 110-04, gated on separate operator
+// authorization), so that invocation cannot run at this wave and would only ever report
+// "function not found," which is not evidence about whether `npx convex run` can reach an
+// internalQuery. That empirical check is deferred to 110-04 Task 3, which records the exact
+// function form (internalQuery vs. query) against the live deployed backend instead of an
+// assumed one.
+export const listRetentionPolicy = internalQuery({
+  args: {},
+  handler: async () => RETENTION_DAYS,
 });
