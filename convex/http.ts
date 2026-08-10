@@ -28,6 +28,7 @@ import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
 import { remindersIngest, remindersRead } from "./remindersIngest";
 import { calendarIngest } from "./calendarEvents";
 import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
+import { galdrPromptGet, galdrListGet, galdrPromptPost, galdrUsagePost } from "./galdrHttp";
 
 const http = httpRouter();
 
@@ -113,5 +114,16 @@ http.route({ path: "/inbox-read-all", method: "POST",    handler: inboxReadAll }
 http.route({ path: "/inbox-read-all", method: "OPTIONS", handler: inboxReadAll });
 http.route({ path: "/inbox-read-held-unacked", method: "POST",    handler: inboxReadHeldUnacked });
 http.route({ path: "/inbox-read-held-unacked", method: "OPTIONS", handler: inboxReadHeldUnacked });
+
+// Phase 116: Galdr Prompt Library — agent/CLI only (D-04). The absence of an
+// OPTIONS line under each of these four routes is deliberate and IS the
+// access-control boundary itself, not an oversight: no CORS headers, no
+// allowlist entry, no OPTIONS handler. `/health` above (line 37) is the
+// existing precedent for a route with no OPTIONS partner. Anyone adding an
+// OPTIONS route here is reversing a locked decision — see 116-CONTEXT.md D-04.
+http.route({ path: "/galdr/prompt", method: "GET",  handler: galdrPromptGet });
+http.route({ path: "/galdr/list",   method: "GET",  handler: galdrListGet });
+http.route({ path: "/galdr/prompt", method: "POST", handler: galdrPromptPost });
+http.route({ path: "/galdr/usage",  method: "POST", handler: galdrUsagePost });
 
 export default http;
