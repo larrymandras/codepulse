@@ -5,12 +5,12 @@ milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
 stopped_at: Phase 110 context gathered
 last_updated: "2026-08-10T18:42:33.299Z"
-last_activity: 2026-08-10 -- Phase 116 6/8 plans; galdr UI components built, 116-07 (skill) needs a user-level GALDR_API_KEY
+last_activity: 2026-08-10 -- Phase 116 7/8 plans; galdr skill installed + pushed, live round trip verified; only 116-08 remains
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
   percent: 17
 ---
 
