@@ -909,3 +909,109 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     expect(findFrameReplyCall()).toBeUndefined();
   });
 });
+
+// ─── D-01 (188.4-01): merge-path empty assistant bubble prune ───────────────
+// 188.3-SMOKE.md's Open table recorded this as "Found live this plan, NOT
+// fixed… cosmetic, reproducible, unowned": an empty ÁSTRÍÐR bubble renders
+// ahead of every merged-continuation reply because interrupt() only ever
+// FLIPS every streaming message to streaming:false — it never removes one
+// that never received any content or blocks. This closes it at the site that
+// creates the artifact (interrupt()'s own setMessages pass), without
+// touching the control-verb fast-path (content:"" WITH blocks) or the
+// legitimate thinking cursor (content:"" streaming:true, no interrupt yet).
+
+describe("useAstridrChat — interrupt() prunes the empty merge-path assistant bubble (D-01, 188.4-01)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-1" });
+  });
+
+  it("PRUNE-MERGE-PATH-EMPTY: interrupt() on the merge path removes the still-empty assistant placeholder outright", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+
+    const placeholder = result.current.messages.find((m) => m.role === "assistant");
+    expect(placeholder).toBeDefined();
+    expect(placeholder?.content).toBe("");
+    expect(placeholder?.streaming).toBe(true);
+
+    // Nothing has streamed yet — mirrors useAstridrVoice.ts's real merge-path
+    // ordering (chatRef.current.interrupt("continuation-merge") fires before
+    // the merged resend, sometimes before any run.text chunk has arrived).
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    const assistantMessagesAfter = result.current.messages.filter((m) => m.role === "assistant");
+    expect(assistantMessagesAfter).toHaveLength(0);
+    expect(result.current.messages.some((m) => m.id === placeholder!.id)).toBe(false);
+  });
+
+  it('CTRL-PRUNE-KEEPS-BLOCKS: a control-verb fast-path reply (content:"" WITH blocks) survives interrupt(), merely flipped to streaming:false', async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("change your brain to Kimmy K3");
+    });
+
+    // Drive the blocks arrival through the REAL run.blocks handler — the
+    // control-verb fast-path shape (ws_commands.py) — not hand-constructed
+    // state, per the plan's action instructions.
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "I couldn't find a 'Kimmy K3' brain." }],
+          round_num: 0,
+        },
+      });
+    });
+
+    const beforeInterrupt = result.current.messages.find((m) => m.role === "assistant");
+    expect(beforeInterrupt?.content).toBe("");
+    expect(beforeInterrupt?.blocks?.length).toBeGreaterThan(0);
+
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    const afterInterrupt = result.current.messages.find((m) => m.role === "assistant");
+    expect(afterInterrupt).toBeDefined();
+    expect(afterInterrupt?.blocks?.length).toBeGreaterThan(0);
+    expect(afterInterrupt?.streaming).toBe(false);
+  });
+
+  it('CTRL-PRUNE-KEEPS-THINKING-CURSOR: a still in-flight {content:"", streaming:true} placeholder is untouched when no interrupt has run', async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+
+    const placeholder = result.current.messages.find((m) => m.role === "assistant");
+    expect(placeholder).toBeDefined();
+    expect(placeholder?.content).toBe("");
+    expect(placeholder?.streaming).toBe(true);
+  });
+
+  it("CTRL-PRUNE-KEEPS-CONTENT: an assistant message that HAS content is never pruned by any interrupt, including a barge-in", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+
+    act(() => {
+      getHandler("run.text")?.({ data: { session_id: "sess-1", text_chunk: "Tomorrow brings rain" } });
+    });
+
+    act(() => {
+      result.current.interrupt(); // unattributed — same barge-in code path
+    });
+
+    const survivor = result.current.messages.find((m) => m.role === "assistant");
+    expect(survivor).toBeDefined();
+    expect(survivor?.content).toBe("Tomorrow brings rain");
+    expect(survivor?.streaming).toBe(false);
+  });
+});
