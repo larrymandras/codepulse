@@ -2122,4 +2122,56 @@ export default defineSchema({
     // it is load-bearing; a future reader adding that cross-profile query
     // is what will finally consume it.
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // GALDR PROMPT LIBRARY (Phase 116, Seiðr suite)
+  // ============================================================
+
+  // Phase 116 Galdr. `prompts` is the FIRST table in this schema with a
+  // `slug` field, and Convex has no server-side unique constraint — the
+  // `by_slug` index below speeds lookups, it does not enforce uniqueness.
+  // Uniqueness on save is enforced by a transactional check-then-insert in
+  // convex/galdr.ts (D-06: a slug collision is refused, never overwritten),
+  // not by this index.
+  // NOT the same thing as `promptSubmissions` (above, ~line 651) — that
+  // table is unrelated Claude Code hook prompt-length telemetry, not a
+  // prompt library entry. Keep the two distinct in module/hook names too.
+  prompts: defineTable({
+    title: v.string(),
+    slug: v.string(),
+    body: v.string(),
+    category: v.string(), // plain string, not a categories table — see rationale below
+    // No UI surface this phase (design doc §4.1 field list only) — carried
+    // for a future filter/search surface.
+    tags: v.optional(v.array(v.string())),
+    favorite: v.optional(v.boolean()),
+    // incremented only on resolved-body delivery: skill injection, UI Copy, UI Send-to-Chat —
+    // never on listing, viewing, favoriting, or "Copy as command".
+    usageCount: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    archived: v.optional(v.boolean()), // D-16: delete = archive; no hard delete this phase
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_category", ["category"])
+    .index("by_updatedAt", ["updatedAt"]),
+  // Category model: a plain `category: v.string()` field, NOT a separate
+  // categories table with per-category icon/color/sortOrder overrides (the
+  // heavier pattern Skills uses — `api.skillCategories.getSkillsWithOverrides`,
+  // `src/pages/Skills.tsx:78-79`). That pattern earns its cost when a surface
+  // has 100+ auto-classified entries needing administered metadata; Galdr is
+  // a curated library saved one prompt at a time via `/galdr-save`, and D-08
+  // caps the skill surface with no `--category` flag. Filter chips are
+  // derived at render time from the live distinct `category` values instead.
+
+  // Phase 116 Galdr. Bounded by newest-N-per-prompt (cap 20), pruned inline
+  // on write in convex/galdr.ts's save/restore mutations (D-14) — deliberately
+  // NOT a convex/retention.ts RETENTION_DAYS entry. See the D-13 exemption
+  // comment inside RETENTION_DAYS for why calendar-age pruning is wrong here.
+  promptVersions: defineTable({
+    promptId: v.id("prompts"),
+    body: v.string(),
+    savedAt: v.number(),
+  }).index("by_promptId", ["promptId"]),
 });
