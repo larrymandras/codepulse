@@ -14,7 +14,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { RETENTION_DAYS } from "./retention";
+import { RETENTION_DAYS, PRUNE_PREDICATES } from "./retention";
 
 const schemaSource = readFileSync(resolve(process.cwd(), "convex/schema.ts"), "utf-8");
 
@@ -56,7 +56,9 @@ describe("RETENTION_DAYS", () => {
   // Post-execution gap closure (adversarial mutation-testing pass, 2026-08-07): deleting the
   // `controlVerbSwaps: 30` entry from RETENTION_DAYS outright was caught by nothing above — the
   // existing tests only assert generic properties (every key is a real schema table, every
-  // window is positive, gatewayQuotaSnapshots specifically, a fixed keep-forever list) and never
+  // window is positive, gatewayQuotaSnapshots specifically, a narrowed keep-forever list —
+  // Phase 110 D-03 dropped `aggregates` from it, since `aggregates` is now itself a
+  // RETENTION_DAYS key protected by a predicate rather than by absence) and never
   // asserted these two Phase 108 tables are present at all. A table silently becoming unbounded
   // is the exact class of defect CLAUDE.md records as having caused a real OOM crash-loop on
   // this self-hosted instance. Unlike the CR-01/scope-filter guards elsewhere in this repo, this
@@ -90,14 +92,47 @@ describe("RETENTION_DAYS", () => {
   });
 
   it("still keeps the cost/trend tables forever — pruning these would break dashboards", () => {
-    // Phase 104 derives dollars from `aggregates` token buckets on every read, so
-    // pruning aggregates or llmMetrics would silently destroy re-priceable history
-    // (D-04). retention.ts's header comment states this; assert it.
-    for (const keepForever of ["aggregates", "llmMetrics", "sessions", "alerts"]) {
+    // Phase 110 D-01/D-03 narrowed this list: `aggregates` now IS a RETENTION_DAYS
+    // key (90 days) — its `period:"hourly"` rows are prunable. `period:"daily"`
+    // rows are protected instead by PRUNE_PREDICATES.aggregates (asserted in the
+    // dedicated positive guard below), not by absence from this map. llmMetrics,
+    // sessions, and alerts remain outright absent from RETENTION_DAYS; pruning
+    // them would silently destroy re-priceable cost history (D-04) or break
+    // trend dashboards.
+    for (const keepForever of ["llmMetrics", "sessions", "alerts"]) {
       expect(
         Object.keys(RETENTION_DAYS),
         `${keepForever} must NOT be pruned`
       ).not.toContain(keepForever);
+    }
+  });
+
+  it("the aggregates predicate can never delete a period:daily row (D-01/D-03/D-04)", () => {
+    // Known-present control so this cannot pass vacuously against an empty or
+    // mis-imported RETENTION_DAYS/PRUNE_PREDICATES.
+    expect(RETENTION_DAYS.aggregates).toBe(90);
+    expect(PRUNE_PREDICATES.aggregates).toBeDefined();
+    expect(PRUNE_PREDICATES.aggregates!({ period: "daily" })).toBe(false);
+    expect(PRUNE_PREDICATES.aggregates!({ period: "hourly" })).toBe(true);
+
+    // The decision rationale must be documented in place, not merely absent —
+    // read convex/retention.ts's own source the same way this file already
+    // reads convex/schema.ts's source above (D-13 exemption test precedent).
+    const retentionSource = readFileSync(resolve(process.cwd(), "convex/retention.ts"), "utf-8");
+    expect(retentionSource).toContain("D-01");
+    expect(retentionSource).toContain("PRUNE_PREDICATES");
+  });
+
+  it("every PRUNE_PREDICATES key is a real, pruned table (silent-no-op guard)", () => {
+    // A predicate for a table that is never pruned (absent from RETENTION_DAYS)
+    // or that doesn't exist in schema.ts is a silent no-op of the same class the
+    // table-existence guard above was written to catch.
+    for (const key of Object.keys(PRUNE_PREDICATES)) {
+      expect(schemaTables.has(key), `${key} must be a real schema table`).toBe(true);
+      expect(
+        Object.keys(RETENTION_DAYS),
+        `${key} must also be a RETENTION_DAYS key`
+      ).toContain(key);
     }
   });
 });

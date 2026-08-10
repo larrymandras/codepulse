@@ -742,7 +742,10 @@ async function fetchLlmRowsForHour(
  *
  * Retention floor: llmMetrics is one of the tables convex/retention.ts's own
  * comment marks "kept forever" (it is not in that module's PRUNED_TABLES — only
- * the runtime-firehose/build-history tables are physically deleted there). The
+ * the runtime-firehose/build-history tables are physically deleted there; since
+ * Phase 110 D-01 that now also includes `aggregates` `period:"hourly"` rows
+ * specifically — `period:"daily"` rows stay exempt via
+ * PRUNE_PREDICATES.aggregates). The
  * retention window that DOES apply to llmMetrics specifically is
  * `agentConfigs["retention_days"]` (convex/archival.ts's markStaleArchived,
  * default 30, clamped 1-365 — the sibling retention module for this exact
