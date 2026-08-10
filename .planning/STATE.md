@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Phase 110 context gathered
-last_updated: "2026-08-10T20:34:06.038Z"
-last_activity: 2026-08-10 -- Phase 110 execution started
+stopped_at: Phase 111 UI-SPEC approved
+last_updated: "2026-08-10T22:46:22.276Z"
+last_activity: 2026-08-10 -- Phase 110 waves 1-4 executed and deployed; stopped before wave 5
 progress:
   total_phases: 12
   completed_phases: 3
@@ -55,6 +55,7 @@ Status: **Deployed to the live self-hosted instance 2026-08-10 ~17:05 ET, operat
 Last activity: 2026-08-10 -- Phase 110 waves 1-4 executed and deployed; stopped before wave 5
 
 **Three things the 110-06 session must know before starting:**
+
 1. **An `aggregates` ALERT after a successful prune is EXPECTED and is NOT prune failure.** The deployed health check measures the oldest doc in a table, not the oldest doc the pruner would delete, so the permanently-protected oldest `period:"daily"` row (165.0h past the 90-day cutoff and growing 24h/day) keeps the ALERT lit forever. DUR-01's real signal is the baseline pair in `110-DUR-EVIDENCE.md`: the oldest `period:"daily"` `_creationTime` must NOT move forward, and the oldest `period:"hourly"` one MUST. A concurrent session is building a predicate-aware `summarizeOverhangProbe` fix; it is NOT part of Phase 110 and was NOT deployed.
 2. **Two items are deferred into that session:** a clean zero-`TIMEOUT` health-check re-run (tonight's run hit a live `events` `SystemTimeoutError` — pre-existing and memory-correlated, with prior occurrences 2026-08-04 at 41.7 GiB and 2026-08-05 at 45.95 GiB, not a regression from this phase), and the 110-05 ROADMAP checkbox, deliberately not set tonight because a concurrent session had uncommitted Phase 111 work in ROADMAP.md and updating it would have interleaved the two.
 3. **Backend memory is worth a look at start:** 16.02 GiB at 05:30 → 23.57 at 16:44 → 32.51 at 18:00 (flat at 18:05). The day's ~1.04 GiB/h organic rate explains only ~1.3 of the ~8.9 GiB jump; the deploy and a 19-probe health run both sit in that window. Correlation only — no experiment isolated it. `ConvexNightlyRestart` at 02:00 should have cleared it before the cron fires at 05:00.
@@ -912,8 +913,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-10T18:42:33.283Z
-Stopped at: Phase 110 context gathered
+Last session: 2026-08-10T22:46:22.261Z
+Stopped at: Phase 111 UI-SPEC approved
 
 --- Prior (superseded by the above) --- Completed 109-08-PLAN.md
 
@@ -932,7 +933,7 @@ Stopped at: Phase 110 context gathered
 --- Prior (Phase 103, superseded by the above) --- Phase 103's gap-closure cycle is 18/18 plans CODE-complete (103-18 closed WR-01, 2026-07-29). Next step is an operator-attended LIVE re-verification against the running Ástríðr stack covering 103-16 (reselect gets a fresh confirm prompt), 103-17 (pinned-default count reads config), and 103-18 (revert survives navigating away from the Chat composer pill) — a green unit suite is explicitly not accepted as proof per this cycle's established pattern (see 103-VERIFICATION.md). Only after that should BSC-01..05 be re-marked complete in REQUIREMENTS.md and the phase checkbox flipped in ROADMAP.md.
 
 --- Historical (v11.0, closed 2026-07-25) --- Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This was the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
-Resume file: .planning/phases/110-convex-durability/110-CONTEXT.md
+Resume file: .planning/phases/111-mission-board/111-UI-SPEC.md
 
 ## Operator Next Steps
 
