@@ -1085,10 +1085,42 @@ that window. **This is recorded as correlation with a plausible mechanism, not c
 experiment isolated it, and none was funded. Container limit is 64 GiB; the instance has run at
 45.95 GiB before without incident, and `ConvexNightlyRestart` fires at 02:00.
 
-**Part of this ALERT is the check working as designed.** The 172.8h `aggregates` overhang is real
-and expected — the new predicate has not yet run under cron — and `aggregates` was *structurally
-invisible* to every health check that ever ran before tonight. A table that cannot be seen cannot
-be alerted on. The ALERT is the first time this overhang has been observable at all.
+**Part of this ALERT is the check working as designed.** `aggregates` was *structurally invisible*
+to every health check that ever ran before tonight — a table that cannot be seen cannot be alerted
+on — so this is the first time any overhang on it has been observable at all.
+
+**CORRECTION (2026-08-10, written after the above and before this file was finalised).** An earlier
+version of this paragraph said the 172.8h overhang was "expected — the new predicate has not yet
+run under cron," which implies it clears after the first nightly prune. **That is wrong**, and the
+error is mine (the orchestrator's), not the executor's. Re-derived from this file's own baseline
+probes:
+
+```
+retention window                  : 90 days
+oldest hourly row past the cutoff : 172.8 h   <- prunable; removed by tomorrow's prune
+oldest daily  row past the cutoff : 165.0 h   <- PROTECTED FOREVER by PRUNE_PREDICATES.aggregates
+health check reported             : 172.8 h
+```
+
+Today's 172.8h figure matches the oldest **hourly** row exactly, so it is currently reporting a
+genuinely prunable backlog. But the health check measures *the oldest document in the table*, not
+*the oldest document the pruner would delete*. Once tomorrow's prune removes the aged hourly rows,
+the oldest remaining document becomes the oldest **daily** row — still 165.0h past the cutoff, and
+protected in perpetuity by the very predicate this phase shipped. The ALERT therefore does **not**
+clear. It persists and grows by 24h every day, forever.
+
+This is a real defect that Phase 110 *introduced*: making a table period-aware while its health
+probe stayed period-blind guarantees a permanent false ALERT — the exact "green (or red) nobody
+re-examines" failure mode that plan 110-05 exists to eliminate, arriving through a different door.
+It was found by a concurrent session working in this checkout, which is building a
+`summarizeOverhangProbe` / `oldestPrunableDoc` fix that measures lag against the predicate rather
+than against the index head. That work is NOT part of Phase 110, is not deployed, and is not
+covered by this evidence file.
+
+Consequence for tomorrow's plan `110-06`: an `aggregates` ALERT persisting after a successful prune
+is **expected under the currently deployed code** and must NOT be read as the prune having failed.
+DUR-01's actual pass/fail signal remains the one this file's baseline established — the oldest
+`period:"daily"` `_creationTime` must not move forward, and the oldest `period:"hourly"` one must.
 
 ---
 
