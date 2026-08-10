@@ -11,6 +11,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
+    "test:e2e:authed": "playwright test --project=chromium-authed",
     "dev:noauth": "vite --port 5181 --strictPort --host 127.0.0.1",
     "test:e2e:noauth": "playwright test",
     "test:e2e:noauth:help": "echo 'dev:noauth / test:e2e:noauth: npm run-script defaults to cmd.exe on Windows, which cannot parse an inline VAR= assignment, so the empty assignment must be issued at the invocation instead: VITE_CLERK_PUBLISHABLE_KEY= npm run dev:noauth  (and)  PW_BASE_URL=http://localhost:5181 npm run test:e2e:noauth -- issued from GIT BASH, never PowerShell (PS 5.1 deletes an env var assigned an empty string, silently leaving the Clerk gate live). Start dev:noauth in its own terminal FIRST -- playwright.config.ts webServer is hardcoded to 5173 and will report itself healthy while these tests target 5181. dev:noauth pins --host 127.0.0.1, overriding vite.config.ts server.host:true, because that config-level wide bind would otherwise expose this AUTH-DISABLED server on the tailnet/LAN -- never drop that flag. These specs exercise navigation only, not the Clerk auth gate.'",
@@ -67,6 +68,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
+    "@clerk/testing": "^2.2.21",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.2",
     "@testing-library/jest-dom": "^6.9.1",
@@ -77,6 +79,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^6.0.3",
     "autoprefixer": "^10.5.2",
+    "dotenv": "^17.4.2",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.8",
     "shadcn": "^4.2.0",
