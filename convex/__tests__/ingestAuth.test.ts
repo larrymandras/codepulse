@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { validateIngestAuth, parseAllowlist, getCorsHeaders, getCorsHeadersWithAllowlist } from "../ingestAuth";
+import { validateIngestAuth, validateGaldrAuth, parseAllowlist, getCorsHeaders, getCorsHeadersWithAllowlist } from "../ingestAuth";
 
 /**
  * Behavioral integration tests for ingest authentication (CPHLTH-02).
@@ -70,6 +70,63 @@ describe("ingestAuth (CPHLTH-02)", () => {
     const req = new Request("http://localhost/ingest");
     const headers = getCorsHeaders(req);
     expect(headers["Access-Control-Allow-Headers"]).toContain("Authorization");
+  });
+});
+
+describe("validateGaldrAuth", () => {
+  it("rejects a request with no Authorization header when GALDR_API_KEY is set", () => {
+    vi.stubEnv("GALDR_API_KEY", "test-galdr-key");
+    const req = new Request("http://localhost/galdr/prompt?slug=x", { method: "GET" });
+    expect(validateGaldrAuth(req)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects a request whose Bearer value is a different key", () => {
+    vi.stubEnv("GALDR_API_KEY", "test-galdr-key");
+    const req = new Request("http://localhost/galdr/prompt?slug=x", {
+      method: "GET",
+      headers: { Authorization: "Bearer wrong-key" },
+    });
+    expect(validateGaldrAuth(req)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("accepts a request whose Bearer value matches GALDR_API_KEY", () => {
+    vi.stubEnv("GALDR_API_KEY", "test-galdr-key");
+    const req = new Request("http://localhost/galdr/prompt?slug=x", {
+      method: "GET",
+      headers: { Authorization: "Bearer test-galdr-key" },
+    });
+    expect(validateGaldrAuth(req)).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it("fails closed: GALDR_API_KEY unset and GALDR_ALLOW_ANON unset returns false", () => {
+    vi.stubEnv("GALDR_API_KEY", "");
+    const req = new Request("http://localhost/galdr/prompt?slug=x", { method: "GET" });
+    expect(validateGaldrAuth(req)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("returns true only when GALDR_API_KEY is unset AND GALDR_ALLOW_ANON is exactly the string \"true\"", () => {
+    vi.stubEnv("GALDR_API_KEY", "");
+    vi.stubEnv("GALDR_ALLOW_ANON", "true");
+    const req = new Request("http://localhost/galdr/prompt?slug=x", { method: "GET" });
+    expect(validateGaldrAuth(req)).toBe(true);
+    vi.unstubAllEnvs();
+
+    // Negative control: the opt-in is exact-string only, not truthy-string.
+    vi.stubEnv("GALDR_API_KEY", "");
+    vi.stubEnv("GALDR_ALLOW_ANON", "1");
+    const reqOne = new Request("http://localhost/galdr/prompt?slug=x", { method: "GET" });
+    expect(validateGaldrAuth(reqOne)).toBe(false);
+    vi.unstubAllEnvs();
+
+    vi.stubEnv("GALDR_API_KEY", "");
+    vi.stubEnv("GALDR_ALLOW_ANON", "TRUE");
+    const reqUpper = new Request("http://localhost/galdr/prompt?slug=x", { method: "GET" });
+    expect(validateGaldrAuth(reqUpper)).toBe(false);
+    vi.unstubAllEnvs();
   });
 });
 

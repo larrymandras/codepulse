@@ -105,6 +105,38 @@ export function validateForgeIngestAuth(request: Request): boolean {
 }
 
 /**
+ * Validate the Bearer token on a Galdr prompt-library request.
+ * Phase 116 D-01: a dedicated GALDR_API_KEY, not a reuse of ASTRIDR_INGEST_API_KEY —
+ * that key is write-only telemetry today, and reusing it would widen a leaked-key
+ * blast radius to include reading the prompt library. This is CodePulse's first
+ * authenticated *read* endpoint (`GET /galdr/prompt`); every other route in
+ * convex/http.ts besides `/health` is write-ingest.
+ * Phase 116 D-02: this one key authorizes both the galdr read and the galdr writes
+ * (`/galdr-save`, usageCount bump) — do not add a read/write split. The only
+ * holders are Larry's own CLI sessions, so a split buys little against the cost
+ * of syncing two secrets across `.claude`, `.claude-alt`, and the laptop.
+ * Fails CLOSED, structurally identical to validateIngestAuth / validateForgeIngestAuth:
+ * a missing key must NOT silently open the prompt library to the public internet.
+ * To run the unauthenticated dev path, set GALDR_ALLOW_ANON=true explicitly.
+ * Uses plain `===` for the bearer comparison, NOT a constant-time compare — this is
+ * deliberate, matching both siblings above. Introducing a different comparison for
+ * only one of three validators would create an inconsistency without changing the
+ * realistic risk on a single-operator self-hosted instance; do not "fix" this later.
+ * Returns true only if a configured key matches the request's Bearer token, or
+ * if no key is set AND GALDR_ALLOW_ANON is explicitly "true".
+ */
+export function validateGaldrAuth(request: Request): boolean {
+  const expectedKey = _env.GALDR_API_KEY;
+  if (!expectedKey) {
+    // Fail closed: a missing key must not silently open the prompt library to the
+    // public internet. Require an explicit opt-in for the dev/anon path.
+    return _env.GALDR_ALLOW_ANON === "true";
+  }
+  const authHeader = request.headers.get("Authorization") ?? "";
+  return authHeader === `Bearer ${expectedKey}`;
+}
+
+/**
  * Return a 401 Unauthorized response.
  * Uses minimal fixed headers only — a 401 rejection does not negotiate CORS.
  */
