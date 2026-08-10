@@ -1,3 +1,45 @@
+---
+phase: 110-convex-durability
+plan: 01
+subsystem: database
+tags: [convex, retention, pure-functions, unit-tests, mutation-testing]
+
+# Dependency graph
+requires: []
+provides:
+  - "partitionBatchForPrune: predicate-aware batch bookkeeping that sources lastCreationTime from every doc read, deleted or skipped (D-02) — the Pitfall-1 cursor-stall fix"
+  - "resolveRotationStart: bounds-checked rotation-start resolution, any malformed value resolving to 0 without throwing (D-05)"
+  - "planRotationWrite: the rotation write decision, returning null for interior actions so no per-batch agentConfigs write can be introduced (D-06)"
+  - "27 unit tests in convex/retentionCursor.test.ts, including a mutation-proven all-skipped-batch regression with its own negative control"
+affects: [110-03]
+
+# Tech tracking
+tech-stack:
+  added: []
+  patterns:
+    - "decisions extracted as pure, dependency-free, unit-testable functions BEFORE being wired into an untestable Convex mutation (this repo has no convex-test harness)"
+    - "regression test asserted end-to-end through the real downstream consumer (planNextPruneStep) fed real upstream output, not a hand-built object"
+    - "negative control in its own it(...) proving the regression test is not vacuous — the pre-fix value leaves the cursor unchanged"
+
+key-files:
+  created:
+    - .planning/phases/110-convex-durability/110-01-SUMMARY.md
+  modified:
+    - convex/retentionCursor.ts
+    - convex/retentionCursor.test.ts
+
+key-decisions:
+  - "lastCreationTime is sourced from EVERY doc iterated, never from toDelete alone. Once a predicate can skip a doc without deleting it, a fully-skipped batch would report lastCreationTime: null, which planNextPruneStep's Math.max(lastCreationTime ?? cursorMs, cursorMs) clamp resolves to an unchanged cursor — reviving the head-rescan self-defeat this module exists to fix."
+  - "planNextPruneStep and its interfaces left byte-identical to HEAD (additions only, verified via git diff). convex/retentionCursor.ts remains import-free: grep -c '^import ' returns 0."
+  - "Mutation-tested rather than assumed: sourcing lastCreationTime from toDelete failed 3 tests including the end-to-end regression; reverting restored 27/27 green. Both RED and GREEN transcripts captured."
+
+requirements-completed: [DUR-01]
+
+# Metrics
+duration: ~20min
+completed: 2026-08-10
+---
+
 # Phase 110 Plan 01: Prune-Chain Helper Extraction Summary
 
 Three pure, dependency-free helpers (`partitionBatchForPrune`, `resolveRotationStart`,

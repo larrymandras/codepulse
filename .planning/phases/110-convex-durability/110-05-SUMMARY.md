@@ -1,3 +1,48 @@
+---
+phase: 110-convex-durability
+plan: 05
+subsystem: database
+tags: [convex, retention, powershell, ops-script, self-hosted, health-check]
+
+# Dependency graph
+requires:
+  - phase: 110-04
+    provides: "listRetentionPolicy live and reachable as internalQuery via `npx convex run --env-file <path> retention:listRetentionPolicy`, deployed policy readback (19 keys) as the source-of-truth cross-check target"
+provides:
+  - "retention-health-check.ps1 reads the deployed retention policy live via retention:listRetentionPolicy instead of a hand-copied 14-entry hashtable (D-07)"
+  - "a hard non-zero-exit failure path on a failed/non-JSON/empty policy read, proven to fire by an attended deliberate-break test, with no fallback table list"
+  - "DUR-02 leg 2: a full health-check run covering all 19 deployed tables, three-way count cross-check, five previously-invisible tables confirmed visible by name"
+  - "an open item (events TIMEOUT) explicitly deferred to a clean re-run alongside plan 110-06, not silently closed"
+affects: [110-06]
+
+# Tech tracking
+tech-stack:
+  added: []
+  patterns:
+    - "unversioned ops script edited with hash-verified backup + bounded diff as the sole rollback path, since the file isn't under git until Phase 113"
+    - "hard-fail-no-fallback health check: a coverage-critical read that can silently degrade to a stale subset is treated as a security-relevant defect, not a convenience feature"
+    - "deliberate-break test as the only way to prove a failure path fires, distinct from describing it"
+
+key-files:
+  created:
+    - .planning/phases/110-convex-durability/110-05-SUMMARY.md
+  modified:
+    - C:/Users/mandr/convex-selfhost/retention-health-check.ps1 (unversioned; backed up at .pre-110.bak)
+    - .planning/phases/110-convex-durability/110-DUR-EVIDENCE.md
+
+key-decisions:
+  - "Operator decision: leg 2 closes on coverage now (fully proven — three-way count cross-check equal at 19, five previously-invisible tables confirmed by name); the events TIMEOUT is recorded as an explicit open item, not resolved by this plan, with a clean zero-TIMEOUT run deferred to tomorrow morning post-02:00-restart, in the same session as plan 110-06."
+  - "Operator decision: the deliberate-break test was run by the orchestrator in the attended session (operator chose 'I run it, you review the output'), not by the executor."
+  - "The break test's rollback target was a fresh snapshot of the EDITED script, NOT .pre-110.bak — that backup holds the pre-edit original, so restoring from it would have silently undone the entire plan under test. Restore proven byte-identical by hash."
+  - "A false claim was written into 110-DUR-EVIDENCE.md by the orchestrator and corrected in commit c214fcdb: the 172.8h aggregates overhang does NOT clear after the first prune. The deployed health check measures the oldest doc in a table, not the oldest the pruner would delete, so the permanently-protected oldest daily row keeps the ALERT lit and growing. This is a defect Phase 110 introduced."
+
+requirements-completed: [DUR-02]
+
+# Metrics
+duration: ~50min (across two working windows: Tasks 1-2, then the Task 3 checkpoint closure)
+completed: 2026-08-10
+---
+
 # Plan 110-05 Summary — Health check reads the live retention policy
 
 **Plan:** `110-05-PLAN.md` (wave 4, `autonomous: false`, requirements DUR-02)
