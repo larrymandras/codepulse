@@ -2174,4 +2174,33 @@ export default defineSchema({
     body: v.string(),
     savedAt: v.number(),
   }).index("by_promptId", ["promptId"]),
+
+  // Phase 117 Bifröst (D-01). A curated hub of the URLs Larry actually opens.
+  // Like `prompts`, this is deliberately EXEMPT from RETENTION_DAYS: a link is
+  // curated, not telemetry, and deleting one for going a quarter unused would
+  // be a bug. Do NOT add it to convex/retention.ts.
+  links: defineTable({
+    title: v.string(),
+    url: v.string(),
+    description: v.optional(v.string()),
+    category: v.string(), // plain string, same rationale as prompts.category
+    // A lucide icon NAME (e.g. "flame"), never inline SVG — keeps
+    // navRegistry.ts's iconComponents map the single icon source.
+    icon: v.optional(v.string()),
+    pinned: v.optional(v.boolean()),
+    order: v.optional(v.number()),
+    isLocalService: v.optional(v.boolean()),
+    // D-02: liveness resolves by CONTAINER NAME, not host:port. The design
+    // doc's "join on host:port" cannot be built — no port/host field exists
+    // anywhere in this schema (verified 2026-08-10). This joins
+    // dockerContainers.name, which is live and already rendered as a status
+    // dot by DockerPanel.tsx:70. D-03: absent containerName renders NO dot,
+    // never a green one — no signal must not read as "up".
+    containerName: v.optional(v.string()),
+    archived: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_order", ["order"]),
 });
