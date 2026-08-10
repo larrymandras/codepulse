@@ -304,7 +304,42 @@ export function useAstridrChat() {
       // session check computed as a trace field that never entered the
       // gate, with a test asserting the diagnostic instead of the behavior.
       const sessionOk = !payload.session_id || payload.session_id === lastSessionRef.current;
-      if (!sessionOk) return;
+      // 188.4 validation audit (2026-08-10): this early return used to be
+      // BARE. Every other drop path in the voice/chat stack names itself
+      // before returning (final.noise-rejected, final.wake-phrase-only-
+      // dropped, final.duration-rejected, run.tts.received's willPlay:false),
+      // and this one did not — so a foreign-session drop could only ever be
+      // evidenced by RENDERED ABSENCE plus a paired control, never by a gate
+      // naming itself. 188.4-VALIDATION.md carried that as a disclosed
+      // limitation; this closes it.
+      //
+      // Traced on the DROP ONLY, not on every receipt: the backend
+      // double-delivers run.blocks (see :283), so tracing every frame would
+      // flood the 500-entry ring buffer that the injectors and every live
+      // smoke session read. The drop is the rare, interesting event.
+      //
+      // Strictly additive — `sessionOk` is computed above and consumed by the
+      // gate below exactly as before. The comment above records why that
+      // ordering is load-bearing: the run.tts predecessor bug was a session
+      // check computed as a TRACE FIELD that never entered the gate at all.
+      if (!sessionOk) {
+        if (typeof window !== "undefined") {
+          const buf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
+            .__astridrVoiceTrace ??= []);
+          buf.push({
+            t: new Date().toISOString().slice(11, 23),
+            ev: "run.blocks.session-rejected",
+            d: {
+              eventSession: payload.session_id,
+              lastSession: lastSessionRef.current,
+              blockCount: blocks.length,
+              blockTypes: blocks.map((b) => b.type),
+            },
+          });
+          if (buf.length > 500) buf.shift();
+        }
+        return;
+      }
 
       // 186-01 follow-up (fresh live trace, 186-09 swap testing): the
       // control-verb fast-path short-circuit (ws_commands.py::_handle_chat_

@@ -466,6 +466,82 @@ describe("useAstridrChat — run.blocks text backfill for streamingReplyRef (186
     expect(partial).toBe("");
   });
 
+  // ─── 188.4 validation audit (2026-08-10): the drop now NAMES itself ───────
+  // 188.4-VALIDATION.md disclosed this as a live limitation: "the run.blocks
+  // reject path still emits no trace, so foreign-session drops rest on
+  // rendered absence plus a paired control rather than on a gate naming
+  // itself." The two tests below are that pair — the drop emits, and an
+  // ACCEPTED frame does not, so the trace distinguishes a drop from mere
+  // traffic. Behavior assertions stay in BLOCKS-FOREIGN above; per the
+  // predecessor bug these are additive diagnostics and must never become the
+  // only thing asserted.
+
+  it("BLOCKS-FOREIGN-TRACED: the foreign-session drop emits run.blocks.session-rejected naming both sessions", async () => {
+    const traceBuf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
+      .__astridrVoiceTrace = []);
+
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-999-foreign",
+          blocks: [{ type: "text", text: "a foreign reply that must not land" }],
+          round_num: 0,
+        },
+      });
+    });
+
+    const rejected = (traceBuf as Array<{ ev: string; d: Record<string, unknown> }>).filter(
+      (e) => e.ev === "run.blocks.session-rejected",
+    );
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].d.eventSession).toBe("sess-999-foreign");
+    expect(rejected[0].d.lastSession).toBe("sess-1");
+    expect(rejected[0].d.blockCount).toBe(1);
+    expect(rejected[0].d.blockTypes).toEqual(["text"]);
+  });
+
+  it("CTRL-BLOCKS-ACCEPTED-NOT-TRACED: an ACCEPTED same-session run.blocks emits no rejection trace", async () => {
+    const traceBuf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
+      .__astridrVoiceTrace = []);
+
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    // One differing variable against BLOCKS-FOREIGN-TRACED: the session
+    // matches. Without this control the assertion above would pass against a
+    // build that traced EVERY run.blocks frame, which would name nothing.
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "the real reply" }],
+          round_num: 0,
+        },
+      });
+    });
+
+    const rejected = (traceBuf as Array<{ ev: string }>).filter(
+      (e) => e.ev === "run.blocks.session-rejected",
+    );
+    expect(rejected).toHaveLength(0);
+    // ...and the frame really did land, so the absence above is not just the
+    // handler never having run.
+    expect(result.current.messages.some((m) => m.blocks?.length)).toBe(true);
+  });
+
   it("CTRL-BLOCKS-NO-SESSION: a run.blocks event with no session_id key at all still backfills and appends (fail open)", async () => {
     const { result } = renderHook(() => useAstridrChat());
     await act(async () => {
