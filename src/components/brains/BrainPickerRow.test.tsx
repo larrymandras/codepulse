@@ -196,7 +196,38 @@ describe("resolveHealthStatus", () => {
     expect(resolveHealthStatus(entry, { ollama: { state: "closed", authenticated: true } })).toBe(
       "reachable"
     );
-    expect(resolveHealthStatus(entry, {})).toBe("unreachable");
+  });
+
+  // Defect 2(a) (BRAIN-SURFACE-DEFECTS-2026-08-10): absence of telemetry was
+  // rendered as a confirmed negative ("unreachable"), so EVERY picker row —
+  // including the active, demonstrably working one — read as down. This is not
+  // hypothetical drift: `convex/lib/providers.ts:20` is the authoritative key
+  // list behind `providerHealth.latest` (anthropic_direct, openrouter, ollama,
+  // claude-cli, codex, antigravity, claude-sdk), and the catalogue's `vendor`
+  // values for the Claude tier rows ("anthropic") and the OpenRouter rows
+  // ("openai"/"x-ai"/"google") intersect it NOWHERE — so `liveHealth[vendor]`
+  // is permanently undefined for those rows and this branch is the one they
+  // all take. An unread sensor must report unknown, never "down".
+  it("reports unknown — not unreachable — when no telemetry exists for the vendor", () => {
+    const entry: CatalogueEntry = { ...findEntry("ollama-llama3"), health: undefined };
+    expect(resolveHealthStatus(entry, {})).toBe("unknown");
+  });
+
+  it("reports unknown when live health is keyed by a name the entry's vendor never matches", () => {
+    // The live Claude-row case: catalogue says vendor "anthropic", telemetry is
+    // keyed "anthropic_direct". A miss must not be reported as a confirmed down.
+    const entry: CatalogueEntry = {
+      ...findEntry("ollama-llama3"),
+      health: undefined,
+      vendor: "anthropic",
+    };
+    expect(resolveHealthStatus(entry, { anthropic_direct: { state: "closed" } })).toBe("unknown");
+  });
+
+  it("still reports a confirmed-down vendor as unreachable", () => {
+    // Control: the negative verdict must survive for a vendor we DID read.
+    const entry: CatalogueEntry = { ...findEntry("ollama-llama3"), health: undefined };
+    expect(resolveHealthStatus(entry, { ollama: { state: "open" } })).toBe("unreachable");
   });
 });
 

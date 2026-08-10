@@ -956,3 +956,62 @@ describe("Chat — command-center panel mounts (188-13, D-18, T-188-52/53)", () 
     expect(screen.queryByTestId("quick-commands-panel")).not.toBeInTheDocument();
   });
 });
+
+// ─── Defect 4 (BRAIN-SURFACE-DEFECTS-2026-08-10) ──────────────────────────────
+//
+// `submit()` fired `void sendMessage(text)` and cleared the draft unconditionally,
+// never reading sendMessage's `Promise<boolean>` (the success signal CR-01/99-07
+// locked in for exactly this reason, and which the skill-launch path at
+// Chat.tsx:556-565 already honors). Every `return false` path in useAstridrChat
+// — including the silent early return at useAstridrChat.ts:155
+// (`isStreamingRef.current || status !== "connected"`) — therefore ate the
+// operator's text with no bubble, no toast, and an emptied composer.
+describe("Chat — composer submit reports a failed send (Defect 4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    mockSendMessage.mockResolvedValue(true);
+  });
+
+  function typeAndSend(text: string) {
+    const box = screen.getByPlaceholderText("Type or speak to Ástríðr…");
+    fireEvent.change(box, { target: { value: text } });
+    fireEvent.click(screen.getByLabelText("Send message"));
+    return box as HTMLTextAreaElement;
+  }
+
+  it("keeps the draft in the composer when the send does not succeed", async () => {
+    mockSendMessage.mockResolvedValue(false);
+    renderChat();
+
+    const box = typeAndSend("Reply with exactly: ok");
+
+    await waitFor(() => {
+      expect(box.value).toBe("Reply with exactly: ok");
+    });
+  });
+
+  it("surfaces a toast when the send does not succeed", async () => {
+    mockSendMessage.mockResolvedValue(false);
+    renderChat();
+
+    typeAndSend("Reply with exactly: ok");
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("still clears the draft on a successful send", async () => {
+    mockSendMessage.mockResolvedValue(true);
+    renderChat();
+
+    const box = typeAndSend("hello");
+
+    await waitFor(() => {
+      expect(box.value).toBe("");
+    });
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+});

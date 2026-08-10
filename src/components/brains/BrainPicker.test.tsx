@@ -1727,3 +1727,57 @@ describe("BrainPicker — renders catalogue rows with no TooltipProvider ancesto
     expect(await screen.findByText("Codex CLI")).toBeInTheDocument();
   });
 });
+
+// ─── Defect 3 (BRAIN-SURFACE-DEFECTS-2026-08-10) ──────────────────────────────
+//
+// Reported: a coordinate click at a row's visual centre dispatched nothing,
+// while clicking the same row via its accessibility element dispatched fine.
+// The handoff doc's stated theory was that the inner button does not fill the
+// row's clickable area, so a click on the row padding/wrapper "hits neither
+// path".
+//
+// CHARACTERIZATION, NOT A REGRESSION GUARD FOR A FIX — these two cases were
+// written to TEST that theory and they DISPROVE it: both passed against
+// unmodified source. There is no dead zone in the event graph. A click landing
+// anywhere inside the cmdk item that is allowed to bubble reaches
+// `CommandItem`'s own `onClick` (cmdk wires `onClick -> onSelect`), which is
+// `handleActivate`; the button path merely short-circuits that with
+// `stopPropagation` so the two can never double-fire.
+//
+// So the real cause of the reported no-op is NOT the DOM wiring, and cannot be
+// reproduced in jsdom, which has no layout and therefore no hit-testing: it has
+// to be something intercepting the coordinate in a real browser. The leading
+// unverified candidate is the Radix Tooltip that WR-03 wrapped around the whole
+// row button (`side="top"`, hoverable content enabled by default, rendered in a
+// portal) overlaying an adjacent row. Settling that needs a real browser — see
+// the handoff doc's Defect 3 section.
+//
+// These stay because they are cheap and they pin the bubbling contract that
+// `stopPropagation` in `BrainPickerRow` could silently break.
+describe("BrainPicker — clicking a row outside the inner button still activates (Defect 3)", () => {
+  it("dispatches when the click lands on the row container rather than the button", async () => {
+    renderPicker();
+
+    openPicker();
+    const label = await screen.findByText("Codex CLI");
+    const button = label.closest("button")!;
+    const rowContainer = button.parentElement!.parentElement!;
+    expect(rowContainer).not.toBe(button);
+
+    fireEvent.click(rowContainer);
+
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
+  });
+
+  it("dispatches when the click lands on the cmdk item's own padding box", async () => {
+    renderPicker();
+
+    openPicker();
+    const label = await screen.findByText("Codex CLI");
+    const commandItem = label.closest('[data-slot="command-item"]')!;
+
+    fireEvent.click(commandItem);
+
+    await waitFor(() => expect(mockDispatch).toHaveBeenCalledTimes(1));
+  });
+});

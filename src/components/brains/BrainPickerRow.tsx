@@ -63,18 +63,25 @@ export interface BrainPickerRowProps {
   onSelect: (entry: CatalogueEntry) => void;
 }
 
-type HealthStatus = "reachable" | "degraded" | "unreachable";
+/** Defect 2(a) (BRAIN-SURFACE-DEFECTS-2026-08-10): `unknown` is the fourth member this union
+ *  was missing. Without it `resolveHealthStatus` had nowhere to put "we have no reading for
+ *  this vendor" and had to borrow a definite negative, so an unread sensor was displayed as a
+ *  confirmed-down engine. Absence is not a verdict. */
+type HealthStatus = "reachable" | "degraded" | "unreachable" | "unknown";
 
 const HEALTH_DOT_CLASS: Record<HealthStatus, string> = {
   reachable: "bg-(--status-ok)",
   degraded: "bg-(--status-warn)",
   unreachable: "bg-(--status-error)",
+  // Neutral, never a status color — an unknown reading must not read as ok, warn, OR error.
+  unknown: "bg-(--muted-foreground)",
 };
 
 const HEALTH_LABEL: Record<HealthStatus, string> = {
   reachable: "reachable",
   degraded: "degraded",
   unreachable: "unreachable",
+  unknown: "health unknown",
 };
 
 const QUOTA_INDICATOR_CLASS: Record<"ok" | "warn" | "error", string> = {
@@ -128,7 +135,13 @@ export function resolveHealthStatus(
 ): HealthStatus {
   if (entry.health) return entry.health;
   const data = liveHealth[entry.vendor];
-  if (!data) return "unreachable";
+  // Defect 2(a): "no telemetry for this vendor" is NOT "confirmed down". This branch is the
+  // one every Claude and OpenRouter row actually takes, because `providerHealth.latest` is
+  // keyed by the `convex/lib/providers.ts` registry names (anthropic_direct, openrouter,
+  // ollama, claude-cli, codex, antigravity, claude-sdk) while the catalogue's `vendor` values
+  // are "anthropic" / "openai" / "x-ai" / "google" — sets that never intersect. Reporting the
+  // miss honestly is correct on its own terms; the key mismatch is a separate defect (2(b)).
+  if (!data) return "unknown";
   if (data.state === "open") return "unreachable";
   if (data.authenticated === false) return "degraded";
   return "reachable";

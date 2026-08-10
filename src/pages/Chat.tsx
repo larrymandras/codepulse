@@ -593,11 +593,31 @@ export default function Chat() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  // Defect 4 (BRAIN-SURFACE-DEFECTS-2026-08-10): `sendMessage` returns the
+  // real success signal CR-01 (99-07) locked in — "the promise resolved" is NOT
+  // "the send succeeded" — and every `return false` path in `useAstridrChat`
+  // used to be swallowed here, because this cleared the draft unconditionally
+  // without ever reading it. The silent one is the early return at
+  // `useAstridrChat.ts:155` (`isStreamingRef.current || status !== "connected"`),
+  // which appends no bubble at all, so the operator's words vanished with no
+  // transcript entry, no toast, and an emptied composer.
+  //
+  // The clear stays OPTIMISTIC (the composer must not lag an ack round-trip
+  // while `sendMessage` has already appended the user's own bubble), and the
+  // text is restored on failure — 188.1 D-03's fail-toward-sending rule applied
+  // to the composer: losing a user's words is strictly worse than a stale
+  // draft. The restore is guarded so it can never clobber something typed
+  // during the await, and the toast is deliberately OUTSIDE the state updater
+  // (StrictMode double-invokes updaters, which would fire it twice).
   const submit = () => {
     const text = draft.trim();
     if (!text || isStreaming || disconnected) return;
-    void sendMessage(text);
     setDraft("");
+    void sendMessage(text).then((sent) => {
+      if (sent) return;
+      setDraft((cur) => (cur === "" ? text : cur));
+      toast.error("Couldn't send — Ástríðr didn't accept the message. Try again.");
+    });
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
