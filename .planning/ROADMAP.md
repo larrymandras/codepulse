@@ -803,15 +803,17 @@ Plans:
 
 ### Phase 111: Mission Board
 
-**Goal**: The leftover `JobsPanel`/`subagentJobs` surface becomes a real mission board operators can trust, built entirely on data that streams today.
-**Depends on**: Nothing (frontend-only, independent of every other v14.0 phase)
-**Requirements**: MISSION-01, MISSION-02, MISSION-03
+**Goal**: ~~The leftover `JobsPanel`/`subagentJobs` surface becomes a real mission board operators can trust, built entirely on data that streams today.~~ **CORRECTED 2026-08-10 (Stale Docs rule) — the struck goal rested on a premise that a live probe falsified.** The surface becomes a truthful **post-hoc history board** over terminal-state rows, and every affordance app-wide that asserts a mission state the data cannot support is removed.
+**Depends on**: ~~Nothing (frontend-only, independent of every other v14.0 phase)~~ Nothing — **still frontend-only under the narrowed scope**, but *not* because the data streams: it does not. See below.
+**Requirements**: MISSION-01 *(partial — see D-04)*, ~~MISSION-02~~ *(deferred, D-03)*, MISSION-03
+
+*(**Scope narrowed 2026-08-10** at discuss time, on evidence, operator-approved. Probe of `subagentJobs` on the live self-hosted instance: **7 rows ever**, `{failed:2, cancelled:3, completed:2}` — **zero `queued`, zero `running`**; **`submittedAt === finishedAt` in 7 of 7**; **newest row 2026-07-07**, ~34 days stale; **0 rows** carrying a `sessionId`/`traceId`; and `subagentJobs` **absent** from `retention.ts` (control: `toolExecutions` present), so those 7 are lifetime history rather than a pruned window. Corroborated by `runtimeIngest.ts:594-596`, which routes **terminal-state events only** — "never queued/running, those live only in Supabase". Consequences: criterion 1's *live*, *duration* and *orphan* clauses each lack backing (`submittedAt` is a synthetic copy of `finishedAt`; a `running` row cannot arrive, making the orphan clause vacuous); criterion 2 has **no data path at all** — `toolExecutions` carries no `jobId` and `subagentJobs` no `sessionId`/`traceId`, and `toolExecutions` is on 14-day retention anyway. Criterion 3 is the only fully satisfiable one and becomes the phase's acceptance spine. The live board is **not abandoned** — it moves to a new cross-repo phase that first repairs the astridr emitter (real `submittedAt`, non-terminal states, a correlation key). Full evidence and the 13 locked decisions: `phases/111-mission-board/111-CONTEXT.md`.)*
 
 **Success Criteria** (what must be TRUE):
 
-  1. Background missions render as live cards carrying status and duration; a job orphaned by a restart renders honestly as failed, never as silently still-running.
-  2. Tool activity on a mission renders as humanized labels ("reading Gmail…", "Write index.html") rather than raw tool/function names.
-  3. No per-mission cost, confirm-card, or squad-grouping affordance appears anywhere on the board — each stays fully absent rather than showing as empty or zeroed.
+  1. Background missions render as an honest **history** — per-mission status and "finished X ago", with no duration figure and no live/streaming chrome implying data that is not arriving. *(Was: "live cards carrying status and duration … orphaned … renders honestly as failed". The orphan and duration halves defer with the emitter phase per D-04.)*
+  2. ~~Tool activity on a mission renders as humanized labels ("reading Gmail…", "Write index.html") rather than raw tool/function names.~~ **Deferred to the emitter phase (D-03)** — no join key exists between a mission and its tool rows.
+  3. No per-mission cost, confirm-card, or squad-grouping affordance appears anywhere on the board — each stays fully absent rather than showing as empty or zeroed. **Extended (D-06/D-07):** this applies to *every* consumer of `subagentJobs`, not just `JobsPanel` — including `ActiveAgentsPanel` (`Chat.tsx:1054`), which filters `status === "running"` against a table that never receives one and therefore renders "No agents running." permanently and unconditionally.
 
 **Plans**: TBD
 **UI hint**: yes

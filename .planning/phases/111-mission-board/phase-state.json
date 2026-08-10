@@ -1,0 +1,31 @@
+{
+  "phase": 111,
+  "phaseName": "mission-board",
+  "created": "2026-08-10T22:37:27.263Z",
+  "history": [
+    {
+      "timestamp": "2026-08-10T22:37:27.264Z",
+      "command": "ui-phase",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-10T22:37:27.264Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "111-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "111-DISCUSSION-LOG.md"
+      ]
+    }
+  }
+}
