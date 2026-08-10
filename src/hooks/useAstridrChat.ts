@@ -617,6 +617,22 @@ export function useAstridrChat() {
     // already has content, so the empty predicate alone never reaches it;
     // adding a reason check would miss the flush-send path and be
     // over-engineering (188.4-CONTEXT.md § D-01).
+    //
+    // CHECK-5 AMENDMENT (2026-08-10, live session 18:11:02.675): the original
+    // `!(blocks.length > 0)` half was too coarse. An interrupted tool-call
+    // turn had already emitted a ToolUseBlock and nothing else, so the
+    // predicate declined and rendered a bubble carrying a bare `reminders`
+    // chip with no text — the SAME user-visible artifact this prune exists to
+    // remove. The test now asks what the user can SEE rather than whether an
+    // array is non-empty: a tool_use block renders as a compact chip
+    // (ChatBubble), so blocks that are ALL tool_use contain nothing visible.
+    // Any other block type — text, markdown, approval, metric, table, or an
+    // unknown one hitting the FallbackBlockData markdown path — IS visible
+    // and keeps the message alive. Note `[].some()` is false, so the
+    // no-blocks-at-all case still prunes exactly as before.
+    // Deliberately still not scoped by `reason`: reason-scoping would let the
+    // next producer on another interrupt path escape this fix the same way
+    // this variant escaped the first one.
     setMessages((prev) => {
       const prunedIds: string[] = [];
       const next: typeof prev = [];
@@ -628,7 +644,7 @@ export function useAstridrChat() {
         const isEmptyAssistant =
           msg.role === "assistant" &&
           !(msg.content && msg.content.length > 0) &&
-          !(msg.blocks && msg.blocks.length > 0);
+          !(msg.blocks ?? []).some((b) => b.type !== "tool_use");
         if (isEmptyAssistant) {
           prunedIds.push(msg.id);
           continue;

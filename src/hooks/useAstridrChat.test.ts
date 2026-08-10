@@ -1014,6 +1014,122 @@ describe("useAstridrChat — interrupt() prunes the empty merge-path assistant b
     expect(survivor?.content).toBe("Tomorrow brings rain");
     expect(survivor?.streaming).toBe(false);
   });
+
+  // ─── Check-5 (188.4-04 live session) — the variant that ESCAPED the above ──
+  // Filed at .planning/todos/pending/
+  // 2026-08-10-merge-path-bubble-survives-prune-when-tool-block-present.md.
+  // Live at 18:11:02.675 the interrupted turn had already emitted a tool_use
+  // block, so `msg.blocks.length > 0` and the original predicate declined —
+  // rendering a bubble carrying a `reminders` chip and NO text ahead of the
+  // real reply. `interrupt.pruned-empty-assistant` appeared nowhere in that
+  // session log while `tts.audio.stop.called {reason:'interrupt:continuation-
+  // merge'}` did, which is the control proving interrupt() ran and the
+  // predicate — not the call — is what declined.
+  //
+  // The discriminator is what the USER can see, not why we interrupted: a
+  // tool_use block renders as a compact chip (ChatBubble), so a message whose
+  // blocks are ALL tool_use has nothing user-visible in it and is the same
+  // artifact as the no-blocks case. Any block that is not tool_use (text,
+  // markdown, approval, metric, table…) is user-visible and must survive.
+
+  it("PRUNE-MERGE-PATH-TOOLUSE-ONLY: interrupt() removes a placeholder whose only block is a tool_use chip (Check-5)", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("How many reminders do I have?");
+    });
+
+    // The live shape: a tool-call turn emitted its ToolUseBlock before the
+    // continuation merge interrupted it, and no text ever arrived.
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "tool_use", name: "reminders", arguments: {} }],
+          round_num: 0,
+        },
+      });
+    });
+
+    const beforeInterrupt = result.current.messages.find((m) => m.role === "assistant");
+    expect(beforeInterrupt?.content).toBe("");
+    expect(beforeInterrupt?.blocks).toHaveLength(1);
+
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    expect(result.current.messages.filter((m) => m.role === "assistant")).toHaveLength(0);
+  });
+
+  it("CTRL-PRUNE-KEEPS-TOOLUSE-PLUS-TEXT: a turn that emitted a tool chip AND text is kept — only flipped to streaming:false", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("How many reminders do I have?");
+    });
+
+    // One differing variable against PRUNE-MERGE-PATH-TOOLUSE-ONLY: a text
+    // block alongside the same chip. This is the tool-call turn that actually
+    // answered, and pruning it would delete a real reply.
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [
+            { type: "tool_use", name: "reminders", arguments: {} },
+            { type: "text", text: "You have three reminders." },
+          ],
+          round_num: 0,
+        },
+      });
+    });
+
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    const survivor = result.current.messages.find((m) => m.role === "assistant");
+    expect(survivor).toBeDefined();
+    expect(survivor?.blocks).toHaveLength(2);
+    expect(survivor?.streaming).toBe(false);
+  });
+
+  it("CTRL-PRUNE-KEEPS-APPROVAL-ONLY: an approval block with no text is user-visible and actionable — never pruned", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("delete the old backups");
+    });
+
+    // The dangerous false positive for any "no text means nothing to see"
+    // rule: an approval block carries no text field at all, but it is the
+    // entire point of the message and pruning it would silently drop a HITL
+    // gate the user is meant to answer.
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [
+            {
+              type: "approval",
+              requestId: "req-1",
+              action: "delete_backups",
+              details: {},
+              riskLevel: "high",
+            },
+          ],
+          round_num: 0,
+        },
+      });
+    });
+
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    const survivor = result.current.messages.find((m) => m.role === "assistant");
+    expect(survivor).toBeDefined();
+    expect(survivor?.blocks?.[0]?.type).toBe("approval");
+    expect(survivor?.streaming).toBe(false);
+  });
 });
 
 // ─── D-02 (188.4-01): a late run.blocks after interrupt() resurrects with ────
