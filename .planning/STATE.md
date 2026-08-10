@@ -5,12 +5,12 @@ milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
 stopped_at: Completed Phase 109 (10/10) — ENGINE-03, ENGINE-04 and TELE-02 all signed against the live stack
 last_updated: "2026-08-10T15:11:27.087Z"
-last_activity: 2026-08-10 -- Phase 116 waves 1-3 complete (4/8 plans), paused at 116-05 deploy checkpoint
+last_activity: 2026-08-10 -- Phase 116 wave 4 complete (5/8 plans), galdr surface deployed live to 127.0.0.1:3210
 progress:
   total_phases: 12
   completed_phases: 2
   total_plans: 25
-  completed_plans: 21
+  completed_plans: 22
   percent: 17
 ---
 
