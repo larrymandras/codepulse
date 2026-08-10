@@ -31,6 +31,16 @@ vi.mock("@/hooks/useCommandPaletteSearch", () => ({
     sessions: [{ id: "s1", label: "Session #1" }],
     alerts: [{ id: "al1", title: "Cost spike" }],
     cronJobs: [{ id: "cj1", name: "health-check" }],
+    // Phase 117: Bifröst links joined this hook's contract. The second entry is
+    // deliberately titled "Tasks" — the same label as a Pages nav entry — to
+    // hold the cmdk value-collision guard honest. "Tasks" specifically because
+    // no other assertion in this file resolves that text, so the fixture does
+    // not make unrelated tests ambiguous (an earlier attempt used "Forge" and
+    // broke three of them).
+    links: [
+      { id: "l1", title: "Convex dashboard", url: "http://127.0.0.1:6791" },
+      { id: "l2", title: "Tasks", url: "http://127.0.0.1:7070" },
+    ],
   }),
 }));
 
@@ -127,6 +137,29 @@ describe("CommandPalette", () => {
     const item = screen.getByText("Send task to agent");
     fireEvent.click(item);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  // Phase 117 D-05 — Bifröst links in the palette.
+  it("Links group renders link items from useCommandPaletteSearch", () => {
+    renderPalette({ open: true });
+    expect(screen.getByText("Links")).toBeInTheDocument();
+    expect(screen.getByText("Convex dashboard")).toBeInTheDocument();
+  });
+
+  it("a link whose title duplicates a nav page renders BOTH, with distinct cmdk values", () => {
+    renderPalette({ open: true });
+
+    // "Tasks" exists twice on purpose: once as a Pages nav entry, once as a
+    // link. cmdk keys selection by value and derives it from item text when
+    // none is given, so without the explicit `value` on link items these two
+    // collapse into one value — the double-highlight / ArrowDown-loop defect.
+    const dupItems = screen.getAllByText("Tasks");
+    expect(dupItems.length).toBe(2);
+
+    const values = dupItems
+      .map((el) => el.closest("[data-value]")?.getAttribute("data-value"))
+      .filter(Boolean);
+    expect(new Set(values).size).toBe(values.length);
   });
 
   it("Cron Jobs group renders cron job items from useCommandPaletteSearch", () => {

@@ -50,6 +50,7 @@ import {
   Gauge,
   Wrench,
   Sparkles,
+  Link2,
 } from "lucide-react";
 
 export const iconComponents: Record<string, React.ElementType> = {
@@ -94,6 +95,7 @@ export const iconComponents: Record<string, React.ElementType> = {
   gauge: Gauge,   // Phase 93 — Quality page
   wrench: Wrench,   // Phase 105 — Tools page
   sparkles: Sparkles,   // Phase 116 — Galdr page
+  "link-2": Link2,   // Phase 117 — Bifröst page
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -127,6 +129,8 @@ export const navGroups: NavGroupConfig[] = [
       { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
       // Adjacent to Skills on purpose: both are curated-content-library tools.
       { to: "/galdr", label: "Galdr", icon: "sparkles", group: "COMMAND" },
+      // Bifröst sits beside Galdr: both are Seiðr Suite curated-library surfaces.
+      { to: "/bifrost", label: "Bifröst", icon: "link-2", group: "COMMAND" },
       { to: "/reminders", label: "Reminders", icon: "clock", group: "COMMAND" },
       { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "COMMAND" },
       { to: "/forge", label: "Forge", icon: "flame", group: "COMMAND" },

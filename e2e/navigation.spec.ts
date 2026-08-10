@@ -30,6 +30,15 @@ test.describe('Sidebar navigation', () => {
     await expect(page).toHaveURL('/galdr');
   });
 
+  // Phase 117: same reasoning as the galdr test above — proves the registry
+  // entry renders as a reachable link, which no unit test can show.
+  test('navigates to bifrost page', async ({ page }) => {
+    await page.goto('/');
+    const bifrostLink = page.locator('a[href="/bifrost"]').first();
+    await bifrostLink.click();
+    await expect(page).toHaveURL('/bifrost');
+  });
+
   test('navigates to alerts page', async ({ page }) => {
     await page.goto('/');
     const alertsLink = page.locator('a[href="/alerts"]').first();

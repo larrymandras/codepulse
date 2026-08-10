@@ -25,6 +25,7 @@ import {
   Navigation,
   Zap,
   LayoutDashboard,
+  Link2,
 } from "lucide-react";
 // Leaf nav registry — NOT DashboardLayout, which imports CommandPalette
 // (importing it here created an import cycle; WR-02, phase 96 review).
@@ -40,7 +41,8 @@ interface CommandPaletteProps {
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { sendCommand } = useAstridrWS();
-  const { agents, sessions, alerts, cronJobs } = useCommandPaletteSearch();
+  const { agents, sessions, alerts, cronJobs, links } =
+    useCommandPaletteSearch();
   const { commands, status: commandsStatus } = useCommandCatalog();
 
   function select(action: () => void) {
@@ -67,6 +69,38 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               </CommandItem>
             );
           })}
+        </CommandGroup>
+
+        <CommandSeparator />
+
+        {/* Phase 117 D-05: Bifröst links. Enter opens the URL — external ones in
+            a new tab, internal paths through the router.
+
+            The explicit `value` is load-bearing, not decoration. cmdk keys
+            selection by value and derives it from item TEXT when none is given,
+            so a link titled "Forge" would collide with the Forge nav entry in
+            the Pages group above — producing the double-highlight and
+            ArrowDown loop this repo has hit before. Including the URL makes
+            each value unique while keeping both title and URL searchable. */}
+        <CommandGroup heading="Links">
+          {links.map((l) => (
+            <CommandItem
+              key={l.id}
+              value={`${l.title} ${l.url}`}
+              onSelect={() =>
+                select(() => {
+                  if (/^https?:\/\//i.test(l.url)) {
+                    window.open(l.url, "_blank", "noopener,noreferrer");
+                  } else {
+                    navigate(l.url);
+                  }
+                })
+              }
+            >
+              <Link2 className="mr-2 h-4 w-4" />
+              {l.title}
+            </CommandItem>
+          ))}
         </CommandGroup>
 
         <CommandSeparator />

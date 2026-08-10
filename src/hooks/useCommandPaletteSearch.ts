@@ -5,6 +5,7 @@ export interface PaletteAgent { id: string; name: string }
 export interface PaletteSession { id: string; label: string }
 export interface PaletteAlert { id: string; title: string }
 export interface PaletteCronJob { id: string; name: string }
+export interface PaletteLink { id: string; title: string; url: string }
 
 export function useCommandPaletteSearch() {
   // Live Convex subscriptions — always up-to-date (avoids stale data)
@@ -15,6 +16,10 @@ export function useCommandPaletteSearch() {
   // Cron jobs: per D-01/D-03, cron jobs are a searchable entity type
   // recentCrons returns individual cron execution records with jobName field
   const cronRaw = useQuery(api.automation.recentCrons, {}) ?? [];
+  // Phase 117 D-05: Bifröst links join this existing aggregation seam rather
+  // than getting their own palette plumbing. Not sliced — the hub is curated by
+  // hand and is expected to stay small, unlike the telemetry sets above.
+  const linksRaw = useQuery(api.bifrost.list) ?? [];
 
   const agents: PaletteAgent[] = (agentsRaw as any[]).slice(0, 20).map((a) => ({
     id: a._id,
@@ -43,5 +48,11 @@ export function useCommandPaletteSearch() {
     if (cronJobs.length >= 20) break;
   }
 
-  return { agents, sessions, alerts, cronJobs };
+  const links: PaletteLink[] = (linksRaw as any[]).map((l) => ({
+    id: l._id,
+    title: l.title,
+    url: l.url,
+  }));
+
+  return { agents, sessions, alerts, cronJobs, links };
 }
