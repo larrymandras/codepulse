@@ -906,3 +906,84 @@ run. The signature belongs in a follow-up once Probe F is unblocked.
   re-run. `consulting` and `personal` are clear. This needs a scoped restore once the page is
   usable again.
 - The page freeze above needs diagnosis before Probe F can be attempted.
+
+## Probe F — attempted via the plan's own route, and BLOCKED on a one-way door
+
+The page freeze reported above was **transient**, not a permanent lock: after the operator restarted
+Chrome the same `New Profile` control opened its Sheet normally and the page has been responsive
+since. The most likely cause is the Vite dev-server HMR recompile triggered by this plan's own edit
+to `useProfileSwap.ts`, which was in flight at exactly that moment. Recorded as a probable cause,
+not a proven one — and explicitly NOT a CodePulse defect claim.
+
+Teardown of the Probe D re-run's pin was completed first:
+
+```
+state_before_teardown: { model_override: null,
+                         profile_overrides: { business: { model: "claude-sonnet-5", ... } } }
+restore ack: ok
+STATE_AFTER_TEARDOWN:  { model_override: null, profile_overrides: {} }
+AT_BASELINE: true
+```
+
+### What happened when the plan's route was followed
+
+A profile `gate-probe-f-temp` was created through Settings → Agent Profiles → **New Profile**. It did
+NOT appear in the Agent Profiles list. My first reading of that was "the create failed" — **wrong**,
+and corrected by querying the source of truth:
+
+```
+$ npx convex run agentProfiles:list --url http://127.0.0.1:3210 --admin-key "..."
+  { "_id": "jd74stq2vbzy7mtwkvq3da4d7x8c6bf9",
+    "name": "Gate Probe F Temp",
+    "profileId": "gate-probe-f-temp" }        <- created successfully
+```
+
+It was deleted immediately, verified against a control so the absence could not be a broken probe:
+
+```
+occurrences of gate-probe-f-temp after remove: 0
+total agentProfiles rows still present:        3993     <- control: the query still returns data
+```
+
+### Why the plan's route cannot satisfy Probe F
+
+`New Profile` writes to the **`agentProfiles`** table (`useAgentProfiles.ts:9` →
+`api.agentProfiles.create`). The Agent Profiles rows — and therefore the Settings surface Probe F
+must read — render from **`profileConfigs`** instead. The component's own docstring says so
+(`Settings.tsx:237-240`):
+
+> "Renders one row per REAL, populated profile (`profileConfigs`, via `useProfileConfigs()`), never
+> per the legacy `agentProfiles` table … `agentProfiles` is consulted only as an optional join for
+> `displayName`/`avatarId`/the Edit-button's metadata target."
+
+So a profile created through that button is structurally invisible on the four surfaces Probe F
+needs to read. Satisfying Probe F requires a **`profileConfigs`** row instead.
+
+**And that is a one-way door.** `convex/profiles.ts` exports `recordMetrics`, `overview`,
+`recordActivityBatch`, `upsertConfig`, `updateEmail`, `listConfigs`, `recordSwitch`,
+`recentSwitches`, `seedProfiles`, `summarize` — no delete. Repo-wide:
+
+```
+$ grep -rn "profileConfigs" convex/*.ts | grep -iE "\.delete\("
+NO .delete() against profileConfigs anywhere in convex/
+```
+
+Creating a fourth `profileConfigs` row to satisfy Probe F would therefore add a permanent profile to
+the operator's live configuration with no supported way to remove it, on a self-hosted instance
+whose operational rules forbid casual hand-deletion. That decision belongs to the operator, so the
+probe stops here rather than proceeding.
+
+**Probe F remains PARTIAL. It is still not rounded up.**
+
+### Two incidental findings, raised because they are substantiated
+
+1. **`New Profile` creates rows the section it lives in never displays.** The button sits inside the
+   Agent Profiles card but writes to `agentProfiles`, while that card renders `profileConfigs`. A
+   profile created there succeeds silently and is then invisible. Confidence: high — the create was
+   observed succeeding in `agentProfiles` while the card's own docstring documents it renders only
+   `profileConfigs`. Whether this is a defect or an intentional split serving the Roster feature is
+   not established here.
+2. **A stale claim in a load-bearing comment.** `Settings.tsx:239` justifies ignoring `agentProfiles`
+   on the grounds it has "zero rows in production, `convex/profiles.ts:113`". The live self-hosted
+   instance returns **3993** rows. The rendering decision may still be correct, but its stated
+   justification is false as written.
