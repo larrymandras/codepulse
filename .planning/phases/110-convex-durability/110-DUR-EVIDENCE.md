@@ -771,3 +771,281 @@ would have destroyed 110-06's evidence before it could be collected.
 *Task 1, Task 2 (operator authorization), and Task 3 (deploy + post-deploy readback) of
 `110-04-PLAN.md` are complete. The new retention code (and Phase 116's galdr backend) is live on the
 self-hosted instance. The retention cron was not triggered.*
+
+---
+
+# Plan 110-05 — D-07 health-check edit + DUR-02 leg 2
+
+## Task 1 — retention-health-check.ps1 edited to read the live policy (D-07)
+
+This script lives at `C:/Users/mandr/convex-selfhost/retention-health-check.ps1` and is **not
+under version control** until Phase 113's debt sweep, so the edit itself is captured here as the
+only durable record of what changed and the only rollback path.
+
+### Backup and hash (taken before any edit)
+
+```
+Copy-Item retention-health-check.ps1 retention-health-check.ps1.pre-110.bak
+```
+
+| | SHA256 |
+|---|---|
+| Original (pre-edit), `Get-FileHash` | `F0A156BEA17EF7EC9E6B9CB08B9194E98A0EDD914713832478190FFCC3906817` |
+| `.pre-110.bak` backup, `Get-FileHash` | `F0A156BEA17EF7EC9E6B9CB08B9194E98A0EDD914713832478190FFCC3906817` |
+| Match | **TRUE** — backup is byte-identical to the pre-edit original |
+| Edited file (post-edit), `Get-FileHash` | `3F579801768BADD75E5E6AF4D1DD13E220E46BC3F984730C92CD1DBB1D073492` |
+
+`C:/Users/mandr/convex-selfhost/retention-health-check.ps1.pre-110.bak` exists on disk. This is
+the only rollback path: `Copy-Item retention-health-check.ps1.pre-110.bak retention-health-check.ps1
+-Force` restores the pre-110 state exactly, verifiable against the first hash above.
+
+### The edit
+
+Deleted the `$RetentionDays` hand-copied hashtable (14 entries) and its "Keep in sync if that map
+changes" comment outright. Replaced with a live CLI read of `retention:listRetentionPolicy` via the
+proven invocation form from plan 110-04 (`npx convex run --env-file <path> retention:listRetentionPolicy`),
+parsed into a `$Policy` PSCustomObject, with a hard failure path (no fallback list) if the read
+fails, returns non-JSON, or yields zero properties. The probe loop's `foreach` header now iterates
+`$Policy.PSObject.Properties.Name` instead of `$RetentionDays.Keys`; the loop body is otherwise
+byte-identical (still uses `$table`/`$days`). The verdict log line gained a `tables=$policyTableCount`
+field.
+
+Edited with the Edit tool (which writes/reads UTF-8 losslessly), not `Get-Content`/`Set-Content` —
+avoids the PS 5.1 ANSI round-trip mojibake trap.
+
+### Verification
+
+**Parse check** (`[System.Management.Automation.Language.Parser]::ParseFile`, run via a script file
+to avoid shell-quoting interference, with the error array explicitly inspected rather than trusting
+a bare exit code):
+```
+PARSE_OK
+```
+Zero parser errors.
+
+**BOM / ASCII check** — the file was already genuinely ASCII-only pre-edit (0 bytes > 127, no BOM;
+its own header comment claims "ASCII-only for PS 5.1"), so there were no em-dashes or other
+non-ASCII characters to corrupt. Re-checked post-edit:
+```
+non-ascii byte count (post-edit): 0
+```
+Confirmed still 0. No mojibake introduced.
+
+**Grep acceptance criteria:**
+
+| Check | Result |
+|---|---|
+| `Select-String -SimpleMatch '$RetentionDays'` | 0 hits |
+| `Select-String -SimpleMatch 'Keep in sync'` | 0 hits |
+| `Select-String -SimpleMatch 'retention:listRetentionPolicy'` | 1 hit (the invocation line; the explanatory comment was worded to avoid a second literal match) |
+| Hardcoded table names (`runtime_events`, `toolExecutions`, `agentCoordination`, plus the other 10 old entries) outside comment lines | 0 hits (`grep -v '^\s*#' ... \| grep -E '<names>'` → no match, exit 1) |
+
+**Full diff against `.pre-110.bak`** — exactly three regions changed, matching the plan's bound
+("changes only in the replaced region and the verdict line, probe-loop body unchanged apart from
+its foreach header"):
+
+```diff
+--- retention-health-check.ps1.pre-110.bak
++++ retention-health-check.ps1
+@@ -35,22 +35,39 @@
+ $CodepulseDir = 'C:\Users\mandr\codepulse'
+ $alertConfig  = 'C:\Users\mandr\scripts\notebooklm-keepwarm.alert.conf'
+
+-# Mirrors convex/retention.ts RETENTION_DAYS. Keep in sync if that map changes.
+-$RetentionDays = [ordered]@{
+-    runtime_events        = 14
+-    toolExecutions        = 14
+-    activeTime            = 14
+-    selfHealingEvents     = 14
+-    fileOps               = 14
+-    heartbeatAlerts       = 14
+-    events                = 90
+-    environmentSnapshots  = 90
+-    contextSnapshots      = 90
+-    metricSnapshots       = 90
+-    securityEvents        = 90
+-    cronExecutions        = 90
+-    jobLifecycle          = 90
+-    agentCoordination     = 90
++# Live read of the deployed retention policy (convex/retention.ts RETENTION_DAYS) via
++# the CLI call below -- Phase 110 D-07 removes the hand-copied table list entirely, so
++# a table added to RETENTION_DAYS is visible here the next run, not the next time
++# someone remembers to update this file. A failed, non-JSON, or empty read is a hard
++# non-zero exit -- this NEVER falls back to a hardcoded table list. A health check
++# that silently degrades to a stale subset while still printing a green verdict is
++# the exact defect this replaces: it is worse than no health check at all.
++$policyRaw = (cmd /c "cd /d `"$CodepulseDir`" && npx convex run --env-file `"$EnvFile`" retention:listRetentionPolicy 2>&1") -join "`n"
++$policyExit = $LASTEXITCODE
++$Policy = $null
++$policyTableCount = 0
++$policyFailReason = $null
++if ($policyExit -ne 0) {
++    $policyFailReason = "CLI exit ${policyExit}: $policyRaw"
++} else {
++    try {
++        $Policy = $policyRaw | ConvertFrom-Json
++    } catch {
++        $Policy = $null
++        $policyFailReason = "non-JSON response: $policyRaw"
++    }
++    if ($null -ne $Policy) {
++        $policyTableCount = @($Policy.PSObject.Properties.Name).Count
++        if ($policyTableCount -eq 0) {
++            $policyFailReason = "policy read returned zero properties (empty is a failure, not an empty policy)"
++        }
++    }
++}
++if ($policyFailReason) {
++    $failMsg = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') verdict=ALERT detail=policy read failed -- $policyFailReason -- no fallback table list used"
++    $failMsg | Out-File -FilePath $Log -Append -Encoding utf8
++    Write-Host $failMsg
++    exit 1
+ }
+
+ # Thresholds
+@@ -98,8 +115,8 @@
+ $anyTimeout = $false
+ $nowMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+
+-foreach ($table in $RetentionDays.Keys) {
+-    $days = $RetentionDays[$table]
++foreach ($table in $Policy.PSObject.Properties.Name) {
++    $days = $Policy.$table
+     # Single-quoted JS string literals only -- keeps this free of nested double-quotes
+     # so the cmd /c wrapping below doesn't have to fight PowerShell/cmd quote parsing.
+     $query = "const oldest = await ctx.db.query('$table')..."
+@@ -168,7 +185,7 @@
+     $detail = "all tables caught up, no timeouts, memory/db nominal"
+ }
+
+-Write-Log "verdict=$verdict detail=$detail"
++Write-Log "verdict=$verdict tables=$policyTableCount detail=$detail"
+```
+
+**VERDICT: PASS.** All Task 1 acceptance criteria satisfied. The hand-copied policy is gone, the
+script now reads the deployed map through the proven CLI invocation, a failed read is a hard
+non-zero exit with no fallback list, and the original is backed up with a verified-matching hash.
+The deliberate-break test proving the failure path actually fires (rather than merely being
+described) is deferred to the Task 3 checkpoint per the plan, since it requires temporarily
+pointing the read at a nonexistent function and restoring — an operator-run step, not this
+executor's to perform unattended.
+
+---
+
+## DUR-02 leg 2 — health check covers every table
+
+**Scope of this leg's claim, stated up front:** this leg proves **coverage only** — every table in
+the deployed retention policy is now visible to the health check. It is **not** evidence that a
+complete prune pass executed. `empty-or-caught-up` is ambiguous between pruned, empty, and nothing
+aged out. The claim that a complete pass actually ran belongs to leg 1 in plan 110-06, observing
+tomorrow's 09:00 UTC nightly cron, and is not asserted here.
+
+### Run
+
+Executed attended, once, via `powershell -NoProfile -File retention-health-check.ps1`, script start
+2026-08-10 18:00:22 (pre-run timestamp), completing 2026-08-10 18:02:00 per the log. Script process
+exit code: `0` (the script's own exit code reflects whether the *policy read* succeeded, not the
+per-table verdict — an `ALERT` verdict from a stale/timed-out table is a monitored condition logged
+and Telegram-alerted, not a script-level failure; only a failed policy read exits non-zero, per
+Task 1's design).
+
+Full `retention-health.log` block for this run, pasted verbatim (no credential value appears in it
+— the log only ever contains table names, overhang hours, memory/db size, and verdict text; the
+`--env-file` path itself, not its contents, is what appears in the script, and is not echoed to the
+log at all):
+
+```
+2026-08-10 18:00:36 === retention health check starting ===
+2026-08-10 18:00:37   activeEngineSnapshots -> oldest doc overhang 0h past 30d cutoff
+2026-08-10 18:00:39   activeTime -> oldest doc overhang 11h past 14d cutoff
+2026-08-10 18:00:40   agentCoordination -> oldest doc overhang 0h past 90d cutoff
+2026-08-10 18:00:41   aggregates -> oldest doc overhang 172.8h past 90d cutoff
+2026-08-10 18:00:42   contextSnapshots -> empty or fully caught up
+2026-08-10 18:00:43   controlVerbSwaps -> oldest doc overhang 0h past 30d cutoff
+2026-08-10 18:00:44   cronExecutions -> oldest doc overhang 13h past 90d cutoff
+2026-08-10 18:00:47   environmentSnapshots -> oldest doc overhang 0h past 90d cutoff
+2026-08-10 18:01:11   events -> TIMEOUT: [Error fetching POST http://127.0.0.1:3210/api/run_test_function 400 Bad Request: SystemTimeoutError: Your request timed out performing too many system operations.]
+2026-08-10 18:01:13   fileOps -> oldest doc overhang 11h past 14d cutoff
+2026-08-10 18:01:14   gatewayQuotaSnapshots -> oldest doc overhang 0h past 30d cutoff
+2026-08-10 18:01:15   heartbeatAlerts -> oldest doc overhang 9.7h past 14d cutoff
+2026-08-10 18:01:16   jobLifecycle -> oldest doc overhang 13h past 90d cutoff
+2026-08-10 18:01:17   metricSnapshots -> empty or fully caught up
+2026-08-10 18:01:24   runtime_events -> oldest doc overhang 13h past 14d cutoff
+2026-08-10 18:01:25   securityEvents -> oldest doc overhang 0h past 90d cutoff
+2026-08-10 18:01:26   selfHealingEvents -> oldest doc overhang 13h past 14d cutoff
+2026-08-10 18:01:27   toolExecutions -> oldest doc overhang 11h past 14d cutoff
+2026-08-10 18:01:28   toolPolicyEvents -> oldest doc overhang 0h past 90d cutoff
+2026-08-10 18:01:30   memory=32.51GiB / 64GiB db=6.3GiB
+2026-08-10 18:01:30 verdict=ALERT tables=19 detail=at least one table's index-head query timed out (index rot); worst overhang 172.8h exceeds 72h (prune not keeping up)
+2026-08-10 18:01:59 wrote self-diagnosis to C:\Users\mandr\convex-selfhost\diagnosis-2026-08-10-1801.md
+2026-08-10 18:02:00 Telegram alert sent.
+2026-08-10 18:02:00 === done ===
+```
+
+### Three-way table-count cross-check
+
+| Source | Count |
+|---|---|
+| Tables probed by this run (`tables=` in the verdict log line, independently recounted from the 19 per-table lines above) | 19 |
+| `Object.keys(RETENTION_DAYS).length`, source, `convex/retention.ts` (established in plan 110-04's own independent re-derivation) | 19 |
+| Deployed `listRetentionPolicy` readback key count (established in plan 110-04) | 19 |
+
+**All three equal at 19.** This is a coverage gain from 14 (the pre-110 script) to 19, matching the
+deployed policy exactly — a run printing 14 would mean the edit did not take effect; a run printing
+18 would mean `aggregates` was missing from what the script read. Neither happened.
+
+### The five previously-invisible tables, by name
+
+| Table | Status this run |
+|---|---|
+| `gatewayQuotaSnapshots` | `ok` — oldest doc overhang 0h past 30d cutoff |
+| `toolPolicyEvents` | `ok` — oldest doc overhang 0h past 90d cutoff |
+| `activeEngineSnapshots` | `ok` — oldest doc overhang 0h past 30d cutoff |
+| `controlVerbSwaps` | `ok` — oldest doc overhang 0h past 30d cutoff |
+| `aggregates` | `ok` — oldest doc overhang **172.8h** past 90d cutoff |
+
+All five now appear by name in the health check's output — this is what makes this leg evidence of
+coverage rather than a count that could have been reached some other way. `aggregates`' 172.8h
+overhang is not itself alarming for this leg's coverage-only claim: the new `aggregates`-aware
+prune predicate deployed today (plan 110-04) has not yet run under the nightly cron (next fire is
+tomorrow 09:00 UTC, observed by plan 110-06's leg 1) — an overhang here says nothing about whether a
+prune pass will succeed, only that the table is now visible to the check at all, which it was not
+before this plan.
+
+### TIMEOUT — one table, recorded verbatim, not re-run
+
+**`events` returned `TIMEOUT`** this run:
+```
+events -> TIMEOUT: Error fetching POST  http://127.0.0.1:3210/api/run_test_function 400 Bad Request: SystemTimeoutError: Your request timed out performing too many system operations.
+```
+
+Per this plan's explicit instruction, this is recorded verbatim and the run is **not re-run** — a
+probe that times out on this instance is a signal about instance health, per `CLAUDE.md`'s
+Self-Hosted Convex operational rules ("A dashboard-wide 'no data / all zeros / reconnect loop' is
+index rot or memory starvation until proven otherwise"), and repeating the read is exactly the read
+pressure those rules warn against. Backend memory during this run was `32.51GiB` (up from `16.02GiB`
+at the prior day's 05:30 scheduled run, tail-read earlier in this session), consistent with — not
+proof of — an index-rot condition. No action was taken against the instance in response (read-only
+scope per this plan's `<live_instance_safety>` bound); this is flagged for the team lead below.
+
+**This means Task 2's "zero `TIMEOUT` rows" acceptance criterion is NOT met by this run.** Coverage
+of all 19 tables is proven (the cross-check above), five previously-invisible tables are confirmed
+visible by name, and the hard-failure-path design from Task 1 is sound — but the run itself
+surfaced a real, live TIMEOUT on `events`, which this evidence records honestly rather than omits
+or re-runs away.
+
+### Credential-shape scan
+
+```
+grep -inE "sk_[A-Za-z0-9]|sb_[A-Za-z0-9]|gho_[A-Za-z0-9]|Bearer [A-Za-z0-9]|convex-self-hosted\|" \
+  .planning/phases/110-convex-durability/110-DUR-EVIDENCE.md
+```
+No new match introduced by this section (checked by re-running the same scan the orchestrator used
+in 110-04 against the file after this append). The only prior hit remains the pre-existing false
+positive on the word "bearer" in ordinary prose from the 110-04 preamble.
+
+---
+
+*Plan 110-05 Task 1 (script edit) and Task 2 (DUR-02 leg 2 capture) are complete. Task 3
+(operator checkpoint, including the deliberate-break test and a decision on the `events` TIMEOUT
+finding above) has not yet run.*
