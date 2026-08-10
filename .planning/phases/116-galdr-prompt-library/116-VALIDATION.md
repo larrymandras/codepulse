@@ -1,11 +1,26 @@
 ---
 phase: 116
 slug: galdr-prompt-library
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-10
 ---
+
+<!--
+nyquist_compliant: true  — set 2026-08-10 after gsd-plan-checker traced every row of the
+Per-Task Verification Map below against the 8 PLAN.md files and found each covered by a
+concrete <automated> command, with no MISSING markers, no watch-mode flags, and no
+three-consecutive-tasks-without-verify gap.
+
+wave_0_complete: DELIBERATELY LEFT false. The checker's fix hint suggested flipping it too,
+but the Wave 0 files listed below do not exist on disk yet — verified 2026-08-10:
+convex/__tests__/galdr.test.ts and src/components/galdr/ are both absent, while the three
+files marked "exists" (convex/retention.test.ts, convex/__tests__/ingestAuth.test.ts,
+e2e/navigation.spec.ts) were confirmed present by the same check. This flag means the
+scaffolding is WRITTEN, not that it is PLANNED. It flips during execution, not now.
+-->
+
 
 # Phase 116 — Validation Strategy
 
@@ -84,12 +99,13 @@ Task IDs are assigned by the planner. Each row below is a **behaviour that must 
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all ❌ references above
-- [ ] No watch-mode flags (`vitest run`, never bare `vitest`; `playwright test`, never `--ui`)
-- [ ] Feedback latency < 60s
-- [ ] Manual-only rows each have concrete, observable instructions — no proxy signals
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all ❌ references above — the shared `{{variable}}` extraction is plan 116-02, wave 1, ahead of both consumers
+- [x] No watch-mode flags (`vitest run`, never bare `vitest`; `playwright test`, never `--ui`)
+- [x] Feedback latency < 60s
+- [x] Manual-only rows each have concrete, observable instructions — no proxy signals
+- [x] `nyquist_compliant: true` set in frontmatter
+- [ ] `wave_0_complete: true` — **flips during execution**, once the Wave 0 files above exist on disk. Not a planning-time claim.
 
-**Approval:** pending
+**Approval:** approved 2026-08-10 (gsd-plan-checker, VERIFICATION PASSED)

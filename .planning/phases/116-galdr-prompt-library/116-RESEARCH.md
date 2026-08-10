@@ -395,14 +395,16 @@ Not applicable in the "old approach → new approach" sense — this is a greenf
 
 **If this table is empty:** N/A — one assumption logged above; everything else in this research is grounded in direct file:line reads of the live repo (auth validators, HTTP routes, retention module, schema conventions, deploy evidence from Phase 107-05, `recordSkillLaunch` behavior, skill directory contents).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact env-var resolution mechanism for the galdr skill script**
+> Both questions were settled during planning on 2026-08-10. Resolutions verified against the plan text, cited inline below.
+
+1. **(RESOLVED — see `116-07-PLAN.md:128-130`)** Option (b) was chosen: `process.env.GALDR_API_KEY` / `process.env.CODEPULSE_URL` first, falling back to a skill-local dotfile resolved as an ABSOLUTE path from `os.homedir()` and parsed with a simple `KEY=VALUE` line match. The `codepulse-hook.mjs` relative-resolution trick is forbidden by name. There is no default for the key — `116-07-PLAN.md:181` requires a real child-process test proving exit code 2 with the variable deleted. **Exact env-var resolution mechanism for the galdr skill script**
    - What we know: the pattern to copy (`hooks/codepulse-hook.mjs:187-232`) resolves `.env.local` relative to the hook's own location inside the repo.
    - What's unclear: the skill lives outside the repo at `~/.claude/skills/galdr/`, so that relative resolution cannot work unmodified.
    - Recommendation: planner decides between (a) a real shell/user environment variable set once outside any repo, or (b) a skill-local `~/.claude/skills/galdr/.env` loaded via an absolute path the script constructs from `os.homedir()`. Either is a small, contained decision — does not need a fresh research pass.
 
-2. **Whether the skill's `usageCount` bump on injection reuses the same POST route as `/galdr-save`, or needs a third route**
+2. **(RESOLVED — see `116-04-PLAN.md:145-146, 183, 293`)** The recommendation below was taken: a third, narrow `POST /galdr/usage` route calling `api.galdr.recordUsage`, structurally unable to reach D-15's version-append path rather than avoiding it by a conditional. Four Galdr routes total. **Whether the skill's `usageCount` bump on injection reuses the same POST route as `/galdr-save`, or needs a third route**
    - What we know: design doc §4.1 says `/galdr <slug>` "injects into context, bumps usageCount" — implying a write happens after a successful fetch+resolve, distinct from `/galdr-save`'s "capture a new prompt" semantics.
    - What's unclear: whether this is a third, minimal route (e.g. `POST /galdr/prompt/bump-usage`) or an optional flag on the existing write route.
    - Recommendation: a third, narrow route (`{slug}` in, `{ok:true}` out, no body-changing side effects, so it does NOT append a `promptVersions` snapshot per D-15's "body-changing write" scope) keeps the write route's contract clean — bumping usage is not a body-changing write and must not trigger Pattern 5's version-append logic.

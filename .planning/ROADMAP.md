@@ -846,6 +846,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 114 to break down)
 
 ### Phase 115: Workspace scanner
@@ -856,6 +857,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 115 to break down)
 
 ### Phase 116: Galdr prompt library
@@ -866,13 +868,30 @@ Plans:
 **Plans:** 8 plans in 6 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 116-01-PLAN.md — schema tables, D-13 retention exemption, `validateGaldrAuth` (wave 1)
 - [ ] 116-02-PLAN.md — shared pure `{{variable}}` + slug contract (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 116-03-PLAN.md — `convex/galdr.ts` domain module: collision refusal, append-only versions, count-cap prune, archive (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 116-04-PLAN.md — four bearer-authed HTTP routes with no CORS and no OPTIONS (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 116-05-PLAN.md — [BLOCKING] deploy the schema to the live self-hosted instance (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 116-06-PLAN.md — FillVariablesDialog, SendSplitButton, PromptEditorDrawer (wave 5)
 - [ ] 116-07-PLAN.md — the `/galdr` + `/galdr-save` Claude Code skill and its install (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 116-08-PLAN.md — `/galdr` page, nav registry entry, route, e2e (wave 6)
 
 ### Phase 117: Bifrost link hub
@@ -883,6 +902,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 117 to break down)
 
 ### Phase 118: Studio media gallery
@@ -893,6 +913,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 118 to break down)
 
 ### Phase 119: Loom curated pipelines
@@ -903,6 +924,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 119 to break down)
 
 ---
