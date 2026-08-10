@@ -261,6 +261,20 @@ None — no external service configuration required. This plan is code-only; not
 - Plan 110-05's DUR-01 live before/after daily-row count check has real code to verify against: `PRUNE_PREDICATES.aggregates` is mutation-tested in the unit suite, but the live proof that a nightly run actually preserves daily rows on the production instance still needs the deploy (110-04) plus a real prune cycle (110-05).
 - No blockers identified for the next wave.
 
+## Self-Check
+
+- `convex/retention.ts` exists: FOUND
+- `convex/retention.test.ts` exists: FOUND
+- `convex/aggregates.ts` exists: FOUND
+- `convex/dataRetention.ts` exists: FOUND
+- `.planning/phases/110-convex-durability/110-03-SUMMARY.md` exists: FOUND
+- Commit `fd896605` (Task 1) exists: FOUND
+- Commit `ae6fe7b7` (Task 2) exists: FOUND
+- Commit `4dde5dd9` (Task 3) exists: FOUND
+- `git diff HEAD -- .planning/STATE.md .planning/ROADMAP.md` empty: CONFIRMED (neither file touched by this plan)
+
+## Self-Check: PASSED
+
 ---
 *Phase: 110-convex-durability*
 *Completed: 2026-08-10*
