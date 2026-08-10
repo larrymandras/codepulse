@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Completed 109-08-PLAN.md
-last_updated: "2026-08-09T16:13:41.344Z"
-last_activity: 2026-08-09
+stopped_at: Completed 109-09-PLAN.md (live gate — ENGINE-03/TELE-02 signed, ENGINE-04 held; 109-10 written)
+last_updated: "2026-08-10T14:20:00.000Z"
+last_activity: 2026-08-10
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 16
-  completed_plans: 15
+  total_plans: 17
+  completed_plans: 16
   percent: 17
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 109 — per-agent-engine-ui
+**Current focus:** Phase 109 — per-agent-engine-ui. Wave 7's live gate (109-09) ran 2026-08-10: 7 probes pass, 1 partial, 1 failed leg. **ENGINE-03 and TELE-02 signed; ENGINE-04 deliberately HELD Pending** — its central server-confirmed claim is proven, but Probe D's clear leg failed with a confirmed root cause (`useProfileSwap.ts:145` never resets `unmountedRef` on remount, so StrictMode latches it and the outcome machine never leaves `pending` on dev builds; production unaffected, proven by a build control and a reverted mutation test). Next: **109-10** (wave 8, gap closure) — the one-line reset plus a regression test that spans the mount→cleanup→remount boundary, then re-run Probe D live on `:5173`, close Probe F's absent-state reading, and sign ENGINE-04. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`.
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 

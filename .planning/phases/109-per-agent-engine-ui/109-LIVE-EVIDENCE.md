@@ -796,4 +796,23 @@ here, so it is real work, not a footnote.
 
 ## Operator sign-off
 
-> Pending. To be written by the operator, not by the executing agent.
+**ENGINE-03 — SATISFIED.** Supported by Probe A (`default_profile_id` read off the live ack), Probe
+E (D-06 precedence proven on every surface that can show the subject, each against a control that
+showed the opposite in the same state), and Probe B (the per-profile override map correct on the
+wire).
+
+**TELE-02 — SATISFIED.** Supported by Probe G (`listGlobal` returning real unscoped rows from the
+self-hosted instance against a known-present scoped control) and Probe H (combined history with
+correct `GLOBAL` marking, a badge equal to the true rendered row count, and a pinned note proven
+live-derived by its present-then-absent contrast).
+
+**ENGINE-04 — HELD PENDING.** Its central claim — server-confirmed rather than optimistic — is
+proven twice over by Probe D, and Probes B/C/D-negative all pass. It is NOT marked satisfied because
+Probe D's clear leg is a recorded FAILURE with a confirmed root cause. Nothing is marked satisfied
+while a probe for it is failing. ENGINE-04 is unblocked by plan 109-10 (gap closure), after which it
+should be re-verified against Probe D and signed separately.
+
+`Operator sign-off: Larry Mandras, 2026-08-10` — recorded by the executing agent under the
+operator's explicit authorization given in-session on 2026-08-10, per this plan's own
+"the operator does, or explicitly authorizes it". The authorization covered signing ENGINE-03 and
+TELE-02 while holding ENGINE-04 pending, exactly as written above.

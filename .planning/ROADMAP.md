@@ -752,7 +752,11 @@ Plans:
 
 **Wave 7**
 
-- [ ] 109-09-PLAN.md — **operator-attended live gate, `autonomous: false`**: astridr rebuild + in-container freshness probe, then D-03/D-05/D-06/D-11 probes each paired with a control, evidence pasted as rows (ENGINE-03, ENGINE-04, TELE-02)
+- [x] 109-09-PLAN.md — **operator-attended live gate, `autonomous: false`**: astridr rebuild + in-container freshness probe, then D-03/D-05/D-06/D-11 probes each paired with a control, evidence pasted as rows (ENGINE-03, ENGINE-04, TELE-02) — **7 pass · 1 partial · 1 failed leg** (2026-08-10). ENGINE-03 and TELE-02 signed; ENGINE-04 held pending. Evidence: `109-LIVE-EVIDENCE.md`.
+
+**Wave 8**
+
+- [ ] 109-10-PLAN.md — **gap closure, `autonomous: false`**: reset `unmountedRef` on remount with a regression test that spans the StrictMode mount→cleanup→remount boundary, then re-run Probe D live on `:5173` and close Probe F's `Not reported` absent state, and sign ENGINE-04 (ENGINE-04, ENGINE-03)
 
 **UI hint**: yes
 
@@ -828,7 +832,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 8/9 | In Progress|  |
+| 109. Per-Agent Engine UI | 9/10 | In Progress|  |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
