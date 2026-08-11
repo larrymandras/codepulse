@@ -387,12 +387,17 @@ export const subscriptionUsage = query({
     const cutoff = Date.now() / 1000 - 30 * 86400;
 
     // Read only rows that CAN match, via by_provider (["provider", "timestamp"]),
-    // instead of materializing the whole 30-day window and filtering in JS. On
-    // 2026-08-11 a 1000-row sample of that window was 100% billingType "api"
-    // across four providers, none of them subscription — so the old .collect()
-    // was doing maximal work to compute a near-certain zero, and timed out
-    // ("too many system operations"), which blanked the entire Analytics page
-    // because an unhandled useQuery throw unmounts the React tree.
+    // instead of materializing the whole 30-day window and filtering in JS. The
+    // old .collect() timed out ("too many system operations"), which blanked the
+    // entire Analytics page rather than one widget, because an unhandled useQuery
+    // throw unmounts the React tree.
+    //
+    // Measured after the fix on 2026-08-11: 864 subscription calls / 20.75M tokens,
+    // returned in ~1s with truncated=false. (An earlier take(1000) sample of the
+    // window showed 100% billingType "api" and suggested the answer was ~zero —
+    // that sample was wrong, not the data: by_timestamp returns from the OLDEST
+    // end of the window, and the subscription traffic is recent. Recorded because
+    // a bounded sample from one end of an index is not a sample of the range.)
     let totalCalls = 0;
     let totalTokens = 0;
     let budget = SUBSCRIPTION_READ_BUDGET;
