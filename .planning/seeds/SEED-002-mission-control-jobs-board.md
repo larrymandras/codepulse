@@ -32,3 +32,4 @@ Relationship to v11.0: Phase 99 launches SKILLS (chat.send / Forge / Ástríðr 
 this seed adds MISSION telemetry + control. Build order per Codex + v11 resume plan:
 98 → 99 → 100, with this seed slotting when astridr's MC-1 backend exists to feed it.
 Convex tables/telemetry shapes must follow docs/astridr-contract.md on the astridr side.
+**Prerequisite (2026-08-10, Phase 111):** this live board waits on SEED-007's emitter revival — see `.planning/seeds/SEED-007-mission-emitter-revival.md`.
