@@ -37,9 +37,9 @@ Closes **BSC-01**, the one requirement v13.0 left PARTIAL. Cross-repo: the astri
 
 ## Convex Durability (DUR)
 
-- [ ] **DUR-01** — `aggregates` is bounded by a retention policy and pruned in batch-capped increments, never a bulk delete. *(The 2026-07-21/22 incident was caused by mass deletes producing tombstone storms; any new prune must ride the existing batch-capped machinery.)*
-- [ ] **DUR-02** — Operator can confirm the nightly prune completes a full pass across **every** table in `RETENTION_DAYS`, verified against the live instance rather than only in code. *(The cursor fix shipped 2026-07-30; a full successful pass over all tables has not been separately observed and recorded.)*
-- [ ] **DUR-03** — The convex-backend memory-growth root cause is identified with evidence, and either fixed or recorded as understood — with `ConvexNightlyRestart` documented as a deliberate mitigation rather than an unexplained workaround. *(Already established: `db.sqlite3` stays byte-identical across a ~7.6 → 31 GiB climb, so it is accumulated runtime working set, **not** data volume — which rules out retention as the lever and excludes any row-count hypothesis.)*
+- [x] **DUR-01** — `aggregates` is bounded by a retention policy and pruned in batch-capped increments, never a bulk delete. *(The 2026-07-21/22 incident was caused by mass deletes producing tombstone storms; any new prune must ride the existing batch-capped machinery.)*
+- [x] **DUR-02** — Operator can confirm the nightly prune completes a full pass across **every** table in `RETENTION_DAYS`, verified against the live instance rather than only in code. *(The cursor fix shipped 2026-07-30; a full successful pass over all tables has not been separately observed and recorded.)*
+- [x] **DUR-03** — The convex-backend memory-growth root cause is identified with evidence, and either fixed or recorded as understood — with `ConvexNightlyRestart` documented as a deliberate mitigation rather than an unexplained workaround. *(Already established: `db.sqlite3` stays byte-identical across a ~7.6 → 31 GiB climb, so it is accumulated runtime working set, **not** data volume — which rules out retention as the lever and excludes any row-count hypothesis.)*
 
 ## Mission Board (MISSION)
 
@@ -87,9 +87,9 @@ Filled by the roadmapper.
 | ENGINE-03 | Phase 109 | Complete |
 | ENGINE-04 | Phase 109 | Complete |
 | ENGINE-05 | Phase 108 | Complete |
-| DUR-01 | Phase 110 | Pending |
-| DUR-02 | Phase 110 | Pending |
-| DUR-03 | Phase 110 | Pending |
+| DUR-01 | Phase 110 | Complete (2026-08-11) |
+| DUR-02 | Phase 110 | Complete (2026-08-11) |
+| DUR-03 | Phase 110 | Complete (2026-08-11) |
 | MISSION-01 | Phase 111 | Partial — status/history shipped; duration + orphan recovery deferred to SEED-007 (D-04) |
 | MISSION-02 | SEED-007 (was Phase 111) | Blocked on astridr — no join key exists (D-03) |
 | MISSION-03 | Phase 111 | Complete |

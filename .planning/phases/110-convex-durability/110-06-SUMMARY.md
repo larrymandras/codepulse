@@ -120,9 +120,10 @@ None for Tasks 1-2. Task 3 requires the operator (Larry) to review the evidence 
 
 ## Next Phase Readiness
 
-- **DUR-01 and DUR-02 are NOT yet closed.** Task 3 is a blocking `checkpoint:human-verify` gate (`autonomous: false`) and this executor stops here per its dispatch — it does not self-approve, and STATE.md/ROADMAP.md are not updated (the orchestrator owns those writes).
+- **DUR-01 and DUR-02 are CLOSED** (updated 2026-08-11, commit `7a572576`). Task 3's blocking `checkpoint:human-verify` gate was answered by the operator with the verbatim response `approved`, recorded in `110-DUR-EVIDENCE.md`. This executor correctly did not self-approve it; the orchestrator closed it on the operator's actual response.
 - Both evidence sections are complete and committed (`6e75c623`), every verdict sits below the output that produced it, and both hard-fail/control conditions this plan required (daily-unchanged, hourly-moved-forward) are satisfied on live data.
-- No blockers beyond awaiting the operator's Task 3 response. See the checkpoint report returned alongside this summary for the exact resume-signal contract.
+- The operator's chart check was blocked first by an unrelated `llm:subscriptionUsage` timeout that blanked `/analytics`; fixed in `0053c596`, deployed, and the re-priced daily-bucket figures confirmed rendering (`COVERED $73.4893`). Not a DUR-01 failure — Phase 110 never touched `convex/llm.ts`.
+- ROADMAP.md was updated to 6/6 Complete in `e4a485ce`. Phase verification passed 3/3 must-haves.
 
 ## Self-Check
 
@@ -135,4 +136,4 @@ None for Tasks 1-2. Task 3 requires the operator (Larry) to review the evidence 
 
 ---
 *Phase: 110-convex-durability*
-*Completed: Tasks 1-2 only, 2026-08-11 — plan not yet closed, Task 3 checkpoint pending*
+*Completed: 3/3 tasks, 2026-08-11 — closed on the operator's verbatim `approved` at the Task 3 checkpoint*
