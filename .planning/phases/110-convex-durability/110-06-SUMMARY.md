@@ -32,21 +32,21 @@ key-decisions:
   - "The DUR-01 hourly control probe returned a DIFFERENT document than the plan-04 baseline (different metric_type: cost -> tokens) at the SAME bucket_start -- investigated and recorded as expected: by_period_bucket orders by (period, bucket_start) not _creationTime, and multiple metric_type rows share a bucket_start, so once the baseline's row was deleted the query surfaces whichever remaining row sorts first. The _creationTime-moved-forward signal, which is what the plan's control actually requires, is unaffected by this and was satisfied (~49.9 days forward)."
   - "Amended (not replaced) the 2026-08-10 CORRECTION block asserting the aggregates ALERT 'does not clear, persists and grows forever' -- that claim was falsified within hours of being written by a concurrent session's deploy of commit 96a1df68 (summarizeOverhangProbe / oldestPrunableDoc). Verified live: today's 05:30 UTC health-check run reports aggregates as 'caught up', not ALERT. Original reasoning preserved verbatim per the dispatch instruction; a dated follow-up appended below it."
 
-requirements-completed: []  # DUR-01 and DUR-02 are NOT marked complete by this summary -- Task 3 (operator sign-off, blocking checkpoint) has not yet run. See "Next Phase Readiness."
+requirements-completed: [DUR-01, DUR-02]  # closed 2026-08-11 on operator sign-off ("approved") after the /analytics blocker was fixed and the re-priced daily-bucket figures were confirmed rendering
 
 # Metrics
-duration: ~45min (Tasks 1-2 only; Task 3 checkpoint pending)
+duration: ~45min for Tasks 1-2, plus a checkpoint-blocking detour to fix llm:subscriptionUsage before the operator could perform the chart check
 completed: 2026-08-11
 ---
 
-# Phase 110 Plan 06: DUR-02 Leg 1 + DUR-01 Live Confirmation Summary (Tasks 1-2 of 3 — checkpoint pending)
+# Phase 110 Plan 06: DUR-02 Leg 1 + DUR-01 Live Confirmation Summary (3/3 — closed on operator sign-off)
 
 **A complete 09:00 UTC nightly prune pass is proven from `_scheduled_functions` (268 invocations spanning table indices 0-18, all success), and DUR-01's daily-rows-survive / hourly-rows-age-out claim is confirmed against the plan-110-04 baseline — both independently re-derived, not transcribed from the orchestrator's prior findings.**
 
 ## Performance
 
 - **Duration:** ~45 min (container-log re-verification, `_scheduled_functions` probe development and query, three baseline-probe re-runs, rotation-cursor query, evidence write-up, commit)
-- **Tasks:** 2 of 3 complete. Task 3 is a blocking `checkpoint:human-verify` (`autonomous: false`) — **not executed**, per dispatch instructions. This executor does not self-approve it.
+- **Tasks:** 3 of 3 complete. Task 3 (blocking `checkpoint:human-verify`) was closed by the orchestrator on the operator's verbatim response `approved`, recorded in `110-DUR-EVIDENCE.md`.
 - **Files modified:** 1 (`110-DUR-EVIDENCE.md`)
 
 ## Accomplishments

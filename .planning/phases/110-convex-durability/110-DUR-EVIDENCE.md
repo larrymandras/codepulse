@@ -1647,6 +1647,66 @@ argument was ever constructed in any command pasted in this section — every in
 
 ---
 
-*DUR-02 leg 1 and the DUR-01 live confirmation are complete. Task 3 (operator sign-off) is next and
-is a blocking checkpoint — this plan does not close DUR-01/DUR-02 or update ROADMAP/STATE until the
-operator responds.*
+*DUR-02 leg 1 and the DUR-01 live confirmation are complete.*
+
+---
+
+## Task 3 — Operator sign-off closing DUR-01 and DUR-02
+
+### The blocker that had to be cleared first
+
+The checkpoint's `<how-to-verify>` step 4 requires the operator to confirm the dashboard's cost
+charts still render — the user-visible half of DUR-01, which no transcript can settle. On first
+attempt `/analytics` did not render at all:
+
+```
+[CONVEX Q(llm:subscriptionUsage)] [Request ID: c7384888a962ddbf] Server Error
+Your request timed out performing too many system operations. Called by client
+```
+
+**Not a DUR-01 failure, and not caused by this phase.** `git log 92ceeda2..HEAD -- convex/llm.ts`
+was empty — Phase 110 never touched that file. The mechanism is the one
+`convex/llm.ts`'s own Phase 104 STOPGAP note already documents: `/analytics` fires ~10 queries
+concurrently and the combined load tips a memory-loaded instance, and because an unhandled
+`useQuery` throw unmounts the React tree, ONE failing query blanks the whole page — including
+cost charts whose data was fully intact.
+
+Fixed under this project's rule that errors found during a phase get fixed rather than filed as
+pre-existing: `0053c596` bounds `subscriptionUsage` to read only rows that can match via the
+`by_provider` index (~864 rows instead of 5,274), deployed with operator authorization, verified
+returning in ~1.1s. Two of the orchestrator's own diagnostic claims about it were wrong and were
+corrected in `d2acdc31` and `c4a53541` rather than left standing. The remaining instances of the
+pattern were logged as `.planning/todos/pending/llm-analytics-rollup-migration-cr01.md` rather
+than fixed inside a durability phase.
+
+### What the operator verified
+
+`/analytics` rendered after the fix. `COST BY MODEL` drew its full 30-day range with real
+per-model figures, and the `COVERED` column showed **$73.4893** for `claude-cli` — that column is
+Phase 104's re-pricing computing off the `period:"daily"` aggregate buckets on read, which is
+precisely what `PRUNE_PREDICATES.aggregates` exists to protect. It rendered a real number, not a
+blank or a zero.
+
+**Correction to the orchestrator's own framing, recorded because it changed the test.** The
+operator was initially asked to confirm the charts render "history back to early May", extrapolated
+from the daily buckets spanning `2026-05-05 → 2026-08-10`. That was wrong: the UI's range toggle
+tops out at **30d**, so a May-to-now view is not something this surface has ever offered. The
+correct test — which is what was performed — is that the cost surfaces render their full intended
+range with the re-priced daily-bucket figures intact.
+
+### Operator response, verbatim
+
+```
+approved
+```
+
+**VERDICT: DUR-01 and DUR-02 close on observed evidence.** DUR-01 on both legs — the row-level
+proof (oldest `period:"daily"` `_creationTime` byte-identical across a real prune, oldest
+`period:"hourly"` moved forward 49.9 days) and the user-visible proof (the surface that re-prices
+those buckets still draws). DUR-02 on both legs — a complete pass covering table indices 0..18
+with all-success states inside the cron window, and a health check that now covers all 19 tables
+instead of a hand-copied 14.
+
+---
+
+*Plan `110-06` complete. DUR-01 and DUR-02 closed on live, operator-signed evidence.*
