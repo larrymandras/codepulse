@@ -18,6 +18,7 @@ key-files:
     - .planning/phases/113-debt-sweep/113-FLAKE-INSTRUMENTATION.md
   modified:
     - src/pages/Chat.test.tsx
+requirements-completed: []
 decisions:
   - "Refreshed the Task-2 restore-point backup AFTER Task 1's instrumentation was committed, not before (see Deviations) — the plan's Task 2 restore logic only makes sense against a backup that already includes the instrumentation"
   - "requirements.mark-complete NOT run for DEBT-06 — it spans this plan and 113-06; 113-06 has not run, so DEBT-06 stays Pending in REQUIREMENTS.md"
@@ -37,9 +38,10 @@ against the full suite.
 
 ### Task 1 — Query-site DOM capture (D-08 amended, D-11)
 
-Added a module-scope helper `captureBrainPillDom(): string` inside the `describe("Chat —
-composer brain pill ...")` block in `src/pages/Chat.test.tsx` (next to the existing
-`renderPlainChat()` helper, not inside any `it`). It calls the non-throwing
+Added a helper `captureBrainPillDom(): string` at `Chat.test.tsx:543`, scoped inside the
+`describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", ...)` callback that opens at
+`:512` (describe-scope, not module scope — the helper is declared inside that callback, next to
+the existing `renderPlainChat()` helper, not inside any `it`). It calls the non-throwing
 `screen.queryAllByTestId("chat-brain-pill-label")` — so the capture itself can never turn a real
 assertion failure into a different error (`TestingLibraryElementError`) — and returns a
 multi-line string with: the match count; each match's index, `textContent`, and `outerHTML`
@@ -48,9 +50,12 @@ multi-line string with: the match count; each match's index, `textContent`, and 
 distinguishes "genuinely empty DOM at query time" from "captured after cleanup").
 
 Attached the helper's return value as `expect()`'s message argument at all three of the target
-`it`'s label assertions (now `Chat.test.tsx:622-623`, `:637-638`, `:650-651` — the file shifted
-because the helper's definition sits above them), evaluated into a local const on the line
-immediately before each assertion so it runs synchronously, before any `afterEach`.
+`it`'s label assertions (capture-then-assert pairs, re-verified against the live file:
+`Chat.test.tsx:622` captures / `:623` asserts, `:635` captures / `:636-638` asserts, `:648`
+captures / `:649-651` asserts — the assertion spans multiple lines because the call itself wraps,
+so the capture-eval line is always the assertion's *start*, not its continuation), evaluated into
+a local const on the line immediately before each assertion so it runs synchronously, before any
+`afterEach`.
 
 Nothing else in the target `it` changed:
 - `await screen.findByTestId("chat-brain-pill-label")` — untouched, no `waitFor` wrapper, no
@@ -148,8 +153,10 @@ against it:
 ```
 - `iteration=1/3 status=FAIL` with `exit=1` (non-zero): PASS.
 - No `iteration=2/3` line ever written (grep count 0): the runner stopped: PASS.
-- `.../113-soak-control-b.log.iteration-1.txt` exists, 1049 bytes, containing the full
-  `AssertionError: expected 1 to be 2` output: PASS.
+- `.../113-soak-control-b.log.iteration-1.txt` existed, was non-empty, and contained the full
+  `AssertionError: expected 1 to be 2` output: PASS. (The file was deleted by design as part of
+  this control's own cleanup — see below — so its exact size is not restated here as an
+  unverifiable figure; only the properties confirmed at the time it was inspected.)
 - Script process exit code 1: PASS.
 
 Deleted the throwaway test file and both control log artifacts afterward;
@@ -264,3 +271,162 @@ FOUND commit: 4e49cbb7
 Deliberately **not touched** — `.planning/STATE.md` is dirty with a concurrent session's
 in-progress work per this execution's sequential-executor instructions. `ROADMAP.md` was updated
 via `roadmap.update-plan-progress 113` instead (scoped, diffed before commit).
+
+## Adversarial verification
+
+Two independent adversarial agents confirmed four defects in this plan's deliverables after
+execution. All four are closed. Runner fixes committed as `abaf2ea0` (`scripts/soak-vitest.mjs`);
+this document's corrections committed separately.
+
+### DEFECT 1 (HIGH) — capture path was index-scoped, not run-scoped — FIXED
+
+`scripts/soak-vitest.mjs`'s per-failure capture path was `${logPath}.iteration-${i}.txt` — keyed
+on the iteration index alone. A second failing run against the same log at the same iteration
+index silently overwrote the first run's captured evidence (demonstrated by the adversarial
+agent: 1419 B → 10442 B, the original token gone). Since 113-06 re-runs tier 1 on the
+`reproduced` disposition branch, a post-fix soak failing at the same index would have destroyed
+the original reproduction's evidence.
+
+**Fix:** capture filenames now embed this run's own start timestamp and sanitized label
+(`${logPath}.${label}-${runStartIso}.iteration-${i}.txt`), so two separate runs can never collide
+on a capture path. The capture body records its own `label`, `run_started`, `iteration`, and
+`status` fields, so an orphaned capture file remains attributable without cross-referencing the
+log. The log line gained a `capture=<path>` field so a `status=FAIL` line can be traced to its
+exact capture file. A same-path collision (structurally near-impossible given the run-scoped
+name, but not assumed away) refuses with a FATAL exit via an exclusive (`"wx"`) file write rather
+than silently overwriting.
+
+**Control (live, in the transcript):** ran two separate soak invocations, each against a
+deliberately failing test, against the *same* log path, both stopping at `iteration=1/3`:
+
+```
+2026-08-11T19:57:03.857Z label=defect1-runA iteration=1/3 status=FAIL exit=1 duration_ms=1700 capture=...defect1.log.defect1-runA-2026-08-11T19-57-02-156Z.iteration-1.txt
+2026-08-11T19:57:13.048Z label=defect1-runB iteration=1/3 status=FAIL exit=1 duration_ms=1750 capture=...defect1.log.defect1-runB-2026-08-11T19-57-11-297Z.iteration-1.txt
+```
+
+Run A's capture file (`defect1-runA-...iteration-1.txt`) contains the unique token
+`SOAK_CONTROL_RUN_A_TOKEN_9x7q2` written into that test's failure message; after run B's failure
+at the same iteration index, that file was re-read and the token was still present and intact.
+Run B's own capture file (`defect1-runB-...iteration-1.txt`) independently contains
+`SOAK_CONTROL_RUN_B_TOKEN_9x7q2`. Both files coexist — this is the exact scenario that destroyed
+evidence under the old naming scheme, where both runs would have resolved to the identical path
+`defect1.log.iteration-1.txt` and the second `writeFileSync` (no exclusivity flag) would have
+silently overwritten the first.
+
+### DEFECT 2 (MEDIUM) — hang produced silence, not a log line — FIXED
+
+`scripts/soak-vitest.mjs:105-108`'s log line was written only *after* `spawnSync` returned, so a
+hung iteration produced no record at all — contradicting T-113-22's stated mitigation ("each
+iteration's wall clock is recorded so a hang is visible in the log rather than silent"). There
+was no per-iteration timeout; the only existing guard was the startup regex rejecting a bare
+`vitest` invocation.
+
+**Fix:** added `--timeout <ms>` (default `300000` = 5 min, chosen as ~6-8x the measured 37-46s
+full-suite duration so it will not false-positive on this repo's real suite while still bounding
+a genuine hang), passed as `spawnSync`'s own `timeout` option with `killSignal: "SIGTERM"`. A
+killed iteration is recorded with its own `status=TIMEOUT` line (distinct from `FAIL`) and a
+capture file, and the soak stops immediately, exactly as it does on `FAIL`.
+
+**Control — positive (live):** `--timeout 1500` against a 60-second `setTimeout` hang:
+```
+2026-08-11T19:57:27.409Z label=defect2-hang iteration=1/2 status=TIMEOUT exit=null duration_ms=1505 capture=...
+```
+Killed and logged at `duration_ms=1505` (bounded near the 1500ms timeout, not the 60000ms hang
+duration) — a hang is now visible within a bounded time instead of never.
+
+**Control — negative (live):** the identical `--timeout 30000` against a normal ~1.7s full test
+file run over 2 iterations produced `status=PASS` on both, no `TIMEOUT`, no early stop:
+```
+2026-08-11T19:57:34.597Z label=defect2-normal iteration=1/2 status=PASS exit=0 duration_ms=1715 capture=(none)
+2026-08-11T19:57:36.395Z label=defect2-normal iteration=2/2 status=PASS exit=0 duration_ms=1797 capture=(none)
+```
+Confirms the timeout does not fire on real, well-behaved runs.
+
+### DEFECT 3 (MEDIUM) — harness error indistinguishable from a real test failure — FIXED
+
+`result.error` (a `spawnSync` launch failure, or a `maxBuffer` overrun) was never surfaced —
+`exitCode = result.status ?? (result.signal ? 128 : 1)` always fell through to `status=FAIL`,
+identical to a genuine test failure in both the log line and the capture. On the `reproduced`
+disposition branch, 113-06 would have had no way to tell a harness malfunction from a real
+reproduction of the flake.
+
+**Fix:** `result.error` is inspected first. `result.error.code === "ETIMEDOUT"` → `status=TIMEOUT`
+(Defect 2's path); any other `result.error` → `status=ERROR`, recorded verbatim
+(`error: <code> <message>`) in the capture and counted in a separate `harness_errors` tally, never
+in `failed`.
+
+**Control — positive (live):** a command guaranteed to overrun `maxBuffer` (writing ~90 MiB of
+stdout against the runner's 64 MiB cap) produced a genuine `spawnSync`-level `ENOBUFS` error (
+verified first via a standalone `node -e` probe outside the runner, then through the runner
+itself):
+```
+2026-08-11T19:58:00.181Z label=defect3-enobufs iteration=1/2 status=ERROR exit=null duration_ms=161 capture=...
+iterations_run=1 passed=0 failed=0 timed_out=0 harness_errors=1 (stopped early)
+```
+`status=ERROR`, not `status=FAIL`; `failed=0`, `harness_errors=1`. (Note: a plain nonexistent
+binary name, e.g. `this-command-does-not-exist-9x7q2`, does *not* reach `result.error` under this
+script's `shell: true` — Windows' `cmd.exe` absorbs the "not recognized" case itself and returns
+a normal non-zero exit, which is correctly `status=FAIL` since the shell genuinely ran and
+genuinely failed. The `ENOBUFS` case is a true spawn-level harness failure and is the correct
+positive control.)
+
+**Control — negative:** every other live run in this verification pass (Defects 1, 2's negative
+case, and the plain multi-iteration PASS run) exercised the normal `PASS`/`FAIL` paths with zero
+`status=ERROR` lines, confirming `ERROR` is not spuriously assigned to ordinary outcomes.
+
+### Compatibility with 113-06's parsing contract
+
+Re-applied 113-06-PLAN.md Tasks 1-2's exact derivations to a real, post-change combined log
+(concatenation of three real runner invocations above — 3 `PASS`, 1 `TIMEOUT`, 1 `FAIL`, no
+`ERROR` in that particular combination):
+
+```
+grep -c 'iteration='            → 5   (3 iteration lines + 1 TIMEOUT line + 1 FAIL line; the
+                                        3 header "iterations=N" lines correctly do NOT match)
+grep -c 'status=PASS'           → 3
+grep -c 'status=FAIL'           → 1   (TIMEOUT is excluded, as required)
+highest iteration= numerator    → 3
+duration_ms values (grep -oE)   → 1837, 1788, 1771, 1505, 17
+grep -c 'status=TIMEOUT'        → 1   (confirms it is NOT counted by the status=FAIL grep above)
+grep -c 'status=ERROR'          → 0
+```
+
+All derivations 113-06 depends on continue to work unchanged against the new format.
+
+### DEFECT 4 (artifact) — this document — FIXED
+
+- Added `requirements-completed: []` to frontmatter (was absent; sibling summaries 113-01/02/03
+  all carry it). DEBT-06 is **not** claimed complete here — it spans this plan and 113-06, and
+  113-06 has not run.
+- Corrected "module-scope helper ... inside the describe(...) block" (self-contradictory) to
+  state plainly that `captureBrainPillDom()` is declared at `Chat.test.tsx:543`, inside the
+  `describe` callback opening at `:512` — describe-scope, not module scope.
+- Corrected the capture/assertion line-pair citations. Re-verified against the live file: `:622`
+  captures / `:623` asserts, `:635` captures / `:636-638` asserts, `:648` captures / `:649-651`
+  asserts. The prior text cited `:637-638` and `:650-651` for the second and third pairs — those
+  are the assertion's continuation lines (the `expect(...)` call wraps), not its start line.
+- Removed the restated exact byte size (`1049 bytes`) of the soak runner's Control B capture
+  file, which was deleted by design as part of that control's own cleanup — an unverifiable
+  figure once the file is gone. Replaced with the properties that were actually confirmed at
+  inspection time (existed, non-empty, contained the real `AssertionError`).
+
+### Full verification (post-fix)
+
+- `npx vitest run` (full suite): **304 files passed | 17 skipped**, **4038 tests passed | 193
+  todo**, **0 failures**, ~38.9s.
+- `npx tsc --noEmit`: exit 0.
+- No leftover throwaway files: `git status --porcelain --untracked-files=all` shows only this
+  plan's own edits (`.planning/STATE.md` untouched, belongs to a concurrent session).
+- All verification runs above used scratch log paths outside the repo
+  (`%TEMP%\claude\...\scratchpad\soak\`); none were committed.
+
+### Commit granularity note
+
+The plan's success criteria call for each fix committed separately. Defects 1-3 are all fixes to
+the same ~15-line loop body in `scripts/soak-vitest.mjs` with genuinely interleaved control flow
+(e.g. the single `status` variable computed in Defect 3's fix is what Defect 1's `capture=` field
+and Defect 2's early-stop both read) — splitting them into three sequential commits would require
+staging partial hunks that leave the file in a syntactically incoherent intermediate state between
+commits. They are committed together as one runner-fix commit (`abaf2ea0`), with each defect
+documented separately above and in the commit message body. Defect 4 (this document) is a
+logically separate artifact and is committed on its own.
