@@ -143,3 +143,14 @@ None - no external service configuration required.
 ---
 *Phase: 111-mission-board*
 *Completed: 2026-08-11*
+
+## Self-Check: PASSED
+
+- FOUND: src/components/JobsPanel.tsx
+- FOUND: src/components/JobsPanel.test.tsx
+- FOUND: src/pages/LiveRun.tsx
+- FOUND: .planning/phases/111-mission-board/111-01-SUMMARY.md
+- FOUND commit: 476155f0 (Task 1)
+- FOUND commit: 39ef99ea (Task 2)
+- FOUND commit: 14658112 (Task 3)
+- FOUND commit: f311d04a (SUMMARY.md commit)
