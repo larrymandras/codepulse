@@ -39,6 +39,14 @@ test.describe('Sidebar navigation', () => {
     await expect(page).toHaveURL('/bifrost');
   });
 
+  // Phase 119: same reasoning as the galdr/bifrost tests above.
+  test('navigates to loom page', async ({ page }) => {
+    await page.goto('/');
+    const loomLink = page.locator('a[href="/loom"]').first();
+    await loomLink.click();
+    await expect(page).toHaveURL('/loom');
+  });
+
   test('navigates to alerts page', async ({ page }) => {
     await page.goto('/');
     const alertsLink = page.locator('a[href="/alerts"]').first();

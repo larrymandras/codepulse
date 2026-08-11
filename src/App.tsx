@@ -70,6 +70,9 @@ const Galdr = lazy(() => import("./pages/Galdr"));
 // Phase 117: Bifröst link hub
 const Bifrost = lazy(() => import("./pages/Bifrost"));
 
+// Phase 119: Loom curated pipelines
+const Loom = lazy(() => import("./pages/Loom"));
+
 // Phase 72: Tool / Capability Galaxy
 const ToolGalaxy = lazy(() => import("./pages/ToolGalaxy"));
 
@@ -145,6 +148,8 @@ export default function App() {
               <Route path="/galdr" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Galdr...</div>}><Galdr /></Suspense>} />
               {/* Phase 117: Bifröst link hub */}
               <Route path="/bifrost" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Bifröst...</div>}><Bifrost /></Suspense>} />
+              {/* Phase 119: Loom curated pipelines */}
+              <Route path="/loom" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Loom...</div>}><Loom /></Suspense>} />
               <Route path="/live-run" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Live Run...</div>}><LiveRun /></Suspense>} />
               <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
               <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />

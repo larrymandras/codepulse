@@ -51,6 +51,7 @@ import {
   Wrench,
   Sparkles,
   Link2,
+  Waypoints,
 } from "lucide-react";
 
 export const iconComponents: Record<string, React.ElementType> = {
@@ -96,6 +97,7 @@ export const iconComponents: Record<string, React.ElementType> = {
   wrench: Wrench,   // Phase 105 — Tools page
   sparkles: Sparkles,   // Phase 116 — Galdr page
   "link-2": Link2,   // Phase 117 — Bifröst page
+  waypoints: Waypoints,   // Phase 119 — Loom page
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -140,6 +142,9 @@ export const navGroups: NavGroupConfig[] = [
     group: "GRAPHS",
     items: [
       { to: "/graphs", label: "Graphs Hub", icon: "network", group: "GRAPHS" },
+      // Loom is a graph surface (React Flow pipeline), not a COMMAND tool —
+      // design doc §4.4 places it in GRAPHS.
+      { to: "/loom", label: "Loom", icon: "waypoints", group: "GRAPHS" },
       { to: "/tool-galaxy", label: "Tool Galaxy", icon: "boxes", group: "GRAPHS" },
       { to: "/mcp-inventory", label: "MCP Inventory", icon: "server", group: "GRAPHS" },
       { to: "/knowledge-graph", label: "KG Explorer", icon: "share-2", group: "GRAPHS" },
