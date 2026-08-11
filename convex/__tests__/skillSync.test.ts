@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   normalizeOrigin,
   computeSkillPrunes,
+  computePruneRefusals,
   groupSkillRowsByName,
   maxDefined,
   sanitizeScannedOrigins,
+  sanitizeScannedOriginsComplete,
 } from "../skillSync";
 
 describe("maxDefined", () => {
@@ -156,6 +158,214 @@ describe("sanitizeScannedOrigins (GC-03)", () => {
       sanitizeScannedOrigins({})
     );
     expect(prunes.map((p) => p._id)).toEqual([]); // proj untouched — legacy path
+  });
+});
+
+describe("computeSkillPrunes — exhaustive-coverage guard (DEBT-05, D-03)", () => {
+  // Fixture: a `claude-code` personal skill plus 3 `claude-code:plugin` skills.
+  // "incoming carrying only the claude-code rows" (the plan's shorthand) is
+  // realized here as a PARTIAL plugin read — the real DEBT-05/D-03 shape per
+  // the plan's own <behavior> section ("An origin present in `incoming` but
+  // NOT declared is not prunable — this is the plugin case and the whole
+  // point of the guard"): 1 of 3 plugin skills came through before the read
+  // stopped, and scannedOrigins honestly does NOT declare claude-code:plugin
+  // covered (the read was not exhaustive). A fixture where incoming carries
+  // literally zero plugin-origin rows can never distinguish strict from
+  // additive mode — both already leave an origin absent from BOTH incoming
+  // and scannedOrigins untouched (see the pre-existing GC-03 "undeclared
+  // origin" test above) — so it would make the control below non-load-bearing.
+  const ccDeploy = { _id: "20", name: "deploy", origin: "claude-code" };
+  const pluginA = { _id: "21", name: "plugin-a", origin: "claude-code:plugin" };
+  const pluginB = { _id: "22", name: "plugin-b", origin: "claude-code:plugin" };
+  const pluginC = { _id: "23", name: "plugin-c", origin: "claude-code:plugin" };
+
+  it("REGRESSION: an exhaustive declaration that omits claude-code:plugin protects it, even though incoming carries a partial plugin read", () => {
+    const prunes = computeSkillPrunes(
+      [ccDeploy, pluginA, pluginB, pluginC],
+      [
+        { name: "deploy", origin: "claude-code" },
+        { name: "plugin-a", origin: "claude-code:plugin" },
+      ],
+      ["claude-code"], // scannedOrigins does NOT declare claude-code:plugin
+      true // scannedOriginsComplete
+    );
+    expect(prunes.map((p) => p._id)).toEqual([]); // none of the plugin rows pruned
+  });
+
+  it("CONTROL: the identical existing/incoming/scannedOrigins inputs with scannedOriginsComplete omitted DO prune the undeclared-but-missing claude-code:plugin rows — proving the guard above is load-bearing", () => {
+    const prunes = computeSkillPrunes(
+      [ccDeploy, pluginA, pluginB, pluginC],
+      [
+        { name: "deploy", origin: "claude-code" },
+        { name: "plugin-a", origin: "claude-code:plugin" },
+      ],
+      ["claude-code"]
+      // scannedOriginsComplete omitted -> additive/legacy path
+    );
+    expect(prunes.map((p) => p._id).sort()).toEqual(["22", "23"]); // pluginB, pluginC wrongly pruned without the guard
+  });
+
+  it("backward-compat: a native/bridge-shaped snapshot with no manifest at all prunes exactly the legacy rows (the 410 astridr rows stay prunable by their own producers)", () => {
+    const nativeStale = { _id: "30", name: "old-skill", origin: "native" };
+    const nativeCurrent = { _id: "31", name: "current-skill", origin: "native" };
+    const prunes = computeSkillPrunes(
+      [nativeStale, nativeCurrent],
+      [{ name: "current-skill", origin: "native" }]
+      // no scannedOrigins, no scannedOriginsComplete -- exactly today's native/bridge shape
+    );
+    expect(prunes.map((p) => p._id)).toEqual(["30"]);
+  });
+
+  it("a declared origin with zero incoming rows still prunes all of them under the strict/exhaustive path (98-05 emptied-project case survives)", () => {
+    const projSkillA = { _id: "40", name: "old-a", origin: "claude-code:project:xyz" };
+    const projSkillB = { _id: "41", name: "old-b", origin: "claude-code:project:xyz" };
+    const prunes = computeSkillPrunes(
+      [ccDeploy, projSkillA, projSkillB],
+      [{ name: "deploy", origin: "claude-code" }], // zero incoming for the project origin
+      ["claude-code", "claude-code:project:xyz"],
+      true
+    );
+    expect(prunes.map((p) => p._id).sort()).toEqual(["40", "41"]);
+  });
+
+  it("REGRESSION: each malformed scannedOriginsComplete shape, composed through sanitizeScannedOriginsComplete, degrades to the additive/legacy path instead of engaging strict mode", () => {
+    for (const malformed of ["true", 1, {}, null]) {
+      const prunes = computeSkillPrunes(
+        [ccDeploy, pluginA, pluginB, pluginC],
+        [
+          { name: "deploy", origin: "claude-code" },
+          { name: "plugin-a", origin: "claude-code:plugin" },
+        ],
+        ["claude-code"],
+        sanitizeScannedOriginsComplete(malformed)
+      );
+      // Same result as the CONTROL above: additive/legacy path prunes the
+      // undeclared-but-missing plugin rows.
+      expect(prunes.map((p) => p._id).sort()).toEqual(["22", "23"]);
+    }
+  });
+});
+
+describe("sanitizeScannedOriginsComplete (DEBT-05, D-03)", () => {
+  it("accepts only a literal boolean true", () => {
+    expect(sanitizeScannedOriginsComplete(true)).toBe(true);
+  });
+
+  it("REGRESSION: rejects everything else — a truthy string/number/object/null must not engage the strict path", () => {
+    expect(sanitizeScannedOriginsComplete("true")).toBe(false);
+    expect(sanitizeScannedOriginsComplete(1)).toBe(false);
+    expect(sanitizeScannedOriginsComplete({})).toBe(false);
+    expect(sanitizeScannedOriginsComplete(null)).toBe(false);
+    expect(sanitizeScannedOriginsComplete(undefined)).toBe(false);
+    expect(sanitizeScannedOriginsComplete(false)).toBe(false);
+  });
+});
+
+describe("computePruneRefusals (DEBT-05, D-05)", () => {
+  it("names a 7-row protected origin with sampleNames capped at 5", () => {
+    const ccDeploy = { _id: "20", name: "deploy", origin: "claude-code" };
+    const pluginRows = Array.from({ length: 7 }, (_, i) => ({
+      _id: `p${i}`,
+      name: `plugin-${i}`,
+      origin: "claude-code:plugin",
+    }));
+    const incoming = [
+      { name: "deploy", origin: "claude-code" },
+      // Decoy entry: puts claude-code:plugin into the incoming-origins set
+      // (so the additive/legacy verdict actually prunes something to diff
+      // against) without matching any of the 7 existing rows by name.
+      { name: "plugin-decoy", origin: "claude-code:plugin" },
+    ];
+    const refusals = computePruneRefusals(
+      [ccDeploy, ...pluginRows],
+      incoming,
+      ["claude-code"], // claude-code:plugin not declared
+      true
+    );
+    expect(refusals).toHaveLength(1);
+    expect(refusals[0].origin).toBe("claude-code:plugin");
+    expect(refusals[0].protectedCount).toBe(7);
+    expect(refusals[0].sampleNames).toHaveLength(5);
+  });
+
+  it("returns [] when the strict path is not engaged (legacy path)", () => {
+    const ccDeploy = { _id: "20", name: "deploy", origin: "claude-code" };
+    const pluginA = { _id: "21", name: "plugin-a", origin: "claude-code:plugin" };
+    const refusals = computePruneRefusals(
+      [ccDeploy, pluginA],
+      [{ name: "deploy", origin: "claude-code" }],
+      ["claude-code"]
+      // scannedOriginsComplete omitted
+    );
+    expect(refusals).toEqual([]);
+  });
+});
+
+describe("computePruneRefusals — alert payload contract (D-05)", () => {
+  const ccDeploy = { _id: "20", name: "deploy", origin: "claude-code" };
+  const pluginRows = Array.from({ length: 7 }, (_, i) => ({
+    _id: `p${i}`,
+    name: `plugin-${i}`,
+    origin: "claude-code:plugin",
+  }));
+  const projRows = [
+    { _id: "proj0", name: "proj-0", origin: "claude-code:project:abc" },
+    { _id: "proj1", name: "proj-1", origin: "claude-code:project:abc" },
+  ];
+  const incoming = [
+    { name: "deploy", origin: "claude-code" },
+    { name: "plugin-decoy", origin: "claude-code:plugin" },
+    { name: "proj-decoy", origin: "claude-code:project:abc" },
+  ];
+  const refusals = computePruneRefusals(
+    [ccDeploy, ...pluginRows, ...projRows],
+    incoming,
+    ["claude-code"], // neither claude-code:plugin nor claude-code:project:abc declared
+    true
+  );
+
+  it("sorts the result by origin ascending, one entry per protected origin, exact keys only", () => {
+    expect(refusals.map((r) => r.origin)).toEqual([
+      "claude-code:plugin",
+      "claude-code:project:abc",
+    ]);
+    for (const r of refusals) {
+      expect(Object.keys(r).sort()).toEqual(["origin", "protectedCount", "sampleNames"]);
+    }
+  });
+
+  it("protectedCount is the exact real number of protected rows per origin", () => {
+    expect(refusals[0].protectedCount).toBe(7);
+    expect(refusals[1].protectedCount).toBe(2);
+  });
+
+  it("sampleNames is capped at 5 for the 7-row origin, uncapped (2) for the 2-row origin, and every name is drawn from the existing fixture", () => {
+    expect(refusals[0].sampleNames).toHaveLength(5);
+    expect(refusals[1].sampleNames).toHaveLength(2);
+    const allExistingPluginNames = new Set(pluginRows.map((r) => r.name));
+    const allExistingProjNames = new Set(projRows.map((r) => r.name));
+    for (const n of refusals[0].sampleNames) expect(allExistingPluginNames.has(n)).toBe(true);
+    for (const n of refusals[1].sampleNames) expect(allExistingProjNames.has(n)).toBe(true);
+  });
+
+  it("D-06: a fully-covered healthy scan (every existing origin declared, incoming matching) produces zero refusals", () => {
+    const pluginA = { _id: "50", name: "plugin-a", origin: "claude-code:plugin" };
+    const pluginB = { _id: "51", name: "plugin-b", origin: "claude-code:plugin" };
+    const pluginC = { _id: "52", name: "plugin-c", origin: "claude-code:plugin" };
+    const existing = [ccDeploy, pluginA, pluginB, pluginC];
+    const incomingHealthy = [
+      { name: "deploy", origin: "claude-code" },
+      { name: "plugin-a", origin: "claude-code:plugin" },
+      { name: "plugin-b", origin: "claude-code:plugin" },
+      { name: "plugin-c", origin: "claude-code:plugin" },
+    ];
+    const healthyRefusals = computePruneRefusals(
+      existing,
+      incomingHealthy,
+      ["claude-code", "claude-code:plugin"], // every existing origin declared
+      true
+    );
+    expect(healthyRefusals).toEqual([]);
   });
 });
 
