@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { SESSION_CALLS_READ_CAP } from "./llm";
+import { SESSION_CALLS_READ_CAP, SUBSCRIPTION_PROVIDERS } from "./llm";
+import { PROVIDER_BILLING, getBillingType } from "./lib/providers";
 
 // ---------------------------------------------------------------------------
 // Minimal in-memory ctx.db for goalId-persistence test (Phase 149 PULSE-01)
@@ -302,5 +303,51 @@ describe("llm", () => {
 
     it.todo("should filter for rows where agentId is undefined (DB round-trip)");
     it.todo("should join via sessionId to agents table for agentId lookup (DB round-trip)");
+  });
+
+  // 2026-08-11: subscriptionUsage used to .collect() a 30-day window of llmMetrics
+  // and filter in JS. llmMetrics is DELIBERATELY keep-forever (excluded from
+  // RETENTION_DAYS, guarded by a positive test in retention.test.ts), so that read
+  // grew without bound and eventually threw "too many system operations" — which
+  // blanked the whole Analytics page, because an unhandled useQuery throw unmounts
+  // the React tree rather than emptying one widget. It now reads only rows that CAN
+  // match, via the by_provider index, driven by this derived list.
+  describe("SUBSCRIPTION_PROVIDERS — derived from the registry, never hardcoded", () => {
+    it("contains exactly the providers PROVIDER_BILLING marks as subscription", () => {
+      const expected = Object.keys(PROVIDER_BILLING).filter(
+        (p) => PROVIDER_BILLING[p as keyof typeof PROVIDER_BILLING] === "subscription",
+      );
+      expect([...SUBSCRIPTION_PROVIDERS].sort()).toEqual([...expected].sort());
+    });
+
+    it("every entry is genuinely subscription-billed (no api provider leaks in)", () => {
+      for (const p of SUBSCRIPTION_PROVIDERS) {
+        expect(getBillingType(p)).toBe("subscription");
+      }
+    });
+
+    // The bidirectional half. Without it, a hardcoded array that happens to match
+    // today would pass the check above forever, and a subscription provider added
+    // to the registry tomorrow would be silently excluded from the usage total —
+    // undercounting with no error, which is the failure mode this whole fix exists
+    // to remove.
+    it("omits no subscription provider present in the registry", () => {
+      for (const [provider, billing] of Object.entries(PROVIDER_BILLING)) {
+        if (billing === "subscription") {
+          expect(SUBSCRIPTION_PROVIDERS).toContain(provider);
+        }
+      }
+    });
+
+    // Control: proves the assertions above can fail. If they were vacuous — an empty
+    // list, or a list of everything — this would not hold.
+    it("excludes api-billed providers, and is neither empty nor everything", () => {
+      expect(SUBSCRIPTION_PROVIDERS.length).toBeGreaterThan(0);
+      expect(SUBSCRIPTION_PROVIDERS.length).toBeLessThan(
+        Object.keys(PROVIDER_BILLING).length,
+      );
+      expect(SUBSCRIPTION_PROVIDERS).not.toContain("anthropic_direct");
+      expect(SUBSCRIPTION_PROVIDERS).not.toContain("claude-sdk");
+    });
   });
 });

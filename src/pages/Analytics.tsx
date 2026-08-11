@@ -64,7 +64,7 @@ export default function Analytics() {
     period: "daily",
     lookbackHours: 30 * 24,
   });
-  const subscriptionUsage = useQuery(api.llm.subscriptionUsage) ?? { calls: 0, tokens: 0 };
+  const subscriptionUsage = useQuery(api.llm.subscriptionUsage) ?? { calls: 0, tokens: 0, truncated: false };
   // Prompt-cache hit rate (Anthropic) — verifies caching is actually being hit
   const cacheStats = useQuery(api.llm.cacheStats, {});
   // (Removed 2026-08-03: a second `costByPeriod` read whose only consumer was

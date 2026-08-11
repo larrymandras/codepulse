@@ -1,7 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { getBillingType } from "./lib/providers";
+import { getBillingType, PROVIDER_BILLING } from "./lib/providers";
 
 export const recordCall = mutation({
   args: {
@@ -362,25 +362,68 @@ export const rollupCosts = internalMutation({
 
 /** Phase 67 D-01: Subscription provider usage (call count + token total).
  *  Used by Analytics page Subscription Usage MetricCard. */
+/**
+ * Providers whose calls bill against a subscription rather than per-token API spend.
+ * Derived from PROVIDER_BILLING rather than hardcoded, so adding a subscription
+ * provider to the registry flows through here automatically — `lib/providers.ts`
+ * is explicit that provider arrays must never be duplicated elsewhere.
+ */
+export const SUBSCRIPTION_PROVIDERS = (
+  Object.keys(PROVIDER_BILLING) as (keyof typeof PROVIDER_BILLING)[]
+).filter((p) => PROVIDER_BILLING[p] === "subscription");
+
+/**
+ * Total documents this query may read in one call. Bounds a table that is
+ * DELIBERATELY keep-forever: llmMetrics is excluded from RETENTION_DAYS (see
+ * convex/retention.ts) and guarded by a positive test, so it grows without limit.
+ * An unbounded read over it is therefore not "slow eventually" — it is guaranteed
+ * to cross Convex's system-operations ceiling and throw.
+ */
+const SUBSCRIPTION_READ_BUDGET = 8000;
+
 export const subscriptionUsage = query({
   args: {},
   handler: async (ctx) => {
     const cutoff = Date.now() / 1000 - 30 * 86400;
-    const all = await ctx.db.query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
 
-    const subRows = all.filter((r) => getBillingType(r.provider) === "subscription");
-
+    // Read only rows that CAN match, via by_provider (["provider", "timestamp"]),
+    // instead of materializing the whole 30-day window and filtering in JS. On
+    // 2026-08-11 a 1000-row sample of that window was 100% billingType "api"
+    // across four providers, none of them subscription — so the old .collect()
+    // was doing maximal work to compute a near-certain zero, and timed out
+    // ("too many system operations"), which blanked the entire Analytics page
+    // because an unhandled useQuery throw unmounts the React tree.
     let totalCalls = 0;
     let totalTokens = 0;
-    for (const r of subRows) {
-      totalCalls++;
-      totalTokens += r.totalTokens;
+    let budget = SUBSCRIPTION_READ_BUDGET;
+    let truncated = false;
+
+    for (const provider of SUBSCRIPTION_PROVIDERS) {
+      if (budget <= 0) {
+        truncated = true;
+        break;
+      }
+      const rows = await ctx.db
+        .query("llmMetrics")
+        .withIndex("by_provider", (q) =>
+          q.eq("provider", provider).gte("timestamp", cutoff),
+        )
+        .filter((q) => q.neq(q.field("archived"), true))
+        .take(budget);
+
+      // Hitting the cap exactly means there may be more rows we did not read.
+      // Reported rather than silently undercounted — a total that is quietly
+      // low is worse than one labelled incomplete.
+      if (rows.length === budget) truncated = true;
+      budget -= rows.length;
+
+      for (const r of rows) {
+        totalCalls++;
+        totalTokens += r.totalTokens;
+      }
     }
 
-    return { calls: totalCalls, tokens: totalTokens };
+    return { calls: totalCalls, tokens: totalTokens, truncated };
   },
 });
 
