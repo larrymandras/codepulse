@@ -956,6 +956,75 @@ describe("Chat — command-center panel mounts (188-13, D-18, T-188-52/53)", () 
   });
 });
 
+// ─── Nyquist GAP-1 (Phase 111, MISSION-03, T-111-06, D-07) ────────────────────
+//
+// ActiveAgentsPanel was deleted because its "No agents running." empty state
+// was unfalsifiable: it filtered subagentJobs for status === "running", and
+// convex/runtimeIngest.ts only ever routes terminal-state events, so no
+// "running" row can ever arrive. cc-left-rail was reduced to a single child
+// (Intelligence Feed only). These tests close the gap the deletion itself
+// left uncovered:
+//   (a) cc-left-rail has exactly one child element,
+//   (b) neither "ACTIVE AGENTS" nor "No agents running." renders anywhere in
+//       the mounted Chat tree, in both mode states,
+//   (c) the six-panel assertion above is positive-only — a seventh panel
+//       (or a reinstated ActiveAgentsPanel using the shared panel-chrome
+//       convention) would still pass every existing loop, so this makes the
+//       count EXHAUSTIVE by counting rendered panel-chrome headers directly.
+function panelChromeHeaders(container: HTMLElement): HTMLElement[] {
+  // All six command-center panels (IntelligenceFeedPanel/MissionTimelinePanel/
+  // LlmStatusPanel/SystemMonitorPanel/VoiceStatusPanel/QuickCommandsPanel)
+  // share this exact header <span> className verbatim — confirmed by reading
+  // each component's source before writing this selector.
+  const HEADER_CLASS =
+    "font-mono text-sm tracking-[0.1em] text-muted-foreground flex items-center gap-2";
+  return Array.from(container.querySelectorAll<HTMLElement>("span")).filter(
+    (el) => el.className === HEADER_CLASS
+  );
+}
+
+describe("Chat — command-center rail is agent-panel-free (Phase 111 D-07, GAP-1)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+    localStorage.removeItem(LS_COMMAND_CENTER);
+  });
+
+  it("cc-left-rail has exactly one child element with mode ON — only Intelligence Feed remains after the D-07 ActiveAgentsPanel deletion", () => {
+    const { container } = renderChat();
+    fireEvent.click(gridToggle());
+    const rail = container.querySelector('[data-testid="cc-left-rail"]');
+    expect(rail).toBeTruthy();
+    expect(rail!.children.length).toBe(1);
+  });
+
+  it("never renders ACTIVE AGENTS or the unfalsifiable 'No agents running.' empty state while mode is OFF", () => {
+    const { container } = renderChat();
+    expect(within(container).queryByText("ACTIVE AGENTS")).not.toBeInTheDocument();
+    expect(within(container).queryByText("No agents running.")).not.toBeInTheDocument();
+  });
+
+  it("never renders ACTIVE AGENTS or the unfalsifiable 'No agents running.' empty state while mode is ON", () => {
+    const { container } = renderChat();
+    fireEvent.click(gridToggle());
+    expect(within(container).queryByText("ACTIVE AGENTS")).not.toBeInTheDocument();
+    expect(within(container).queryByText("No agents running.")).not.toBeInTheDocument();
+  });
+
+  it("renders EXACTLY six panel-chrome headers with mode ON — an exhaustive count, so a seventh panel cannot hide behind the positive-only label loop above", () => {
+    const { container } = renderChat();
+    fireEvent.click(gridToggle());
+    expect(panelChromeHeaders(container).length).toBe(COMMAND_CENTER_PANEL_LABELS.length);
+  });
+
+  it("renders ZERO panel-chrome headers with mode OFF", () => {
+    const { container } = renderChat();
+    expect(panelChromeHeaders(container).length).toBe(0);
+  });
+});
+
 // ─── Defect 4 (BRAIN-SURFACE-DEFECTS-2026-08-10) ──────────────────────────────
 //
 // `submit()` fired `void sendMessage(text)` and cleared the draft unconditionally,
