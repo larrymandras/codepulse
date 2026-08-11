@@ -655,7 +655,7 @@ Plans:
 
 - [x] **Phase 108 — Per-Profile Engine Telemetry (astridr backend)** — real per-profile active-engine telemetry, a scoped `swap.set`, and a `control_verb_swap` domain route, verified live before the dependent UI is built (completed 2026-08-07)
 - [ ] **Phase 109 — Per-Agent Engine UI** — the already-built picker/badge/confirm-modal surfaces light up on real telemetry with honest server-confirmed swap status
-- [ ] **Phase 110 — Convex Durability** — `aggregates` bounded by the existing batch-capped retention machinery, a verified full nightly prune pass, and the memory-growth root cause documented
+- [x] **Phase 110 — Convex Durability** — `aggregates` bounded by the existing batch-capped retention machinery, a verified full nightly prune pass, and the memory-growth root cause documented (completed 2026-08-11)
 - [ ] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` upgraded into a real mission board on today's data — live cards, humanized tool labels, honest orphan recovery
 - [ ] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition
 - [ ] **Phase 113 — Debt Sweep** — skill-registry prune churn, the intermittent `Chat.test.tsx` failure, and `convex-selfhost/` under version control
@@ -791,11 +791,11 @@ Plans:
 
 **Wave 4**
 
-- [ ] 110-05-PLAN.md — **`autonomous: false`**: `retention-health-check.ps1`'s 14-entry hand-copied policy deleted for a live read with a hard non-zero exit on failure; DUR-02 leg 2 captured with a three-way table-count control (DUR-02; D-07, D-08)
+- [x] 110-05-PLAN.md — **`autonomous: false`**: `retention-health-check.ps1`'s 14-entry hand-copied policy deleted for a live read with a hard non-zero exit on failure; DUR-02 leg 2 captured with a three-way table-count control (DUR-02; D-07, D-08)
 
 **Wave 5**
 
-- [ ] 110-06-PLAN.md — **`autonomous: false`, gated on a real 09:00 UTC cron run**: DUR-02 leg 1 pulled from container logs with both bounds and both controls, DUR-01 daily-survival confirmed against the pre-deploy baseline with its hourly control (DUR-01, DUR-02; D-01, D-05, D-06, D-08)
+- [x] 110-06-PLAN.md — **`autonomous: false`, gated on a real 09:00 UTC cron run**: DUR-02 leg 1 proven from the durable `_scheduled_functions` record (table indices 0..18, all-success, inside the cron window) after container logs were shown with controls to be structurally unable to carry it — Convex UDF `console.log` never reaches container stdout and the self-hosted backend retains no queryable log history; DUR-01 daily-survival confirmed against the pre-deploy baseline with its hourly control (DUR-01, DUR-02; D-01, D-05, D-06, D-08)
 
 **UI hint**: no
 
@@ -868,7 +868,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
-| 110. Convex Durability | 4/6 | In Progress|  |
+| 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 2/3 | In Progress|  |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
 | 113. Debt Sweep | 0/TBD | Not started | - |
