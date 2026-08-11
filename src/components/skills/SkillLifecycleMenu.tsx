@@ -83,9 +83,12 @@ export function resolveHostId(hosts: HostLike[], explicit?: string): string {
   return newestFirst[0]?.hostId ?? "";
 }
 
-/** "claude-code" -> "global", "claude-code:project:<key>" -> "project". */
+/**
+ * "claude-code" -> "global" (the plugin-sourced global origin maps the same
+ * way, D-17 parity), "claude-code:project:<key>" -> "project".
+ */
 function scopeLabel(origin: string): string {
-  if (origin === "claude-code") return "global";
+  if (origin === "claude-code" || origin === "claude-code:plugin") return "global";
   if (origin.startsWith("claude-code:project:")) return "project";
   return origin;
 }

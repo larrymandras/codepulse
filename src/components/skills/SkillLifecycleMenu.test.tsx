@@ -443,6 +443,47 @@ describe("SkillLifecycleMenu — cold lane acts on the dormant copy (98-REVIEW W
   });
 });
 
+describe("SkillLifecycleMenu — scopeLabel plugin-origin parity (D-17)", () => {
+  // scopeLabel is a private helper only reachable via the shadow-blocked
+  // Restore tooltip's rendered text — not exported (the plan explicitly asks
+  // for rendered-text assertions instead). Both fixtures use lane="cold" with
+  // the REAL isShadowing (mirrors the WR-04 cold-lane suite above) so the
+  // shadow-blocked branch — and its scopeLabel(blockingOrigin) call — is
+  // actually reached.
+  const shadowedByClaudeCode: RowSkill = { ...activeGlobal, origins: [DORMANT_ORIGIN, "claude-code"] };
+  const shadowedByPlugin: RowSkill = { ...activeGlobal, origins: [DORMANT_ORIGIN, "claude-code:plugin"] };
+
+  async function useRealIsShadowing() {
+    const actual = await vi.importActual<typeof import("@/lib/skills")>("@/lib/skills");
+    vi.mocked(isShadowing).mockImplementation(actual.isShadowing);
+  }
+
+  async function openShadowTooltip(skill: RowSkill) {
+    render(withProviders(<SkillLifecycleMenu skill={skill} hostId="desktop" lane="cold" />));
+    openMenu();
+    const restoreItem = screen.getByRole("menuitem", { name: /Restore/i });
+    // The Tooltip's trigger is the wrapping <span>, not the disabled item
+    // itself (disabled items are pointer-events:none) — focus the span.
+    fireEvent.focus(restoreItem.parentElement ?? restoreItem);
+    await waitFor(() => {
+      expect(screen.getAllByText(/Shadowed by an active/).length).toBeGreaterThan(0);
+    });
+    return screen.getAllByText(/Shadowed by an active/)[0].textContent ?? "";
+  }
+
+  it("shadowed-by-claude-code renders the 'global' scope wording in the Restore tooltip", async () => {
+    await useRealIsShadowing();
+    const text = await openShadowTooltip(shadowedByClaudeCode);
+    expect(text).toContain("Shadowed by an active global skill");
+  });
+
+  it("shadowed-by-claude-code:plugin renders the SAME 'global' scope wording (D-17 parity)", async () => {
+    await useRealIsShadowing();
+    const text = await openShadowTooltip(shadowedByPlugin);
+    expect(text).toContain("Shadowed by an active global skill");
+  });
+});
+
 describe("SkillLifecycleMenu — Archive (no dialog)", () => {
   it("enqueues action archive, destination cold, sourceOrigin the active origin", () => {
     renderMenu(activeGlobal, "host-1");
