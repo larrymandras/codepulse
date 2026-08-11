@@ -102,12 +102,12 @@ vi.mock("sonner", () => ({
 // as `BrainHeaderBadge.test.tsx` mocking `useActiveEngine` — `filterBrainSwaps`/
 // `describeSwapOutcome`/`SWAP_HISTORY_CAP` stay REAL (via `importOriginal`) so these tests exercise
 // the real filter/outcome logic together with the real render, not a hand-copied mirror of either.
-// Phase 109 (D-11): `useCombinedSwapHistory` mocked alongside it for the same reason —
-// `SwapHistoryList` (which `SwapHistorySection` now delegates to) reads that hook, not the plain
-// scoped-only one. `mockUseControlVerbSwaps` is kept even though nothing in this file's own
-// production code calls it post-Phase-109 (no other consumer in this test file was pointed at
-// it) — harmless to leave wired, avoids an unrelated churn to this describe block's setup.
-const mockUseControlVerbSwaps = vi.fn<(profileId: string | undefined) => SwapHistoryRow[]>();
+// Phase 109 (D-11): `useCombinedSwapHistory` is what `SwapHistoryList` (which `SwapHistorySection`
+// delegates to) actually reads, not the plain scoped-only hook.
+// 2026-08-11 (v14.0 audit INT-06): the `mockUseControlVerbSwaps` wiring was removed along with the
+// real `useControlVerbSwaps` export it stood in for. The prior comment here argued it was "harmless
+// to leave wired" — that stopped being true once the export was deleted, since the mock would then
+// assert a module shape that no longer exists.
 const mockUseCombinedSwapHistory = vi.fn<
   (profileId: string | undefined) => {
     rows: (SwapHistoryRow & { origin: "scoped" | "global" })[];
@@ -119,7 +119,6 @@ vi.mock("@/hooks/useControlVerbSwaps", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useControlVerbSwaps")>();
   return {
     ...actual,
-    useControlVerbSwaps: (profileId: string | undefined) => mockUseControlVerbSwaps(profileId),
     useCombinedSwapHistory: (profileId: string | undefined) =>
       mockUseCombinedSwapHistory(profileId),
   };
@@ -266,11 +265,7 @@ beforeEach(() => {
   mockToastFn.mockReset();
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
   mockProfileOverrides = {};
-  // D-15: honest-empty default, matching what the real hook returns when GlobalSwapModal's
-  // genuinely-global `profileId={undefined}` call skips the query.
-  mockUseControlVerbSwaps.mockReset();
-  mockUseControlVerbSwaps.mockReturnValue([]);
-  // Phase 109 (D-11): same honest-empty default for the combined hook `SwapHistoryList` actually
+  // Phase 109 (D-11): honest-empty default for the combined hook `SwapHistoryList` actually
   // reads — every test in this file mounts `SwapHistorySection`/`SwapHistoryList` unconditionally
   // (GlobalSwapModal's own mount), so this must always be a well-formed object, never undefined.
   mockUseCombinedSwapHistory.mockReset();

@@ -32,9 +32,16 @@ const TIERS: Array<{ name: TierName; width: number; height: number }> = [
   { name: 'below-lg', width: 900, height: 900 },
 ];
 
+// 'ACTIVE AGENTS' removed 2026-08-11 (v14.0 audit INT-03): commit 87dafe30
+// feat(111-02) deleted ActiveAgentsPanel, but this list still asserted its
+// header was visible -- directly contradicting src/pages/Chat.test.tsx:1005,1012,
+// which assert "ACTIVE AGENTS" is NOT in the document. The spec's own :104-109
+// Clerk skip is why it went unnoticed: against the default :5173 server every
+// tier skips, so it only fails when run unskipped against dev:noauth on :5181.
+// The other six labels were each confirmed to resolve to a live component in
+// src/components/control-center/; 'ACTIVE AGENTS' resolved to zero.
 const PANEL_HEADERS = [
   'INTELLIGENCE FEED',
-  'ACTIVE AGENTS',
   'MISSION TIMELINE',
   'LLM STATUS',
   'SYSTEM MONITOR',

@@ -10,10 +10,9 @@ import { api } from "../../convex/_generated/api";
  * loading signal preserved.
  */
 
-/** Links only. `[]` while loading. */
-export function useBifrostLinks() {
-  return useQuery(api.bifrost.list) ?? [];
-}
+// `useBifrostLinks()` (the bare `?? []` wrapper) was removed 2026-08-11 by the
+// v14.0 audit (INT-06) — zero non-test call sites. `useBifrostLinksState` below
+// is what `Bifrost.tsx` actually consumes.
 
 /** Links plus the loading signal the `?? []` fallback destroys. */
 export function useBifrostLinksState() {

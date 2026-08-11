@@ -4,8 +4,11 @@
  * THIS SPEC WRITES TO THE LIVE SELF-HOSTED CONVEX INSTANCE. The repo has no
  * separate test database. That is why two things here are mandatory rather than
  * tidy: the run-unique title suffix (a slug collision is a CORRECT D-06 refusal
- * and would read as a test failure on the second run), and the archive cleanup
- * at the end. Never reach for a bulk delete or `convex import` to clean up —
+ * and would read as a test failure on the second run), and the archive cleanup —
+ * which lives in `afterEach`, NOT at the end of the test body, so that it also
+ * runs when the body fails (see the `createdTitle` note below; a body-tail
+ * cleanup leaked 18 rows before 2026-08-11). Never reach for a bulk delete or
+ * `convex import` to clean up —
  * mass mutation on this instance is what took the dashboard down for days on
  * 2026-07-21/22 (repo CLAUDE.md, Self-Hosted Convex Operational Rules).
  *
@@ -36,9 +39,56 @@ test.describe('Galdr send-to-chat', () => {
     });
   });
 
+  /**
+   * The title this run created, or null if it never got that far.
+   *
+   * 2026-08-11 (v14.0 audit INT-04): cleanup used to be step 5 of the test BODY.
+   * Any failure at steps 2-4 therefore skipped it and leaked the prompt
+   * permanently — `prompts` is deliberately retention-exempt (convex/retention.ts
+   * D-13), so nothing ever reaps a leaked row. That is not hypothetical: this
+   * spec is intermittently flaky under full-suite parallel load (see the timeout
+   * note above), and the live library was found holding 18 leaked
+   * `E2E send probe *` rows against 1 real prompt — 95% of what /galdr rendered.
+   * Those were archived individually on 2026-08-11.
+   *
+   * Cleanup now lives in afterEach so it runs on the failure path too. It is
+   * still the per-row archive path — never a bulk delete or `convex import`,
+   * per the repo's Self-Hosted Convex Operational Rules.
+   */
+  let createdTitle: string | null = null;
+
+  test.afterEach(async ({ page }) => {
+    if (!createdTitle) return; // nothing was created — nothing to clean up
+    const title = createdTitle;
+    createdTitle = null;
+
+    await page.goto('/galdr');
+    await page.getByText(title).first().click();
+    // Drawer footer Archive, then the AlertDialog's own Archive. Scoped by role
+    // so the two same-named buttons cannot be confused for one another.
+    await page.getByRole('button', { name: 'Archive' }).click();
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: 'Archive' })
+      .click();
+    // Assert on the send-target chevron, which only a CARD has. A bare
+    // getByText(title) also matches the drawer and the AlertDialog heading
+    // (`Archive "{title}"?`), so it counts 2 while the dialog is up and never
+    // reaches 0. The longer timeout covers the Convex subscription round trip,
+    // which is measurably slower when the full suite runs 16 workers wide.
+    // This stays a real assertion: if cleanup silently no-ops, the run must fail
+    // rather than quietly leak, which is exactly how the 18 rows accumulated.
+    await expect(
+      page.getByRole('button', { name: `Choose send target for ${title}` })
+    ).toHaveCount(0, { timeout: 20_000 });
+  });
+
   test('resolves variables before navigating to chat', async ({ page }) => {
     const suffix = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const title = `E2E send probe ${suffix}`;
+    // Registered BEFORE the create click, not after it succeeds: a create that
+    // half-lands (row written, assertion times out) must still be cleaned up.
+    createdTitle = title;
 
     // 1. Create a prompt with one variable through the drawer.
     await page.goto('/galdr');
@@ -85,23 +135,6 @@ test.describe('Galdr send-to-chat', () => {
     expect(chatText).toContain('release notes');
     expect(chatText).not.toContain('{{');
 
-    // 5. Clean up by archiving — the only removal this phase has.
-    await page.goto('/galdr');
-    await page.getByText(title).first().click();
-    // Drawer footer Archive, then the AlertDialog's own Archive. Scoped by role
-    // so the two same-named buttons cannot be confused for one another.
-    await page.getByRole('button', { name: 'Archive' }).click();
-    await page
-      .getByRole('alertdialog')
-      .getByRole('button', { name: 'Archive' })
-      .click();
-    // Assert on the send-target chevron, which only a CARD has. A bare
-    // getByText(title) also matches the drawer and the AlertDialog heading
-    // (`Archive "{title}"?`), so it counts 2 while the dialog is up and never
-    // reaches 0. The longer timeout covers the Convex subscription round trip,
-    // which is measurably slower when the full suite runs 16 workers wide.
-    await expect(
-      page.getByRole('button', { name: `Choose send target for ${title}` })
-    ).toHaveCount(0, { timeout: 20_000 });
+    // Cleanup is NOT here — see the afterEach teardown below.
   });
 });

@@ -61,7 +61,9 @@ vi.mock("@/hooks/useGaldrPrompts", () => ({
     prompts: [NEVER_USED, OLDER, NEWER],
     isLoading: false,
   }),
-  useGaldrPrompts: () => [NEVER_USED, OLDER, NEWER],
+  // `useGaldrPrompts` key dropped 2026-08-11 (v14.0 audit INT-06) — the real
+  // export was removed as dead code, so mocking it here would assert a module
+  // shape that no longer exists.
   useGaldrPromptVersions: () => [],
 }));
 

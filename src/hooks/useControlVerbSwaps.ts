@@ -54,20 +54,12 @@ export type SwapHistoryRow = {
 
 const EMPTY_ROWS: SwapHistoryRow[] = [];
 
-/**
- * useControlVerbSwaps — the most recent (up to `SWAP_HISTORY_CAP`) swap-history rows for one
- * profile scope, newest first. `undefined` when no `profileId` is supplied never fabricates a
- * read (see header comment) — it skips the query and returns the same honest-empty `[]` as a
- * real profile with zero rows so far.
- */
-export function useControlVerbSwaps(profileId: string | undefined): SwapHistoryRow[] {
-  return (
-    (useQuery(
-      api.controlVerbSwaps.listByScope,
-      profileId ? { profileId } : "skip"
-    ) as SwapHistoryRow[] | undefined) ?? EMPTY_ROWS
-  );
-}
+// `useControlVerbSwaps()` — the SCOPED-ONLY read — was removed 2026-08-11 by the
+// v14.0 audit (INT-06). It had zero non-test call sites: Phase 109 D-11 replaced
+// it everywhere with `useCombinedSwapHistory` below, because a global swap
+// genuinely CAN change an unpinned profile's engine, so a scoped-only history
+// silently omitted rows the operator needed to see. `EMPTY_ROWS` is retained —
+// `useCombinedSwapHistory` uses it for the same honest-empty guarantee.
 
 /** A merged row, tagged with which query it came from (D-11/D-12) — the ONLY signal that
  * distinguishes "this profile's own swap" (`origin: "scoped"`, no badge) from "a fleet-wide swap"

@@ -13,13 +13,14 @@ import { api } from "../../convex/_generated/api";
  * repo's wrapper convention (`useActiveEngine.ts`).
  */
 
-/** The live prompt library. `[]` while loading, never `undefined`. */
-export function useGaldrPrompts() {
-  return useQuery(api.galdr.list) ?? [];
-}
+// `useGaldrPrompts()` (the bare `?? []` wrapper) was removed 2026-08-11 by the
+// v14.0 audit (INT-06) — it had zero non-test call sites. `useGaldrPromptsState`
+// below is the one every surface actually uses, because it keeps the loading
+// signal. Re-add the bare wrapper only when a caller genuinely wants prompts
+// with no loading distinction.
 
 /**
- * Same data, but keeping the loading signal the `?? []` fallback destroys.
+ * The live prompt library, keeping the loading signal a `?? []` fallback destroys.
  *
  * `useGaldrPrompts()` cannot tell "still loading" from "the library is empty" —
  * both are `[]`. 116-UI-SPEC requires those to render differently (skeleton cards

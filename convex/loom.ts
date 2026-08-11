@@ -10,7 +10,7 @@
  * job history — and the two cross-link rather than merge (D-07).
  */
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, query } from "./_generated/server";
 
 type LoomCtx = { db: any };
 
@@ -137,7 +137,16 @@ export async function upsertPipelineHandler(
   });
 }
 
-export const upsertPipeline = mutation({
+/**
+ * `internalMutation`, not `mutation` (v14.0 audit INT-03) — a plain `mutation`
+ * lands in the client-callable `api.` namespace, so any holder of the shipped
+ * `VITE_CONVEX_URL` could upsert a pipeline straight from devtools, bypassing
+ * `validateLoomAuth` in loomHttp.ts entirely. Same rule Phase 108 applied to its
+ * own telemetry writes (activeEngine.ts `recordRouting`, controlVerbSwaps.ts
+ * `record`). The UI never calls this; the documented CLI consumer
+ * (`npx convex run loom:upsertPipeline`) reaches internal functions fine.
+ */
+export const upsertPipeline = internalMutation({
   args: {
     slug: v.string(),
     name: v.string(),
@@ -229,7 +238,13 @@ export async function recordStepEventHandler(
   return { ok: true as const, runId: latest._id };
 }
 
-export const recordStepEvent = mutation({
+/**
+ * `internalMutation`, not `mutation` (v14.0 audit INT-03) — see `upsertPipeline`
+ * above. Its only caller is loomHttp.ts's bearer-gated route; leaving it public
+ * made that gate bypassable, since the same write was reachable unauthenticated
+ * through `api.loom.recordStepEvent`.
+ */
+export const recordStepEvent = internalMutation({
   args: {
     pipelineSlug: v.string(),
     stepId: v.string(),

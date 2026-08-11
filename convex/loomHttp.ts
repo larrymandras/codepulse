@@ -11,7 +11,7 @@
  * calls this; it reads through subscriptions.
  */
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { validateLoomAuth, unauthorizedResponse } from "./ingestAuth";
 
 /**
@@ -52,7 +52,7 @@ export const loomEventPostHandler = async (ctx: any, request: Request) => {
   if (!stepId) return jsonResponse({ error: "MISSING_FIELD", field: "stepId" }, 400);
   if (!event) return jsonResponse({ error: "MISSING_FIELD", field: "event" }, 400);
 
-  const result = await ctx.runMutation(api.loom.recordStepEvent, {
+  const result = await ctx.runMutation(internal.loom.recordStepEvent, {
     pipelineSlug,
     stepId,
     event,
