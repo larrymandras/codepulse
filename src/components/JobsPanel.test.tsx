@@ -85,6 +85,46 @@ describe("JobsPanel", () => {
     expect(container.textContent).not.toMatch(/finished \d{3,}h ago/);
   });
 
+  // ── Hours tier + the day boundary (code-review WR-01) ─────────────────────
+  // The hours branch had NO positive coverage: the only hours-related
+  // assertion was the negative `not.toMatch(/finished \d{3,}h ago/)` above,
+  // and the 34-day fixture (h=816) sits outside the range a broken `h < 24`
+  // threshold would corrupt. Mutating `h < 24` to `h < 240` left the whole
+  // suite green while silently rendering every 1–9-day-old row as
+  // "finished 120h ago". The 25-hour case below is what actually kills that
+  // mutant — it is the first value that must cross into the day tier.
+
+  it("renders 'finished 3h ago' for a row finished 3 hours ago", () => {
+    mockUseSubagentJobs.mockReturnValue([
+      makeRow("j-hour", "completed", 3 * 3600),
+    ]);
+
+    render(<JobsPanel />);
+
+    expect(screen.getByText("finished 3h ago")).toBeInTheDocument();
+  });
+
+  it("renders 'finished 23h ago' at the top of the hours tier", () => {
+    mockUseSubagentJobs.mockReturnValue([
+      makeRow("j-hour-max", "completed", 23 * 3600),
+    ]);
+
+    render(<JobsPanel />);
+
+    expect(screen.getByText("finished 23h ago")).toBeInTheDocument();
+  });
+
+  it("crosses into the day tier at 25 hours, rendering 'finished 1d ago' not 'finished 25h ago'", () => {
+    mockUseSubagentJobs.mockReturnValue([
+      makeRow("j-day-boundary", "completed", 25 * 3600),
+    ]);
+
+    const { container } = render(<JobsPanel />);
+
+    expect(screen.getByText("finished 1d ago")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/finished 25h ago/);
+  });
+
   it("renders 'finished 5m ago' for a row finished 300s ago (epoch guard control)", () => {
     mockUseSubagentJobs.mockReturnValue([
       makeRow("j-min", "completed", 300),
@@ -124,6 +164,13 @@ describe("JobsPanel", () => {
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain("bg-muted");
     expect(container.querySelectorAll(".animate-pulse").length).toBe(0);
+    // code-review WR-02: assert the ICON too, not just the badge. Without
+    // this, re-adding a `running:`/`unknown:` entry to stateIcon in any
+    // colour would leave every other assertion in this test green while
+    // directly violating D-08.
+    expect(
+      container.querySelectorAll('[class*="text-muted-foreground/50"]').length
+    ).toBe(1);
   });
 
   it("renders no animate-pulse element for a 'running' status row (removed affordance)", () => {
@@ -140,5 +187,27 @@ describe("JobsPanel", () => {
 
     expect(container.querySelectorAll(".animate-pulse").length).toBe(0);
     expect(container.querySelectorAll(".text-\\(--status-ok\\)").length).toBe(0);
+    // code-review WR-02: the positive half — "running" must render the muted
+    // Clock fallback, not merely fail to render a live-looking one.
+    expect(
+      container.querySelectorAll('[class*="text-muted-foreground/50"]').length
+    ).toBe(1);
+  });
+
+  it("does NOT render the muted Clock fallback for a mapped status (WR-02 control)", () => {
+    // The control for the two assertions above: it proves the selector
+    // discriminates. A mapped status renders its own icon (`completed` ->
+    // CheckCircle, `text-primary/80`), so the fallback selector must find
+    // NOTHING here. Without this, a selector that matched everything — or
+    // nothing — would satisfy both tests above and prove neither.
+    mockUseSubagentJobs.mockReturnValue([
+      makeRow("j-mapped", "completed", 60),
+    ]);
+
+    const { container } = render(<JobsPanel />);
+
+    expect(
+      container.querySelectorAll('[class*="text-muted-foreground/50"]').length
+    ).toBe(0);
   });
 });
