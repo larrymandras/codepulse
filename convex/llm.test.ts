@@ -306,12 +306,17 @@ describe("llm", () => {
   });
 
   // 2026-08-11: subscriptionUsage used to .collect() a 30-day window of llmMetrics
-  // and filter in JS. llmMetrics is DELIBERATELY keep-forever (excluded from
-  // RETENTION_DAYS, guarded by a positive test in retention.test.ts), so that read
-  // grew without bound and eventually threw "too many system operations" — which
-  // blanked the whole Analytics page, because an unhandled useQuery throw unmounts
-  // the React tree rather than emptying one widget. It now reads only rows that CAN
-  // match, via the by_provider index, driven by this derived list.
+  // and filter in JS, and threw "too many system operations" — which blanked the
+  // whole Analytics page, because an unhandled useQuery throw unmounts the React
+  // tree rather than emptying one widget. It now reads only rows that CAN match,
+  // via the by_provider index, driven by this derived list.
+  //
+  // Do NOT restate the first diagnosis, which was wrong: that read did not "grow
+  // without bound". llmMetrics as a TABLE is keep-forever, but the 30-day window
+  // SLIDES — measured at 5,274 rows, down from Phase 104's ~7,080 on 2026-08-01.
+  // The supported mechanism is concurrent load from Analytics' ~10 simultaneous
+  // queries against a memory-loaded instance (see the providerBreakdown STOPGAP
+  // note in llm.ts). The win here is reading ~864 rows instead of 5,274.
   describe("SUBSCRIPTION_PROVIDERS — derived from the registry, never hardcoded", () => {
     it("contains exactly the providers PROVIDER_BILLING marks as subscription", () => {
       const expected = Object.keys(PROVIDER_BILLING).filter(

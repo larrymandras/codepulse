@@ -373,11 +373,25 @@ export const SUBSCRIPTION_PROVIDERS = (
 ).filter((p) => PROVIDER_BILLING[p] === "subscription");
 
 /**
- * Total documents this query may read in one call. Bounds a table that is
- * DELIBERATELY keep-forever: llmMetrics is excluded from RETENTION_DAYS (see
- * convex/retention.ts) and guarded by a positive test, so it grows without limit.
- * An unbounded read over it is therefore not "slow eventually" — it is guaranteed
- * to cross Convex's system-operations ceiling and throw.
+ * Total documents this query may read in one call.
+ *
+ * CORRECTED 2026-08-11 (second pass): an earlier version of this comment said the
+ * old `.collect()` "grows without limit" and was "guaranteed" to cross Convex's
+ * system-operations ceiling. That was wrong and is left here rather than quietly
+ * rewritten. `llmMetrics` as a TABLE is indeed keep-forever (excluded from
+ * RETENTION_DAYS, guarded by a positive test in retention.test.ts) — but the read
+ * is a 30-day SLIDING window, so it does not grow without bound. Measured
+ * 2026-08-11: 5,274 rows in that window, DOWN from the ~7,080 Phase 104 recorded
+ * on 2026-08-01, because the window slides as activity moves.
+ *
+ * The better-supported mechanism is the one the `providerBreakdown` STOPGAP note
+ * below already documents: Analytics fires ~10 queries concurrently, and the
+ * combined load tips a memory-loaded instance over. Backend memory was 32.5 GiB
+ * last night versus 18 GiB after the nightly restart.
+ *
+ * This cap is therefore defence-in-depth, not the load-bearing fix. What actually
+ * helps here is reading ~864 rows instead of 5,274 — a ~6x cut in this query's
+ * share of that concurrent load.
  */
 const SUBSCRIPTION_READ_BUDGET = 8000;
 
