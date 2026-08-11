@@ -301,6 +301,53 @@ describe("computePruneRefusals (DEBT-05, D-05)", () => {
   });
 });
 
+// DEFECT 2 (adversarial gate on 113-02): computePruneRefusals' `strictPrunedIds` exclusion
+// filter (skillSync.ts:146) was DEAD in every existing fixture — replacing it with an empty
+// Set left all pre-existing tests green, because every fixture's "declared" origin never also
+// held a row that was genuinely stale (i.e. legitimately pruned under BOTH the legacy and the
+// strict rule). Without a row like that, `legacyPrunes` and `strictPrunes` never overlap on a
+// declared origin, so the `if (strictPrunedIds.has(row._id)) continue` line never had anything
+// to skip — the filter looked exercised but was never actually discriminating anything.
+describe("computePruneRefusals — discriminates a row still pruned under strict mode from a row protected by it (defect 2)", () => {
+  it("REGRESSION: a stale row in a DECLARED origin is genuinely pruned and NOT reported as a refusal, while a row in an undeclared origin is both protected and reported", () => {
+    const ccDeploy = { _id: "60", name: "deploy", origin: "claude-code" };
+    // Genuinely stale: declared covered (claude-code IS in scannedOrigins) and absent from
+    // incoming — this row must be deleted under BOTH the additive/legacy rule and the strict
+    // rule, so it must never show up as a "refusal."
+    const ccStale = { _id: "61", name: "stale-cc-skill", origin: "claude-code" };
+    // Protected: origin NOT declared, so the strict rule must refuse to prune it even though
+    // the additive/legacy rule would.
+    const pluginA = { _id: "62", name: "plugin-a", origin: "claude-code:plugin" };
+
+    const incoming = [
+      { name: "deploy", origin: "claude-code" },
+      // Decoy: without an incoming row under claude-code:plugin, that origin would never be
+      // prunable under the additive/legacy baseline either (computeSkillPrunes' additive mode
+      // seeds prunableOrigins from BOTH incoming origins and scannedOrigins), which would make
+      // pluginA non-discriminating too. This decoy is what makes claude-code:plugin actually
+      // prunable under the legacy baseline, so the strict rule's protection of it is a real,
+      // observable difference — not a case that was never going to prune it either way.
+      { name: "plugin-decoy", origin: "claude-code:plugin" },
+    ];
+
+    const refusals = computePruneRefusals(
+      [ccDeploy, ccStale, pluginA],
+      incoming,
+      ["claude-code"], // declared: claude-code only — claude-code:plugin is NOT declared
+      true
+    );
+
+    expect(refusals).toHaveLength(1);
+    expect(refusals[0].origin).toBe("claude-code:plugin");
+    expect(refusals[0].sampleNames).toEqual(["plugin-a"]);
+
+    // Confirm ccStale (the declared-origin row) was ACTUALLY pruned under the strict rule —
+    // proving its absence from `refusals` reflects "correctly deleted," not "silently missed."
+    const strictPrunes = computeSkillPrunes([ccDeploy, ccStale, pluginA], incoming, ["claude-code"], true);
+    expect(strictPrunes.map((p) => p._id)).toEqual(["61"]);
+  });
+});
+
 describe("computePruneRefusals — alert payload contract (D-05)", () => {
   const ccDeploy = { _id: "20", name: "deploy", origin: "claude-code" };
   const pluginRows = Array.from({ length: 7 }, (_, i) => ({
@@ -317,8 +364,14 @@ describe("computePruneRefusals — alert payload contract (D-05)", () => {
     { name: "plugin-decoy", origin: "claude-code:plugin" },
     { name: "proj-decoy", origin: "claude-code:project:abc" },
   ];
+  // DEFECT 3 (adversarial gate on 113-02): `existing`'s natural insertion order used to be
+  // [ccDeploy, ...pluginRows, ...projRows], which is ALREADY alphabetical by origin
+  // ("claude-code:plugin" < "claude-code:project:abc") — deleting the `.sort()` call in
+  // computePruneRefusals left this fixture green by luck, not by proof. Insertion order here
+  // deliberately CONTRADICTS alphabetical order (project rows first, then plugin rows) so the
+  // `.sort()` call is the only thing that can make the assertion below pass.
   const refusals = computePruneRefusals(
-    [ccDeploy, ...pluginRows, ...projRows],
+    [...projRows, ccDeploy, ...pluginRows],
     incoming,
     ["claude-code"], // neither claude-code:plugin nor claude-code:project:abc declared
     true
