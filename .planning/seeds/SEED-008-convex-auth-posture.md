@@ -93,16 +93,46 @@ Reading: the only rule that could admit LAN traffic to a Docker-published port i
 **blocked** by the default-block. Tailnet inbound is most likely **allowed**, via the Any-profile
 Tailscale rules, which is consistent with laptop browsing working today.
 
-**Still unresolved, and deliberately not called settled.** Three further probes were attempted from
-this host and all are inconclusive because every available path is special-cased: loopback (own IP),
-a Docker container on the bridge network (returned 200 to `10.0.0.44:3210`, but that traverses
-Docker's own NAT and its own firewall allowance), and WSL (no usable distro). **The decisive test
-requires a device that is neither this machine nor a container on it** — see the seed's trigger
-condition. Until it runs, treat "LAN is blocked" as the likely reading, not a fact.
+## RESOLVED 2026-08-11 — the LAN could reach it, and that half is now closed
 
-Note the consequence if LAN *is* blocked: the recommended port rebinding becomes largely redundant
-— the firewall is already enforcing what it would enforce — and carries a real risk of breaking
-tailnet browsing. That is why it was **not** executed when this seed was planted.
+**The firewall reading above was wrong.** It predicted LAN was already blocked. A laptop on the
+same subnet, Tailscale off, measured:
+
+```
+http://10.0.0.44:5173/         -> 200   (control: the path is live)
+http://10.0.0.44:3210/version  -> 200   (Convex backend)
+http://10.0.0.44:6791/         -> 200   (Convex dashboard)
+```
+
+So any device on the home LAN could call every public Convex mutation with no credential. Three
+probes attempted from the host itself were all inconclusive — loopback (own IP), a Docker container
+on the bridge (returned 200, but through Docker's own NAT and allowance), and WSL (no usable
+distro). **Only the off-host device settled it.** Record this: a firewall-rule *reading* is not a
+reachability *result*, and this analysis was confidently wrong twice before a real probe ran.
+
+**Fix applied the same day:** `convex-selfhost\restrict-convex-lan.ps1` — Windows Firewall Block
+rules on TCP `3210-3211` and `6791`, scoped `RemoteAddress=LocalSubnet`. Block beats Allow in WFP,
+so it overrides the Docker Desktop Backend allowance without modifying it. Verified after: the same
+laptop probe returned **000**, browsing over Tailscale still loads CodePulse with live data, and on
+the host loopback stayed 200 with Ástríðr→Convex ingest still flowing (newest `events` row 12s old,
+since container traffic rides the Docker bridge, not the host LAN interface). Revert with `-Remove`.
+
+Chosen over rebinding the container to `127.0.0.1` + the Tailscale IP because that makes Convex
+startup depend on the Tailscale interface being up first — on a reboot where Docker wins that race
+the bind fails and Convex does not start at all, trading an exposure for an outage risk.
+
+## What this does and does NOT close
+
+**Closed:** LAN devices can no longer reach the unauthenticated mutation surface.
+
+**Still open — the actual question this seed exists for.** The exposure is now bounded to the
+tailnet, which makes *the tailnet the de facto auth boundary* by accident rather than by decision.
+Anything on the tailnet — every enrolled device, and anything running on one — can still write to
+every public Convex function with no credential. That is probably acceptable, but it has never been
+decided, written down, or weighed against making Clerk mandatory. The firewall rule bought time; it
+did not answer the question. Note also that the rule lives in `convex-selfhost\`, which is not under
+version control (DEBT-07, Phase 113) — so this mitigation is currently one machine rebuild away from
+being silently lost.
 
 ## Related
 
