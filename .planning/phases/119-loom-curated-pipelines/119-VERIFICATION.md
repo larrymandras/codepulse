@@ -45,14 +45,36 @@ path → exit 2).
 
 ## Gaps
 
-1. **The seeded card has 3 steps; its source workflow declares 2.** Hand-seeded
-   before the scanner existed. `/loom-author` proposes the correct `Review →
-   Verify`.
-2. **`LOOM_API_KEY` is backend-only** — the user-level copy was not set, so
-   emits need it passed explicitly. Probed, with a working control.
-3. **No committed e2e spec for `/loom`** beyond the nav test; the live gate was
-   verified by direct probe, so it is not regression-guarded like `/bifrost`.
+Updated 2026-08-11 after a close-out pass.
+
+1. ~~The seeded card has 3 steps; its source declares 2.~~ **CLOSED.**
+   Re-authored from the scanner's proposal to `review → verify`, matching the
+   workflow's own `meta`. The upsert returned the same `_id`, so it refreshed
+   rather than duplicated, and both steps kept their `docMd`. A curated card
+   claiming a step its source does not have is the drift Loom exists to prevent.
+2. **`LOOM_API_KEY` is backend-only** — still open, and needs Larry. The
+   user-level copy was not set (probed, with `GALDR_API_KEY` as the control
+   proving the probe works), so emits must pass the key explicitly.
+3. ~~No committed e2e spec for `/loom`.~~ **CLOSED.** `e2e/loom.spec.ts` guards
+   the control pair, with the clean-run assertion FIRST so a page rendering
+   every step as errored cannot pass. Mutation-proven: forcing `stepStateFrom`
+   to return `"error"` fails the control while the state-vocabulary test
+   correctly still passes. It fails rather than skips when its fixture is
+   missing, so it cannot pass vacuously.
 4. **D-05's cap depth and D-08's deferrals** remain unexercised/undone by design.
+5. **NEW — the live-data e2e specs are flaky under full-suite parallel load.**
+   Three consecutive `--workers=4` runs after bounding the timeouts gave 0, 2
+   and 1 of the Seiðr specs failing. Timeouts reduced it and did not eliminate
+   it, because the cause is contention over shared mutable state, not a bound:
+   these specs read — and `galdr` writes — one live Convex instance and one dev
+   server while 20 axe scans run concurrently. In isolation they are reliable
+   (loom + bifrost + galdr + navigation → 15/15). The fix is a separate serial
+   Playwright project for live-data specs; not made unilaterally because it is a
+   repo-wide config change and a concurrent session is active in this checkout.
+6. **NEW — `e2e/command-center-breakpoints.spec.ts` fails 3/3, and it is not
+   Loom's.** `87dafe30 feat(111-02)` deleted `ActiveAgentsPanel` while the spec
+   still lists `'ACTIVE AGENTS'` at line 37 among its required panel headers.
+   Belongs to the in-flight Phase 111.
 
 ## Verdict
 

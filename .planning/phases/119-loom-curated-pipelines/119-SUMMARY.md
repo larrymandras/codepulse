@@ -126,16 +126,20 @@ measurement bugs, and I checked before reporting either as a defect.
 
 ## Gaps — stated, not buried
 
-1. **The seeded `review-verify` card has 3 steps; the workflow declares 2.** I
-   hand-seeded `review → verify → report` before the scanner existed;
-   `loom-scan.mjs` correctly proposes `Review → Verify` from the real `meta`.
-   The card is richer than its source. Re-author it with `/loom-author` to make
-   the two agree, or keep the extra step deliberately.
-2. **`LOOM_API_KEY` is set on the backend but NOT as a user-level env var**
-   (step 5 of the setup was not run; confirmed by probe, with `GALDR_API_KEY` as
-   the control proving the probe works). Emits therefore need the key passed
-   explicitly until that is done.
+Updated 2026-08-11 after a close-out pass; see `119-VERIFICATION.md` for the
+same list with evidence.
+
+1. ~~Seeded card has 3 steps, workflow declares 2.~~ **CLOSED** — re-authored to
+   `review → verify`; same `_id`, `docMd` preserved.
+2. **`LOOM_API_KEY` backend-only** — open, needs Larry's step 5.
 3. **D-08 deferrals:** the Ástríðr cron lens and manual in-UI authoring.
-4. **No e2e spec for `/loom` beyond the nav test.** The live gate was verified
-   by direct probe rather than a committed spec, so it is not guarded against
-   regression the way `/bifrost` and `/galdr` are.
+4. ~~No e2e spec for `/loom`.~~ **CLOSED** — `e2e/loom.spec.ts` (`2db8c4cb`),
+   mutation-proven and non-vacuous.
+5. **NEW: live-data e2e specs are flaky under full-suite parallel load.**
+   Contention over one shared Convex instance and dev server, not a timeout
+   value. Reliable in isolation (15/15). Fix is a serial Playwright project for
+   live-data specs — a repo-wide config change, deliberately not made while a
+   concurrent session is active here.
+6. **NEW: `command-center-breakpoints.spec.ts` fails 3/3** because `87dafe30`
+   (Phase 111) deleted `ActiveAgentsPanel` without updating the spec. Not this
+   phase's.
