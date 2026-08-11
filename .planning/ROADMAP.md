@@ -820,7 +820,7 @@ Plans:
 **Wave 1** (parallel, no file overlap)
 
 - [x] 111-01-PLAN.md — JobsPanel becomes a mission history surface: prune the queued/running icon map, replace the dual-meaning elapsed formatter with a single-meaning "finished X ago" incl. a day tier, strip the pulsing dot and BACKGROUND JOBS label, hex→token fix, plus a new JobsPanel.test.tsx (MISSION-01, MISSION-03; D-05, D-08, D-09, D-10, D-13)
-- [ ] 111-02-PLAN.md — delete ActiveAgentsPanel outright (component, test, import, mount + its SectionErrorBoundary) and repair Chat.test.tsx's six exposed seven-panel claims (MISSION-03; D-01, D-07, D-13)
+- [x] 111-02-PLAN.md — delete ActiveAgentsPanel outright (component, test, import, mount + its SectionErrorBoundary) and repair Chat.test.tsx's six exposed seven-panel claims (MISSION-03; D-01, D-07, D-13)
 
 **Wave 2**
 
@@ -869,7 +869,7 @@ Plans:
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
 | 110. Convex Durability | 4/6 | In Progress|  |
-| 111. Mission Board | 1/3 | In Progress|  |
+| 111. Mission Board | 2/3 | In Progress|  |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
 | 113. Debt Sweep | 0/TBD | Not started | - |
 
