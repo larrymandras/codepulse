@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
-status: executing
-stopped_at: Completed 111-02-PLAN.md (deleted ActiveAgentsPanel, D-07)
-last_updated: "2026-08-11T12:48:44.000Z"
+status: ready_to_plan
+stopped_at: Phase 111 complete (3/3) — ready to discuss Phase 113
+last_updated: 2026-08-11T14:21:24.702Z
 last_activity: 2026-08-11
 progress:
   total_phases: 12
-  completed_phases: 3
+  completed_phases: 5
   total_plans: 34
-  completed_plans: 33
-  percent: 25
+  completed_plans: 34
+  percent: 42
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 111 — mission-board
+**Current focus:** Phase 113 — debt sweep
 
 **Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
@@ -49,16 +49,22 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 111 (mission-board) — EXECUTING
-Plan: 3 of 3 (111-02 complete; 111-03 next, if planned)
-Status: Ready to execute
+Phase: 113
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-08-11
+
+**Phase 111 — mission-board: COMPLETE (3/3, 2026-08-11), VERIFIED `passed` (3/3 must-haves).** The phase was deliberately subtractive: `JobsPanel` became a truthful post-hoc history board and `ActiveAgentsPanel` was deleted outright, so no surface asserts a mission state `subagentJobs` cannot back. `JobsPanel` now renders `MISSION HISTORY` / `{n} missions` / `finished X ago` with the day tier that was missing (the one real 34-day-old row rendered `816h` before), the `stateIcon` map carries only the three terminal statuses, and the seconds-epoch guard survived the rewrite. **The blocking operator checkpoint was actually run** — live against `localhost:5173` on 2026-08-11, verdict `approved`, with screenshot evidence for all nine legs including zero console errors on both pages. Notably absent from those consoles: "Functions are not valid as a React child", the exact symptom T-111-02 predicted for the unguarded `stateIcon[job.status]` prototype-chain lookup. Code review returned 0 critical / 2 warnings, **both fixed in-session** with mutation-proven tests rather than deferred (`111-REVIEW.md` status: resolved) — the day-boundary mutant `h < 24 → h < 240` had been invisible to the pre-existing 34-day test because 816h sits outside the corrupted window. Full suite 3951 passed | 0 failed; `npx tsc --noEmit` exit 0. Two checkpoint observations were routed to backlog rather than patched: 80-char task-snippet truncation with no ellipsis (traced to deliberate upstream astridr policy across four call sites → SEED-007 item 7) and an unopened devtools "1 Issue" badge (→ `todos/pending/111-devtools-issues-panel-entry-unexamined.md`, explicitly NOT classified as benign). Evidence: `111-VERIFICATION.md`, `111-REVIEW.md`, `111-03-SUMMARY.md`.
+
+**Counter reconciliation (2026-08-11, Phase 111 close) — read this before trusting or "fixing" the frontmatter numbers.** `gsd-sdk query phase.complete 111` wrote `completed_plans: 36` against `total_plans: 34` — an impossible counter, and the cheapest possible tell that something is being counted wrong. Cause: it counts SUMMARY.md files (36) against a PLAN.md-derived total (34). Phases 117 and 119 each have a SUMMARY.md but **zero** PLAN.md files (quick-shaped work), so they inflate the numerator only. Re-derived from disk: phases holding PLAN.md files are 108=7, 109=10, 110=6, 111=3, 116=8 → **34 plans, 34 summaries**, so `total_plans: 34` / `completed_plans: 34` is the coherent pair. `completed_phases` was also stale at 3: it matched the ROADMAP checklist, but the checklist itself lagged — **109 and 116 were both complete and `VERIFICATION.md`-passed with full plan/summary parity, yet unticked.** Both were ticked at this close with their evidence inline, giving `completed_phases: 5` (108, 109, 110, 111, 116) and `percent: 42`. **Phases 117 and 119 were deliberately NOT ticked** despite carrying `VERIFICATION.md status=passed`: 119 is actively in flight in a concurrent session — its own commit `73816fb1` records `LOOM_API_KEY` as unset with the paired 200 control still outstanding — and ticking it would be exactly the premature-green this phase existed to remove. Derive these numbers from disk, never from the previous value ± 1.
 
 **Plan 111-02 complete (2026-08-11).** Deleted `ActiveAgentsPanel` outright (component, test, import, mount, `SectionErrorBoundary` wrapper) — it filtered `subagentJobs` on `status === "running"`, a state the table structurally never receives, so it rendered the unfalsifiable "No agents running." permanently (D-07, MISSION-03). `cc-left-rail` now has one child, `IntelligenceFeedPanel`; `SectionErrorBoundary` count in `Chat.tsx` went 17→15 (verified before editing). `Chat.test.tsx`'s seven-panel claims repaired: `SEVEN_PANEL_LABELS` renamed to the count-free `COMMAND_CENTER_PANEL_LABELS` with `ACTIVE AGENTS` dropped, doc comment and three test titles now say "six"; the label array's mutation control was run and captured RED (`ACTIVE AGENTS` re-added → mode-ON test failed with `Unable to find an element with the text: ACTIVE AGENTS`) before being reverted to green. Whole-tree `grep -rn "ActiveAgentsPanel" src/` and `grep -rn "ACTIVE AGENTS" src/` both return no matches. Full suite 297 test files passed | 17 skipped, 3943 tests passed | 193 todo, 0 failed; `npx tsc --noEmit` exit 0. One plan-scope correction (Rule 3): the `cc-left-rail` comment at `Chat.tsx:1028-1033` named the deleted panel in prose and was reworded (no CSS/class change) to satisfy the plan's own whole-file grep acceptance criterion. Executed sequentially on `master`, no worktree — two concurrent sessions (Phase 110-06, Phase 119/Loom) committed unrelated work to this same branch in the same window; neither was touched. See `111-02-SUMMARY.md`.
 
 **Counter note (2026-08-11, this session):** `completed_plans` moved 32→33, crediting only this plan's verified completion — NOT derived from the raw on-disk SUMMARY.md count (34), because one of those two new files (`110-06-SUMMARY.md`, added by a concurrent session in this same window) is an interim checkpoint summary ("Tasks 1-2 summary, Task 3 checkpoint pending" per its own commit message and content), not a completed plan. A future session closing out 110-06 should reconcile this properly once that plan actually finishes.
 
-**Phase 110 is NOT closed — 110-06 (wave 5) is still outstanding.** 110-01..110-05 are complete and deployed (2026-08-10 ~17:05 ET, operator-authorized); 110-06 is blocked on observing a real 09:00 UTC `retention-prune` fire against the deployed code (earliest 2026-08-11 09:00 UTC / 05:00 ET; the plan forbids hand-triggering it). Also still open from that phase: a clean zero-`TIMEOUT` health-check re-run, and the 110-05 ROADMAP checkbox. This block was overwritten by `gsd-sdk query state.begin-phase --phase 111` (the documented state.* narrative clobber) and restored by hand. **Counter note, corrected 2026-08-11:** that same call moved `completed_plans` 30→31 and I initially reverted it to 30 as a phantom increment — that revert was wrong. Ground truth is the SUMMARY.md file count on disk (`.planning/phases/*/*-SUMMARY.md`), which was 31 before Phase 111 started: 108=7, 109=10, 110=5, 116=8, 117=1. The committed 30 was stale because a CONCURRENT session completed 117-01 without bumping the counter. Derive this number from disk, never from the previous value ± 1. Read the three numbered notes below before starting 110-06.
+> **↑ SUPERSEDED at Phase 111 close (2026-08-11).** That reconciliation has now happened — 110-06 finished in the concurrent session, so its summary is no longer interim. See the **Counter reconciliation** block below for the authoritative derivation; do not carry the 32→33 reasoning forward.
+
+**~~Phase 110 is NOT closed — 110-06 (wave 5) is still outstanding.~~ CORRECTED 2026-08-11 at Phase 111 close: Phase 110 IS now closed.** A concurrent session finished 110-06 while Phase 111 was executing. Ground truth: ROADMAP milestone checkbox is `[x]` (completed 2026-08-11), `110-VERIFICATION.md` reads `status: passed`, and the phase has 6 PLAN.md files with 6 SUMMARY.md files — full parity. The struck sentence was true when written earlier in this same session and is preserved rather than deleted so the sequence stays legible. The original text follows for the record: 110-01..110-05 are complete and deployed (2026-08-10 ~17:05 ET, operator-authorized); 110-06 is blocked on observing a real 09:00 UTC `retention-prune` fire against the deployed code (earliest 2026-08-11 09:00 UTC / 05:00 ET; the plan forbids hand-triggering it). Also still open from that phase: a clean zero-`TIMEOUT` health-check re-run, and the 110-05 ROADMAP checkbox. This block was overwritten by `gsd-sdk query state.begin-phase --phase 111` (the documented state.* narrative clobber) and restored by hand. **Counter note, corrected 2026-08-11:** that same call moved `completed_plans` 30→31 and I initially reverted it to 30 as a phantom increment — that revert was wrong. Ground truth is the SUMMARY.md file count on disk (`.planning/phases/*/*-SUMMARY.md`), which was 31 before Phase 111 started: 108=7, 109=10, 110=5, 116=8, 117=1. The committed 30 was stale because a CONCURRENT session completed 117-01 without bumping the counter. Derive this number from disk, never from the previous value ± 1. Read the three numbered notes below before starting 110-06.
 
 **Three things the 110-06 session must know before starting:**
 
@@ -922,10 +928,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-11T12:38:47.117Z
-Stopped at: Completed 111-01-PLAN.md (JobsPanel mission history rewrite)
+Last session: 2026-08-11T14:21:24.702Z
+Stopped at: Phase 111 complete (3/3) — ready to discuss Phase 113
 
---- Prior (superseded by the above) --- Completed 109-08-PLAN.md
+--- Prior (superseded by the above) --- Completed 111-01-PLAN.md (JobsPanel mission history rewrite)
 
 --- Prior (superseded by the above) --- Completed 109-01-PLAN.md (Astridr D-05 profile_overrides + D-03 default_profile_id, feature/brain-swap commits 10503e4f/effb7a48/411e0253/8c4842f1)
 

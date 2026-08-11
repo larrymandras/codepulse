@@ -654,14 +654,14 @@ Plans:
 **Phase summary:**
 
 - [x] **Phase 108 — Per-Profile Engine Telemetry (astridr backend)** — real per-profile active-engine telemetry, a scoped `swap.set`, and a `control_verb_swap` domain route, verified live before the dependent UI is built (completed 2026-08-07)
-- [ ] **Phase 109 — Per-Agent Engine UI** — the already-built picker/badge/confirm-modal surfaces light up on real telemetry with honest server-confirmed swap status
+- [x] **Phase 109 — Per-Agent Engine UI** — the already-built picker/badge/confirm-modal surfaces light up on real telemetry with honest server-confirmed swap status (completed 2026-08-10; ticked 2026-08-11 at Phase 111 close — the box lagged the work. Evidence: `109-VERIFICATION.md` status=passed, 10 plans/10 summaries.)
 - [x] **Phase 110 — Convex Durability** — `aggregates` bounded by the existing batch-capped retention machinery, a verified full nightly prune pass, and the memory-growth root cause documented (completed 2026-08-11)
-- [ ] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` upgraded into a real mission board on today's data — live cards, humanized tool labels, honest orphan recovery
+- [x] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` became a truthful **post-hoc history board** over terminal-state rows, and every affordance asserting a mission state the data cannot back was removed (`ActiveAgentsPanel` deleted outright) (completed 2026-08-11). *(Description corrected at phase close: the milestone line still carried the pre-2026-08-10 goal — "live cards, humanized tool labels, honest orphan recovery" — all three of which were struck or deferred when the scope was narrowed on probe evidence. Ticking that text would have made the checklist assert delivery of exactly the work D-03/D-04 deferred to SEED-007.)*
 - [ ] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition
 - [ ] **Phase 113 — Debt Sweep** — skill-registry prune churn, the intermittent `Chat.test.tsx` failure, and `convex-selfhost/` under version control
 - [ ] **Phase 114 — Workspace Map view** — ARMS radial map on `ForceGraphCanvas`, two switchable lenses (Larry's workspace ↔ Ástríðr's world)
 - [ ] **Phase 115 — Workspace scanner** — host-side classifier over workspace roots, versioned `kind:"workspace"` snapshot ingest
-- [ ] **Phase 116 — Galdr prompt library** — `prompts` tables + `/galdr` live-fetch skills + send-to-Chat/clipboard (Seiðr Suite)
+- [x] **Phase 116 — Galdr prompt library** — `prompts` tables + `/galdr` live-fetch skills + send-to-Chat/clipboard (Seiðr Suite) (completed 2026-08-10; ticked 2026-08-11 at Phase 111 close — the box lagged the work. Evidence: `116-VERIFICATION.md` status=passed, 8 plans/8 summaries.)
 - [ ] **Phase 117 — Bifrost link hub** — `links` table, command-palette jump, liveness dots (Seiðr Suite; /gsd-quick-shaped)
 - [ ] **Phase 118 — Studio media gallery** — media-vault + sidecar provenance, thumbs-only in Convex, watcher, styles/models, G-drive backup (Seiðr Suite)
 - [ ] **Phase 119 — Loom curated pipelines** — `pipelines`/`pipelineRuns` + React Flow view + step-event emits over Convex subscriptions (Seiðr Suite)
@@ -824,7 +824,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 111-03-PLAN.md — **`autonomous: false`**: correct REQUIREMENTS.md so the traceability table stops asserting what Phase 111 cannot deliver, plant SEED-007 to own the deferred emitter work, audit both non-goals with controls, and an operator checkpoint against the running app (MISSION-03; D-02, D-03, D-04, D-06, D-11, D-12)
+- [x] 111-03-PLAN.md — **`autonomous: false`**: correct REQUIREMENTS.md so the traceability table stops asserting what Phase 111 cannot deliver, plant SEED-007 to own the deferred emitter work, audit both non-goals with controls, and an operator checkpoint against the running app (MISSION-03; D-02, D-03, D-04, D-06, D-11, D-12)
 
 **UI hint**: yes
 
@@ -869,7 +869,7 @@ Plans:
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
-| 111. Mission Board | 2/3 | In Progress|  |
+| 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
 | 113. Debt Sweep | 0/TBD | Not started | - |
 
