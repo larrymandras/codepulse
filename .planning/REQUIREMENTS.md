@@ -60,7 +60,7 @@ Closes **BSC-01**, the one requirement v13.0 left PARTIAL. Cross-repo: the astri
 
 Numbering continues from v13.0's DEBT-01..04.
 
-- [ ] **DEBT-05** — A transient scan that misses part of the skill catalog no longer prunes live skill rows. *(`computeSkillPrunes` deletes rows for any name absent from an incoming snapshot; observed dropping ~56 live plugin skills, 185 → 131 → 185. Nothing permanently lost, but the catalog is briefly wrong.)*
+- [x] **DEBT-05** — A transient scan that misses part of the skill catalog no longer prunes live skill rows. *(`computeSkillPrunes` deletes rows for any name absent from an incoming snapshot; observed dropping ~56 live plugin skills, 185 → 131 → 185. Nothing permanently lost, but the catalog is briefly wrong.)*
 - [ ] **DEBT-06** — The intermittent `Chat.test.tsx` brain-pill failure (`D-106-04-01`) is deterministic, root-caused from a **captured failure** rather than masked with a `waitFor`. *(Three candidate causes already refuted and recorded; the outstanding lever is capturing the actual `textContent` on failure.)*
 - [ ] **DEBT-07** — `convex-selfhost/`'s compose `logging:` block and restart scripts are under version control, not living only on disk.
 
@@ -96,7 +96,7 @@ Filled by the roadmapper.
 | TELE-01 | Phase 112 | Pending |
 | TELE-02 | Phase 109 | Complete |
 | TELE-03 | Phase 112 | Pending |
-| DEBT-05 | Phase 113 | Pending |
+| DEBT-05 | Phase 113 | Complete |
 | DEBT-06 | Phase 113 | Pending |
 | DEBT-07 | Phase 113 | Pending |
 

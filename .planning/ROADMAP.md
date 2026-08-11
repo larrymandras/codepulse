@@ -867,11 +867,11 @@ Plans:
 - [x] 113-02-PLAN.md - DEBT-05 server: coverage-declaration prune guard on both call sites + refusal alerts (wave 1)
 - [x] 113-03-PLAN.md - DEBT-05 frontend: eight origin-coupling sites accept the plugin origin (wave 1)
 - [x] 113-05-PLAN.md - DEBT-06: query-site DOM capture + per-iteration soak runner, both control-proven (wave 1)
-- [ ] 113-07-PLAN.md - DEBT-07: ignore set before git init, INSTANCE_SECRET parameterized, key-name template (wave 1)
+- [x] 113-07-PLAN.md - DEBT-07: ignore set before git init, INSTANCE_SECRET parameterized, key-name template (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 113-04-PLAN.md - DEBT-05 migration: one-shot dry-run-by-default re-origin of existing plugin rows (wave 2)
+- [x] 113-04-PLAN.md - DEBT-05 migration: one-shot dry-run-by-default re-origin of existing plugin rows (wave 2)
 - [ ] 113-08-PLAN.md - DEBT-07: bootstrap README, preflight validator, reviewed first commit, temp-clone proof (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -889,7 +889,7 @@ Plans:
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
-| 113. Debt Sweep | 4/8 | In Progress|  |
+| 113. Debt Sweep | 6/8 | In Progress|  |
 
 ### Phase 114: Workspace Map view
 
