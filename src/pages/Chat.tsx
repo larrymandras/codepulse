@@ -38,7 +38,6 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { ControlCenterPanel } from "@/components/control-center/ControlCenterPanel";
 import { CompactControlStrip } from "@/components/control-center/CompactControlStrip";
 import { IntelligenceFeedPanel } from "@/components/control-center/IntelligenceFeedPanel";
-import { ActiveAgentsPanel } from "@/components/control-center/ActiveAgentsPanel";
 import { MissionTimelinePanel } from "@/components/control-center/MissionTimelinePanel";
 import { LlmStatusPanel } from "@/components/control-center/LlmStatusPanel";
 import { SystemMonitorPanel } from "@/components/control-center/SystemMonitorPanel";
@@ -1026,11 +1025,11 @@ export default function Chat() {
             data-testid="cc-grid"
             className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4"
           >
-            {/* LEFT RAIL — (a) Intelligence Feed, (b) Active Agents. min-h-0
+            {/* LEFT RAIL — (a) Intelligence Feed. min-h-0
                 lets Intelligence Feed's own flex-1 scroll region actually
                 bound to the grid row height instead of growing to fit its
                 full unbounded item list (188-14 live finding: without this,
-                Active Agents rendered 13000px+ below the fold, invisible).
+                the rail's content rendered 13000px+ below the fold, invisible).
                 188-14 live finding #2: at xl this rail shares a grid ROW
                 with chatColumn/centerColumn/RIGHT RAIL/vitals, and CSS
                 grid's default align-items:stretch means the row's height is
@@ -1049,9 +1048,6 @@ export default function Chat() {
             >
               <SectionErrorBoundary name="Intelligence Feed">
                 <IntelligenceFeedPanel />
-              </SectionErrorBoundary>
-              <SectionErrorBoundary name="Active Agents">
-                <ActiveAgentsPanel />
               </SectionErrorBoundary>
             </div>
 
