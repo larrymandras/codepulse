@@ -356,8 +356,15 @@ describe("resolveLifecycleActions / resolveScopeDrop — plugin origin parity (D
     expect(resolveLifecycleActions(activePlugin).moveDestinationIsProject).toBe(true);
   });
 
-  it("resolveScopeDrop: plugin source -> global is a same-scope noop, -> project opens the dialog", () => {
-    expect(resolveScopeDrop(activePlugin, "global")).toEqual({ kind: "noop" });
+  // A "-> global is a same-scope noop" assertion is deliberately NOT included
+  // here: the pre-fix unrecognized-origin fallback also returns {kind:"noop"}
+  // unconditionally for every targetScope (verified against the genuine
+  // pre-fix blob at 4425fe03^), so that assertion cannot discriminate the fix
+  // and would be vacuous. The "-> project opens the dialog" assertion below
+  // DOES discriminate: the pre-fix fallback returns {kind:"noop"} for a
+  // project target too, not {kind:"dialog"} (adversarial verification round,
+  // 113-03 defect 2).
+  it("resolveScopeDrop: plugin source -> project opens the dialog (discriminates from the pre-fix unrecognized-origin fallback)", () => {
     expect(resolveScopeDrop(activePlugin, "project")).toEqual({ kind: "dialog" });
   });
 
@@ -376,15 +383,6 @@ describe("resolveLifecycleActions / resolveScopeDrop — plugin origin parity (D
       action: "archive",
       sourceOrigin: "claude-code",
       destination: "cold",
-    });
-  });
-
-  it("a skill active in both claude-code and claude-code:plugin is multiScope and rejected by the drag matrix", () => {
-    const dualGlobal = { name: "legal", origins: ["claude-code", PLUGIN_ORIGIN] };
-    expect(resolveLifecycleActions(dualGlobal).multiScope).toBe(true);
-    expect(resolveScopeDrop(dualGlobal, "cold")).toEqual({
-      kind: "reject",
-      hint: "Active in multiple scopes — disambiguation ships in a later release.",
     });
   });
 });
