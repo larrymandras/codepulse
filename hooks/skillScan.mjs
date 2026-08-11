@@ -5,6 +5,10 @@ import { createHash } from "node:crypto";
 
 const BLOCK_SCALAR = new Set([">", "|", ">-", "|-", ">+", "|+", ""]);
 
+// D-02: plugin-sourced skills get their own origin, distinct from the personal
+// ~/.claude/skills origin. Keep this in sync with hooks/scanner.mjs's expectations.
+export const PLUGIN_ORIGIN = "claude-code:plugin";
+
 export function parseFrontmatter(input) {
   // Normalize CRLF first: JS `.` does not match \r, so an unnormalized CRLF file
   // parses only its final frontmatter key. Every SKILL.md on Windows is CRLF.
@@ -135,9 +139,13 @@ export function collectClaudeCodeSkills({ home, cwd, platform = process.platform
   const acc = [];
   const globalDir = join(home, ".claude", "skills");
   readSkillDir(globalDir, "claude-code", acc);
+  // Plugin skills get their own origin (D-02), distinct from the personal skills dir,
+  // specifically so a partial/failed plugin read cannot make the personal-skills origin
+  // look complete — the failed sub-source stays isolated to its own origin instead of
+  // silently under-counting a "claude-code" origin that is otherwise fully present.
   // Prefer the installed version of each plugin; fall back to walking the whole cache.
-  if (!readInstalledPluginSkills(home, "claude-code", acc)) {
-    walkPluginCache(join(home, ".claude", "plugins", "cache"), "claude-code", acc);
+  if (!readInstalledPluginSkills(home, PLUGIN_ORIGIN, acc)) {
+    walkPluginCache(join(home, ".claude", "plugins", "cache"), PLUGIN_ORIGIN, acc);
   }
   // Cold storage: present on disk but NOT loaded by Claude Code. Distinct origin so
   // per-origin pruning keeps it isolated from the active-skill rows.
@@ -152,12 +160,19 @@ export function collectClaudeCodeSkills({ home, cwd, platform = process.platform
     readSkillDir(projectDir, `claude-code:project:${repoKey(root, platform)}`, acc);
   }
 
-  // A name can appear twice within one origin (e.g. ~/.claude/skills/vercel-sandbox and
-  // a plugin that also ships vercel-sandbox). The server upserts by (name, origin), so
-  // the survivor would otherwise depend on walk order. Keep the first — the personal
-  // skills dir is read before plugins, so a hand-installed skill beats a plugin's copy.
+  // Dedup rule 1: a name can appear twice within one origin (e.g. two cached versions of
+  // the same plugin, or two plugins that both ship a same-named skill). The server
+  // upserts by (name, origin), so the survivor would otherwise depend on walk order —
+  // keep the first.
+  // Dedup rule 2: a name present under BOTH the personal skills dir (claude-code) and an
+  // installed plugin (claude-code:plugin) must still yield exactly ONE row across all
+  // origins, and it must be the personal-dir copy — a hand-installed skill beats a
+  // plugin's copy of the same name. globalDir is read before plugins, so `acc` already
+  // contains every "claude-code"-origin row by the time this dedup pass runs.
+  const claudeCodeNames = new Set(acc.filter((s) => s.origin === "claude-code").map((s) => s.name));
   const seen = new Set();
   return acc.filter((s) => {
+    if (s.origin === PLUGIN_ORIGIN && claudeCodeNames.has(s.name)) return false;
     const key = `${s.origin}::${s.name}`;
     if (seen.has(key)) return false;
     seen.add(key);

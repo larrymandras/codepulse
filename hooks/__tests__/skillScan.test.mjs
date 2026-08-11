@@ -96,7 +96,7 @@ describe("collectClaudeCodeSkills", () => {
     const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
     const byName = Object.fromEntries(skills.map((s) => [s.name, s]));
     expect(byName["deep-research"].origin).toBe("claude-code");
-    expect(byName["brainstorm"].origin).toBe("claude-code");
+    expect(byName["brainstorm"].origin).toBe("claude-code:plugin");
     expect(byName["repo-skill"].origin).toBe(`claude-code:project:${repoKey(cwd, "linux")}`);
     expect(byName["deep-research"].description).toBe("Research");
   });
@@ -127,17 +127,30 @@ describe("collectClaudeCodeSkills", () => {
     rmSync(join(home, ".claude", "skills", "claude-video"), { recursive: true, force: true });
   });
 
-  it("keeps one row per (name, origin), preferring the personal skills dir over a plugin", () => {
-    // The plugin cache also ships a `deep-research`; the personal dir must win.
+  it("REGRESSION: keeps one row per name across origins, preferring the personal skills dir over a plugin", () => {
+    // The plugin cache also ships a `deep-research`; the personal dir must win, and the
+    // plugin's copy (now on claude-code:plugin, D-02) must not survive as a second row
+    // under a different origin.
     const pluginSkill = join(home, ".claude", "plugins", "cache", "p", "1.1.0", "skills", "deep-research");
     mkdirSync(pluginSkill, { recursive: true });
     writeFileSync(join(pluginSkill, "SKILL.md"), "---\nname: deep-research\ndescription: FROM PLUGIN\n---\n");
 
     const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
-    const rows = skills.filter((s) => s.name === "deep-research" && s.origin === "claude-code");
+    const rows = skills.filter((s) => s.name === "deep-research");
     expect(rows).toHaveLength(1);
-    expect(rows[0].description).toBe("Research"); // the personal dir's copy
+    expect(rows[0].origin).toBe("claude-code");
+    expect(rows[0].description).toBe("Research"); // the personal dir's copy, not "FROM PLUGIN"
     rmSync(pluginSkill, { recursive: true, force: true });
+  });
+
+  it("REGRESSION: claude-code and claude-code:plugin are disjoint origins in the fixture", () => {
+    const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
+    const ccNames = new Set(skills.filter((s) => s.origin === "claude-code").map((s) => s.name));
+    const pluginNames = skills.filter((s) => s.origin === "claude-code:plugin").map((s) => s.name);
+    expect(pluginNames.length).toBeGreaterThan(0);
+    for (const name of pluginNames) {
+      expect(ccNames.has(name)).toBe(false);
+    }
   });
 
   it("emits only the INSTALLED version of a plugin skill, not every cached version", () => {
