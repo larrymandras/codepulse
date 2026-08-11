@@ -962,6 +962,15 @@ describe("forge.validateLifecyclePreflight — LAYER-1 refusal rules (D-02/D-03/
     ).toThrow(/^lifecycle-refused:shadow:/);
   });
 
+  it("action='restore' destination='global' throws lifecycle-refused:shadow: when claude-code:plugin is already active (D-17 parity)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "restore", destination: "global", workspaceId: null, sourceOrigin: "claude-code:available" },
+        ["claude-code:plugin", "claude-code:available"]
+      )
+    ).toThrow(/^lifecycle-refused:shadow:/);
+  });
+
   it("action='restore' destination='global' does not throw when no active claude-code row exists", () => {
     expect(() =>
       validateLifecyclePreflight(
@@ -994,6 +1003,15 @@ describe("forge.validateLifecyclePreflight — LAYER-1 refusal rules (D-02/D-03/
       validateLifecyclePreflight(
         { action: "move", destination: "global", workspaceId: null, sourceOrigin: "claude-code:project:abc1234" },
         ["claude-code", "claude-code:project:abc1234"]
+      )
+    ).toThrow(/^lifecycle-refused:collision:/);
+  });
+
+  it("action='move' destination='global' throws lifecycle-refused:collision: when claude-code:plugin is already active (D-17 parity)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "move", destination: "global", workspaceId: null, sourceOrigin: "claude-code:project:abc1234" },
+        ["claude-code:plugin", "claude-code:project:abc1234"]
       )
     ).toThrow(/^lifecycle-refused:collision:/);
   });

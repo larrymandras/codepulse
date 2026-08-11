@@ -517,10 +517,21 @@ export function buildIntakeRow(
 const GLOBAL_ORIGIN = "claude-code";
 
 /**
+ * D-02's plugin-sourced origin (split out of the personal "claude-code" dir by
+ * hooks/skillScan.mjs) — DUPLICATED from src/lib/skills.ts's PLUGIN_ORIGIN
+ * (not imported: convex/ functions do not import from src/, keeping the
+ * backend bundle independent of the browser bundle). Treated as global scope
+ * everywhere GLOBAL_ORIGIN is, for exact parity with the frontend's D-17
+ * treatment of the same origin.
+ */
+const PLUGIN_ORIGIN = "claude-code:plugin";
+
+/**
  * Dormant/cold-storage origin string — DUPLICATED from src/lib/skills.ts's
  * DORMANT_ORIGIN (not imported: convex/ functions do not import from src/,
  * keeping the backend bundle independent of the browser bundle). Keep these
- * two literals in sync if the origin convention ever changes.
+ * three literals (GLOBAL_ORIGIN, PLUGIN_ORIGIN, DORMANT_ORIGIN) in sync with
+ * their src/lib/skills.ts counterparts if the origin convention ever changes.
  */
 const DORMANT_ORIGIN = "claude-code:available";
 
@@ -645,7 +656,7 @@ export function validateLifecyclePreflight(
   }
 
   if (args.action === "restore" && args.destination === "global") {
-    if (originsForName.includes(GLOBAL_ORIGIN)) {
+    if (originsForName.includes(GLOBAL_ORIGIN) || originsForName.includes(PLUGIN_ORIGIN)) {
       throw new ConvexError("lifecycle-refused:shadow:already active in global");
     }
   }
@@ -657,7 +668,7 @@ export function validateLifecyclePreflight(
   }
 
   if (args.action === "move" && args.destination === "global") {
-    if (originsForName.includes(GLOBAL_ORIGIN)) {
+    if (originsForName.includes(GLOBAL_ORIGIN) || originsForName.includes(PLUGIN_ORIGIN)) {
       throw new ConvexError("lifecycle-refused:collision:already active in global");
     }
   }
