@@ -80,6 +80,40 @@ alone (no decision authorized widening it) and absorbed the gap with one cast in
 `JobsPanel.test.tsx`. Widening belongs with the emitter phase, which will settle the real
 state set once non-terminal states actually arrive.
 
+## 7. Task snippets arrive pre-truncated at 80 characters (observed live, 2026-08-11)
+
+Found at the 111-03 operator checkpoint, not by a test. Every long mission row on the
+rendered board ends mid-word with no ellipsis — e.g. `Write a detailed history of the East
+India Company (the British East India Compa`.
+
+This is **upstream and deliberate**, not a CodePulse rendering defect. Evidence, in the
+order it was checked:
+
+- `convex/runtimeIngest.ts:616` stores the value verbatim — `taskSnippet: d.task_snippet ??
+  d.taskSnippet ?? ""` — with no slice anywhere on the ingest path.
+- `src/components/EntityRow.tsx:31` applies Tailwind `truncate`, which renders an ellipsis
+  and only engages when the text fills its column. The screenshot shows a wide empty gap
+  between the end of the text and the `FAILED` badge, so `truncate` is demonstrably NOT
+  engaging — the string genuinely ends there in the stored data.
+- astridr-repo truncates at exactly 80 chars in four independent call sites:
+  `astridr/tools/delegate_task.py:504` (`handoff.task_description[:80]`),
+  `astridr/automation/subagent_jobs.py:271` and `astridr/tools/cancel_job.py:154` (both
+  `(row.get("task") or "")[:80]`), with `tests/unit/automation/test_subagents.py:409`
+  (`test_delegation_event_task_snippet_truncated`) asserting the behavior.
+
+So the 80-char cap is intentional emitter policy. What is worth revisiting when the emitter
+phase opens: an 80-char hard cut with **no ellipsis marker** is indistinguishable on screen
+from a complete short task, so the operator cannot tell truncated from whole. Either emit a
+marker, or carry the full task alongside the snippet so the UI can offer a title/expand
+affordance. Phase 111 deliberately did not compensate for this in CSS — no decision
+authorized restyling that column, and papering over a data-shape issue in the view is the
+same class of dishonesty this phase removed.
+
+Minor, adjacent: `astridr/channels/commands.py:67` reads
+`task_snippet = f.task[:80] if len(f.task) <= 80 else f.task[:80]` — both branches are
+identical, so the conditional does nothing. Harmless, but it should be collapsed to
+`f.task[:80]` whenever that file is next touched.
+
 ## Relationship to SEED-002
 
 This seed is the prerequisite SEED-002's live mission board has been waiting on. SEED-002

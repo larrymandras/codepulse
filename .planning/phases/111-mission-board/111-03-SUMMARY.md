@@ -38,16 +38,22 @@ duration: ~25min (Tasks 1-2 only; Task 3 checkpoint not executed)
 completed: 2026-08-11 (Tasks 1-2 only — plan NOT complete, checkpoint pending)
 ---
 
-# Phase 111 Plan 03: Correct Traceability, Plant SEED-007, Audit Non-Goals Summary (Tasks 1-2 of 3 — CHECKPOINT PENDING)
+# Phase 111 Plan 03: Correct Traceability, Plant SEED-007, Audit Non-Goals Summary (3 of 3 — COMPLETE)
 
-**Corrected REQUIREMENTS.md's MISSION section to match what Phase 111 actually shipped (reverting a tool-applied premature MISSION-01 completion), planted SEED-007 to own every deliberately deferred item, and proved both non-goals (D-11, D-12) held via probe-plus-control. Task 3 (operator checkpoint) has NOT been run — this plan is not complete.**
+**Corrected REQUIREMENTS.md's MISSION section to match what Phase 111 actually shipped (reverting a tool-applied premature MISSION-01 completion), planted SEED-007 to own every deliberately deferred item, proved both non-goals (D-11, D-12) held via probe-plus-control, and closed the blocking operator checkpoint with a live `approved` verdict against the running app.**
 
-## IMPORTANT: This plan is incomplete
+## Plan status: COMPLETE (3/3 tasks)
 
-Only Tasks 1 and 2 have executed. Task 3 is `type="checkpoint:human-verify" gate="blocking"` and
-per the checkpoint protocol has been left untouched — not simulated, not self-approved. This
-SUMMARY documents Tasks 1-2 only. The checkpoint section below is explicitly marked **AWAITING
-OPERATOR VERDICT** and must not be read as a pass.
+> **Superseded 2026-08-11.** This heading previously read "IMPORTANT: This plan is incomplete"
+> and described Tasks 1-2 only, which was accurate when the executor wrote it. The blocking
+> checkpoint has since been run with the operator and returned `approved`; the original text is
+> replaced rather than left to contradict the record below (project Stale Docs rule).
+
+All three tasks have executed. Task 3 was `type="checkpoint:human-verify" gate="blocking"` and was
+run with a live operator against `localhost:5173` — not simulated, not self-approved, not inferred
+from silence. The operator supplied screenshot evidence for every leg before approving. Full
+results, including two observations routed to follow-ups rather than fixed, are in the
+**CHECKPOINT** section below.
 
 ## Performance
 
@@ -247,13 +253,81 @@ $ npx vitest run
 Both exit 0. (The repeated `Not implemented: HTMLCanvasElement's getContext()` lines are known
 jsdom/canvas mock noise from unrelated graph/chart components, not failures — 0 failed tests.)
 
-## CHECKPOINT — Task 3: AWAITING OPERATOR VERDICT
+## CHECKPOINT — Task 3: OPERATOR VERDICT RECORDED — **APPROVED** (2026-08-11)
 
-**This section is NOT a pass. Task 3 has not been run. The operator has not been asked yet.**
+> **Status corrected 2026-08-11 by the orchestrator.** This section previously read "AWAITING
+> OPERATOR VERDICT"; the checkpoint has since been run with the operator live against
+> `localhost:5173`, and the original heading is superseded rather than deleted so the
+> before-state stays legible.
 
-Per the checkpoint protocol, the orchestrator will present the steps below to the operator and a
-continuation agent will record the verdict in a follow-up to this SUMMARY (or a new one). Do not
-read the presence of this section as approval.
+**Operator verdict, verbatim: `approved`.**
+
+Not inferred from silence, a timeout, or an idle verifier — the operator ran the steps against
+the running dev server and returned evidence for every leg before approving. Evidence supplied
+was three screenshots (Live Run; Chat with command-center mode ON; two devtools console captures),
+not prose assertions.
+
+### Observed results, step by step
+
+| Step | Expected | Observed | Source |
+|------|----------|----------|--------|
+| 2 | Header reads `MISSION HISTORY`, not BACKGROUND JOBS | PASS — `MISSION HISTORY` | Live Run screenshot |
+| 3 | No pulsing dot, no replacement glyph | PASS — nothing to the left of the label | Live Run screenshot |
+| 4 | Badge reads `{n} missions` | PASS — `7 missions` | Live Run screenshot |
+| 5 | Day unit, not a 3-digit `h` value | PASS — `finished 35d ago` on all four visible rows | Live Run screenshot |
+| 6 | No duration / cost / confirm card / squad grouping | PASS — none present | Live Run screenshot |
+| 7 | Trailing-cluster layout judgment | PASS — no wrap, no overflow, no crowding at the operator's window width | Live Run screenshot |
+| 9 | Left rail = Intelligence Feed only, no empty card / "coming soon" / gap | PASS — `INTELLIGENCE FEED` is the rail's sole child, no residue | Chat screenshot |
+| 10 | Mission Timeline still present and rendering (D-13) | PASS — present, rendering `channel_health` entries | Chat screenshot |
+| 11 | Console errors on either page | PASS — **zero errors on both pages** | Two console screenshots |
+
+**Note on step 5:** the plan predicted `finished 34d ago`; the live value is `finished 35d ago`.
+This is correct, not a discrepancy — the newest `subagentJobs` row is dated 2026-07-07 and the
+checkpoint ran on 2026-08-11, which is 35 days. The plan was authored on 2026-08-10, one day
+earlier. The day tier is behaving exactly as specified; the figure simply advances daily, which
+is the whole point of the `d` tier that 111-01 added.
+
+### Console capture detail (step 11)
+
+Both pages report **`No errors`** explicitly in the devtools sidebar counter.
+
+- **Chat page** (15 messages): 0 errors, 1 warning — the Clerk development-keys notice
+  (`client:525`). Remainder is `[vite]` connect/connected, the React DevTools nudge, `[voice]`
+  lifecycle logs from `useAstridrVoice.ts:211` / `useWakeWord.ts:67`, and two `[Violation]`
+  performance notices (`'message'` handler 194 ms; `setTimeout` handler 66 ms) attributed to
+  `react-dom`.
+- **Live Run page** (5 messages): 0 errors, 1 warning — the same Clerk notice. One
+  `[Violation] 'message' handler took 170ms` from `react-dom`.
+
+Nothing in either stream names `JobsPanel`, `Chat`, `SectionErrorBoundary`, or
+"Functions are not valid as a React child". That last absence is the meaningful one: it is the
+exact symptom `111-01-PLAN.md`'s threat model (T-111-02) predicted for the unguarded
+`stateIcon[job.status]` prototype-chain lookup, and it did not occur.
+
+### Two observations recorded as follow-ups, NOT fixed in this phase
+
+Both were surfaced by the checkpoint and deliberately routed to backlog rather than patched —
+no decision in this phase authorized touching either, and 111-03's own action text forbids
+fixing what the checkpoint reports.
+
+1. **Task snippets end mid-word at 80 characters** (e.g. `…the British East India Compa`).
+   Traced to deliberate upstream emitter policy, NOT a CodePulse rendering defect:
+   `convex/runtimeIngest.ts:616` stores the value verbatim with no slice;
+   `src/components/EntityRow.tsx:31`'s Tailwind `truncate` is demonstrably not engaging (the
+   screenshot shows a wide gap between the text and the `FAILED` badge, and `truncate` would
+   render an ellipsis); and astridr-repo caps it at exactly 80 chars in four call sites —
+   `astridr/tools/delegate_task.py:504`, `astridr/automation/subagent_jobs.py:271`,
+   `astridr/tools/cancel_job.py:154` — with `tests/unit/automation/test_subagents.py:409`
+   asserting the behavior. **Recorded as SEED-007 item 7**, including the substantive point
+   worth revisiting: an 80-char cut with no ellipsis marker is indistinguishable on screen from
+   a complete short task.
+2. **A devtools `1 Issue` badge on both pages, never opened.** The Issues panel is a separate
+   surface from the console stream, so "no console errors" is not evidence about its contents.
+   Deliberately NOT classified as benign or pre-existing — that would be a guess.
+   **Recorded as `.planning/todos/pending/111-devtools-issues-panel-entry-unexamined.md`** with
+   reproduction steps.
+
+### Original checkpoint material (retained for the record)
 
 ### What was built (111-01 + 111-02, carried forward for the operator)
 
