@@ -947,16 +947,18 @@ Plans:
 
 - [ ] 116-08-PLAN.md — `/galdr` page, nav registry entry, route, e2e (wave 6)
 
-### Phase 117: Bifrost link hub
+### Phase 117: Bifröst link hub
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 116
-**Plans:** 0 plans
+**Goal:** A `links` table backs a categorized `/bifrost` hub whose entries are jumpable from the command palette, and whose container-bound local services carry a liveness dot that reflects real service state rather than a decoration.
+**Requirements**: none mapped — design-doc-driven phase (`docs/proposals/2026-08-07-seidr-suite-design.md` §4.2). The acceptance-bearing units are the 6 locked decisions D-01..D-06 in `117-CONTEXT.md`, same convention as Phase 116.
+**Depends on:** Nothing. (The auto-generated "Phase 116" stub line was an artifact — the design doc's §5 states 116-119 are independent of each other and of 109-115; the ordering is daily-value preference, not dependency.)
+**Plans:** 0 plans — **executed via `/gsd-quick`, by design.** The design doc's §5 phasing table sizes this phase `S (/gsd-quick-shaped)`, so plan-phase was deliberately skipped rather than missed. This is why the phase carries a CONTEXT, SUMMARY and VERIFICATION but no PLAN.md, and why the milestone's plan counter reads two lower than its summary count (Phase 119 is the other).
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 117 to break down)
+- *(none — quick-path execution; see above)*
+
+**Status: COMPLETE and VERIFIED `passed`, 4/4 goal clauses (`117-VERIFICATION.md`, 2026-08-10).** Verified against the design doc's own gate, on live probes rather than code reading: the `links` table deployed to `127.0.0.1:3210` with `by_category`/`by_order` added and zero `.convex.cloud`; `/bifrost` reachable and rendering, proven by an `e2e/navigation.spec.ts` click-through rather than a unit test; the palette jump asserted on the resulting popup URL, not merely on the item being clickable; and liveness resolved by CONTAINER NAME (D-02, a deliberate departure from the design doc's host:port join) with a green/absent control pair. One case is unit-only — see the report's gaps section.
 
 ### Phase 118: Studio media gallery
 
@@ -971,14 +973,16 @@ Plans:
 
 ### Phase 119: Loom curated pipelines
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 118
-**Plans:** 0 plans
+**Goal:** `pipelines` and `pipelineRuns` back a React Flow view at `/loom` that renders a curated pipeline definition-first, with per-step docs served from the row rather than from disk, and a live run driven by real step-event emits over Convex subscriptions animating the same nodes — an error rendering distinctly from a clean run.
+**Requirements**: none mapped — design-doc-driven phase (`docs/proposals/2026-08-07-seidr-suite-design.md` §4.4). The acceptance-bearing units are the 8 locked decisions D-01..D-08 in `119-CONTEXT.md`, same convention as Phase 116.
+**Depends on:** Nothing. (The auto-generated "Phase 118" stub line was an artifact — §5 of the design doc states 116-119 are mutually independent; the Ástríðr cron lens only *improves* after v29 A3, it does not gate this phase.)
+**Plans:** 0 plans — **executed without plan-phase. This is a deviation, not a design choice.** Unlike Phase 117 (sized `S (/gsd-quick-shaped)` in §5 and therefore correctly quick-executed), §5 sizes Loom `M/L` — the same tier as Phase 116, which was broken into 8 plans across 6 waves. Recorded here rather than smoothed over: the phase shipped and verified, but it skipped the planning step its own sizing called for, and that is the second of the two reasons the milestone's plan counter reads lower than its summary count.
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 119 to break down)
+- *(none recorded — see the deviation note above)*
+
+**Status: COMPLETE and VERIFIED `passed`, 4/4 goal clauses (`119-VERIFICATION.md`, 2026-08-11).** Verified against the design doc's own gate on live evidence: both tables deployed to `127.0.0.1:3210` with `by_slug`/`by_pipelineSlug`/`by_startedAt` added; `/loom` rendering 3 React Flow nodes with zero page errors and reachable from the sidebar via `e2e/navigation.spec.ts`; and six real emits through `hooks/loom-emit.mjs` producing an errored run (`["complete","error","pending"]`) against a second clean run (`["complete","complete","complete"]`) on the same pipeline and components — a genuine control pair where only the run differs, not two separate assertions.
 
 ---
 
