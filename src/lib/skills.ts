@@ -2,6 +2,12 @@
 
 export const DORMANT_ORIGIN = "claude-code:available";
 const PROJECT_PREFIX = "claude-code:project:";
+/**
+ * D-02's plugin-sourced origin (split out of the personal "claude-code" dir by
+ * hooks/skillScan.mjs). Every site below treats it as global scope, for exact
+ * behaviour parity with the pre-split "claude-code" state (D-17).
+ */
+export const PLUGIN_ORIGIN = "claude-code:plugin";
 
 export type SkillLike = {
   name: string;
@@ -66,7 +72,7 @@ export function resolveLifecycleActions(
     shadowed,
     multiScope,
     activeOrigin,
-    moveDestinationIsProject: activeOrigin === "claude-code",
+    moveDestinationIsProject: activeOrigin === "claude-code" || activeOrigin === PLUGIN_ORIGIN,
   };
 }
 
@@ -122,13 +128,19 @@ export function resolveScopeDrop(
     return { kind: "reject", hint: "Restore to Global first, then move." };
   }
 
-  const isActiveGlobal = activeOrigin === "claude-code";
+  const isActiveGlobal = activeOrigin === "claude-code" || activeOrigin === PLUGIN_ORIGIN;
   const isActiveProject = activeOrigin?.startsWith(PROJECT_PREFIX) ?? false;
 
   if (isActiveGlobal) {
     if (targetScope === "global") return { kind: "noop" };
     if (targetScope === "project") return { kind: "dialog" };
-    return { kind: "enqueue", action: "archive", sourceOrigin: "claude-code", destination: "cold" };
+    // Inside this branch activeOrigin is necessarily "claude-code" or
+    // PLUGIN_ORIGIN (isActiveGlobal), but TS doesn't narrow it from that
+    // boolean — the `??` keeps the type honest without a cast. This must
+    // derive from the skill's own origin, not a hardcoded literal: hardcoding
+    // "claude-code" here would enqueue an archive against the wrong origin
+    // for every plugin skill (a silent data-targeting bug).
+    return { kind: "enqueue", action: "archive", sourceOrigin: activeOrigin ?? "claude-code", destination: "cold" };
   }
 
   if (isActiveProject && activeOrigin) {
@@ -140,7 +152,8 @@ export function resolveScopeDrop(
   }
 
   // Fallback for an origin-less or unrecognized-origin skill (activeOrigin
-  // neither "claude-code" nor a project origin) — a safe no-op, not unreachable.
+  // none of "claude-code", PLUGIN_ORIGIN, or a project origin) — a safe
+  // no-op, not unreachable.
   return { kind: "noop" };
 }
 
@@ -163,6 +176,7 @@ export function projectNameFromSource(source?: string): string | null {
 export function originLabel(origin: string, projectName?: string | null): string {
   if (origin === DORMANT_ORIGIN) return "Dormant (cold storage)";
   if (origin === "claude-code") return "Claude Code";
+  if (origin === PLUGIN_ORIGIN) return "Claude Code · Plugin";
   if (origin.startsWith(PROJECT_PREFIX)) {
     return projectName ? `Project · ${projectName}` : `Project · ${origin.slice(PROJECT_PREFIX.length, PROJECT_PREFIX.length + 7)}`;
   }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   DORMANT_ORIGIN,
+  PLUGIN_ORIGIN,
   isDormant,
   isShadowing,
   hasDormantCopy,
@@ -79,6 +80,11 @@ describe("originLabel", () => {
   });
   it("passes through unknown origins", () => {
     expect(originLabel("bridge")).toBe("bridge");
+  });
+  it("labels the plugin origin distinctly from the personal claude-code origin (D-17)", () => {
+    const pluginLabel = originLabel(PLUGIN_ORIGIN);
+    expect(pluginLabel).not.toBe(PLUGIN_ORIGIN);
+    expect(pluginLabel).not.toBe(originLabel("claude-code"));
   });
 });
 
@@ -339,6 +345,46 @@ describe("resolveScopeDrop (100-01: the complete drag matrix, D-02/D-04)", () =>
         kind: "reject",
         hint: "Active in multiple scopes — disambiguation ships in a later release.",
       });
+    });
+  });
+});
+
+describe("resolveLifecycleActions / resolveScopeDrop — plugin origin parity (D-17)", () => {
+  const activePlugin = { name: "legal", origins: [PLUGIN_ORIGIN] };
+
+  it("resolveLifecycleActions treats a plugin-origin skill's move destination as Project, same as claude-code", () => {
+    expect(resolveLifecycleActions(activePlugin).moveDestinationIsProject).toBe(true);
+  });
+
+  it("resolveScopeDrop: plugin source -> global is a same-scope noop, -> project opens the dialog", () => {
+    expect(resolveScopeDrop(activePlugin, "global")).toEqual({ kind: "noop" });
+    expect(resolveScopeDrop(activePlugin, "project")).toEqual({ kind: "dialog" });
+  });
+
+  it("resolveScopeDrop: plugin source -> cold enqueues archive with sourceOrigin the skill's own origin, and the claude-code path is unchanged", () => {
+    expect(resolveScopeDrop(activePlugin, "cold")).toEqual({
+      kind: "enqueue",
+      action: "archive",
+      sourceOrigin: PLUGIN_ORIGIN,
+      destination: "cold",
+    });
+    // Non-regression: the pre-existing claude-code path must still resolve to
+    // the literal "claude-code" sourceOrigin in the same test, so a fixture
+    // that broke either path could not pass.
+    expect(resolveScopeDrop(activeGlobal, "cold")).toEqual({
+      kind: "enqueue",
+      action: "archive",
+      sourceOrigin: "claude-code",
+      destination: "cold",
+    });
+  });
+
+  it("a skill active in both claude-code and claude-code:plugin is multiScope and rejected by the drag matrix", () => {
+    const dualGlobal = { name: "legal", origins: ["claude-code", PLUGIN_ORIGIN] };
+    expect(resolveLifecycleActions(dualGlobal).multiScope).toBe(true);
+    expect(resolveScopeDrop(dualGlobal, "cold")).toEqual({
+      kind: "reject",
+      hint: "Active in multiple scopes — disambiguation ships in a later release.",
     });
   });
 });
