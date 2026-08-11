@@ -2203,4 +2203,50 @@ export default defineSchema({
   })
     .index("by_category", ["category"])
     .index("by_order", ["order"]),
+
+  // Phase 119 Loom (D-01). Curated pipelines: what the system is DESIGNED to
+  // do, definition-first, optionally lit by live runs. Distinct from Phase
+  // 111's Mission Board, which is post-hoc job history — see D-07.
+  pipelines: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    owner: v.optional(v.string()), // "larry" | "astridr"
+    // Per-step docs live IN the row so the UI never serves files from disk.
+    steps: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        icon: v.optional(v.string()), // lucide icon NAME, never inline SVG
+        docMd: v.optional(v.string()),
+      })
+    ),
+    sourceRef: v.optional(v.string()),
+    enabled: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_slug", ["slug"]),
+
+  // D-05: stepEvents is append-only and BOUNDED, pruned inline on write. An
+  // unbounded event array on a long-running pipeline is the same growth hazard
+  // Phase 116 capped for promptVersions and Phase 110 is currently fighting in
+  // `aggregates`. See LOOM_STEP_EVENT_CAP in convex/loom.ts.
+  pipelineRuns: defineTable({
+    pipelineSlug: v.string(),
+    status: v.string(), // "running" | "complete" | "error"
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+    currentStep: v.optional(v.string()),
+    stepEvents: v.array(
+      v.object({
+        stepId: v.string(),
+        event: v.string(), // start | action | complete | error | warn
+        text: v.optional(v.string()),
+        at: v.number(),
+      })
+    ),
+  })
+    .index("by_pipelineSlug", ["pipelineSlug"])
+    .index("by_startedAt", ["startedAt"]),
 });

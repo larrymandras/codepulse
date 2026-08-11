@@ -137,6 +137,25 @@ export function validateGaldrAuth(request: Request): boolean {
 }
 
 /**
+ * Phase 119 (Loom) D-03. Fourth member of the same family, structurally
+ * identical to the three above — same fail-closed shape, same explicit
+ * ALLOW_ANON opt-in, same plain `===` comparison for the reason stated above.
+ *
+ * A separate key rather than reusing GALDR_API_KEY: this repo's established
+ * pattern is one key per producer, and a step emitter that can write run
+ * history is a different capability from a prompt-library reader even though
+ * both are driven by Larry's own CLI sessions.
+ */
+export function validateLoomAuth(request: Request): boolean {
+  const expectedKey = _env.LOOM_API_KEY;
+  if (!expectedKey) {
+    return _env.LOOM_ALLOW_ANON === "true";
+  }
+  const authHeader = request.headers.get("Authorization") ?? "";
+  return authHeader === `Bearer ${expectedKey}`;
+}
+
+/**
  * Return a 401 Unauthorized response.
  * Uses minimal fixed headers only — a 401 rejection does not negotiate CORS.
  */

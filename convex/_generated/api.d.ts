@@ -106,6 +106,8 @@ import type * as lib_aggregateShard from "../lib/aggregateShard.js";
 import type * as lib_providers from "../lib/providers.js";
 import type * as lib_sankeyClassify from "../lib/sankeyClassify.js";
 import type * as llm from "../llm.js";
+import type * as loom from "../loom.js";
+import type * as loomHttp from "../loomHttp.js";
 import type * as meetingBot from "../meetingBot.js";
 import type * as memory from "../memory.js";
 import type * as memoryPreflight from "../memoryPreflight.js";
@@ -276,6 +278,8 @@ declare const fullApi: ApiFromModules<{
   "lib/providers": typeof lib_providers;
   "lib/sankeyClassify": typeof lib_sankeyClassify;
   llm: typeof llm;
+  loom: typeof loom;
+  loomHttp: typeof loomHttp;
   meetingBot: typeof meetingBot;
   memory: typeof memory;
   memoryPreflight: typeof memoryPreflight;

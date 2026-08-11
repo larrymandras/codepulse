@@ -29,6 +29,7 @@ import { remindersIngest, remindersRead } from "./remindersIngest";
 import { calendarIngest } from "./calendarEvents";
 import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
 import { galdrPromptGet, galdrListGet, galdrPromptPost, galdrUsagePost } from "./galdrHttp";
+import { loomEventPost } from "./loomHttp";
 
 const http = httpRouter();
 
@@ -125,5 +126,9 @@ http.route({ path: "/galdr/prompt", method: "GET",  handler: galdrPromptGet });
 http.route({ path: "/galdr/list",   method: "GET",  handler: galdrListGet });
 http.route({ path: "/galdr/prompt", method: "POST", handler: galdrPromptPost });
 http.route({ path: "/galdr/usage",  method: "POST", handler: galdrUsagePost });
+
+// Phase 119 Loom (D-02/D-04). One emit route, agent/CLI only — no OPTIONS
+// partner and no CORS headers, same boundary as the /galdr routes above.
+http.route({ path: "/loom/event", method: "POST", handler: loomEventPost });
 
 export default http;
