@@ -1122,6 +1122,48 @@ is **expected under the currently deployed code** and must NOT be read as the pr
 DUR-01's actual pass/fail signal remains the one this file's baseline established — the oldest
 `period:"daily"` `_creationTime` must not move forward, and the oldest `period:"hourly"` one must.
 
+### FOLLOW-UP (2026-08-11, plan 110-06) — the "does not clear, persists and grows" claim above is now itself stale
+
+The block above is preserved verbatim above this note because it records what was believed at the
+time and the mechanism it describes (index-head overhang measurement is period-blind, so a
+permanently-protected daily row keeps a naive check ALERT-red forever) was **correct as a diagnosis
+of the code that existed on 2026-08-10**. It is no longer an accurate description of the deployed
+system as of this plan.
+
+A concurrent session working in this same checkout shipped and deployed the fix the paragraph above
+describes as "not part of Phase 110": commit `96a1df68` (2026-08-10 18:37:01 -0400,
+`fix(retention): measure prunable lag, not index age, in the health probe`) adds
+`retention:oldestPrunableDoc` (`convex/retention.ts:379-418`) and `summarizeOverhangProbe`
+(`convex/retentionCursor.ts:203-231`), which measure the oldest doc the pruner would actually
+**delete** — reusing `PRUNE_PREDICATES` and `partitionBatchForPrune`, the same objects `pruneBatchV3`
+runs on — rather than the oldest doc in the table outright. `retention-health-check.ps1` was updated
+to call it. This landed and deployed the same evening this correction paragraph was written, so the
+paragraph was already stale within hours of being committed.
+
+Verified live by this plan (110-06), re-reading `retention-health.log` directly rather than trusting
+either the original claim or this correction on its own:
+
+```
+2026-08-11 05:30:09   aggregates -> caught up (nothing past the 90d cutoff that the pruner may delete)
+...
+2026-08-11 05:30:26 verdict=OK tables=19 detail=all tables caught up, no timeouts, memory/db nominal
+2026-08-11 05:30:26 OK -- no Telegram alert sent (worst overhang 0.5h, mem 17.81GiB)
+```
+
+The `aggregates` ALERT **did in fact clear** — it reads `caught up`, and the run's overall verdict is
+`OK`, not `ALERT`. The phrasing itself ("caught up (nothing past the ... cutoff **that the pruner may
+delete**)") is the predicate-aware wording `summarizeOverhangProbe` introduces; the pre-fix script
+only ever said "empty or fully caught up" with no such qualifier (compare the 2026-08-10 18:00 run
+pasted above in DUR-02 leg 2). This is independent textual confirmation the new probe is the one
+that ran, not merely that the alert happened to go quiet.
+
+Two things NOT to conclude from this: (1) `96a1df68` is not part of Phase 110's plan set and this
+plan does not claim it as Phase 110 work — it is recorded here only because it falsifies a claim
+Phase 110's own evidence file made; (2) the ALERT clearing is not, by itself, evidence that a prune
+ran successfully — `caught up` is also the reading an empty table would produce. DUR-02 leg 1 below
+is what actually proves a complete pass occurred; this note only corrects the earlier claim that the
+ALERT could never clear.
+
 ---
 
 ## Task 3 — Deliberate-break test and operator sign-off
@@ -1218,3 +1260,393 @@ the authorization and should be verifiable after the fact rather than taken on t
 *Plan `110-05` complete. DUR-02 leg 2 closed on coverage, with a clean zero-TIMEOUT re-run deferred
 to tomorrow morning. DUR-02 leg 1 and the DUR-01 before/after remain open — they belong to plan
 `110-06`, which cannot start until the 09:00 UTC cron has fired against the deployed code.*
+
+---
+
+# Plan 110-06 — DUR-02 leg 1 and DUR-01 live confirmation
+
+**Date:** 2026-08-11
+**Driver:** Claude Code (sequential executor, plan `110-06`, `autonomous: false`)
+**Target:** self-hosted Convex at `127.0.0.1:3210`, reached via `--env-file
+C:\Users\mandr\convex-selfhost\selfhosted.envfile` — the same target every prior probe in this file
+used. All probes below are read-only: no write, patch, delete, import, or scheduler call was issued
+against the live instance in this plan. The retention cron (`retention:startNightlyPrune`) was not
+hand-triggered — the 09:00 UTC fire this leg observes happened on its own, before this session
+started. No `--push`, `--prod`, or `deploy` flag was passed to any `npx convex` command. `npx convex
+env list` was not run.
+
+## DUR-02 leg 1 — a complete pass observed on the running instance
+
+### Source correction: the container-log source is provably unavailable (re-verified independently)
+
+This plan's original Task 1 named `docker logs convex-backend` as the evidence source. The plan was
+corrected before this executor started (commits `5b1a0f1a`, `3e190abc`) on the grounds that Convex
+UDF `console.log` never reaches container stdout on this self-hosted backend. Rather than transcribe
+that correction, every probe behind it was re-run independently in this session, against today's log
+tail (not the tail the plan-correction session captured yesterday):
+
+```
+=== A: "nightly prune started" ===
+0
+=== B: "all tables pruned" ===
+0
+=== C: "done, pruned" ===
+0
+=== D: "nightly batch cap" ===
+0
+```
+
+All four of the chain's log strings return **zero** hits from `docker logs convex-backend --tail
+20000` (`cmd /c "docker logs convex-backend --tail 20000 2>&1"`, piped through `Select-String
+-SimpleMatch`), run fresh in this session.
+
+**Positive control 1 — the retained window covers the 09:00 UTC fire.** The retained tail spans:
+
+```
+first line: 2026-08-11T05:55:02.575713Z  ... "POST /runtime-ingest HTTP/1.1" 200 ...
+last line:  2026-08-11T12:35:19.959043Z  ... "POST /forge-commands-claim HTTP/1.1" 200 ...
+```
+
+— i.e. `05:55:02Z` through `12:35:19Z`, which comfortably contains the entire 09:00–09:20 UTC cron
+window. Count of lines timestamped `T09:0x`: **436**. (The window in this session's tail is wider
+than the `05:10–12:22` window the plan-correction session recorded yesterday, because container
+stdout is a rolling buffer and more log volume has accumulated since — the exact bound moving is
+expected and does not weaken the control; what matters is that `T09:0x` lines are present in force,
+and they are.)
+
+**Positive control 2 — UDF-adjacent output does reach stdout, but none of it is this chain's
+application logs.** `udf|function_log` (case-insensitive) hits: **100**. Sample (first 5), all
+backend-internal (isolate memory-carryover restarts, an OCC retry) — not `console.log` from
+`convex/retention.ts`:
+
+```
+2026-08-11T06:00:57.327106Z  WARN  local_backend: Running without a proxy in release mode -- UDF
+  `fetch` requests are unrestricted!
+2026-08-11T06:39:52.160851Z  INFO  isolate::client: Restarting Isolate memory_carry_over:
+  TooMuchMemoryCarryOver("63.75 MiB", "99 MiB"), last request: "UDF: events.js:listRecentUnified"
+2026-08-11T06:44:49.682842Z  INFO  isolate::client: Restarting Isolate memory_carry_over:
+  TooMuchMemoryCarryOver("63.15 MiB", "99 MiB"), last request: "UDF: events.js:listRecentUnified"
+2026-08-11T06:48:36.541863Z  INFO  isolate::client: Restarting Isolate memory_carry_over:
+  TooMuchMemoryCarryOver("63.78 MiB", "99 MiB"), last request: "UDF: docker.js:currentStatus"
+2026-08-11T07:01:20.386687Z  WARN  application::application_function_runner: Optimistic
+  concurrency control failed (... "forgeHosts" table ...), retrying Udf(forge.js:claimAndUpsertHost)
+```
+
+Case-insensitive `retention` hits: **128** — all `database::retention` (Convex's own Rust tombstone
+GC module, `go_delete_table_documents`), not this codebase's chain. Sample (first 5):
+
+```
+2026-08-11T06:00:57.310431Z  INFO  database::retention: go_delete_table_documents: Deleting
+  documents in tablet AWZb63yPJOgyVeU-BQFQsA deleted at timestamp 1784729235689949555
+2026-08-11T06:00:57.315032Z  INFO  database::retention: go_delete_table_documents: Deleting
+  documents in tablet Avo_C5fUGsiJWpaqxkxQsA deleted at timestamp 1784729235689949555
+2026-08-11T06:00:57.315409Z  INFO  cmd_util::env: Overriding DOCUMENT_RETENTION_DELAY to 1800 from
+  environment
+```
+
+**`npx convex logs --history 3000` returns no queryable history.** Run against the live self-hosted
+backend with a 12s process-kill bound (the CLI switches to an interactive streaming tail and does not
+exit on its own):
+
+```
+- Showing logs of deployment:
+  ??? http://127.0.0.1:3210
+Watching logs for dev deployment...
+```
+
+No historical lines at all — it goes straight to live streaming. There is no queryable log history on
+this self-hosted backend to bound with `--since`/`--tail`, confirming the plan-correction's finding
+independently.
+
+**Conclusion, re-derived, not transcribed:** the chain's log lines are unrecoverable from container
+stdout by any of the three routes tried (raw grep, udf/function_log tag, `npx convex logs --history`),
+with two positive controls proving the search itself was capable of finding output when output
+exists. The claim moves to a durable record below.
+
+### `_scheduled_functions` probe — the durable record
+
+Window used (independently confirmed against the day's actual UTC boundaries before querying):
+`1786438800000`–`1786440000000` ms = `2026-08-11T09:00:00Z`–`2026-08-11T09:20:00Z`.
+
+```
+$ npx convex run --env-file <selfhosted.envfile> --inline-query "
+    const WINDOW_START = 1786438800000; const WINDOW_END = 1786440000000;
+    const rows = await ctx.db.system.query('_scheduled_functions').order('desc').take(1000);
+    const pruneRows = rows.filter(r => (r.name||'').includes('pruneBatchV3')
+      && r.scheduledTime >= WINDOW_START && r.scheduledTime <= WINDOW_END);
+    const tableIndices = [...new Set(pruneRows.map(r => r.args && r.args[0] && r.args[0].tableIndex))].sort((a,b)=>a-b);
+    const stateCounts = {};
+    for (const r of pruneRows) { const k = r.state ? r.state.kind : 'unknown'; stateCounts[k] = (stateCounts[k]||0)+1; }
+    const nonSuccess = pruneRows.filter(r => !r.state || r.state.kind !== 'success')
+      .map(r => ({scheduledTime: r.scheduledTime, tableIndex: r.args && r.args[0] && r.args[0].tableIndex, state: r.state}));
+    const oldestRowInBoundedSet = rows.length ? rows[rows.length-1].scheduledTime : null;
+    return { totalRowsReturnedByBoundedQuery: rows.length, oldestScheduledTimeInBoundedSet: oldestRowInBoundedSet,
+      pruneBatchV3CountInWindow: pruneRows.length, distinctTableIndices: tableIndices, stateCounts,
+      nonSuccessRows: nonSuccess,
+      firstScheduledTime: pruneRows.length ? pruneRows[pruneRows.length-1].scheduledTime : null,
+      lastScheduledTime: pruneRows.length ? pruneRows[0].scheduledTime : null };
+  "
+{
+  "distinctTableIndices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  "firstScheduledTime": 1786438826400,
+  "lastScheduledTime": 1786439716219,
+  "nonSuccessRows": [],
+  "oldestScheduledTimeInBoundedSet": 1786179667042,
+  "pruneBatchV3CountInWindow": 268,
+  "stateCounts": { "success": 268 },
+  "totalRowsReturnedByBoundedQuery": 1000
+}
+```
+
+Note: `ctx.db.query` refuses system tables directly (`Error: System tables can only be accessed from
+db.system.query()`) — `ctx.db.system.query('_scheduled_functions')` is the correct call, confirmed by
+a failing first attempt in this session using the wrong form.
+
+**Bound-not-truncated check.** `totalRowsReturnedByBoundedQuery` hit the `take(1000)` ceiling, so
+this is a lower-bound read by construction (per this plan's `take` ceiling rule). What makes it
+sufficient here: `oldestScheduledTimeInBoundedSet` is `1786179667042` = `2026-08-08T09:01:07.042Z`,
+three days before the window start — i.e. the 1000 most-recent scheduled-function rows (descending
+order) reach comfortably past the window on both sides without exhausting the bound, so the window
+`1786438800000`–`1786440000000` is fully contained inside the returned set, not clipped at either
+edge.
+
+**Distinct `tableIndex` coverage.** `[0, 1, 2, ..., 18]` — 19 distinct values, `0..K-1` with `K=19`
+(re-derived independently from `convex/retention.ts`'s `RETENTION_DAYS` object literal via a small
+Node script parsing it directly: `["runtime_events","toolExecutions","activeTime",
+"selfHealingEvents","fileOps","heartbeatAlerts","gatewayQuotaSnapshots","events",
+"environmentSnapshots","contextSnapshots","metricSnapshots","securityEvents","cronExecutions",
+"jobLifecycle","agentCoordination","toolPolicyEvents","activeEngineSnapshots","controlVerbSwaps",
+"aggregates"]`, `COUNT=19` — matching the 19 recorded in plans 110-04/110-05). No gaps.
+
+**Success state.** `stateCounts: { "success": 268 }` — every one of the 268 `pruneBatchV3`
+invocations in the window reports `state.kind === "success"`. `nonSuccessRows` is the empty array
+`[]`, pasted rather than summarized, per the acceptance criteria: there is nothing else to paste.
+
+**Window timestamps.** `firstScheduledTime` = `1786438826400` = `2026-08-11T09:00:26.400Z`.
+`lastScheduledTime` = `1786439716219` = `2026-08-11T09:15:16.219Z`. Both independently converted
+(`[DateTimeOffset]::FromUnixTimeMilliseconds(...).UtcDateTime`) in this session, both inside the
+09:00–09:20 UTC cron window.
+
+### Rotation cursor — corroboration, presented with its ambiguity, not as standalone proof
+
+`planRotationWrite` (`convex/retentionCursor.ts:269-273`) returns `0` for the `"done"` action AND
+returns `tableIndex` for `"cap-reached"` — so a stored value of `0` is, on its own, equally
+consistent with "the chain completed the whole 19-table pass" and "the chain hit the nightly cap
+while still on table index 0." A bare `value: 0` reading does **not** by itself prove a complete
+pass. It becomes decisive only in combination with the `tableIndex` coverage set above: a
+cap-at-index-0 run could not have produced invocations at table indices 1 through 18, and the probe
+above shows all 19 present. That is the reasoning this leg rests on, stated explicitly rather than
+inferred.
+
+The rotation cursor row read in this session (see the DUR-01 section below for the raw query and
+full output): `{ "value": 0, "source": "runtime", "updatedAt": 1786439716.834 }`. `updatedAt`
+1786439716.834 read as epoch **seconds** = `2026-08-11T09:15:16.834Z` — 0.615s after the window's
+own `lastScheduledTime` (`09:15:16.219Z`), consistent with the cursor being patched at the tail end
+of the final batch's own mutation.
+
+### Independent corroboration — the post-prune 05:30-local health check
+
+`retention-health.log`, read directly in this session (not quoted from the plan dispatch):
+
+```
+2026-08-11 05:30:03 === retention health check starting ===
+2026-08-11 05:30:04   memory=17.81GiB / 64GiB db=6.38GiB uptime=Up 3 hours (healthy)
+2026-08-11 05:30:06   activeEngineSnapshots -> caught up (nothing past the 30d cutoff that the pruner may delete)
+2026-08-11 05:30:07   activeTime -> caught up (nothing past the 14d cutoff that the pruner may delete)
+2026-08-11 05:30:08   agentCoordination -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:09   aggregates -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:10   contextSnapshots -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:12   controlVerbSwaps -> caught up (nothing past the 30d cutoff that the pruner may delete)
+2026-08-11 05:30:13   cronExecutions -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:14   environmentSnapshots -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:15   events -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:16   fileOps -> caught up (nothing past the 14d cutoff that the pruner may delete)
+2026-08-11 05:30:17   gatewayQuotaSnapshots -> caught up (nothing past the 30d cutoff that the pruner may delete)
+2026-08-11 05:30:18   heartbeatAlerts -> caught up (nothing past the 14d cutoff that the pruner may delete)
+2026-08-11 05:30:19   jobLifecycle -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:20   metricSnapshots -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:21   runtime_events -> oldest PRUNABLE doc overhang 0.5h past 14d cutoff
+2026-08-11 05:30:22   securityEvents -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:23   selfHealingEvents -> oldest PRUNABLE doc overhang 0.5h past 14d cutoff
+2026-08-11 05:30:25   toolExecutions -> caught up (nothing past the 14d cutoff that the pruner may delete)
+2026-08-11 05:30:26   toolPolicyEvents -> caught up (nothing past the 90d cutoff that the pruner may delete)
+2026-08-11 05:30:26 verdict=OK tables=19 detail=all tables caught up, no timeouts, memory/db nominal
+2026-08-11 05:30:26 OK -- no Telegram alert sent (worst overhang 0.5h, mem 17.81GiB)
+2026-08-11 05:30:26 === done ===
+```
+
+05:30 ET (local) = 09:30 UTC, 15 minutes after the chain's own last invocation at 09:15:16 UTC. All
+19 tables report either `caught up` or a sub-1-hour overhang; `verdict=OK`. This is the control that
+rules out the cap-at-index-0 reading: a chain that stopped early on table index 0 would leave tables
+1 through 18 with whatever overhang they had accumulated since the last successful pass, and this run
+shows none of them do. (The `caught up (... that the pruner may delete)` and `oldest PRUNABLE doc
+overhang` phrasing is the predicate-aware wording from `summarizeOverhangProbe`/`oldestPrunableDoc` —
+see the amended CORRECTION note above for why that matters for `aggregates` specifically.)
+
+### Verdict
+
+**Complete pass, starting at index 0, covering all 19 of 19 tables.** The durable
+`_scheduled_functions` record shows 268 `pruneBatchV3` invocations inside the 09:00–09:20 UTC cron
+window, spanning table indices `0` through `18` with no gaps, every one reporting
+`state.kind === "success"`, timestamped `09:00:26.400Z` through `09:15:16.219Z` — inside the fire
+window. The rotation cursor's `value: 0` is corroboration, not standalone proof, and is decisive only
+together with the coverage set (a cap-at-index-0 run could not have produced indices 1–18). The
+independent post-prune health check at 09:30 UTC shows all 19 tables caught up or within a sub-hour
+overhang, which a chain that stopped early could not have produced either. This leg is closed on a
+durable record; the container-log source was sought, found provably unavailable with controls, and
+not used.
+
+---
+
+## DUR-01 live confirmation — daily rows survived, hourly rows aged out
+
+All three baseline probes from plan 110-04 re-run byte-identical (same index, same predicate, same
+`take`) in this session.
+
+### Probe 1 — oldest `period:"daily"` row (D-01 hard-fail instrument)
+
+```
+$ npx convex run --env-file <selfhosted.envfile> --inline-query "const rows = await ctx.db.query('aggregates').withIndex('by_period_bucket', q => q.eq('period','daily')).order('asc').take(1); return rows.length ? { bucket_start: rows[0].bucket_start, _creationTime: rows[0]._creationTime, metric_type: rows[0].metric_type } : { empty: true };"
+{
+  "_creationTime": 1778029200021.6772,
+  "bucket_start": 1777939200,
+  "metric_type": "events"
+}
+```
+
+| | Plan 110-04 baseline (2026-08-10, pre-deploy) | This run (2026-08-11, post-prune) |
+|---|---|---|
+| `_creationTime` | `1778029200021.6772` | `1778029200021.6772` |
+| `bucket_start` | `1777939200` | `1777939200` |
+| `metric_type` | `events` | `events` |
+
+**IDENTICAL — byte-for-byte the same document.** The oldest daily row did not move forward.
+**HARD GATE PASSED.**
+
+### Probe 2 — oldest `period:"hourly"` row (control: opposite failure)
+
+```
+$ npx convex run --env-file <selfhosted.envfile> --inline-query "const rows = await ctx.db.query('aggregates').withIndex('by_period_bucket', q => q.eq('period','hourly')).order('asc').take(1); return rows.length ? { bucket_start: rows[0].bucket_start, _creationTime: rows[0]._creationTime, metric_type: rows[0].metric_type } : { empty: true };"
+{
+  "_creationTime": 1782314125926.0588,
+  "bucket_start": 1777996800,
+  "metric_type": "tokens"
+}
+```
+
+| | Plan 110-04 baseline (2026-08-10, pre-deploy) | This run (2026-08-11, post-prune) |
+|---|---|---|
+| `_creationTime` | `1778001143716.9412` (`2026-05-05T17:12:23.717Z`) | `1782314125926.0588` (`2026-06-24T15:15:25.926Z`) |
+| `bucket_start` | `1777996800` | `1777996800` |
+| `metric_type` | `cost` | `tokens` |
+
+`_creationTime` **moved forward by ~49.9 days**. This is a different document than the baseline read
+(`metric_type` differs: `cost` → `tokens`), which is expected — `by_period_bucket` orders by
+`(period, bucket_start)`, not `_creationTime`, and there are multiple `metric_type` rows sharing the
+same `bucket_start`; once the row the baseline saw was deleted, the query surfaces whichever
+remaining row sorts first by that index. `bucket_start` itself staying at `1777996800` is therefore
+not informative on its own — what carries the signal is `_creationTime` moving forward, which is the
+control this probe exists to provide, and it did.
+
+**CONTROL SATISFIED** by the oldest-hourly-`_creationTime`-moved-forward reading (the plan's first
+listed option). The `retention: aggregates done, pruned <n> docs` log line — the plan's second listed
+option — was not available as corroboration; DUR-02 leg 1 above establishes that no chain log line is
+recoverable from this instance at all, for any table, not only for `aggregates`. The hourly reading
+alone is sufficient per the plan's "at least one of" wording.
+
+### Probe 3 — bounded daily count at `take(1000)`
+
+```
+$ npx convex run --env-file <selfhosted.envfile> --inline-query "const rows = await ctx.db.query('aggregates').withIndex('by_period_bucket', q => q.eq('period','daily')).order('asc').take(1000); return { count: rows.length };"
+{
+  "count": 1000
+}
+```
+
+| | Plan 110-04 baseline (2026-08-10) | This run (2026-08-11) |
+|---|---|---|
+| Bounded daily count (`take(1000)`) | `1000` (cap hit — lower bound, not exhaustive) | `1000` (cap hit — lower bound, not exhaustive) |
+
+**Unchanged, and has not dropped.** Both readings hit the same `take(1000)` ceiling, so this remains
+a lower bound rather than an exact count on both sides — the same limitation the 110-04 baseline
+itself noted — but it is the identical shape of result, giving no indication of a shrinking daily
+population.
+
+### Rotation cursor (D-05/D-06)
+
+```
+$ npx convex run --env-file <selfhosted.envfile> --inline-query "const rows = await ctx.db.query('agentConfigs').withIndex('by_key', q => q.eq('configKey','retention.rotationCursor')).take(5); return { count: rows.length, rows: rows.map(r => ({ value: r.value, source: r.source, updatedAt: r.updatedAt })) };"
+{
+  "count": 1,
+  "rows": [
+    {
+      "source": "runtime",
+      "updatedAt": 1786439716.834,
+      "value": 0
+    }
+  ]
+}
+```
+
+Three assertions, each checked separately:
+
+1. **Exists.** `count: 1` — present. Plan 110-04 Probe 4 recorded this row as `null` (absent)
+   pre-deploy — that recorded absence (`.planning/phases/110-convex-durability/110-DUR-EVIDENCE.md`,
+   Plan 110-04, "Probe 4 — Rotation cursor absence (D-06)") is what makes today's `value: 0` mean
+   something rather than being indistinguishable from a row that never existed.
+2. **Exactly one row**, not a growing set — queried with `.take(5)` to make an unexpected second row
+   visible if one existed; only one came back. This is what distinguishes the patch idiom
+   (`convex/retention.ts`'s `existingCursor ? ctx.db.patch(...) : ctx.db.insert(...)`) from an
+   insert-only anti-pattern that would accumulate a row per run.
+3. **`updatedAt` inside the run window, read as epoch seconds.** `1786439716.834` as epoch
+   **seconds** = `2026-08-11T09:15:16.834Z` — 0.615s after the `_scheduled_functions` window's own
+   `lastScheduledTime` (`09:15:16.219Z`), i.e. inside the observed run, not some other night's run. As
+   epoch milliseconds this value would resolve to 1970-01-21, which is absurd and confirms the seconds
+   interpretation is the correct one.
+
+`value: 0` is consistent with the leg-1 outcome (a completed pass) — DUR-02 leg 1 above is what
+establishes that reading is a completion rather than a cap-at-index-0, per the ambiguity already
+documented there.
+
+### Verdict
+
+**DUR-01 confirmed on live data against the pre-deploy baseline.** The oldest `period:"daily"` row is
+byte-identical to the 110-04 baseline — no daily rows were deleted, so cost-history re-pricing is
+intact. The oldest `period:"hourly"` row's `_creationTime` moved forward ~49.9 days, satisfying the
+opposite-failure control and confirming the predicate is actually pruning, not skipping everything.
+The bounded daily count is unchanged in shape. The rotation cursor is exactly one row, patched (not
+duplicated), holding `value: 0` with an `updatedAt` inside the observed run window read correctly as
+epoch seconds, against a pre-deploy absence already on record.
+
+---
+
+## Credential-shape scan (this plan)
+
+```
+grep -inE "sk_[A-Za-z0-9]|sb_[A-Za-z0-9]|gho_[A-Za-z0-9]|Bearer [A-Za-z0-9]|convex-self-hosted\|" \
+  .planning/phases/110-convex-durability/110-DUR-EVIDENCE.md
+```
+
+Result: the only hit is the same pre-existing false positive on the word "bearer" in ordinary prose
+in the Plan 110-04 preamble ("no Convex admin key, deploy key, or bearer token"), already recorded in
+110-04-SUMMARY.md. No new match introduced by this plan's additions. No `--admin-key`/`--url`-with-key
+argument was ever constructed in any command pasted in this section — every invocation used
+`--env-file <path>`, which never places a credential value on the command line.
+
+## Bounding and mutation discipline (this plan's self-check)
+
+- No probe in this plan used `take` greater than 1000.
+- No probe returned `SystemTimeoutError`; none was retried at a larger `take`.
+- No write, patch, delete, or bulk operation was issued against any table.
+- `npx convex import` was not run.
+- `npx convex env list` was not run.
+- `npx convex deploy` was not run; no `--push`, `--prod`, or `deploy` flag appeared in any command.
+- The retention cron (`retention:startNightlyPrune`) was not hand-triggered — the observed 09:00 UTC
+  fire happened before this session began.
+- No `.env` file was read, cat'd, sourced, or grepped.
+
+---
+
+*DUR-02 leg 1 and the DUR-01 live confirmation are complete. Task 3 (operator sign-off) is next and
+is a blocking checkpoint — this plan does not close DUR-01/DUR-02 or update ROADMAP/STATE until the
+operator responds.*
