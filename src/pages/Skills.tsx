@@ -82,8 +82,9 @@ function SkillsBody() {
   // The Skills page manages Claude Code skills. Hide ONLY the Ástríðr `bridge`/
   // `native` mirror (the cc_* duplicates whose every origin is bridge/native) so
   // a skill never shows twice and those copies don't reject on drag as
-  // "multi-scope". Skills with claude-code, empty, or unknown origins are kept.
-  // VIEW filter only — it does not touch the bridge or Ástríðr's access.
+  // "multi-scope". Skills with claude-code, claude-code:plugin (D-02), empty,
+  // or unknown origins are kept. VIEW filter only — it does not touch the
+  // bridge or Ástríðr's access.
   const manageableSkills = useMemo(
     () =>
       enrichedSkills.filter((s) => {
@@ -111,6 +112,11 @@ function SkillsBody() {
 
   const isProjectOrigin = (s: { origins?: string[] }) =>
     (s.origins ?? []).some((o) => o.startsWith("claude-code:project:"));
+  // D-02 split the personal "claude-code" origin from the plugin-sourced
+  // "claude-code:plugin" origin; both are treated as Global scope here for
+  // behaviour parity with the pre-split state (D-17).
+  const isGlobalOrigin = (s: { origins?: string[] }) =>
+    (s.origins ?? []).some((o) => o === "claude-code" || o === "claude-code:plugin");
 
   // The chip row (SkillFilterChips) drives the overview filter. "cold" is handled
   // by the Cold Storage view, so it falls through to the unfiltered base here.
@@ -129,7 +135,7 @@ function SkillsBody() {
           .sort((a, b) => (b.discoveredAt ?? 0) - (a.discoveredAt ?? 0))
           .slice(0, 30);
       case "global":
-        return base.filter((s) => (s.origins ?? []).includes("claude-code"));
+        return base.filter(isGlobalOrigin);
       case "project":
         return base.filter(isProjectOrigin);
       default:
@@ -145,7 +151,7 @@ function SkillsBody() {
       mostused: base.filter((s) => (s.useCount ?? 0) > 0).length,
       unused: base.filter((s) => (s.useCount ?? 0) === 0 && !isDormant(s)).length,
       recent: Math.min(30, base.filter((s) => (s.discoveredAt ?? 0) > 0).length),
-      global: base.filter((s) => (s.origins ?? []).includes("claude-code")).length,
+      global: base.filter(isGlobalOrigin).length,
       project: base.filter(isProjectOrigin).length,
       cold: base.filter(hasDormantCopy).length,
     };
