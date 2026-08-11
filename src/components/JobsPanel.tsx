@@ -1,17 +1,20 @@
 /**
- * JobsPanel — live background subagent job list with completion surfacing.
+ * JobsPanel — post-hoc mission history board over terminal-state
+ * `subagentJobs` rows.
  *
- * Phase 168 (background subagents) — SC-2/SC-3.
- * Composes EntityRow + StatusBadge, live-query-driven via useSubagentJobs(),
- * mirroring BlackboardPanel's header/empty-state/list template. A job that
- * flips to completed/failed/cancelled surfaces its terminal state
- * automatically the next time the live Convex query updates — no manual
- * polling (SC-3).
+ * Phase 111 (mission board) — D-08/D-09/D-10, subtracting the live-streaming
+ * chrome this surface inherited from Phase 168 (background subagents,
+ * SC-2/SC-3) but cannot honestly back: `subagentJobs` holds only terminal
+ * rows (`runtimeIngest.ts:594-596` never writes `queued`/`running`), so this
+ * is a history board, not a live queue. It still composes EntityRow +
+ * StatusBadge via useSubagentJobs(), mirroring BlackboardPanel's
+ * header/empty-state/list template, and still auto-updates when the Convex
+ * query returns a newly-finished mission — that part of Phase 168's design
+ * was accurate and is unchanged.
  */
 
 import {
   Clock,
-  Zap,
   CheckCircle,
   XCircle,
   Ban,
@@ -22,18 +25,22 @@ import { EntityRow } from "./EntityRow";
 import StatusBadge from "./StatusBadge";
 import { useSubagentJobs, type SubagentJobRow } from "../hooks/useSubagentJobs";
 
-// ── State icon mapping — covers all five subagentJobs statuses ──────────────
+// ── State icon mapping — the three terminal subagentJobs statuses ───────────
+// queued/running are absent on purpose: runtimeIngest.ts:594-596 never
+// writes them for this table, so every row reaching this panel is already
+// terminal. An unmapped status (including "unknown") falls through to the
+// <Clock ... /> default at the call site below — do not add a key here.
 const stateIcon: Record<string, React.ReactNode> = {
-  queued: <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />,
-  running: <Zap className="h-3.5 w-3.5 text-[#22c55e] animate-pulse" />,
   completed: <CheckCircle className="h-3.5 w-3.5 text-primary/80" />,
-  failed: <XCircle className="h-3.5 w-3.5 text-[#ef4444]" />,
+  failed: <XCircle className="h-3.5 w-3.5 text-(--status-error)" />,
   cancelled: <Ban className="h-3.5 w-3.5 text-muted-foreground" />,
 };
 
-// Format elapsed time from a seconds-epoch timestamp to a short string.
-// subagentJobs.submittedAt/finishedAt are Unix epoch SECONDS (docs/
-// astridr-contract.md sec2.31) — no ms conversion needed, unlike swarmTasks.
+// D-09: subagentJobs.submittedAt/finishedAt are Unix epoch seconds (docs/
+// astridr-contract.md sec2.31); Date.now() is ms. The ternary below scales
+// a seconds value up to ms while tolerating an already-ms value, so this
+// function has exactly one meaning now that D-08 removed the non-terminal
+// states — "how long ago this mission finished" — and says so explicitly.
 function formatElapsed(job: SubagentJobRow): string {
   const ref = job.finishedAt ?? job.submittedAt;
   if (!ref) return "";
@@ -41,10 +48,12 @@ function formatElapsed(job: SubagentJobRow): string {
   const diffMs = Date.now() - refMs;
   const s = Math.floor(diffMs / 1000);
   if (s < 0) return "";
-  if (s < 60) return `${s}s`;
+  if (s < 60) return `finished moments ago`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  return `${Math.floor(m / 60)}h`;
+  if (m < 60) return `finished ${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `finished ${h}h ago`;
+  return `finished ${Math.floor(h / 24)}d ago`;
 }
 
 interface JobsPanelProps {
@@ -60,20 +69,19 @@ export default function JobsPanel({ onSelectJob }: JobsPanelProps) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-mono uppercase tracking-widest text-primary flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          BACKGROUND JOBS
+          MISSION HISTORY
         </h2>
         <Badge variant="outline" className="text-xs font-mono">
-          {jobCount} jobs
+          {jobCount} missions
         </Badge>
       </div>
 
       {jobCount === 0 ? (
         <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
           <ListTodo className="h-6 w-6 text-muted-foreground/50" />
-          <p className="text-sm font-medium text-foreground">No background jobs yet</p>
+          <p className="text-sm font-medium text-foreground">No mission history</p>
           <p className="text-sm text-muted-foreground">
-            Jobs submitted via delegate_task(background=True) will appear here.
+            Background missions run via delegate_task(background=True) will appear here once they finish.
           </p>
         </div>
       ) : (
