@@ -12,6 +12,14 @@
  */
 import { test, expect } from '@playwright/test';
 
+/**
+ * These specs read LIVE Convex data through a subscription while the rest of the
+ * suite saturates the same dev server. The default 5s is a load bound, not a
+ * correctness bound — the assertions still fail loudly if the row is genuinely
+ * absent, they just stop failing because axe was hogging the box.
+ */
+const LIVE_DATA_TIMEOUT = 20_000;
+
 test.describe('Bifröst command palette', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -21,7 +29,7 @@ test.describe('Bifröst command palette', () => {
 
   test('Ctrl+K, search a link, Enter opens its URL', async ({ page }) => {
     await page.goto('/bifrost');
-    await expect(page.getByText('Ástríðr API')).toBeVisible();
+    await expect(page.getByText('Ástríðr API')).toBeVisible({ timeout: LIVE_DATA_TIMEOUT });
 
     // DashboardLayout owns the global Ctrl+K binding; Phase 117 deliberately
     // added no new global shortcut.
@@ -50,8 +58,8 @@ test.describe('Bifröst command palette', () => {
     page,
   }) => {
     await page.goto('/bifrost');
-    await expect(page.getByText('Ástríðr API')).toBeVisible();
-    await expect(page.getByText('CodePulse dev server')).toBeVisible();
+    await expect(page.getByText('Ástríðr API')).toBeVisible({ timeout: LIVE_DATA_TIMEOUT });
+    await expect(page.getByText('CodePulse dev server')).toBeVisible({ timeout: LIVE_DATA_TIMEOUT });
 
     // D-03's live half. Two cards, exactly one dot: the container-bound link
     // resolves, the unbound one renders nothing rather than a green dot.
