@@ -98,3 +98,12 @@ None - no external service configuration required. This is the producer half onl
 ---
 *Phase: 113-debt-sweep*
 *Completed: 2026-08-11*
+
+## Self-Check: PASSED
+
+All claimed files and commit hashes verified present:
+- FOUND: hooks/skillScan.mjs
+- FOUND: hooks/scanner.mjs
+- FOUND: hooks/__tests__/skillScan.test.mjs
+- FOUND: .planning/phases/113-debt-sweep/113-01-SUMMARY.md
+- FOUND: 854b2640, 2e4a0eff, c0530ad8, 40dad2a9
