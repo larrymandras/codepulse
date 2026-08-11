@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Completed 111-01-PLAN.md (JobsPanel mission history rewrite)
-last_updated: "2026-08-11T12:38:47.134Z"
+stopped_at: Completed 111-02-PLAN.md (deleted ActiveAgentsPanel, D-07)
+last_updated: "2026-08-11T12:48:44.000Z"
 last_activity: 2026-08-11
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 34
-  completed_plans: 32
+  completed_plans: 33
   percent: 25
 ---
 
@@ -50,11 +50,15 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 111 (mission-board) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3 (111-02 complete; 111-03 next, if planned)
 Status: Ready to execute
 Last activity: 2026-08-11
 
-**Phase 110 is NOT closed — 110-06 (wave 5) is still outstanding.** 110-01..110-05 are complete and deployed (2026-08-10 ~17:05 ET, operator-authorized); 110-06 is blocked on observing a real 09:00 UTC `retention-prune` fire against the deployed code (earliest 2026-08-11 09:00 UTC / 05:00 ET; the plan forbids hand-triggering it). Also still open from that phase: a clean zero-`TIMEOUT` health-check re-run, and the 110-05 ROADMAP checkbox. This block was overwritten by `gsd-sdk query state.begin-phase --phase 111` (the documented state.* narrative clobber) and restored by hand; the same call also inflated `completed_plans` 30→31 with nothing completed, corrected back to 30 in the same edit. Read the three numbered notes below before starting 110-06.
+**Plan 111-02 complete (2026-08-11).** Deleted `ActiveAgentsPanel` outright (component, test, import, mount, `SectionErrorBoundary` wrapper) — it filtered `subagentJobs` on `status === "running"`, a state the table structurally never receives, so it rendered the unfalsifiable "No agents running." permanently (D-07, MISSION-03). `cc-left-rail` now has one child, `IntelligenceFeedPanel`; `SectionErrorBoundary` count in `Chat.tsx` went 17→15 (verified before editing). `Chat.test.tsx`'s seven-panel claims repaired: `SEVEN_PANEL_LABELS` renamed to the count-free `COMMAND_CENTER_PANEL_LABELS` with `ACTIVE AGENTS` dropped, doc comment and three test titles now say "six"; the label array's mutation control was run and captured RED (`ACTIVE AGENTS` re-added → mode-ON test failed with `Unable to find an element with the text: ACTIVE AGENTS`) before being reverted to green. Whole-tree `grep -rn "ActiveAgentsPanel" src/` and `grep -rn "ACTIVE AGENTS" src/` both return no matches. Full suite 297 test files passed | 17 skipped, 3943 tests passed | 193 todo, 0 failed; `npx tsc --noEmit` exit 0. One plan-scope correction (Rule 3): the `cc-left-rail` comment at `Chat.tsx:1028-1033` named the deleted panel in prose and was reworded (no CSS/class change) to satisfy the plan's own whole-file grep acceptance criterion. Executed sequentially on `master`, no worktree — two concurrent sessions (Phase 110-06, Phase 119/Loom) committed unrelated work to this same branch in the same window; neither was touched. See `111-02-SUMMARY.md`.
+
+**Counter note (2026-08-11, this session):** `completed_plans` moved 32→33, crediting only this plan's verified completion — NOT derived from the raw on-disk SUMMARY.md count (34), because one of those two new files (`110-06-SUMMARY.md`, added by a concurrent session in this same window) is an interim checkpoint summary ("Tasks 1-2 summary, Task 3 checkpoint pending" per its own commit message and content), not a completed plan. A future session closing out 110-06 should reconcile this properly once that plan actually finishes.
+
+**Phase 110 is NOT closed — 110-06 (wave 5) is still outstanding.** 110-01..110-05 are complete and deployed (2026-08-10 ~17:05 ET, operator-authorized); 110-06 is blocked on observing a real 09:00 UTC `retention-prune` fire against the deployed code (earliest 2026-08-11 09:00 UTC / 05:00 ET; the plan forbids hand-triggering it). Also still open from that phase: a clean zero-`TIMEOUT` health-check re-run, and the 110-05 ROADMAP checkbox. This block was overwritten by `gsd-sdk query state.begin-phase --phase 111` (the documented state.* narrative clobber) and restored by hand. **Counter note, corrected 2026-08-11:** that same call moved `completed_plans` 30→31 and I initially reverted it to 30 as a phantom increment — that revert was wrong. Ground truth is the SUMMARY.md file count on disk (`.planning/phases/*/*-SUMMARY.md`), which was 31 before Phase 111 started: 108=7, 109=10, 110=5, 116=8, 117=1. The committed 30 was stale because a CONCURRENT session completed 117-01 without bumping the counter. Derive this number from disk, never from the previous value ± 1. Read the three numbered notes below before starting 110-06.
 
 **Three things the 110-06 session must know before starting:**
 
