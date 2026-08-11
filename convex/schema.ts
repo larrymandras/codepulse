@@ -2011,6 +2011,53 @@ export default defineSchema({
     .index("by_googleEventId", ["googleEventId"]),
 
   // ============================================================
+  // PERSONA DIALS & GAG LEDGER (Phase 189 Plan 10, DIAL-01, D-20/D-21)
+  // ============================================================
+
+  // Per-profile, per-persona humor/candor dial values (D-20). Deliberately
+  // departs from 185 D-02/D-16's clears-on-restart brain-swap semantics — a
+  // dial is a preference, not a swap, and rebuilds here are frequent enough
+  // that clears-on-restart would make the feature useless. Scoped to
+  // profileId AND personaId because other personas' tone stays locked per
+  // 185 D-14 — the persona is part of the key, not an assumption. Written
+  // via the authed /persona-dials-ingest httpAction (Ástríðr), reusing
+  // ASTRIDR_INGEST_API_KEY (no new/second key — astridr/tools/reminders.py:41
+  // precedent). ALL timestamps are epoch SECONDS — a millisecond value here
+  // formats as a year-57000 date.
+  personaDials: defineTable({
+    profileId: v.string(),
+    personaId: v.string(),
+    humor: v.float64(), // clamped 0-100 server-side in personaDials.ts:set
+    candor: v.float64(), // clamped 0-100 server-side in personaDials.ts:set
+    updatedAt: v.float64(), // epoch SECONDS
+  }).index("by_profile_persona", ["profileId", "personaId"]),
+
+  // Propose/confirm running-gag callback ledger (D-21). A row can only ever
+  // be created by /gag-ledger-ingest's "propose" op with status "proposed"
+  // — there is no code path by which a single ingest call creates a
+  // "confirmed" row, and `source` is hardcoded "astridr" server-side exactly
+  // like remindersIngest.ts:55, for the same "never trust the caller"
+  // reason. A "proposed" entry is never eligible for callback until
+  // "confirm" flips it. ALL timestamps are epoch SECONDS — a wrong-unit
+  // lastUsedAt/cooldown comparison would pass or fail by accident, not by
+  // logic.
+  gagLedger: defineTable({
+    profileId: v.string(),
+    text: v.string(), // the callback line
+    status: v.string(), // "proposed" | "confirmed" | "retired"
+    source: v.string(), // server-set, always "astridr" — never trust body.source
+    proposedAt: v.float64(), // epoch SECONDS
+    confirmedAt: v.optional(v.float64()),
+    lastUsedAt: v.optional(v.float64()),
+    useCount: v.float64(),
+    retiredAt: v.optional(v.float64()),
+  })
+    .index("by_profile_status", ["profileId", "status"])
+    // The cooldown query (gagLedger.ts eligible()) reads this index; without
+    // it, eligibility would be a full scan on every turn.
+    .index("by_last_used", ["profileId", "lastUsedAt"]),
+
+  // ============================================================
   // GOVERNOR INBOX (Phase 186 Plan 02, GOV-01, D-10) — sibling of reminders
   // ============================================================
 
