@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { parseFrontmatter, repoKey, collectClaudeCodeSkills } from "../skillScan.mjs";
+import { parseFrontmatter, repoKey, collectClaudeCodeSkills, collectClaudeCodeSkillsWithCoverage } from "../skillScan.mjs";
 
 describe("parseFrontmatter", () => {
   it("extracts name and description", () => {
@@ -174,5 +174,93 @@ describe("collectClaudeCodeSkills", () => {
     const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
     const origins = skills.filter((s) => s.origin === "claude-code:available");
     expect(origins.every((s) => s.origin !== "claude-code")).toBe(true);
+  });
+});
+
+describe("collectClaudeCodeSkillsWithCoverage", () => {
+  it("declares every origin that was actually read, on a complete fixture", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-cov-"));
+    const cwd = mkdtempSync(join(tmpdir(), "repo-cov-"));
+    try {
+      mkdirSync(join(home, ".claude", "skills", "deep-research"), { recursive: true });
+      writeFileSync(join(home, ".claude", "skills", "deep-research", "SKILL.md"),
+        "---\nname: deep-research\ndescription: Research\n---\n");
+      mkdirSync(join(home, ".claude", "plugins", "cache", "p", "1.1.0", "skills", "brainstorm"), { recursive: true });
+      writeFileSync(join(home, ".claude", "plugins", "cache", "p", "1.1.0", "skills", "brainstorm", "SKILL.md"),
+        "---\nname: brainstorm\ndescription: Ideas\n---\n");
+      writeFileSync(join(home, ".claude", "plugins", "installed_plugins.json"), JSON.stringify({
+        version: 2,
+        plugins: { "p@official": [{ installPath: join(home, ".claude", "plugins", "cache", "p", "1.1.0") }] },
+      }));
+      mkdirSync(join(home, ".claude", "skills-available", "sales-icp"), { recursive: true });
+      writeFileSync(join(home, ".claude", "skills-available", "sales-icp", "SKILL.md"),
+        "---\nname: sales-icp\ndescription: Build an ICP\n---\n");
+      mkdirSync(join(cwd, ".git"), { recursive: true });
+      mkdirSync(join(cwd, ".claude", "skills", "repo-skill"), { recursive: true });
+      writeFileSync(join(cwd, ".claude", "skills", "repo-skill", "SKILL.md"),
+        "---\nname: repo-skill\ndescription: Local\n---\n");
+
+      const { coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
+      expect([...coveredOrigins].sort()).toEqual(
+        [
+          "claude-code",
+          "claude-code:available",
+          "claude-code:plugin",
+          `claude-code:project:${repoKey(cwd, "linux")}`,
+        ].sort()
+      );
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("REGRESSION: a missing plugin manifest AND cache still emits every other source's rows, omitting only claude-code:plugin from coverage", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-cov-fail-"));
+    const cwd = mkdtempSync(join(tmpdir(), "repo-cov-fail-"));
+    try {
+      mkdirSync(join(home, ".claude", "skills", "deep-research"), { recursive: true });
+      writeFileSync(join(home, ".claude", "skills", "deep-research", "SKILL.md"),
+        "---\nname: deep-research\ndescription: Research\n---\n");
+      mkdirSync(join(home, ".claude", "skills-available", "sales-icp"), { recursive: true });
+      writeFileSync(join(home, ".claude", "skills-available", "sales-icp", "SKILL.md"),
+        "---\nname: sales-icp\ndescription: Build an ICP\n---\n");
+      // Deliberately NO installed_plugins.json and NO plugins/cache directory (D-07 control).
+      mkdirSync(join(cwd, ".git"), { recursive: true });
+
+      const { skills, coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
+      expect(coveredOrigins.includes("claude-code:plugin")).toBe(false);
+      expect(coveredOrigins.includes("claude-code")).toBe(true);
+      expect(skills.some((s) => s.name === "deep-research")).toBe(true);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("does not declare claude-code covered when ~/.claude/skills does not exist", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-cov-nodir-"));
+    const cwd = mkdtempSync(join(tmpdir(), "repo-cov-nodir-"));
+    try {
+      mkdirSync(join(cwd, ".git"), { recursive: true });
+      const { coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
+      expect(coveredOrigins.includes("claude-code")).toBe(false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("does not declare a claude-code:project:* origin when cwd is skipped by the samePath guard", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-cov-same-"));
+    try {
+      mkdirSync(join(home, ".claude", "skills", "deep-research"), { recursive: true });
+      writeFileSync(join(home, ".claude", "skills", "deep-research", "SKILL.md"),
+        "---\nname: deep-research\ndescription: Research\n---\n");
+      const { coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd: home, platform: "linux" });
+      expect(coveredOrigins.some((o) => o.startsWith("claude-code:project:"))).toBe(false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });

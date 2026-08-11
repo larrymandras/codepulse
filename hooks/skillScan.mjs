@@ -55,10 +55,14 @@ export function findRepoRoot(startDir) {
   return startDir;
 }
 
+// Returns true only when the directory was actually enumerated (readdirSync succeeded),
+// false on any early exit — missing dir or a readdirSync throw. An existing-but-EMPTY
+// directory returns true: that is deliberate (98-05 "moved the last skill out, prune
+// it" case) and must not be confused with "could not read this source."
 function readSkillDir(skillsDir, origin, acc) {
-  if (!existsSync(skillsDir)) return;
+  if (!existsSync(skillsDir)) return false;
   let names;
-  try { names = readdirSync(skillsDir); } catch { return; }
+  try { names = readdirSync(skillsDir); } catch { return false; }
   for (const name of names) {
     const md = join(skillsDir, name, "SKILL.md");
     if (!existsSync(md)) continue;
@@ -76,6 +80,7 @@ function readSkillDir(skillsDir, origin, acc) {
       command: fm.command || undefined,
     });
   }
+  return true;
 }
 
 /**
@@ -112,19 +117,26 @@ function readInstalledPluginSkills(home, origin, acc) {
   return found > 0;
 }
 
+// Returns a boolean coverage signal: false when the walk short-circuited (depth cap,
+// missing root, unreadable root) or any statSync/recursive-walk failure occurred
+// anywhere in the tree; true only when every entry was walked cleanly. Does NOT
+// early-return on the first failure — D-07 requires the rows a partial walk DID find
+// to still be pushed into acc even though the walk as a whole is reported uncovered.
 function walkPluginCache(dir, origin, acc, depth = 0) {
-  if (depth > 8 || !existsSync(dir)) return;
+  if (depth > 8 || !existsSync(dir)) return false;
   let entries;
-  try { entries = readdirSync(dir); } catch { return; }
+  try { entries = readdirSync(dir); } catch { return false; }
+  let ok = true;
   for (const e of entries) {
     if (e === "node_modules" || e === ".git") continue;
     const p = join(dir, e);
     let st;
-    try { st = statSync(p); } catch { continue; }
+    try { st = statSync(p); } catch { ok = false; continue; }
     if (!st.isDirectory()) continue;
     if (e === "skills") readSkillDir(p, origin, acc);
-    else walkPluginCache(p, origin, acc, depth + 1);
+    else if (!walkPluginCache(p, origin, acc, depth + 1)) ok = false;
   }
+  return ok;
 }
 
 const samePath = (a, b, platform) => {
@@ -135,29 +147,47 @@ const samePath = (a, b, platform) => {
   return norm(a) === norm(b);
 };
 
-export function collectClaudeCodeSkills({ home, cwd, platform = process.platform }) {
+/**
+ * Like collectClaudeCodeSkills, but also reports which sub-sources this call actually
+ * enumerated (D-01/D-03/D-07). `coveredOrigins` reflects real enumeration outcomes —
+ * an origin is included only when the corresponding read genuinely succeeded, never
+ * assumed. Downstream (hooks/scanner.mjs), this becomes the /scan wire's
+ * `scannedOrigins` manifest: an origin absent here must not be prunable.
+ */
+export function collectClaudeCodeSkillsWithCoverage({ home, cwd, platform = process.platform }) {
   const acc = [];
+  const coveredOrigins = [];
+
   const globalDir = join(home, ".claude", "skills");
-  readSkillDir(globalDir, "claude-code", acc);
+  if (readSkillDir(globalDir, "claude-code", acc)) coveredOrigins.push("claude-code");
+
   // Plugin skills get their own origin (D-02), distinct from the personal skills dir,
   // specifically so a partial/failed plugin read cannot make the personal-skills origin
   // look complete — the failed sub-source stays isolated to its own origin instead of
   // silently under-counting a "claude-code" origin that is otherwise fully present.
   // Prefer the installed version of each plugin; fall back to walking the whole cache.
-  if (!readInstalledPluginSkills(home, PLUGIN_ORIGIN, acc)) {
-    walkPluginCache(join(home, ".claude", "plugins", "cache"), PLUGIN_ORIGIN, acc);
+  // Covered only if one of the two actually succeeded.
+  let pluginCovered = readInstalledPluginSkills(home, PLUGIN_ORIGIN, acc);
+  if (!pluginCovered) {
+    pluginCovered = walkPluginCache(join(home, ".claude", "plugins", "cache"), PLUGIN_ORIGIN, acc);
   }
+  if (pluginCovered) coveredOrigins.push(PLUGIN_ORIGIN);
+
   // Cold storage: present on disk but NOT loaded by Claude Code. Distinct origin so
   // per-origin pruning keeps it isolated from the active-skill rows.
-  readSkillDir(join(home, ".claude", "skills-available"), "claude-code:available", acc);
+  if (readSkillDir(join(home, ".claude", "skills-available"), "claude-code:available", acc)) {
+    coveredOrigins.push("claude-code:available");
+  }
 
   const root = findRepoRoot(cwd);
   const projectDir = join(root, ".claude", "skills");
   // When the session's cwd is the home directory (no .git above it), findRepoRoot
   // returns home, and <root>/.claude/skills IS the global skills dir. Scanning it
   // again would emit every global skill a second time under a bogus project origin.
+  // When skipped by this guard, no project origin is declared covered either.
   if (!samePath(projectDir, globalDir, platform)) {
-    readSkillDir(projectDir, `claude-code:project:${repoKey(root, platform)}`, acc);
+    const projectOrigin = `claude-code:project:${repoKey(root, platform)}`;
+    if (readSkillDir(projectDir, projectOrigin, acc)) coveredOrigins.push(projectOrigin);
   }
 
   // Dedup rule 1: a name can appear twice within one origin (e.g. two cached versions of
@@ -171,11 +201,17 @@ export function collectClaudeCodeSkills({ home, cwd, platform = process.platform
   // contains every "claude-code"-origin row by the time this dedup pass runs.
   const claudeCodeNames = new Set(acc.filter((s) => s.origin === "claude-code").map((s) => s.name));
   const seen = new Set();
-  return acc.filter((s) => {
+  const skills = acc.filter((s) => {
     if (s.origin === PLUGIN_ORIGIN && claudeCodeNames.has(s.name)) return false;
     const key = `${s.origin}::${s.name}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  return { skills, coveredOrigins };
+}
+
+export function collectClaudeCodeSkills(args) {
+  return collectClaudeCodeSkillsWithCoverage(args).skills;
 }
