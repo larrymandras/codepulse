@@ -28,12 +28,12 @@ key-files:
 
 key-decisions:
   - "Dedup rule 2 (personal-dir-wins across the plugin split) computed from the fully-populated acc array in one filter pass rather than tracked incrementally during collection — same result, no second pass over acc, matches the plan's constraint"
-  - "walkPluginCache's coverage boolean is derived strictly from statSync/recursive-call failures per the plan's literal spec; a readSkillDir failure inside a plugin cache 'skills' leaf is not separately tracked into the walk's own boolean (not required by D-07's contract, and doing so would need a second signal path)"
+  - "SUPERSEDED by the Adversarial Verification section below (commit `96ae77d1`): this plan's original execution deliberately left a readSkillDir failure inside a plugin cache 'skills' leaf untracked in walkPluginCache's own boolean. The adversarial gate found this contradicted the function's own doc comment (\"true only when every entry was walked cleanly\") and required it as defect 2; the boolean now does propagate that failure."
 
 patterns-established:
   - "Coverage-declaration return shape ({ skills, coveredOrigins }) with a thin bare-array wrapper preserving the old signature for existing callers"
 
-requirements-completed: [DEBT-05]
+requirements-completed: []
 
 # Metrics
 duration: 6min
@@ -71,7 +71,7 @@ Each task was committed atomically:
 ## Files Created/Modified
 - `hooks/skillScan.mjs` - `PLUGIN_ORIGIN` constant, plugin-origin split with personal-dir-wins dedup, `readSkillDir`/`walkPluginCache` honest boolean returns, new `collectClaudeCodeSkillsWithCoverage` export, `collectClaudeCodeSkills` reduced to a thin wrapper
 - `hooks/scanner.mjs` - both call sites (`runScan`, dry-run branch) switched to `collectClaudeCodeSkillsWithCoverage`; `snapshot.scannedOrigins`/`scannedOriginsComplete` assigned inside the existing try/catch
-- `hooks/__tests__/skillScan.test.mjs` - updated 2 stale origin assertions, added a disjoint-origins regression test, added a `collectClaudeCodeSkillsWithCoverage` describe block (4 tests: complete-fixture coverage, failed-plugin-read D-07 control, missing-personal-dir, samePath-guard skip) — 8 tests added net, 24 total in file (was 16)
+- `hooks/__tests__/skillScan.test.mjs` - updated 2 stale origin assertions, added a disjoint-origins regression test, added a `collectClaudeCodeSkillsWithCoverage` describe block (4 tests: complete-fixture coverage, failed-plugin-read D-07 control, missing-personal-dir, samePath-guard skip) — 5 tests added net, 24 total in file (was 19)
 
 ## Decisions Made
 - Computed the personal-dir-wins dedup set (`claudeCodeNames`) from the fully-populated `acc` array in a single pass after all sub-sources are collected, rather than incrementally tracking it during collection as the plan's action text suggested ("track the set... as you go"). Behaviorally identical since `acc` is complete before the dedup filter runs regardless of visitation order, and it avoids a second pass over `acc` per the plan's explicit constraint ("Do not add a second pass over `acc`").
@@ -94,6 +94,18 @@ None - no external service configuration required. This is the producer half onl
 - The wire contract (`scannedOrigins: string[]`, `scannedOriginsComplete: true`) is live and matches the LOCKED interface spec plan 113-02 depends on: `convex/scan.ts` already forwards the POST body untouched, so `snap.scannedOrigins` reaches `syncInventory` with no HTTP-layer change required.
 - 113-02 can now build the server-side guard (`sanitizeScannedOrigins` extension, per-origin prune eligibility keyed on `coveredOrigins`) and the D-05 `alerts` refusal-visibility write against a real, tested producer signal — this plan shipped no server-side changes.
 - D-17 (frontend origin-coupling: `Skills.tsx`, `skills.ts`, `SkillLifecycleMenu.tsx`, `OriginBadge.tsx`) is explicitly out of this plan's scope per the plan's task list — those 4 files still compare against the bare `"claude-code"` string and will silently drop the 57 now-isolated `claude-code:plugin` rows from the Skills page's Global tab until a later 113-0N plan closes it. Not a regression introduced here (those files already existed with this coupling); flagged so it isn't lost.
+
+## Adversarial Verification
+
+An adversarial verification gate ran against this plan's original execution (commits `854b2640`, `2e4a0eff`, `c0530ad8`, `40dad2a9`) and found 5 confirmed defects, fixed in two follow-up commits on top of that work:
+
+1. **[HIGH] `hooks/skillScan.mjs:113`** — `readInstalledPluginSkills` incremented `found` (and therefore declared `claude-code:plugin` covered) regardless of whether `readSkillDir` actually enumerated the plugin's `skills/` dir, so an unreadable dir still declared coverage while emitting zero rows — the exact data-loss shape DEBT-05 exists to close. Fixed: `found` now only increments when `readSkillDir` returns `true`.
+2. **[MEDIUM] `hooks/skillScan.mjs:136`** — `walkPluginCache`'s `if (e === "skills")` branch discarded `readSkillDir`'s boolean, contradicting its own doc comment ("true only when every entry was walked cleanly"). Fixed: the boolean now propagates into `ok`.
+3. **[MEDIUM] `hooks/scanner.mjs`** — zero automated test coverage; a mutation hardcoding `snapshot.scannedOrigins` survived all 579 pre-existing tests. Fixed: new `hooks/__tests__/scanner.test.mjs` asserts on the real POST body against a local HTTP server (never the live Convex backend), including the D-07 abort path, using a minimal, behavior-preserving `deps` injection point added to `runScan` for testability.
+4. **[MEDIUM] `walkPluginCache`'s `ok = false` propagation** — the `statSync` catch and recursive-call sites were untested; removing both left all tests green. Fixed: added a dedicated depth-cap-nesting regression test plus a real-OS-permission-denial test (icacls on win32, chmod on POSIX/CI) for the `"skills"`-leaf case, since `vi.doMock("node:fs", ...)` did not intercept the read for a dynamically re-imported module in this Vitest/Node setup and `vi.spyOn(fs, ...)` is blocked by the sealed ESM namespace (both verified empirically).
+5. **[artifact] This file** — `requirements-completed` falsely claimed `[DEBT-05]` complete (DEBT-05 spans plans 113-01/02/03/04/06; only the producer half shipped here — corrected to `[]`) and the test-count sentence undercounted the net addition (was "8 tests added net... was 16"; the pre-plan file had 19 `it(` blocks per `git show 1d2e6342:hooks/__tests__/skillScan.test.mjs` (the commit immediately preceding this plan's Wave 1 execution), corrected to "5 tests added net... was 19").
+
+Every fix was mutation-tested: the guarding code was manually reverted, the new/added test was confirmed to fail in isolation, then the fix was restored and the full suite re-verified green. Commits: `96ae77d1` (defects 1, 2, 4), `9b96fe22` (defect 3), this commit (defect 5).
 
 ---
 *Phase: 113-debt-sweep*
