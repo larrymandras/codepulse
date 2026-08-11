@@ -1,9 +1,11 @@
 ---
 id: SEED-008
-status: dormant
+status: resolved
+resolved: 2026-08-11
+resolution: "DECIDED — the tailnet is the auth boundary. Larry's call, 2026-08-11, taken against a measured exposure surface (215 public mutations, 8 files with ctx.auth, 85 without). Clerk is NOT made mandatory. Enforcement is the LAN firewall block, now a named self-verifying check in convex-selfhost/preflight.ps1 so it cannot silently vanish on a machine rebuild."
 planted: 2026-08-11
 planted_during: v14.0 / mid-milestone audit (INT-03 class sweep)
-trigger_when: a decision is needed on whether CodePulse requires sign-in, OR the Convex backend becomes reachable beyond the tailnet, OR a phase touches auth on Convex functions
+trigger_when: RESOLVED — reopen only if the Convex backend becomes reachable beyond the tailnet, if the tailnet gains devices that are not Larry's, or if CodePulse is ever intended to require sign-in for data access rather than for the UI
 scope: Medium
 origin: "v14.0 audit INT-03 class sweep, 2026-08-11. Measured live: POST http://100.93.234.6:3210/api/mutation (TAILNET address, no credential) with {\"path\":\"galdr:recordUsage\"} returned ArgumentValidationError — the function executed its validator. Control {\"path\":\"galdr:definitelyNotReal9x7q2\"} returned 'Could not find public function', proving the probe discriminates. `docker ps` shows convex-backend published on 0.0.0.0:3210-3211, every interface. 13 of ~137 convex/*.ts modules reference ctx.auth."
 paired_seed: none
@@ -134,6 +136,53 @@ were confidently wrong before an off-host probe ran.
 Chosen over rebinding the container to `127.0.0.1` + the Tailscale IP because that makes Convex
 startup depend on the Tailscale interface being up first — on a reboot where Docker wins that race
 the bind fails and Convex does not start at all, trading an exposure for an outage risk.
+
+## RESOLUTION 2026-08-11 — the tailnet is the boundary, deliberately
+
+**Decision: the tailnet is the auth boundary. Clerk is not made mandatory.** Larry's call, taken
+against a measured surface rather than an impression:
+
+| | |
+|---|---|
+| Public mutations (`export const X = mutation(`) | **215** |
+| `internalMutation` | 78 |
+| Files with public mutations **and** `ctx.auth` | **8** |
+| Files with public mutations and **no** `ctx.auth` | **85** |
+| Destructive public mutations | 18, incl. `resetAllCategoriesAndOverrides`, `notifications.clearAll`, `v6Mutations.deleteWarRoom`, `profiles.removeConfig` |
+
+The honest statement of the posture: **Clerk gates the UI, not the data.** Anything on the tailnet
+can call all 215 without signing in. That is now a decision rather than an accident.
+
+**Why not make Clerk mandatory.** It is the correct end state only if CodePulse should require
+sign-in for *data*, not just for the page. Today it would mean a `requireOperator(ctx)` across 215
+mutations, and `dev:noauth` plus the entire Playwright suite depend on the no-auth path — so it also
+requires deciding what tests do without an identity. That is milestone-scale work to defend against
+"an attacker is already on an enrolled device," at which point they have the machine anyway.
+Disproportionate; explicitly rejected, not deferred.
+
+**Why not gate only the 18 destructive mutations.** Considered and rejected: it breaks the same
+`dev:noauth`/e2e paths for exactly those functions, and it leaves the codebase inconsistent — some
+mutations gated, 197 not — which reads as an unfinished migration to the next person.
+
+### What enforcement actually is
+
+The LAN firewall block (`restrict-convex-lan.ps1`), which is **machine state, not repo state**. A
+rebuilt machine has none of it. So the closing action was to make it self-verifying:
+`convex-selfhost/preflight.ps1` now carries `firewall:Block-Convex-Backend-LAN` and
+`firewall:Block-Convex-Dashboard-LAN` as named checks that FAIL with
+`"rule absent -- the LAN can reach Convex unauthenticated; run restrict-convex-lan.ps1"`.
+
+Mutation-tested rather than assumed: pointing the check at a rule name that cannot exist produces
+that FAIL, while the real names PASS on the same machine in the same run. A firewall check never
+shown to fail is decoration.
+
+### Known and accepted under this decision
+
+- Any device on the tailnet, and anything running on one, can write to every public Convex function.
+- **Tailscale ACLs were not inspected.** Default Tailscale policy allows all of your own devices to
+  reach everything. If the tailnet ever gains a shared node or another person's device, that device
+  inherits full write access to this database and **this decision must be revisited** — it is the
+  first reopen trigger in the frontmatter.
 
 ## What this does and does NOT close
 
