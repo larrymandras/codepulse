@@ -1,7 +1,13 @@
-#!/usr/bin/env node
 // CodePulse Environment Scanner
 // Scans Claude Code environment on SessionStart and POSTs inventory to /scan.
 // Exported as a function so codepulse-hook.mjs can import and call it.
+//
+// No shebang here (deliberately removed, DEBT-05/113-01-verify): this file is never invoked
+// as `./scanner.mjs` anywhere in the repo — only via `node hooks/scanner.mjs ...` (see the
+// isDirectRun branch below) or as an ESM import from codepulse-hook.mjs / test files. A
+// shebang has no effect on either invocation path, but Vite/Rolldown's SSR module transform
+// (used by hooks/__tests__/scanner.test.mjs) hoists import statements above line 1, and a
+// shebang left there breaks parsing of the resulting file with a hard "Invalid Character `!`".
 
 import { readFileSync, existsSync, readdirSync } from "fs";
 import { join, dirname } from "path";
@@ -16,11 +22,21 @@ import { readSkillUsage, mergeUsage } from "./skillUsage.mjs";
  *
  * @param {string} sessionId - The Claude Code session ID
  * @param {string} codepulseUrl - The CodePulse Convex site URL (e.g. https://....convex.site)
+ * @param {string} ingestKey - Bearer token for the /scan endpoint
+ * @param {object} [deps] - Injectable overrides for testability only. Every existing
+ *   3-arg call site (codepulse-hook.mjs, this file's own --dry-run/direct-run branch)
+ *   omits this param entirely and gets identical behavior to before this parameter
+ *   existed: real homedir()/process.cwd()/collectClaudeCodeSkillsWithCoverage. Tests use
+ *   `collectSkills` to reach the D-07 abort path (a thrown collector) without needing to
+ *   monkeypatch the live ESM binding, which import live-bindings do not allow.
  */
-export async function runScan(sessionId, codepulseUrl, ingestKey) {
-  const home = homedir();
+export async function runScan(sessionId, codepulseUrl, ingestKey, deps = {}) {
+  const {
+    home = homedir(),
+    cwd = process.cwd(),
+    collectSkills = collectClaudeCodeSkillsWithCoverage,
+  } = deps;
   const globalClaudeDir = join(home, ".claude");
-  const cwd = process.cwd();
   const projectClaudeDir = join(cwd, ".claude");
 
   const snapshot = {
@@ -75,7 +91,7 @@ export async function runScan(sessionId, codepulseUrl, ingestKey) {
 
   // ── Claude Code skills (personal + plugin cache + per-repo project) ──
   try {
-    const { skills, coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd });
+    const { skills, coveredOrigins } = collectSkills({ home, cwd });
     // Join real invocation counts from the host skill-usage log so the dashboard can
     // rank by use. Without this every row sits at useCount 0 and "Most Used" is empty.
     mergeUsage(skills, readSkillUsage(home));
