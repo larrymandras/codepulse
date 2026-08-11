@@ -119,3 +119,42 @@ All claimed files and commit hashes verified present:
 - FOUND: hooks/__tests__/skillScan.test.mjs
 - FOUND: .planning/phases/113-debt-sweep/113-01-SUMMARY.md
 - FOUND: 854b2640, 2e4a0eff, c0530ad8, 40dad2a9
+
+## Adversarial verification round 2
+
+A second adversarial verification pass (independently confirmed against live code by
+two adversarial agents and the orchestrator) found the round-1 fix for defect 1 above
+(`hooks/skillScan.mjs:113`, commit `96ae77d1`) closed only the ALL-plugins-fail case,
+not the more likely PARTIAL-fail case.
+
+**[HIGH] `hooks/skillScan.mjs:120` `readInstalledPluginSkills` — `return found > 0`
+still declared coverage on a partial read.** Round 1 changed `found++` to
+`if (readSkillDir(...)) found++`, so an all-plugins-fail scan correctly returned
+`false`. It did not track failures independently, so with plugin A readable and
+plugin B's `skills/` dir existing-but-unreadable, `found === 1` and the function still
+returned `true` — declaring `claude-code:plugin` covered while a real sub-source read
+had failed. The server-side prune guard (`convex/registry.ts`'s
+`processSkillPruneHandler`, see 113-02 round-2 notes) then treated the origin as fully
+scanned and would delete plugin B's rows with zero `alerts` written. Proven end-to-end
+against the real producer with a two-plugin fixture (one readable, one whose `skills/`
+path is a file, triggering a real `ENOTDIR` — no fs mocking).
+
+**Fix:** `readInstalledPluginSkills` now tracks `found` and `anyFailed` independently
+and returns `found > 0 && !anyFailed`. A missing/absent `skills/` dir is not counted
+as a failure (plugins are not required to ship skills) — only a `readSkillDir` failure
+on a directory that does exist counts. The pre-existing test at
+`hooks/__tests__/skillScan.test.mjs` that exercised exactly this mixed shape had
+locked in the old (wrong) behavior (`coveredOrigins.includes("claude-code:plugin")
+=== true`); its assertion is corrected to `false`, and it still asserts plugin A's row
+is emitted (D-07).
+
+**Mutation-proof:** reverted the fix, re-ran `npx vitest run
+hooks/__tests__/skillScan.test.mjs` — 1 test failed
+(`expected true to be false`, exactly the corrected assertion). Restored the fix,
+re-ran — 28/28 passed. Both outputs captured in the session transcript.
+
+**Commit:** `2c7f6dd0` (`fix(113-01): close partial-plugin-read coverage defect in
+skillScan.mjs`).
+
+**Not closed by this round:** DEBT-05 is not marked complete anywhere by this fix — it
+still spans plans 113-01/02/03/04, and 113-03/113-04 have not executed.

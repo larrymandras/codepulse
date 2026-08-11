@@ -126,3 +126,102 @@ All claimed files and commit hashes verified present:
 - FOUND: convex/__tests__/skillSync.test.ts
 - FOUND: .planning/phases/113-debt-sweep/113-02-SUMMARY.md
 - FOUND: f05c1964, 46719f3c
+
+## Adversarial verification round 2
+
+A second adversarial verification pass (independently confirmed against live code by
+two adversarial agents and the orchestrator) found three further confirmed defects on
+top of round 1. None required a production-code fix in `convex/skillSync.ts` — two
+were confounded test fixtures, and one was zero test coverage on
+`convex/registry.ts`.
+
+**[HIGH] `convex/skillSync.ts:146` `computePruneRefusals`'s `strictPrunedIds`
+exclusion filter was dead in every existing fixture.** Replacing
+`const strictPrunedIds = new Set(strictPrunes.map((r) => r._id));` with
+`const strictPrunedIds = new Set<string>();` (deleting the filter outright) left all
+33 pre-existing tests green, because every fixture's declared origin never also held a
+row that was genuinely stale (pruned under both the legacy and the strict rule) — so
+`legacyPrunes` and `strictPrunes` never overlapped and the exclusion check never had
+anything to skip. Live consequence: a false `skill-prune-guard` alert claiming rows
+were protected when they were in fact deleted, inverting D-05's meaning.
+**Fix (test-only, no code change):** added a discriminating fixture — a declared
+origin (`claude-code`) holding one genuinely-stale row plus an undeclared origin
+(`claude-code:plugin`) — asserting refusals name ONLY the undeclared origin's row, and
+separately asserting the declared origin's stale row was genuinely pruned (not merely
+"not refused"). `convex/skillSync.ts` is byte-identical to HEAD; only
+`convex/__tests__/skillSync.test.ts` changed.
+**Mutation-proof:** applied the deletion mutation — the new test failed
+(`expected [...] to have a length of 1 but got 2`, i.e. the declared origin's
+genuinely-pruned row was wrongly reported as a refusal). Reverted — 34/34 passed.
+
+**[MEDIUM] `convex/skillSync.ts:161` the `.sort()` call in `computePruneRefusals` was
+unproven.** Deleting `result.sort((a, b) => a.origin.localeCompare(b.origin));` left
+all 33 tests green, because the payload-contract fixture's `existing` array
+(`[ccDeploy, ...pluginRows, ...projRows]`) already happened to be in alphabetical
+origin order by luck. **Fix (test-only, no code change):** reordered the fixture
+(project rows before plugin rows) so insertion order contradicts sorted order.
+**Mutation-proof:** applied the deletion mutation — 3 tests failed (order assertion,
+`protectedCount` values swapped, `sampleNames` length swapped). Reverted — 34/34
+passed.
+
+**[MEDIUM] `convex/registry.ts` had zero behavioral test coverage.** No test file in
+the repo imported it. Mutating the D-06 gate (`if (refusals.length > 0)`, one copy
+each at the former `syncInventory`/`syncFullInventory` prune blocks) to `>= 0`, or
+inverting the 6-hour suppression predicate inside `recordSkillPruneRefusals`
+(`a.createdAt > now - SUPPRESSION_WINDOW_SECONDS` → `<`), both left the full
+3983-test suite green. `113-02-PLAN.md:317`'s stated reason ("The alert writer needs
+Convex `ctx`, so do not attempt to unit-test it here") does not hold for this repo —
+Larry explicitly authorized overriding it, following the handler-extraction + fake
+`ctx.db` pattern `convex/galdr.ts` already establishes (`convex-test` is deliberately
+not installed; see `convex/reminders.test.ts:140`).
+
+**Fix:** extracted the previously-duplicated prune+refusal+gate block (identical in
+both mutations except the `changedBy` string) into one exported
+`processSkillPruneHandler(ctx, existingSkills, incomingSkills, rawScannedOrigins,
+rawScannedOriginsComplete, changedBy, now)`, called by both `syncInventory` and
+`syncFullInventory`. Also exported the pre-existing `recordSkillPruneRefusals` helper
+(previously unexported) which `processSkillPruneHandler` wraps. New file
+`convex/__tests__/registry.test.ts` (7 tests) drives both directly against an
+in-memory fake `ctx.db` mirroring `convex/__tests__/galdr.test.ts`'s pattern, asserting
+on stored rows:
+- a fully-covered healthy scan and a legacy no-manifest scan both write zero `alerts`
+  rows (D-06);
+- a guarded scan writes exactly one `alerts` row with the full documented payload
+  (`severity: "warning"`, `source: "skill-prune-guard"`, `status: "active"`,
+  `acknowledged: false`, `details: {origin, protectedCount, sampleNames, changedBy,
+  declaredOrigins}`);
+- the 6-hour suppression window: a second refusal for the same origin inside the
+  window is suppressed, one past the window writes a new row, and a different origin
+  inside the same window is never suppressed by an unrelated alert.
+
+**Mutation-proof, D-06 gate (`>= 0`):** this mutation is write-inert on its own — the
+writer's own `for` loop no-ops on an empty `refusals` array, so a stored-alert-row
+count cannot distinguish the two code paths by itself. The fake `ctx.db` was extended
+to also track which tables `.query(...)` was called against; under the mutation, a
+healthy scan still issues one extra `alerts` read (the suppression-window lookup)
+before the no-op loop runs — exactly the unnecessary-work cost D-06/T-113-07 exist to
+avoid on the memory-pressured self-hosted backend. Applied the mutation — 2 tests
+failed (`expected [] to have a length of +0 but got 1`, i.e. an `alerts` read occurred
+on a healthy scan). Reverted — 7/7 passed.
+**Mutation-proof, suppression predicate (`>` → `<`):** applied the mutation — 2 tests
+failed (alert counts of 2 and 3 instead of the expected 1 and 2). Reverted — 7/7
+passed.
+
+**Deliberate scope note:** this consolidation goes slightly beyond 113-02's original
+literal acceptance criteria (Task 2, which specified two call sites each directly
+invoking `computeSkillPrunes`/`computePruneRefusals`/`recordSkillPruneRefusals` — the
+grep-count criteria `recordSkillPruneRefusals` × 3, `computePruneRefusals(` × 2,
+`ctx.db.insert("alerts"` × 1 no longer hold verbatim against the post-round-2 file).
+Sharing one testable handler was the only way to make the D-06 gate and suppression
+window reachable by a unit test at all in this repo, and further reduces the D-01
+duplication risk the original plan was itself trying to close. No behavior change —
+full suite (3991 tests, was 3983) and `npx tsc --noEmit` both pass.
+
+**Commits:** `33faaf1c` (`test(113-02): add discriminating fixtures proving
+computePruneRefusals' exclusion filter and sort are load-bearing` — defects 2 & 3),
+`5d92ca56` (`test(113-02): extract processSkillPruneHandler and cover the D-06 gate +
+suppression window` — defect 4).
+
+**Not closed by this round:** DEBT-05 is not marked complete anywhere by these fixes —
+it still spans plans 113-01/02/03/04, and 113-03/113-04 have not executed. No
+deployment occurred (`npx convex deploy` was never run).
