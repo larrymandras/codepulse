@@ -303,7 +303,14 @@ describe("collectClaudeCodeSkillsWithCoverage", () => {
     }
   });
 
-  it("REGRESSION: one readable plugin plus one unreadable plugin still declares claude-code:plugin covered and emits only the readable plugin's rows", () => {
+  // DEFECT 1 fix, round 2 (adversarial gate on the 113-01 repair pass): `found > 0` alone
+  // still declared claude-code:plugin covered whenever AT LEAST ONE plugin among several was
+  // readable, even when a SIBLING plugin's skills/ dir existed but could not be enumerated.
+  // This test used to assert `coveredOrigins.includes("claude-code:plugin") === true` for
+  // exactly this mixed shape, which enshrined the bug as intended behaviour. The correct
+  // contract (D-03) is: coverage requires every attempted plugin read to succeed; rows the
+  // successful read DID find must still be emitted (D-07).
+  it("REGRESSION: one readable plugin plus one unreadable plugin leaves claude-code:plugin OUT of coveredOrigins but still emits the readable plugin's rows (D-03 defect 1, partial-read case)", () => {
     const home = mkdtempSync(join(tmpdir(), "home-cov-mixed-"));
     const cwd = mkdtempSync(join(tmpdir(), "repo-cov-mixed-"));
     try {
@@ -328,7 +335,7 @@ describe("collectClaudeCodeSkillsWithCoverage", () => {
       mkdirSync(join(cwd, ".git"), { recursive: true });
 
       const { skills, coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
-      expect(coveredOrigins.includes("claude-code:plugin")).toBe(true);
+      expect(coveredOrigins.includes("claude-code:plugin")).toBe(false);
       const pluginRows = skills.filter((s) => s.origin === "claude-code:plugin");
       expect(pluginRows.map((s) => s.name)).toEqual(["alpha"]);
     } finally {

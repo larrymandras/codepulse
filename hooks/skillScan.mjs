@@ -108,16 +108,29 @@ function readInstalledPluginSkills(home, origin, acc) {
   // whose skills/ dir exists but could not be read (readSkillDir returned false) must not
   // count toward this source being "covered" — any rows readSkillDir found before failing
   // are still in acc (D-07), but the declaration itself has to reflect the failure.
+  //
+  // Adversarial gate (113-01 defect 1): incrementing `found` alone closed only the
+  // ALL-plugins-fail case. The likelier case is PARTIAL failure — one plugin readable,
+  // another's skills/ dir enumerable-but-broken — and `found > 0` still returned true for
+  // that, declaring claude-code:plugin covered when a real sub-source read failed. Coverage
+  // now requires BOTH that at least one plugin was actually read AND that no plugin's read
+  // failed; a missing/absent skills/ dir (the `!existsSync` branch below) is not a failure —
+  // plugins are not required to ship skills.
   let found = 0;
+  let anyFailed = false;
   for (const entries of Object.values(plugins)) {
     for (const e of Array.isArray(entries) ? entries : [entries]) {
       if (!e?.installPath) continue;
       const skillsDir = join(e.installPath, "skills");
       if (!existsSync(skillsDir)) continue;
-      if (readSkillDir(skillsDir, origin, acc)) found++;
+      if (readSkillDir(skillsDir, origin, acc)) {
+        found++;
+      } else {
+        anyFailed = true;
+      }
     }
   }
-  return found > 0;
+  return found > 0 && !anyFailed;
 }
 
 // Returns a boolean coverage signal: false when the walk short-circuited (depth cap,
