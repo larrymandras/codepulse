@@ -124,6 +124,8 @@ import type * as otelLogs from "../otelLogs.js";
 import type * as otelMetrics from "../otelMetrics.js";
 import type * as pagerdutyDelivery from "../pagerdutyDelivery.js";
 import type * as permissionRequests from "../permissionRequests.js";
+import type * as personaDials from "../personaDials.js";
+import type * as personaDialsIngest from "../personaDialsIngest.js";
 import type * as pipelineCheckpoints from "../pipelineCheckpoints.js";
 import type * as pipelines from "../pipelines.js";
 import type * as profiles from "../profiles.js";
@@ -296,6 +298,8 @@ declare const fullApi: ApiFromModules<{
   otelMetrics: typeof otelMetrics;
   pagerdutyDelivery: typeof pagerdutyDelivery;
   permissionRequests: typeof permissionRequests;
+  personaDials: typeof personaDials;
+  personaDialsIngest: typeof personaDialsIngest;
   pipelineCheckpoints: typeof pipelineCheckpoints;
   pipelines: typeof pipelines;
   profiles: typeof profiles;
