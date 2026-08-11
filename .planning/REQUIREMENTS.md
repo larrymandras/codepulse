@@ -43,11 +43,11 @@ Closes **BSC-01**, the one requirement v13.0 left PARTIAL. Cross-repo: the astri
 
 ## Mission Board (MISSION)
 
-Frontend-only, on data that streams today. The parts of SEED-002 needing astridr SEED-023's runtime stay planted.
+~~Frontend-only, on data that streams today.~~ **CORRECTED 2026-08-10 (probe `npx convex run subagentJobs:listRecent --url http://127.0.0.1:3210`, 2026-08-10T20:49Z): nothing has been emitted since 2026-07-07 — the phase shipped a post-hoc history board, not a live one.** The parts of SEED-002 needing astridr SEED-023's runtime stay planted.
 
-- [x] **MISSION-01** — Operator can see background missions as live cards carrying status, duration, and honest orphan recovery: a job lost to a restart renders as failed, never silently as still-running.
-- [ ] **MISSION-02** — Tool activity on a mission renders as humanized labels ("reading Gmail…", "Write index.html") rather than raw tool names.
-- [x] **MISSION-03** — The board asserts no figure that has no emitter. Per-mission cost, confirm cards and squad grouping are **out of scope** and must not appear as empty or zeroed affordances — absent, not fabricated. *(Same honesty rule that caught the `{profileId:"unknown"}` rendering in v13.0.)*
+- [ ] **MISSION-01** — Operator can see background missions as live cards carrying status, duration, and honest orphan recovery: a job lost to a restart renders as failed, never silently as still-running. **Partial (D-04): the honest per-mission status and history-rendering half shipped in Phase 111 (plans 111-01/111-02); the *duration* and *orphan-recovery* halves are deferred to SEED-007. `submittedAt` is a synthetic copy of `finishedAt` in 7 of 7 rows (no duration is derivable), and no `running` row can arrive (`runtimeIngest.ts:594-596` routes terminal-state events only), which makes the orphan clause vacuous rather than merely unbuilt. This checkbox was reverted from a tool-applied `[x]` — see the traceability row below.**
+- [ ] **MISSION-02** — Tool activity on a mission renders as humanized labels ("reading Gmail…", "Write index.html") rather than raw tool names. **Blocked on astridr (D-03) — reassigned to SEED-007.** `toolExecutions` carries no `jobId` (`schema.ts:562-586`), `subagentJobs` carries no `sessionId`/`traceId` (`schema.ts:1028-1041`), 0 of 7 rows carry either, and `toolExecutions` is on 14-day retention (`retention.ts:34`) so even a retroactive join key could not recover tool activity for the July missions. This requirement is NOT claimed by Phase 111.
+- [x] **MISSION-03** — The board asserts no figure that has no emitter. Per-mission cost, confirm cards and squad grouping are **out of scope** and must not appear as empty or zeroed affordances — absent, not fabricated. *(Same honesty rule that caught the `{profileId:"unknown"}` rendering in v13.0.)* Phase 111 removed every affordance asserting an unbacked state across **both** consumers of `subagentJobs`: `JobsPanel`'s queued/running icons, duration figure and live chrome (plan 111-01); `ActiveAgentsPanel` deleted outright (plan 111-02).
 
 ## Telemetry Coverage (TELE)
 
@@ -90,8 +90,8 @@ Filled by the roadmapper.
 | DUR-01 | Phase 110 | Pending |
 | DUR-02 | Phase 110 | Pending |
 | DUR-03 | Phase 110 | Pending |
-| MISSION-01 | Phase 111 | Complete |
-| MISSION-02 | Phase 111 | Pending |
+| MISSION-01 | Phase 111 | Partial — status/history shipped; duration + orphan recovery deferred to SEED-007 (D-04) |
+| MISSION-02 | SEED-007 (was Phase 111) | Blocked on astridr — no join key exists (D-03) |
 | MISSION-03 | Phase 111 | Complete |
 | TELE-01 | Phase 112 | Pending |
 | TELE-02 | Phase 109 | Complete |
