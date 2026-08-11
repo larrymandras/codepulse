@@ -858,7 +858,17 @@ Plans:
   2. The intermittent `Chat.test.tsx` brain-pill failure runs deterministically (fixed from a captured root cause) rather than being masked by a widened `waitFor`.
   3. `convex-selfhost/`'s compose `logging:` block and restart scripts are committed to version control and reproducible from a fresh checkout.
 
-**Plans**: TBD
+**Plans**: 8 plans in 3 waves
+
+Plans:
+- [ ] 113-01-PLAN.md - DEBT-05 producer: plugin origin split + per-sub-source coverage declaration on the /scan wire (wave 1)
+- [ ] 113-02-PLAN.md - DEBT-05 server: coverage-declaration prune guard on both call sites + refusal alerts (wave 1)
+- [ ] 113-03-PLAN.md - DEBT-05 frontend: eight origin-coupling sites accept the plugin origin (wave 1)
+- [ ] 113-04-PLAN.md - DEBT-05 migration: one-shot dry-run-by-default re-origin of existing plugin rows (wave 2)
+- [ ] 113-05-PLAN.md - DEBT-06: query-site DOM capture + per-iteration soak runner, both control-proven (wave 1)
+- [ ] 113-06-PLAN.md - DEBT-06: tiered 30/50 full-suite soak and honest disposition (wave 3)
+- [ ] 113-07-PLAN.md - DEBT-07: ignore set before git init, INSTANCE_SECRET parameterized, key-name template (wave 1)
+- [ ] 113-08-PLAN.md - DEBT-07: bootstrap README, preflight validator, reviewed first commit, temp-clone proof (wave 2)
 
 ---
 
@@ -871,7 +881,7 @@ Plans:
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
-| 113. Debt Sweep | 0/TBD | Not started | - |
+| 113. Debt Sweep | 0/8 | Not started | - |
 
 ### Phase 114: Workspace Map view
 
