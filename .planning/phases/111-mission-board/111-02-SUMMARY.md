@@ -148,3 +148,14 @@ None - no external service configuration required.
 ---
 *Phase: 111-mission-board*
 *Completed: 2026-08-11*
+
+## Self-Check: PASSED
+
+- CONFIRMED DELETED: `src/components/control-center/ActiveAgentsPanel.tsx`
+- CONFIRMED DELETED: `src/components/control-center/ActiveAgentsPanel.test.tsx`
+- FOUND: `src/pages/Chat.tsx`
+- FOUND: `src/pages/Chat.test.tsx`
+- FOUND: `.planning/phases/111-mission-board/111-02-SUMMARY.md`
+- FOUND commit `87dafe30` (Task 1)
+- FOUND commit `b574e14f` (Task 2)
+- FOUND commit `1281c394` (SUMMARY)
