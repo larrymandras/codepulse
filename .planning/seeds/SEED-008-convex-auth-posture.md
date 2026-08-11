@@ -112,10 +112,24 @@ reachability *result*, and this analysis was confidently wrong twice before a re
 
 **Fix applied the same day:** `convex-selfhost\restrict-convex-lan.ps1` — Windows Firewall Block
 rules on TCP `3210-3211` and `6791`, scoped `RemoteAddress=LocalSubnet`. Block beats Allow in WFP,
-so it overrides the Docker Desktop Backend allowance without modifying it. Verified after: the same
-laptop probe returned **000**, browsing over Tailscale still loads CodePulse with live data, and on
-the host loopback stayed 200 with Ástríðr→Convex ingest still flowing (newest `events` row 12s old,
-since container traffic rides the Docker bridge, not the host LAN interface). Revert with `-Remove`.
+so it overrides the Docker Desktop Backend allowance without modifying it.
+
+Verified after, from the same off-host laptop, **control-paired in both directions**:
+
+```
+http://10.0.0.44:3210/version  -> 000   (was 200 — blocked)
+http://10.0.0.44:5173/         -> 200   (control: LAN path still live, so the 000
+                                         is a real block, not a dropped subnet)
+```
+
+Plus: browsing over Tailscale still loads CodePulse with live data; host loopback stayed 200; and
+Ástríðr→Convex ingest kept flowing (newest `events` row 12s old), since container traffic rides the
+Docker bridge rather than the host LAN interface. Revert with `-Remove`.
+
+The `5173=200` line is the one that makes this a result rather than an assumption — without it, a
+`000` from a laptop that had simply fallen off the subnet is indistinguishable from a working
+firewall rule. That distinction is not hypothetical here: two earlier readings of this same question
+were confidently wrong before an off-host probe ran.
 
 Chosen over rebinding the container to `127.0.0.1` + the Tailscale IP because that makes Convex
 startup depend on the Tailscale interface being up first — on a reboot where Docker wins that race
