@@ -114,6 +114,29 @@ Minor, adjacent: `astridr/channels/commands.py:67` reads
 identical, so the conditional does nothing. Harmless, but it should be collapsed to
 `f.task[:80]` whenever that file is next touched.
 
+## 8. The same orphan-run shape now exists in Loom (added 2026-08-11, v14.0 audit)
+
+Phase 119 shipped `pipelineRuns` with the identical defect MISSION-01 deferred here, so this
+seed owns both rather than the two being tracked separately.
+
+`convex/loom.ts:60-70` (`deriveStatus`) returns `"complete"` only once **every** step carries a
+`complete` event. A run whose emitter dies mid-flight — the process is killed, the workflow
+throws before its last step, the machine reboots — therefore stays `status: "running"` forever,
+and `Loom.tsx:56-58` animates its edge indefinitely. One live run was in exactly that state when
+the audit ran.
+
+It is not dishonest as such: the row faithfully reflects the events that were emitted, and
+inventing a `failed` transition the emitter never sent would be the *worse* error. But it is the
+same underlying gap — **no liveness signal, so an abandoned run is indistinguishable from a slow
+one**. Whatever mechanism item 1 lands for `subagentJobs` (heartbeat, lease with expiry, or a
+startedAt + max-duration sweep) should cover `pipelineRuns` in the same pass, since a second
+hand-rolled answer to the same question is how the two surfaces drift apart.
+
+Related and worth folding in while that file is open: `pipelineRuns` has no retention disposition
+at all (v14.0 audit INT-02) — absent from `RETENTION_DAYS`, unmentioned in `retention.ts`'s
+exemption block, and one row is inserted per run forever. Either bound it or record the exemption
+where `prompts`/`links` record theirs.
+
 ## Relationship to SEED-002
 
 This seed is the prerequisite SEED-002's live mission board has been waiting on. SEED-002
