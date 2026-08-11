@@ -244,9 +244,11 @@ export default function LiveRun() {
           </span>
         </div>
       )}
-      {/* Background subagent jobs (Phase 168 SC-2/SC-3): live-query-driven,
-          surfaces job completion without manual polling regardless of
-          which tab or WS run is active. */}
+      {/* Background subagent jobs (Phase 168 SC-2/SC-3, rewritten Phase 111
+          D-10): a post-hoc mission history board over terminal-state
+          subagentJobs rows, not a live queue -- see
+          .planning/phases/111-mission-board/111-CONTEXT.md for the probe
+          evidence. */}
       <div className="px-4 py-3 border-b border-(--border) shrink-0">
         <JobsPanel />
       </div>
