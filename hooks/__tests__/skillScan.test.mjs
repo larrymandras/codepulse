@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, chmodSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { parseFrontmatter, repoKey, collectClaudeCodeSkills, collectClaudeCodeSkillsWithCoverage } from "../skillScan.mjs";
@@ -262,5 +263,157 @@ describe("collectClaudeCodeSkillsWithCoverage", () => {
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
+  });
+
+  // DEFECT 1 fix (adversarial gate on 113-01): readInstalledPluginSkills used to increment
+  // `found` regardless of whether readSkillDir actually enumerated the plugin's skills/ dir,
+  // so a plugin whose skills/ path existed but could not be read still declared
+  // claude-code:plugin covered while contributing zero rows. installPath is deliberately
+  // OUTSIDE .claude/plugins/cache here so the walkPluginCache fallback (which only ever
+  // walks that one directory) cannot mask the assertion by finding the plugin a second way.
+  it("REGRESSION: an unreadable plugin skills/ dir leaves claude-code:plugin OUT of coveredOrigins and emits zero rows for it (D-03 defect 1)", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-cov-unreadable-"));
+    const cwd = mkdtempSync(join(tmpdir(), "repo-cov-unreadable-"));
+    try {
+      mkdirSync(join(home, ".claude", "skills", "deep-research"), { recursive: true });
+      writeFileSync(join(home, ".claude", "skills", "deep-research", "SKILL.md"),
+        "---\nname: deep-research\ndescription: Research\n---\n");
+
+      // The plugin's installPath lives outside .claude/plugins/cache entirely, and its
+      // "skills" path is a FILE, not a directory — readdirSync on it throws ENOTDIR for
+      // real, no fs mocking required. No .claude/plugins/cache dir exists at all, so the
+      // walkPluginCache fallback short-circuits on the missing root and cannot compensate.
+      const installPath = join(home, "plugin-install-bad");
+      mkdirSync(installPath, { recursive: true });
+      writeFileSync(join(installPath, "skills"), "not a directory");
+      mkdirSync(join(home, ".claude", "plugins"), { recursive: true });
+      writeFileSync(join(home, ".claude", "plugins", "installed_plugins.json"), JSON.stringify({
+        version: 2,
+        plugins: { "bad@official": [{ installPath }] },
+      }));
+      mkdirSync(join(cwd, ".git"), { recursive: true });
+
+      const before = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
+      expect(before.coveredOrigins.includes("claude-code:plugin")).toBe(false);
+      expect(before.skills.some((s) => s.origin === "claude-code:plugin")).toBe(false);
+      expect(before.coveredOrigins.includes("claude-code")).toBe(true);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("REGRESSION: one readable plugin plus one unreadable plugin still declares claude-code:plugin covered and emits only the readable plugin's rows", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-cov-mixed-"));
+    const cwd = mkdtempSync(join(tmpdir(), "repo-cov-mixed-"));
+    try {
+      mkdirSync(join(home, ".claude", "plugins"), { recursive: true });
+
+      const goodInstall = join(home, "plugin-install-good");
+      mkdirSync(join(goodInstall, "skills", "alpha"), { recursive: true });
+      writeFileSync(join(goodInstall, "skills", "alpha", "SKILL.md"),
+        "---\nname: alpha\ndescription: Good plugin\n---\n");
+
+      const badInstall = join(home, "plugin-install-bad");
+      mkdirSync(badInstall, { recursive: true });
+      writeFileSync(join(badInstall, "skills"), "not a directory");
+
+      writeFileSync(join(home, ".claude", "plugins", "installed_plugins.json"), JSON.stringify({
+        version: 2,
+        plugins: {
+          "good@official": [{ installPath: goodInstall }],
+          "bad@official": [{ installPath: badInstall }],
+        },
+      }));
+      mkdirSync(join(cwd, ".git"), { recursive: true });
+
+      const { skills, coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
+      expect(coveredOrigins.includes("claude-code:plugin")).toBe(true);
+      const pluginRows = skills.filter((s) => s.origin === "claude-code:plugin");
+      expect(pluginRows.map((s) => s.name)).toEqual(["alpha"]);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  // DEFECT 4 (walkPluginCache ok-propagation, untested per the adversarial gate): repro shape
+  // from the gate's own verified finding — plugins/cache/ present, NO installed_plugins.json
+  // (forces the walk fallback), and a subtree nested deeper than the depth > 8 cap. The
+  // depth-capped recursive call returns false without ever touching disk past that point;
+  // that false must propagate all the way back up through `ok` or the whole walk is reported
+  // covered despite never having been fully walked.
+  it("REGRESSION: a plugin-cache subtree deeper than the depth cap propagates failure up through ok, leaving claude-code:plugin uncovered", () => {
+    const home = mkdtempSync(join(tmpdir(), "home-cov-deep-"));
+    const cwd = mkdtempSync(join(tmpdir(), "repo-cov-deep-"));
+    try {
+      // 9 nested levels: the 9th recursive call receives depth=9 (> 8) and returns false
+      // immediately, which the 8th level's `else if (!walkPluginCache(...)) ok = false`
+      // must catch and propagate all the way back to the top-level caller.
+      let deep = join(home, ".claude", "plugins", "cache");
+      for (let i = 1; i <= 9; i++) deep = join(deep, `L${i}`);
+      mkdirSync(deep, { recursive: true });
+      // Deliberately no installed_plugins.json — forces the walkPluginCache fallback.
+      mkdirSync(join(cwd, ".git"), { recursive: true });
+
+      const { coveredOrigins } = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
+      expect(coveredOrigins.includes("claude-code:plugin")).toBe(false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  // DEFECT 2 (adversarial gate on 113-01): walkPluginCache's `if (e === "skills")` branch
+  // discarded readSkillDir's boolean, directly contradicting its own doc comment ("true only
+  // when every entry was walked cleanly"). The `st.isDirectory()` guard above this branch
+  // rules out the "make skills a file" trick used for defect 1 (a non-directory entry is
+  // skipped before readSkillDir is ever called), so this case needs an actual readdirSync
+  // failure on a real, still-statable directory.
+  //
+  // `vi.doMock("node:fs", ...)` does NOT intercept the read this module performs (verified:
+  // the mocked readdirSync was never invoked for a dynamically re-imported skillScan.mjs in
+  // this Vitest/Node setup — a different failure mode from the already-documented
+  // `vi.spyOn(fs, "readdirSync")` "Cannot redefine property" ESM-namespace error, but the
+  // same practical dead end). Use a REAL OS-level read-deny instead: `chmod 000` on POSIX
+  // (CI runs ubuntu-latest) and an NTFS `icacls /deny (RD)` ACE on win32 (this dev machine) —
+  // both leave `statSync`/`existsSync` succeeding (only "list folder / read data" is denied)
+  // while `readdirSync` throws EPERM/EACCES, matching the exact shape walkPluginCache must
+  // survive: it already passed the `st.isDirectory()` check by the time this happens.
+  describe("REGRESSION: walkPluginCache leaf readSkillDir failure (D-03 defect 2)", () => {
+    function denyDirRead(dir) {
+      if (process.platform === "win32") {
+        execSync(`icacls "${dir}" /deny "%USERNAME%:(RD)"`, { shell: "cmd.exe", windowsHide: true });
+      } else {
+        chmodSync(dir, 0o000);
+      }
+    }
+    function restoreDirRead(dir) {
+      if (process.platform === "win32") {
+        execSync(`icacls "${dir}" /remove:d "%USERNAME%"`, { shell: "cmd.exe", windowsHide: true });
+      } else {
+        chmodSync(dir, 0o755);
+      }
+    }
+
+    it("propagates a failed 'skills' leaf read through ok, leaving claude-code:plugin uncovered", () => {
+      const home = mkdtempSync(join(tmpdir(), "home-cov-leaf-"));
+      const cwd = mkdtempSync(join(tmpdir(), "repo-cov-leaf-"));
+      const skillsLeaf = join(home, ".claude", "plugins", "cache", "p", "1.0.0", "skills");
+      mkdirSync(skillsLeaf, { recursive: true });
+      mkdirSync(join(cwd, ".git"), { recursive: true });
+      // Deliberately no installed_plugins.json — forces the walkPluginCache fallback,
+      // which is the only path that reaches the mutated line.
+      denyDirRead(skillsLeaf);
+      try {
+        const { coveredOrigins, skills } = collectClaudeCodeSkillsWithCoverage({ home, cwd, platform: "linux" });
+        expect(coveredOrigins.includes("claude-code:plugin")).toBe(false);
+        expect(skills.some((s) => s.origin === "claude-code:plugin")).toBe(false);
+      } finally {
+        restoreDirRead(skillsLeaf); // must restore before rmSync can delete the tree
+        rmSync(home, { recursive: true, force: true });
+        rmSync(cwd, { recursive: true, force: true });
+      }
+    });
   });
 });

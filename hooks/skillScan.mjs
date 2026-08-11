@@ -104,14 +104,17 @@ function readInstalledPluginSkills(home, origin, acc) {
   const plugins = data?.plugins;
   if (!plugins || typeof plugins !== "object") return false;
 
+  // D-03: coverage must come from a real enumeration outcome, never be assumed. A plugin
+  // whose skills/ dir exists but could not be read (readSkillDir returned false) must not
+  // count toward this source being "covered" — any rows readSkillDir found before failing
+  // are still in acc (D-07), but the declaration itself has to reflect the failure.
   let found = 0;
   for (const entries of Object.values(plugins)) {
     for (const e of Array.isArray(entries) ? entries : [entries]) {
       if (!e?.installPath) continue;
       const skillsDir = join(e.installPath, "skills");
       if (!existsSync(skillsDir)) continue;
-      readSkillDir(skillsDir, origin, acc);
-      found++;
+      if (readSkillDir(skillsDir, origin, acc)) found++;
     }
   }
   return found > 0;
@@ -133,7 +136,7 @@ function walkPluginCache(dir, origin, acc, depth = 0) {
     let st;
     try { st = statSync(p); } catch { ok = false; continue; }
     if (!st.isDirectory()) continue;
-    if (e === "skills") readSkillDir(p, origin, acc);
+    if (e === "skills") { if (!readSkillDir(p, origin, acc)) ok = false; }
     else if (!walkPluginCache(p, origin, acc, depth + 1)) ok = false;
   }
   return ok;
