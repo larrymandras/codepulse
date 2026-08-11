@@ -181,6 +181,117 @@ Every new/modified assertion was proven load-bearing: the guarding code was reve
 
 `.planning/STATE.md` was modified throughout this session by a concurrent session's in-flight work. Per the shared-checkout protocol, it was never staged, touched, or included in any commit made by this plan. Every commit's `git show --stat HEAD` was checked immediately after committing and contained only the intended files. **STATE.md updates are deliberately skipped by this plan** — the orchestrator or a subsequent session should reconcile STATE.md separately. `ROADMAP.md` was updated via `gsd-sdk query roadmap.update-plan-progress 113` and verified with a scoped diff before the final metadata commit.
 
+## Adversarial Verification
+
+A phase-verifier gate run against this plan's HEAD (`f0c94890`) confirmed three defects. All
+three are closed by two follow-up commits on top of `f0c94890`; the plan's own scope (eight
+frontend sites, D-17) is otherwise unchanged.
+
+### Defect 1 (HIGH, blocked plan 113-04) — `convex/forge.ts` was a ninth coupling site missing from 113-RESEARCH.md's inventory
+
+`convex/forge.ts:517`'s `GLOBAL_ORIGIN = "claude-code"` constant gated two LAYER-1 pre-flight
+refusals in `validateLifecyclePreflight` — the shadow refusal (`restore` → `global`, :648) and
+the collision refusal (`move` → `global`, :661) — and neither was updated by this plan or any
+other 113 plan to recognize `claude-code:plugin`. Once 113-04 migrates the ~57 plugin rows onto
+that origin, both backend refusals would have silently stopped firing for plugin-origin skills.
+This is the real guard (CLAUDE.md: every public Convex function is callable with no credential;
+the frontend check is defense in depth, not the boundary), so this was a genuine, not merely
+theoretical, gap.
+
+**Research gap worth surfacing to the phase verifier:** 113-RESEARCH.md's coupling-site
+inventory covered only the four `src/lib/skills.ts` sites plus three more across
+`OriginBadge.tsx`/`SkillLifecycleMenu.tsx`/`Skills.tsx` (the "eight verified coupling sites" this
+plan closed) — it never traced `convex/forge.ts`'s independent, deliberately-duplicated
+`GLOBAL_ORIGIN`/`DORMANT_ORIGIN` literals (duplicated *by design*, per the file's own docblock,
+because `convex/` does not import from `src/`). A grep for the string `"claude-code"` bounded to
+`src/` would miss this entirely; the inventory needed to include `convex/`. Recommend this be
+folded into how future origin-taxonomy research passes scope their grep.
+
+**Fix** (`d55d86f8`): added a duplicated `PLUGIN_ORIGIN = "claude-code:plugin"` literal to
+`convex/forge.ts` (same pattern as the existing `DORMANT_ORIGIN` duplication — no cross-bundle
+import added) and OR'd it into both LAYER-1 guards. Updated the "keep these in sync" docblock to
+name all three literals (`GLOBAL_ORIGIN`, `PLUGIN_ORIGIN`, `DORMANT_ORIGIN`) now that it would
+otherwise be a false claim about the code beneath it. Added two tests to `convex/forge.test.ts`
+mirroring the existing `:956`/`:992` cases with a plugin-origin row. Mutation-proven: reverted
+both guard changes, ran `convex/forge.test.ts` — both new tests failed
+(`expected [Function] to throw an error`, received `undefined`, i.e. the refusal silently stopped
+firing); restored, diffed byte-identical to the pre-revert fix, re-ran — 166/166 passed (up from
+164 baseline).
+
+### Defect 2 (MEDIUM) — `src/lib/skills.test.ts:360` vacuous assertion
+
+`expect(resolveScopeDrop(activePlugin, "global")).toEqual({ kind: "noop" })` passed against both
+the post-fix code and the genuine pre-fix blob (`git show 4425fe03^:src/lib/skills.ts`) — the
+pre-fix unrecognized-origin fallback returns `{kind:"noop"}` unconditionally for *every*
+`targetScope`, so this specific assertion could never have caught a regression. Verified by
+extracting the real pre-fix source into the repo temporarily (not a re-typed approximation),
+importing it from a throwaway test file, and observing `PRE-FIX global: {"kind":"noop"}` —
+identical to post-fix.
+
+**Fix** (`8e766b4f`): dropped the vacuous global-target line, keeping only the
+`-> project opens the dialog` assertion, which does discriminate: the same pre-fix extraction
+produced `PRE-FIX project: {"kind":"noop"}`, not `{kind:"dialog"}`. Added a comment recording why
+the global-target case is deliberately absent. The scratch pre-fix file and discrimination test
+were deleted after producing the transcript below; neither was committed.
+
+### Defect 3 (MEDIUM) — `src/lib/skills.test.ts:382-388` deleted, not replaced
+
+The `dualGlobal` multiScope test was doubly broken: (1) unreachable — `hooks/skillScan.mjs:218-221`
+dedups any name present under both `claude-code` and `claude-code:plugin`, keeping the personal
+copy, so no live skill can ever carry both origins; and (2) 100% vacuous even setting reachability
+aside — `resolveLifecycleActions`'s `multiScope` is computed purely as
+`nonDormantOrigins.length > 1`, with no dependency on which origin strings are present, so it
+never depended on the `PLUGIN_ORIGIN` literal this plan introduced. The same pre-fix extraction
+confirms this: `PRE-FIX multiScope: true drop: {"kind":"reject","hint":"Active in multiple
+scopes — disambiguation ships in a later release."}` — byte-identical to the post-fix result for
+the identical fixture.
+
+Because the `multiScope` branch is origin-value-agnostic by construction, **no fixture involving
+it can discriminate this fix** — the "replace with a reachable fixture" option offered by the
+defect report is not achievable for this branch. The test was therefore **deleted** (`8e766b4f`),
+not replaced, and that choice plus its reasoning is recorded here per the defect's own
+instruction to state the reason plainly when deleting rather than replacing.
+
+### Discrimination proof transcript (defects 2 and 3)
+
+```
+stdout | ... defect 2 control: pre-fix global-target result (was asserted vacuously at :360)
+PRE-FIX global: {"kind":"noop"}
+
+stdout | ... defect 2 proof: pre-fix project-target result DIFFERS from post-fix
+PRE-FIX project: {"kind":"noop"}
+
+stdout | ... defect 3 control: pre-fix multiScope result ... is BYTE-IDENTICAL to post-fix
+PRE-FIX multiScope: true drop: {"kind":"reject","hint":"Active in multiple scopes — disambiguation ships in a later release."}
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+```
+
+### Verification evidence (post-fix, full suite)
+
+- `npx vitest run convex/forge.test.ts` — 166 passed | 21 todo (187), 0 failed.
+- `npx vitest run src/lib/skills.test.ts` — 54 passed (54), 0 failed.
+- `npx vitest run` (full suite) — **304 files passed | 17 skipped (321)**, **4038 tests passed |
+  193 todo (4231)**, **0 failures**, wall clock 35.41s. Baseline stated in this task's dispatch:
+  4037 passed / 304 files. Net +1 matches the arithmetic exactly: +2 new `forge.test.ts` cases
+  (defect 1), +0 net in `skills.test.ts` (defect 2 replaced one test with one test), -1 in
+  `skills.test.ts` (defect 3's deletion) = +2 -1 = +1.
+- `npx tsc --noEmit` — exits 0, no output.
+
+### Commits
+
+- `d55d86f8` — `fix(113-03-verify): forge.ts LAYER-1 shadow/collision guards accept plugin origin`
+  (defect 1: `convex/forge.ts`, `convex/forge.test.ts`)
+- `8e766b4f` — `test(113-03-verify): fix two vacuous plugin-origin assertions in skills.test.ts`
+  (defects 2 and 3: `src/lib/skills.test.ts`)
+
+### DEBT-05 status — unchanged
+
+This verification round does not change DEBT-05's completion status. It still spans 113-01
+(complete), 113-02 (complete), 113-03 (this plan, complete, now with defects closed), and 113-04
+(not yet run). `requirements-completed` remains correctly `[]` in this file's frontmatter.
+
 ---
 *Phase: 113-debt-sweep*
 *Completed: 2026-08-11*
