@@ -28,6 +28,7 @@ import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
 import { remindersIngest, remindersRead } from "./remindersIngest";
 import { calendarIngest } from "./calendarEvents";
 import { personaDialsIngest } from "./personaDialsIngest";
+import { gagLedgerIngest } from "./gagLedgerIngest";
 import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
 import { galdrPromptGet, galdrListGet, galdrPromptPost, galdrUsagePost } from "./galdrHttp";
 import { loomEventPost } from "./loomHttp";
@@ -105,6 +106,8 @@ http.route({ path: "/calendar-ingest",  method: "POST",    handler: calendarInge
 http.route({ path: "/calendar-ingest",  method: "OPTIONS", handler: calendarIngest });
 http.route({ path: "/persona-dials-ingest", method: "POST",    handler: personaDialsIngest });
 http.route({ path: "/persona-dials-ingest", method: "OPTIONS", handler: personaDialsIngest });
+http.route({ path: "/gag-ledger-ingest",    method: "POST",    handler: gagLedgerIngest });
+http.route({ path: "/gag-ledger-ingest",    method: "OPTIONS", handler: gagLedgerIngest });
 
 // Phase 186: Governor Inbox — the record-everything store the interrupt
 // governor writes to (GOV-01, D-10). All fail-closed via validateIngestAuth

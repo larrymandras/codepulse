@@ -71,6 +71,8 @@ import type * as forgeCommands from "../forgeCommands.js";
 import type * as forgeFileIngest from "../forgeFileIngest.js";
 import type * as forgeIngest from "../forgeIngest.js";
 import type * as forgeLogIngest from "../forgeLogIngest.js";
+import type * as gagLedger from "../gagLedger.js";
+import type * as gagLedgerIngest from "../gagLedgerIngest.js";
 import type * as galdr from "../galdr.js";
 import type * as galdrHttp from "../galdrHttp.js";
 import type * as galdrSlug from "../galdrSlug.js";
@@ -245,6 +247,8 @@ declare const fullApi: ApiFromModules<{
   forgeFileIngest: typeof forgeFileIngest;
   forgeIngest: typeof forgeIngest;
   forgeLogIngest: typeof forgeLogIngest;
+  gagLedger: typeof gagLedger;
+  gagLedgerIngest: typeof gagLedgerIngest;
   galdr: typeof galdr;
   galdrHttp: typeof galdrHttp;
   galdrSlug: typeof galdrSlug;
