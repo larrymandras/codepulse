@@ -865,7 +865,7 @@ Plans:
 
 - [x] 113-01-PLAN.md - DEBT-05 producer: plugin origin split + per-sub-source coverage declaration on the /scan wire (wave 1)
 - [x] 113-02-PLAN.md - DEBT-05 server: coverage-declaration prune guard on both call sites + refusal alerts (wave 1)
-- [ ] 113-03-PLAN.md - DEBT-05 frontend: eight origin-coupling sites accept the plugin origin (wave 1)
+- [x] 113-03-PLAN.md - DEBT-05 frontend: eight origin-coupling sites accept the plugin origin (wave 1)
 - [ ] 113-05-PLAN.md - DEBT-06: query-site DOM capture + per-iteration soak runner, both control-proven (wave 1)
 - [ ] 113-07-PLAN.md - DEBT-07: ignore set before git init, INSTANCE_SECRET parameterized, key-name template (wave 1)
 
@@ -889,7 +889,7 @@ Plans:
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
-| 113. Debt Sweep | 2/8 | In Progress|  |
+| 113. Debt Sweep | 3/8 | In Progress|  |
 
 ### Phase 114: Workspace Map view
 
