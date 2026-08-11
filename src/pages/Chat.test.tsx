@@ -759,7 +759,7 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
 
 // ─── 188-13: Command Center toggle + layout + panel mounts (D-18) ───────────
 //
-// The seven panel components (IntelligenceFeedPanel/ActiveAgentsPanel/
+// The six panel components (IntelligenceFeedPanel/
 // MissionTimelinePanel/LlmStatusPanel/SystemMonitorPanel/VoiceStatusPanel/
 // QuickCommandsPanel) are NOT mocked here — they mount for real, through the
 // SAME useQuery/usePaginatedQuery mocks already wired above (each already
@@ -776,9 +776,8 @@ function findByClassSubstring(container: HTMLElement, marker: string): HTMLEleme
   );
 }
 
-const SEVEN_PANEL_LABELS = [
+const COMMAND_CENTER_PANEL_LABELS = [
   "INTELLIGENCE FEED",
-  "ACTIVE AGENTS",
   "MISSION TIMELINE",
   "LLM STATUS",
   "SYSTEM MONITOR",
@@ -839,7 +838,7 @@ describe("Chat — command-center layout (188-13, D-18)", () => {
     localStorage.removeItem(LS_COMMAND_CENTER);
   });
 
-  it("with the mode OFF, the grid keeps the exact original lg:grid-cols string and mounts none of the seven panels", () => {
+  it("with the mode OFF, the grid keeps the exact original lg:grid-cols string and mounts none of the six panels", () => {
     const { container } = renderChat();
 
     const calmGrid = findByClassSubstring(
@@ -849,12 +848,12 @@ describe("Chat — command-center layout (188-13, D-18)", () => {
     expect(calmGrid).toBeDefined();
     expect(calmGrid?.className).not.toContain("xl:grid-cols-[240px");
 
-    for (const label of SEVEN_PANEL_LABELS) {
+    for (const label of COMMAND_CENTER_PANEL_LABELS) {
       expect(screen.queryByText(label)).not.toBeInTheDocument();
     }
   });
 
-  it("with the mode ON, the 5-track xl grid (calm sizing intact) + footer band + all seven panels render", () => {
+  it("with the mode ON, the 5-track xl grid (calm sizing intact) + footer band + all six panels render", () => {
     const { container } = renderChat();
     fireEvent.click(gridToggle());
 
@@ -866,7 +865,7 @@ describe("Chat — command-center layout (188-13, D-18)", () => {
       "lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)]"
     );
 
-    for (const label of SEVEN_PANEL_LABELS) {
+    for (const label of COMMAND_CENTER_PANEL_LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });
@@ -945,9 +944,9 @@ describe("Chat — command-center panel mounts (188-13, D-18, T-188-52/53)", () 
     expect(screen.getByTestId("voice-status-chip-idle").className).toContain("text-primary");
   });
 
-  it("mounts none of the seven command-center panels while the mode is off", () => {
+  it("mounts none of the six command-center panels while the mode is off", () => {
     renderChat();
-    for (const label of SEVEN_PANEL_LABELS) {
+    for (const label of COMMAND_CENTER_PANEL_LABELS) {
       expect(screen.queryByText(label)).not.toBeInTheDocument();
     }
     // QuickCommandsPanel specifically — the panel this describe block is
