@@ -4,9 +4,61 @@ import { api } from "./_generated/api";
 import {
   normalizeOrigin,
   computeSkillPrunes,
+  computePruneRefusals,
   maxDefined,
   sanitizeScannedOrigins,
+  sanitizeScannedOriginsComplete,
 } from "./skillSync";
+
+/**
+ * Shared refusal-alert writer for both syncInventory and syncFullInventory
+ * (D-01 — a fix landing on only one prune call site is the half-fix this
+ * codebase has produced before). Writes one `alerts` row per refused origin,
+ * source "skill-prune-guard", so a refusal leaves a trace instead of a
+ * console.warn (D-05). Never called on a healthy scan — the caller only
+ * invokes this when `refusals.length > 0` (D-06).
+ *
+ * Suppressed when a recent, still-active alert for the same source+origin
+ * already exists, so a permanently-broken producer scanning on every
+ * SessionStart cannot flood a backend documented as memory-pressured (T-113-07).
+ * The suppression read is a bounded, indexed `.take(20)` — never `.collect()`.
+ */
+async function recordSkillPruneRefusals(
+  ctx: { db: any },
+  refusals: Array<{ origin: string; protectedCount: number; sampleNames: string[] }>,
+  changedBy: string,
+  now: number,
+  declaredOrigins: Array<string | null | undefined> | undefined
+) {
+  const SUPPRESSION_WINDOW_SECONDS = 6 * 60 * 60;
+  const recentAlerts = await ctx.db.query("alerts").withIndex("by_source", (q: any) => q.eq("source", "skill-prune-guard")).order("desc").take(20);
+
+  for (const refusal of refusals) {
+    const suppressed = recentAlerts.some(
+      (a: any) =>
+        a.details?.origin === refusal.origin &&
+        a.status !== "resolved" &&
+        a.createdAt > now - SUPPRESSION_WINDOW_SECONDS
+    );
+    if (suppressed) continue;
+
+    await ctx.db.insert("alerts", {
+      severity: "warning",
+      source: "skill-prune-guard",
+      message: `Prune refused for origin "${refusal.origin}": the scan did not declare this origin covered, so ${refusal.protectedCount} row(s) that would otherwise have been pruned were protected instead.`,
+      details: {
+        origin: refusal.origin,
+        protectedCount: refusal.protectedCount,
+        sampleNames: refusal.sampleNames,
+        changedBy,
+        declaredOrigins,
+      },
+      acknowledged: false,
+      createdAt: now,
+      status: "active",
+    });
+  }
+}
 
 export const syncInventory = mutation({
   args: {
@@ -178,13 +230,24 @@ export const syncInventory = mutation({
       // manifest-less snapshot still cannot wipe anything). The manifest is
       // sanitized once and used for BOTH the guard and the call — a malformed
       // non-array value degrades to the legacy prune path instead of throwing
-      // mid-sync (GC-03).
+      // mid-sync (GC-03). scannedOriginsComplete (DEBT-05, D-01/D-03) adds a
+      // third, RESTRICTIVE mode: when the producer declares its manifest
+      // exhaustive, only the declared origins are prunable — even an origin
+      // present in `incoming` is protected if it wasn't declared covered.
+      // Refused prunes are recorded via the shared alerts writer, never
+      // silently dropped.
       const scannedOrigins = sanitizeScannedOrigins(snap.scannedOrigins);
+      const scannedOriginsComplete = sanitizeScannedOriginsComplete(snap.scannedOriginsComplete);
       if (
         snap.skills.length > 0 ||
         (scannedOrigins !== undefined && scannedOrigins.length > 0)
       ) {
-        for (const row of computeSkillPrunes(existingSkills, snap.skills, scannedOrigins)) {
+        for (const row of computeSkillPrunes(
+          existingSkills,
+          snap.skills,
+          scannedOrigins,
+          scannedOriginsComplete
+        )) {
           await ctx.db.delete(row._id);
           await ctx.db.insert("configChanges", {
             configKey: `skill:${row.name}`,
@@ -193,6 +256,15 @@ export const syncInventory = mutation({
             changedBy: "scanner",
             changedAt: now,
           });
+        }
+        const refusals = computePruneRefusals(
+          existingSkills,
+          snap.skills,
+          scannedOrigins,
+          scannedOriginsComplete
+        );
+        if (refusals.length > 0) {
+          await recordSkillPruneRefusals(ctx, refusals, "scanner", now, scannedOrigins);
         }
       }
     }
@@ -346,13 +418,24 @@ export const syncFullInventory = mutation({
       // manifest-less snapshot still cannot wipe anything). The manifest is
       // sanitized once and used for BOTH the guard and the call — a malformed
       // non-array value degrades to the legacy prune path instead of throwing
-      // mid-sync (GC-03).
+      // mid-sync (GC-03). scannedOriginsComplete (DEBT-05, D-01/D-03) adds a
+      // third, RESTRICTIVE mode: when the producer declares its manifest
+      // exhaustive, only the declared origins are prunable — even an origin
+      // present in `incoming` is protected if it wasn't declared covered.
+      // Refused prunes are recorded via the shared alerts writer, never
+      // silently dropped.
       const scannedOrigins = sanitizeScannedOrigins(snap.scannedOrigins);
+      const scannedOriginsComplete = sanitizeScannedOriginsComplete(snap.scannedOriginsComplete);
       if (
         snap.skills.length > 0 ||
         (scannedOrigins !== undefined && scannedOrigins.length > 0)
       ) {
-        for (const row of computeSkillPrunes(existingSkills, snap.skills, scannedOrigins)) {
+        for (const row of computeSkillPrunes(
+          existingSkills,
+          snap.skills,
+          scannedOrigins,
+          scannedOriginsComplete
+        )) {
           await ctx.db.delete(row._id);
           await ctx.db.insert("configChanges", {
             configKey: `skill:${row.name}`,
@@ -361,6 +444,15 @@ export const syncFullInventory = mutation({
             changedBy: "capability_sync",
             changedAt: now,
           });
+        }
+        const refusals = computePruneRefusals(
+          existingSkills,
+          snap.skills,
+          scannedOrigins,
+          scannedOriginsComplete
+        );
+        if (refusals.length > 0) {
+          await recordSkillPruneRefusals(ctx, refusals, "capability_sync", now, scannedOrigins);
         }
       }
     }
