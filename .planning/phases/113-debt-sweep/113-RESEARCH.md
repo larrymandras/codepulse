@@ -367,19 +367,24 @@ Not applicable — DEBT-07 introduces no new external packages; it version-contr
 
 **If this table is empty:** N/A — three low-risk items logged above, none affecting the core recommendations.
 
-## Open Questions
+## Open Questions (ALL RESOLVED 2026-08-11)
 
-1. **Should the frontend origin-classification fix (6 sites, 3 files) be folded into DEBT-05's scope, or does it need explicit user sign-off given the phase's "no UI work" framing?**
+> All three were put to Larry after this research landed and are now closed by locked decisions in `113-CONTEXT.md`. Each is answered inline below. Do not re-open them.
+
+1. **[RESOLVED → D-17]** **Should the frontend origin-classification fix (6 sites, 3 files) be folded into DEBT-05's scope, or does it need explicit user sign-off given the phase's "no UI work" framing?**
+   - **Answer (Larry, 2026-08-11): fold it into DEBT-05.** Recorded as D-17. Note the site count is **8 sites across 4 files**, not 6 across 3 — orchestrator verification found a 4th file this section missed, `src/components/OriginBadge.tsx:6`, where the failure mode is "renders no badge at all" (`BADGE_STYLES["claude-code:plugin"]` is `undefined`, so `styleFor` returns `undefined` and the component returns `null`). `src/lib/skillVault.ts:12` is safe by design and must NOT be touched. The shared `isGlobalOrigin()` helper suggested below was explicitly **rejected** — it widens a debt sweep into a refactor.
    - What we know: the fix is small and mechanical (one shared `isGlobalOrigin()` helper), and is a *required* consequence of D-02 as currently suggested, not optional polish — without it, ~57 plugin skills visibly disappear from the Skills page.
    - What's unclear: whether "no UI work" in CONTEXT.md's domain boundary was meant to exclude even this kind of required, defensive, non-visual-design change to existing pure-logic files.
    - Recommendation: fold it into DEBT-05's plan as a required task (it's a consequence of D-02, not new scope), but flag it explicitly to Larry at plan review since it does touch `src/pages/Skills.tsx` and `src/components/skills/SkillLifecycleMenu.tsx`.
 
-2. **Exact soak iteration budget for D-09/D-10.**
+2. **[RESOLVED → CONTEXT.md "Claude's Discretion", struck and decided]** **Exact soak iteration budget for D-09/D-10.**
+   - **Answer (Larry, 2026-08-11): tiered — 30 iterations, then 50 more only if tier 1 is clean.** Stop immediately on reproduction. The orchestrator re-measured the full suite independently at **37.98s** (298 files, 3958 tests, 0 failures), so tier 1 ≈ 19 min and worst case ≈ 51 min.
    - What we know: 38s/run measured; 30 iterations (~19 min, ~93% detection probability at the assumed ~1/12 base rate) is a defensible first checkpoint; 50 (~32 min, ~99%) is a defensible extension.
    - What's unclear: whether the planner wants a single fixed budget or a tiered checkpoint-then-extend structure (research recommends tiered).
    - Recommendation: tiered — 30 then 50, GUARDED close if both are exhausted with no repro, per D-10.
 
-3. **Should `docker-compose.yml`'s `INSTANCE_SECRET` parameterization be a DEBT-07 task, or does it require rotating the secret regardless (since it may have already been exposed in prior local `git init` experiments, backups, or NAS mirrors)?**
+3. **[RESOLVED → D-18]** **Should `docker-compose.yml`'s `INSTANCE_SECRET` parameterization be a DEBT-07 task, or does it require rotating the secret regardless (since it may have already been exposed in prior local `git init` experiments, backups, or NAS mirrors)?**
+   - **Answer (Larry, 2026-08-11): parameterize only — rotation is explicitly OUT of scope for Phase 113.** Recorded as D-18. The NAS plaintext exposure is written down there so it is not silently dropped, but rotating `INSTANCE_SECRET` on the live self-hosted backend is a production operation well beyond "put this directory under version control." Implementation note: the planner used `env_file: - selfhosted.envfile` rather than `${VAR}` interpolation, because `${VAR}` reads a `.env` that falls outside `backup-convex.ps1:97`'s NAS mirror list while `selfhosted.envfile` is already in it — verified independently by the plan-checker against the live script.
    - What we know: the value is currently only on local disk (never committed, since the directory has never been a git repo) and is mirrored to NAS via `backup-convex.ps1:97`'s file list, which already includes `docker-compose.yml` in plaintext backups — so it has already left the local machine in some form regardless of DEBT-07.
    - What's unclear: whether that NAS exposure is considered acceptable (trusted private backup target) vs. whether DEBT-07 should trigger a rotation as a precaution.
    - Recommendation: parameterize before commit (required); rotation is a judgment call for Larry, not blocking for this phase's success criterion.

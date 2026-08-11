@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: planning
-stopped_at: Phase 113 context gathered
-last_updated: "2026-08-11T14:46:58.460Z"
+stopped_at: Phase 113 planned (8 plans, 3 waves)
+last_updated: "2026-08-11T16:30:05.000Z"
 last_activity: 2026-08-11
 progress:
   total_phases: 12
   completed_phases: 5
-  total_plans: 34
+  total_plans: 42
   completed_plans: 34
   percent: 42
 ---
@@ -50,9 +50,11 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 113
-Plan: Not started
-Status: Ready to plan
+Plan: 0 of 8
+Status: Ready to execute
 Last activity: 2026-08-11
+
+**Phase 113 — debt-sweep: PLANNED 2026-08-11 (8 plans, 3 waves).** Research ran the controls D-08 mandated and two of them changed the plan. Control 1 confirmed Vitest *does* print the actual `textContent` on the `Chat.test.tsx:585-586` `toBe` failure (`Received: "anthropic-sonnet-5"`), so the deferred item's "unobtainable" framing was wrong. Control 2 **falsified D-08's own mechanism**: `@vitest/runner` always runs `afterEach` before `onFailed`, and `@testing-library/react` auto-registers `afterEach(cleanup)` because `vitest.config.ts:14` sets `globals: true` — so the global `src/test/setup.ts` DOM-dump D-08 specified would have captured an empty `<body>` forever. D-08 was amended on disk; capture moves to the query site. Three decisions were added at Larry's call: **D-17** folds the frontend origin-coupling fix into DEBT-05 (8 sites across 4 files — `Skills.tsx:132,148` filter the Global tab with an exact `.includes("claude-code")`, so D-02 alone would silently drop ~57 plugin skills from the tab; `skillVault.ts:12` is safe by design and must not be touched), **D-18** parameterizes the live `INSTANCE_SECRET` at `docker-compose.yml:89` before DEBT-07's first commit with rotation explicitly out of scope, and the soak budget was set from a measured 37.98s full-suite run to a tiered 30-then-50 iterations. Plan-checker returned VERIFICATION PASSED (1 non-blocking cosmetic warning, since closed). **The decision-coverage gate self-skipped** (`passed: true` but `skipped: true, total: 0` — CONTEXT.md's whole-title-bolded `- **D-01: …**` style parses to zero decisions), so D-01…D-18 coverage was verified by hand instead, with a `D-99` control returning 0 to prove the grep discriminates. Two planner findings no source artifact named: the origin split defeats `hooks/skillScan.mjs:161`'s `${origin}::${name}` dedup key, and `hooks/__tests__/skillScan.test.mjs:139`'s `origin === "claude-code"` filter would have gone **vacuous rather than red** — both independently confirmed and folded into 113-01.
 
 **Phase 111 — mission-board: COMPLETE (3/3, 2026-08-11), VERIFIED `passed` (3/3 must-haves).** The phase was deliberately subtractive: `JobsPanel` became a truthful post-hoc history board and `ActiveAgentsPanel` was deleted outright, so no surface asserts a mission state `subagentJobs` cannot back. `JobsPanel` now renders `MISSION HISTORY` / `{n} missions` / `finished X ago` with the day tier that was missing (the one real 34-day-old row rendered `816h` before), the `stateIcon` map carries only the three terminal statuses, and the seconds-epoch guard survived the rewrite. **The blocking operator checkpoint was actually run** — live against `localhost:5173` on 2026-08-11, verdict `approved`, with screenshot evidence for all nine legs including zero console errors on both pages. Notably absent from those consoles: "Functions are not valid as a React child", the exact symptom T-111-02 predicted for the unguarded `stateIcon[job.status]` prototype-chain lookup. Code review returned 0 critical / 2 warnings, **both fixed in-session** with mutation-proven tests rather than deferred (`111-REVIEW.md` status: resolved) — the day-boundary mutant `h < 24 → h < 240` had been invisible to the pre-existing 34-day test because 816h sits outside the corrupted window. Full suite 3951 passed | 0 failed; `npx tsc --noEmit` exit 0. Two checkpoint observations were routed to backlog rather than patched: 80-char task-snippet truncation with no ellipsis (traced to deliberate upstream astridr policy across four call sites → SEED-007 item 7) and an unopened devtools "1 Issue" badge (→ `todos/pending/111-devtools-issues-panel-entry-unexamined.md`, explicitly NOT classified as benign). Evidence: `111-VERIFICATION.md`, `111-REVIEW.md`, `111-03-SUMMARY.md`.
 
@@ -928,8 +930,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-11T14:46:58.444Z
-Stopped at: Phase 113 context gathered
+Last session: 2026-08-11T16:30:05.000Z
+Stopped at: Phase 113 planned (8 plans, 3 waves)
 
 --- Prior (superseded by the above) --- Completed 111-01-PLAN.md (JobsPanel mission history rewrite)
 
