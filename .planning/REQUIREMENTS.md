@@ -45,9 +45,9 @@ Closes **BSC-01**, the one requirement v13.0 left PARTIAL. Cross-repo: the astri
 
 Frontend-only, on data that streams today. The parts of SEED-002 needing astridr SEED-023's runtime stay planted.
 
-- [ ] **MISSION-01** — Operator can see background missions as live cards carrying status, duration, and honest orphan recovery: a job lost to a restart renders as failed, never silently as still-running.
+- [x] **MISSION-01** — Operator can see background missions as live cards carrying status, duration, and honest orphan recovery: a job lost to a restart renders as failed, never silently as still-running.
 - [ ] **MISSION-02** — Tool activity on a mission renders as humanized labels ("reading Gmail…", "Write index.html") rather than raw tool names.
-- [ ] **MISSION-03** — The board asserts no figure that has no emitter. Per-mission cost, confirm cards and squad grouping are **out of scope** and must not appear as empty or zeroed affordances — absent, not fabricated. *(Same honesty rule that caught the `{profileId:"unknown"}` rendering in v13.0.)*
+- [x] **MISSION-03** — The board asserts no figure that has no emitter. Per-mission cost, confirm cards and squad grouping are **out of scope** and must not appear as empty or zeroed affordances — absent, not fabricated. *(Same honesty rule that caught the `{profileId:"unknown"}` rendering in v13.0.)*
 
 ## Telemetry Coverage (TELE)
 
@@ -90,9 +90,9 @@ Filled by the roadmapper.
 | DUR-01 | Phase 110 | Pending |
 | DUR-02 | Phase 110 | Pending |
 | DUR-03 | Phase 110 | Pending |
-| MISSION-01 | Phase 111 | Pending |
+| MISSION-01 | Phase 111 | Complete |
 | MISSION-02 | Phase 111 | Pending |
-| MISSION-03 | Phase 111 | Pending |
+| MISSION-03 | Phase 111 | Complete |
 | TELE-01 | Phase 112 | Pending |
 | TELE-02 | Phase 109 | Complete |
 | TELE-03 | Phase 112 | Pending |
