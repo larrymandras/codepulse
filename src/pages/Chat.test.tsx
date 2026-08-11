@@ -528,6 +528,42 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     );
   }
 
+  /**
+   * D-08 (amended, 113-05): synchronous, query-site DOM capture for the
+   * brain-pill label assertions below. MUST run before any afterEach —
+   * @testing-library/react auto-registers afterEach(cleanup), and Vitest's
+   * onTestFailed fires after that cleanup has already stripped the DOM
+   * (113-RESEARCH.md "Discovery: onTestFailed fires AFTER cleanup"), so a
+   * global post-hoc hook can never see this state. Uses the non-throwing
+   * queryAllByTestId variant so the capture itself can never turn a real
+   * assertion failure into a different error (TestingLibraryElementError).
+   * Attach the return value as expect()'s message argument at the call site
+   * — never widen the query or the assertion itself (D-11).
+   */
+  function captureBrainPillDom(): string {
+    const TRUNCATE_AT = 400;
+    const truncate = (s: string) =>
+      s.length > TRUNCATE_AT
+        ? `${s.slice(0, TRUNCATE_AT)}…[truncated, ${s.length} chars total]`
+        : s;
+    const matches = screen.queryAllByTestId("chat-brain-pill-label");
+    const matchLines = matches
+      .map(
+        (el, i) =>
+          `  [${i}] textContent=${JSON.stringify(el.textContent)} outerHTML=${JSON.stringify(
+            truncate(el.outerHTML)
+          )}`
+      )
+      .join("\n");
+    const pendingPresent = screen.queryAllByTestId("chat-brain-pill-pending").length > 0;
+    return [
+      `chat-brain-pill-label match count: ${matches.length}`,
+      matchLines || "  (no matches)",
+      `chat-brain-pill-pending present: ${pendingPresent}`,
+      `document.body.innerHTML length: ${document.body.innerHTML.length}`,
+    ].join("\n");
+  }
+
   it("renders the pill in a new row above the composer row without displacing the send button", async () => {
     mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
     const { container } = renderPlainChat();
@@ -583,7 +619,8 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     renderPlainChat();
 
     const labelBefore = (await screen.findByTestId("chat-brain-pill-label")).textContent;
-    expect(labelBefore).toBe("anthropic-sonnet-5");
+    const domAtLabelBefore = captureBrainPillDom();
+    expect(labelBefore, domAtLabelBefore).toBe("anthropic-sonnet-5");
 
     act(() => {
       lastBrainPickerProps?.onPendingChange?.({
@@ -595,7 +632,10 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     expect(await screen.findByTestId("chat-brain-pill-pending")).toHaveTextContent(
       "switching to Codex CLI"
     );
-    expect(screen.getByTestId("chat-brain-pill-label").textContent).toBe(labelBefore);
+    const domAtPendingLabel = captureBrainPillDom();
+    expect(screen.getByTestId("chat-brain-pill-label").textContent, domAtPendingLabel).toBe(
+      labelBefore
+    );
 
     // Error ack: useProfileSwap resolves to "error" (no suffix), which drives onPendingChange(null).
     act(() => {
@@ -605,7 +645,10 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     await waitFor(() =>
       expect(screen.queryByTestId("chat-brain-pill-pending")).not.toBeInTheDocument()
     );
-    expect(screen.getByTestId("chat-brain-pill-label").textContent).toBe(labelBefore);
+    const domAtFinalLabel = captureBrainPillDom();
+    expect(screen.getByTestId("chat-brain-pill-label").textContent, domAtFinalLabel).toBe(
+      labelBefore
+    );
   });
 
   it("renders a static AlertTriangle (never a pulsing dot) for the uncertain kind, paired with a control asserting the in-flight kind renders the pulse (Phase 109 Plan 06, 109-UI-SPEC.md §C)", async () => {
