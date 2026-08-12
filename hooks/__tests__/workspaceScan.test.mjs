@@ -16,8 +16,13 @@ import {
   buildSnapshot,
   buildDryRunReport,
   hashableView,
+  runWorkspaceScan,
 } from "../workspaceScan.mjs";
-import { canonicalReportHash } from "../workspaceApproval.mjs";
+import {
+  canonicalReportHash,
+  REPORT_RELPATH,
+  APPROVAL_MARKER_RELPATH,
+} from "../workspaceApproval.mjs";
 
 const DEFAULT_EXTENSIONS = [".md", ".markdown", ".tsx", ".ts", ".txt"];
 
@@ -642,5 +647,367 @@ describe("buildDryRunReport — D-12 mandated contents", () => {
       const report = buildDryRunReport({ config, rollup, mountedOk: true, generatedAt: 1000 });
       expect(report.warnings.length).toBeGreaterThan(0);
     });
+  });
+});
+
+// =========================================================================================
+// runWorkspaceScan — D-12 case 5, the mandatory integration control (115-VALIDATION.md).
+//
+// "inject a deps.postSnapshot spy; run the real entry point with approval invalid -> spy
+// NEVER called — refusal happens before fetch()." Cases 1-4 of the mandatory five-case table
+// live in hooks/__tests__/workspaceApproval.test.mjs (plan 115-03); this is case 5.
+//
+// Real readdirSync/statSync run against a real mkdtempSync fixture tree (walkRoot is
+// exercised for real, never mocked). Report/marker I/O (writeFileSync/existsSync/readFileSync
+// at REPORT_RELPATH/APPROVAL_MARKER_RELPATH) is redirected to an in-memory fake disk so no
+// test ever touches the real config/ directory on this host.
+// =========================================================================================
+
+/** A tiny in-memory key/value "disk" keyed by the exact relpath strings runWorkspaceScan
+ * passes (REPORT_RELPATH / APPROVAL_MARKER_RELPATH) — never a real filesystem path. */
+function makeFakeDisk() {
+  const files = new Map();
+  return {
+    files,
+    writeFileSync: (path, data) => {
+      files.set(path, data);
+    },
+    existsSync: (path) => files.has(path),
+    readFileSync: (path) => {
+      if (!files.has(path)) {
+        const err = new Error(`ENOENT: no such file, open '${path}'`);
+        err.code = "ENOENT";
+        throw err;
+      }
+      return files.get(path);
+    },
+  };
+}
+
+/** Wires a fixture config + injected postSnapshot spy into a runWorkspaceScan deps object.
+ * readdirSync/statSync are the REAL node:fs functions (applied to the caller's real
+ * mkdtempSync tree); everything else is the fake in-memory disk above. */
+function makeRunDeps({ config, postSnapshot, now = () => 1000, logger }) {
+  const disk = makeFakeDisk();
+  return {
+    disk,
+    deps: {
+      loadConfig: () => config,
+      readdirSync,
+      statSync,
+      writeFileSync: disk.writeFileSync,
+      existsSync: disk.existsSync,
+      readFileSync: disk.readFileSync,
+      postSnapshot,
+      now,
+      logger: logger ?? { log: () => {}, error: () => {} },
+    },
+  };
+}
+
+function makeFixtureConfig(dir) {
+  return makeConfig({ roots: [{ id: "fixture", path: dir, department: "Personal" }] });
+}
+
+describe("runWorkspaceScan — D-12 case 5 integration control (115-VALIDATION.md)", () => {
+  it("(a) CONTROL — a VALID approval reaches the POST exactly once. LOAD-BEARING: without this, every never-called assertion below is satisfiable by an entry point that never posts at all.", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const spyCalls = [];
+      const postSnapshot = async (url, key, body) => {
+        spyCalls.push({ url, key, body });
+        return { ok: true, status: 200 };
+      };
+      const { deps } = makeRunDeps({ config, postSnapshot });
+
+      const dryRunResult = await runWorkspaceScan({ mode: "dry-run" }, deps);
+      expect(dryRunResult.status).toBe("dry-run");
+      expect(spyCalls.length).toBe(0);
+
+      const approveResult = await runWorkspaceScan({ mode: "approve" }, deps);
+      expect(approveResult.status).toBe("approved");
+      expect(approveResult.reportHash).toBe(dryRunResult.reportHash);
+
+      const ingestResult = await runWorkspaceScan(
+        { mode: "ingest", codepulseUrl: "http://example.invalid", ingestKey: "test-key" },
+        deps
+      );
+
+      expect(spyCalls.length).toBe(1);
+      expect(ingestResult.status).toBe("ingested");
+      expect(ingestResult.exitCode).toBe(0);
+      expect(spyCalls[0].url).toBe("http://example.invalid/workspace-ingest");
+      expect(spyCalls[0].body.dryRunReportHash).toBe(dryRunResult.reportHash);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(b) CASE 5 — marker ABSENT: postSnapshot is NEVER called; status refused, exitCode 3", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const spyCalls = [];
+      const postSnapshot = async (...args) => {
+        spyCalls.push(args);
+        return { ok: true, status: 200 };
+      };
+      const { deps } = makeRunDeps({ config, postSnapshot });
+
+      // No dry-run, no approve — the marker never existed.
+      const result = await runWorkspaceScan(
+        { mode: "ingest", codepulseUrl: "http://example.invalid", ingestKey: "test-key" },
+        deps
+      );
+
+      expect(spyCalls.length).toBe(0);
+      expect(result.status).toBe("refused");
+      expect(result.exitCode).toBe(3);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(c) CASE 5 — marker STALE (content drifted after approval): postSnapshot is NEVER called. The 'someone widened the allowlist and re-ran the nightly task' scenario.", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const spyCalls = [];
+      const postSnapshot = async (...args) => {
+        spyCalls.push(args);
+        return { ok: true, status: 200 };
+      };
+      const { deps } = makeRunDeps({ config, postSnapshot });
+
+      await runWorkspaceScan({ mode: "dry-run" }, deps);
+      await runWorkspaceScan({ mode: "approve" }, deps);
+
+      // Drift: a new visible file changes fileCount, and therefore the report hash.
+      writeFileSync(join(dir, "NEW.md"), "added after approval");
+
+      const result = await runWorkspaceScan(
+        { mode: "ingest", codepulseUrl: "http://example.invalid", ingestKey: "test-key" },
+        deps
+      );
+
+      expect(spyCalls.length).toBe(0);
+      expect(result.status).toBe("refused");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(d) CASE 5 — marker CORRUPTED (not hash-shaped): postSnapshot is NEVER called", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const spyCalls = [];
+      const postSnapshot = async (...args) => {
+        spyCalls.push(args);
+        return { ok: true, status: 200 };
+      };
+      const { disk, deps } = makeRunDeps({ config, postSnapshot });
+      disk.writeFileSync(APPROVAL_MARKER_RELPATH, "not-a-hash\n");
+
+      const result = await runWorkspaceScan(
+        { mode: "ingest", codepulseUrl: "http://example.invalid", ingestKey: "test-key" },
+        deps
+      );
+
+      expect(spyCalls.length).toBe(0);
+      expect(result.status).toBe("refused");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(e) none of the refusal cases (b)/(c)/(d) throw or reject — a throw under the hidden nightly task would be swallowed and read as success", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const postSnapshot = async () => ({ ok: true, status: 200 });
+
+      // (b) absent marker
+      {
+        const { deps } = makeRunDeps({ config, postSnapshot });
+        await expect(
+          runWorkspaceScan({ mode: "ingest", codepulseUrl: "http://x.invalid", ingestKey: "k" }, deps)
+        ).resolves.toBeDefined();
+      }
+      // (d) corrupted marker
+      {
+        const { disk, deps } = makeRunDeps({ config, postSnapshot });
+        disk.writeFileSync(APPROVAL_MARKER_RELPATH, "not-a-hash\n");
+        await expect(
+          runWorkspaceScan({ mode: "ingest", codepulseUrl: "http://x.invalid", ingestKey: "k" }, deps)
+        ).resolves.toBeDefined();
+      }
+      // (c) stale marker
+      {
+        const driftFile = join(dir, "DRIFT_E.md");
+        const { deps } = makeRunDeps({ config, postSnapshot });
+        await runWorkspaceScan({ mode: "dry-run" }, deps);
+        await runWorkspaceScan({ mode: "approve" }, deps);
+        writeFileSync(driftFile, "x");
+        await expect(
+          runWorkspaceScan({ mode: "ingest", codepulseUrl: "http://x.invalid", ingestKey: "k" }, deps)
+        ).resolves.toBeDefined();
+        rmSync(driftFile);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(f) the refusal message leaks no absolute path, filename, or ingest key — fixed-string checks only", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "SECRET_FILENAME_MARKER.md"), "x");
+      const config = makeFixtureConfig(dir);
+      const postSnapshot = async () => ({ ok: true, status: 200 });
+      const ingestKeySecret = "sk-super-secret-key-123";
+      const errors = [];
+      const logger = { log: () => {}, error: (msg) => errors.push(String(msg)) };
+      const { deps } = makeRunDeps({ config, postSnapshot, logger });
+
+      await runWorkspaceScan(
+        { mode: "ingest", codepulseUrl: "http://x.invalid", ingestKey: ingestKeySecret },
+        deps
+      );
+
+      const combined = errors.join("\n");
+      expect(errors.length).toBeGreaterThan(0); // sanity: something was actually logged
+      expect(combined.includes(dir)).toBe(false);
+      expect(combined.includes(dir.replace(/\\/g, "/"))).toBe(false);
+      expect(combined.includes("SECRET_FILENAME_MARKER.md")).toBe(false);
+      expect(combined.includes(ingestKeySecret)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(g) --dry-run never posts even when a VALID marker is already present — proves the mode branch, not the gate, suppresses the post in dry-run", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const spyCalls = [];
+      const postSnapshot = async (...args) => {
+        spyCalls.push(args);
+        return { ok: true, status: 200 };
+      };
+      const { deps } = makeRunDeps({ config, postSnapshot });
+
+      await runWorkspaceScan({ mode: "dry-run" }, deps);
+      await runWorkspaceScan({ mode: "approve" }, deps);
+
+      const result = await runWorkspaceScan({ mode: "dry-run" }, deps);
+      expect(spyCalls.length).toBe(0);
+      expect(result.status).toBe("dry-run");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(h) --approve never posts; the marker is written with the CURRENT report's hash on its first line", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const spyCalls = [];
+      const postSnapshot = async (...args) => {
+        spyCalls.push(args);
+        return { ok: true, status: 200 };
+      };
+      const { disk, deps } = makeRunDeps({ config, postSnapshot });
+
+      const dryRunResult = await runWorkspaceScan({ mode: "dry-run" }, deps);
+      const approveResult = await runWorkspaceScan({ mode: "approve" }, deps);
+
+      expect(spyCalls.length).toBe(0);
+      expect(approveResult.status).toBe("approved");
+      const markerContents = disk.files.get(APPROVAL_MARKER_RELPATH);
+      expect(markerContents).toBeDefined();
+      expect(markerContents.split(/\r?\n/)[0].trim()).toBe(dryRunResult.reportHash);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(i) --approve refuses when no report exists on disk; no marker is written", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const postSnapshot = async () => ({ ok: true, status: 200 });
+      const { disk, deps } = makeRunDeps({ config, postSnapshot });
+
+      const result = await runWorkspaceScan({ mode: "approve" }, deps);
+      expect(result.exitCode).not.toBe(0);
+      expect(disk.files.has(APPROVAL_MARKER_RELPATH)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(j) reportHash is excluded from its own hash — re-hashing the written artifact off disk equals its own stored reportHash field", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const postSnapshot = async () => ({ ok: true, status: 200 });
+      const { disk, deps } = makeRunDeps({ config, postSnapshot });
+
+      const dryRunResult = await runWorkspaceScan({ mode: "dry-run" }, deps);
+      const written = JSON.parse(disk.files.get(REPORT_RELPATH));
+
+      expect(written).toHaveProperty("reportHash", dryRunResult.reportHash);
+      expect(canonicalReportHash(hashableView(written))).toBe(written.reportHash);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(k) a failed POST is not reported as success, with a passing CONTROL (a succeeding spy yields exitCode 0) — the non-zero assertion is not satisfiable by an always-failing path", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+
+      // Failing spy.
+      {
+        const failPost = async () => ({ ok: false, status: 500 });
+        const { deps } = makeRunDeps({ config, postSnapshot: failPost });
+        await runWorkspaceScan({ mode: "dry-run" }, deps);
+        await runWorkspaceScan({ mode: "approve" }, deps);
+        const result = await runWorkspaceScan(
+          { mode: "ingest", codepulseUrl: "http://x.invalid", ingestKey: "k" },
+          deps
+        );
+        expect(result.status).toBe("post-failed");
+        expect(result.exitCode).toBe(4);
+      }
+      // CONTROL: succeeding spy on an equivalent fresh approval.
+      {
+        const okPost = async () => ({ ok: true, status: 200 });
+        const { deps } = makeRunDeps({ config, postSnapshot: okPost });
+        await runWorkspaceScan({ mode: "dry-run" }, deps);
+        await runWorkspaceScan({ mode: "approve" }, deps);
+        const result = await runWorkspaceScan(
+          { mode: "ingest", codepulseUrl: "http://x.invalid", ingestKey: "k" },
+          deps
+        );
+        expect(result.status).toBe("ingested");
+        expect(result.exitCode).toBe(0);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
