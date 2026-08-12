@@ -19,6 +19,7 @@ import { NotificationChannels } from "../components/NotificationChannels";
 import { NotificationPreferences } from "../components/NotificationPreferences";
 import { EmailDigestConfig } from "../components/EmailDigestConfig";
 import { DeliveryHistory } from "../components/DeliveryHistory";
+import { GovernorDecisionLog } from "../components/GovernorDecisionLog";
 import LLMProviderConfig from "../components/LLMProviderConfig";
 import ProviderControls from "../components/ProviderControls";
 import CostBudgetsAdmin from "../components/CostBudgetsAdmin";
@@ -971,6 +972,13 @@ export default function Settings() {
       <SectionErrorBoundary name="Delivery History">
       <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <DeliveryHistory />
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Governor Decisions */}
+      <SectionErrorBoundary name="Governor Decisions">
+      <div className="bg-card border border-border rounded-xl p-4 mt-12">
+        <GovernorDecisionLog />
       </div>
       </SectionErrorBoundary>
 
