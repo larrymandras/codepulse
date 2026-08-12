@@ -70,6 +70,23 @@ describe("RETENTION_DAYS", () => {
     expect(RETENTION_DAYS).toHaveProperty("activeEngineSnapshots", 30);
   });
 
+  // Phase 112 D-06 — same mutation-testing rationale as the Phase 108 block above: a generic
+  // "every key is a real table"/"every window is positive" assertion would not catch a
+  // deleted `governorDecisions: 30` or `messageRoutes: 90` entry. This is designed to catch
+  // exactly that deletion, by name, at the specific values D-06 fixed.
+  it("bounds governorDecisions (D-06) at 30 days and messageRoutes (D-06) at 90 days — Phase 112 tables must not silently become unbounded", () => {
+    expect(RETENTION_DAYS).toHaveProperty("governorDecisions", 30);
+    expect(RETENTION_DAYS).toHaveProperty("messageRoutes", 90);
+  });
+
+  // Proves Task 1's two-space-indentation requirement actually held — a table declared at any
+  // other indentation would be invisible to schemaTables' regex and could silently become
+  // unbounded even with a correct RETENTION_DAYS entry above.
+  it("schemaTables sees governorDecisions and messageRoutes — proves the two-space-indentation requirement held", () => {
+    expect(schemaTables.has("governorDecisions")).toBe(true);
+    expect(schemaTables.has("messageRoutes")).toBe(true);
+  });
+
   it("prompts and promptVersions are exempt by design (Phase 116 D-13)", () => {
     // Absence assertions alone would pass vacuously against an empty or
     // mis-imported RETENTION_DAYS — controlVerbSwaps is a known-present
