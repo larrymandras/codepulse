@@ -848,7 +848,7 @@ Plans:
 **Wave 1** *(parallel, no file overlap - different repos / different files)*
 
 - [x] 112-01-PLAN.md - TELE-01, astridr-repo docs only: five dated NOT EMITTED banners in place on sections 2.20-2.24 plus removal of the three unfirable critical-events rows (TELE-01; D-07, D-08, D-09) — complete 2026-08-12, astridr-repo commit `7f61ba1d`, see `112-01-SUMMARY.md`
-- [ ] 112-02-PLAN.md - governorDecisions + messageRoutes tables in schema.ts, both bounded in RETENTION_DAYS with dated reasons, plus a mutation-proven drift assertion (TELE-03; D-06)
+- [x] 112-02-PLAN.md - governorDecisions + messageRoutes tables in schema.ts, both bounded in RETENTION_DAYS with dated reasons, plus a mutation-proven drift assertion (TELE-03; D-06) — complete 2026-08-12, commits `65a4870e`/`bb3b4099`/`4314916a`, see `112-02-SUMMARY.md`
 
 **Wave 2** *(blocked on 112-02)*
 
@@ -913,7 +913,7 @@ Plans:
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
-| 112. Telemetry Coverage Closure | 1/7 | In Progress | - |
+| 112. Telemetry Coverage Closure | 2/7 | In Progress | - |
 | 113. Debt Sweep | 8/8 | Complete (DEBT-06 GUARDED) | 2026-08-12 |
 
 ### Phase 114: Workspace Map view

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Phase 112 plan 112-01 complete (astridr-repo Group A contract correction, TELE-01); 6 plans remain across waves 2-5; Phase 115 context gathered (parallel sessions)
-last_updated: "2026-08-12T14:08:00.000Z"
-last_activity: 2026-08-12 -- Phase 112 plan 112-01 executed (astridr-repo cross-repo doc fix, commit 7f61ba1d); Phase 115 context gathered in a parallel session
+stopped_at: Phase 112 plan 112-02 complete (governorDecisions + messageRoutes schema tables, RETENTION_DAYS bounds, TELE-03); 5 plans remain across waves 2-5; Phase 115 context gathered (parallel sessions)
+last_updated: "2026-08-12T14:18:30.000Z"
+last_activity: 2026-08-12 -- Phase 112 plan 112-02 executed (governorDecisions/messageRoutes tables + RETENTION_DAYS bounds + mutation-proven drift test, commits 65a4870e/bb3b4099/4314916a); Phase 115 context gathered in a parallel session
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 49
-  completed_plans: 43
+  completed_plans: 44
   percent: 67
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 112 (telemetry coverage) in progress — 1/7 plans complete; 114, 115, 118 not started
+**Current focus:** Phase 112 (telemetry coverage) in progress — 2/7 plans complete; 114, 115, 118 not started
 
 **Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
@@ -49,10 +49,12 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 112 (telemetry-coverage-closure) — IN PROGRESS (1/7 plans)
-Plan: 1 of 7 (112-01 complete)
-Status: Phase 112 wave 1 plan 112-01 executed (cross-repo, astridr-repo). 6 plans remain across waves 2-5. Phase 115 (workspace scanner) context gathered in a parallel session, not yet planned into plans. Phase 113 complete (8/8).
-Last activity: 2026-08-12 -- Plan 112-01 executed (astridr-repo Group A contract correction, TELE-01, commit 7f61ba1d)
+Phase: 112 (telemetry-coverage-closure) — IN PROGRESS (2/7 plans)
+Plan: 2 of 7 (112-01, 112-02 complete)
+Status: Phase 112 wave 1 plans 112-01 (cross-repo, astridr-repo) and 112-02 (schema + retention, this repo) executed. 5 plans remain across waves 2-5. Phase 115 (workspace scanner) context gathered in a parallel session, not yet planned into plans. Phase 113 complete (8/8).
+Last activity: 2026-08-12 -- Plan 112-02 executed (governorDecisions + messageRoutes schema tables, RETENTION_DAYS bounds, mutation-proven drift test, TELE-03, commits 65a4870e/bb3b4099/4314916a)
+
+**Plan 112-02 complete (2026-08-12).** Added `governorDecisions` (D-04) and `messageRoutes` (D-13) domain tables to `convex/schema.ts` (both at two-space indentation, matching `retention.test.ts`'s `schemaTables` regex) and bounded both in `RETENTION_DAYS` in the same session (`governorDecisions: 30`, `messageRoutes: 90`, D-06), each with a dated in-line reason recording the measured volume and read-pattern tier. `retention.test.ts` gained a specific-value `toHaveProperty` drift assertion for both new keys and a `schemaTables` presence check, and the new test was mutation-proven: deleting `governorDecisions: 30` was observed to fail exactly that assertion (14/15 passed, the new test the sole failure), the file was restored byte-identical (`git diff --stat` empty) and re-observed green (15/15). `npx tsc --noEmit` clean; full `convex/` suite (77 files, 1452 tests) passed with no regression. No ingest, queries, or UI added — explicit scope boundary per the plan, deferred to 112-03/04/05. No deploy was run (reserved for 112-07, operator-gated). Each of the three task commits was verified via `git show --stat HEAD` to touch exactly its intended file — no foreign files swept in from the concurrent Phase 115 session. See `112-02-SUMMARY.md`.
 
 **Plan 112-01 complete (2026-08-12).** Cross-repo doc-only plan: `astridr-repo/docs/astridr-contract.md` §2.20-§2.24 (`instructions_loaded`, `loop_lifecycle`, `worktree_lifecycle`, `batch_execution`, `auto_memory`) each gained a dated `NOT EMITTED - aspirational` banner in place (D-07/D-09), citing v1.6.0/2026-03-09/`docs/new_claude_capabilities.md`; section numbering §2.19-§2.40 verified unchanged. The three critical-events rows for those same three unfirable kinds (`worktree_lifecycle`, `batch_execution`, `loop_lifecycle`) were removed from the operator-alerting table (D-08), leaving `mcp_connection`/`subagent_job` intact. Task 1's zero-emitter claim was control-paired against `governor_decision` (a real emitter) in the same search run; a bare-substring hit on `worktree_lifecycle` (a pytest function name, not an emitter) was investigated and resolved with a stricter quoted-string-literal search before any prose was written, per this project's verification-discipline rules. Committed once in astridr-repo (`7f61ba1d554568264bdd55797890cd0b9c00a31c`, `feature/brain-swap`, branch not switched), `git show --stat HEAD` confirmed to touch exactly one file. No CodePulse source file was modified. See `112-01-SUMMARY.md`.
 
