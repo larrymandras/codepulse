@@ -42,13 +42,26 @@ function jsonResponse(payload: unknown, status: number): Response {
 
 /**
  * T-115-06-05 (DoS, HIGH): bounds an ingest before any write. The receiving
- * mutation chunk-inserts under a shared ~16,000-doc per-invocation write
- * ceiling and shares that budget with its own inline prune (see
- * convex/workspace.ts's WORKSPACE_DELETE_CAP comment), so an unbounded dirs
- * array is a denial-of-service vector against the single-node self-hosted
- * backend. Refusing at the route is cheaper than a half-written version.
+ * mutation chunk-inserts under a 16,000-doc per-invocation WRITE ceiling
+ * (Convex docs: "Documents written 16,000") and shares that budget with its
+ * own inline prune, so an unbounded dirs array is a denial-of-service vector
+ * against the single-node self-hosted backend. Refusing at the route is
+ * cheaper than a half-written version.
+ *
+ * The budget: inserts (<= this constant) + prune deletes (<=
+ * WORKSPACE_DELETE_CAP, 4,000) + 2 meta-doc patches <= 16,000, so this must
+ * stay <= 11,998. 8,000 is chosen for margin; the real tree measured 4,912
+ * dirs on 2026-08-12, leaving 63% headroom, and the route now re-opens this
+ * conversation before the ceiling does.
+ *
+ * CORRECTED 2026-08-12 (plan 115-09, live): this was 20,000 - which EXCEEDS
+ * the very ceiling the comment above invoked as its reason for existing, so
+ * any payload between ~12,000 and 20,000 dirs was admitted by the guard and
+ * then died inside the mutation, producing exactly the half-written version
+ * the guard exists to prevent. A guard whose own bound is looser than the
+ * limit it cites is decorative; verify the number, not just the rationale.
  */
-const MAX_DIRS_PER_INGEST = 20000;
+export const MAX_DIRS_PER_INGEST = 8000;
 
 const LOCAL_CONFIG_STATUSES = new Set(["merged", "absent", "version-mismatch"]);
 

@@ -48,11 +48,18 @@ export const WORKSPACE_SNAPSHOT_ID = "larry-workspace";
 export const WORKSPACE_KEEP_VERSIONS = 3;
 
 /**
- * Headroom under the ~16,000-doc per-mutation write ceiling this repo's own
- * comments record (graphSnapshots.ts:161,193), leaving room for THIS
- * ingest's own inserts, which happen first in the same invocation. Lower
- * than the sweep's 15,000 because this mutation's write budget is shared
- * with the insert step; the sweep had the whole budget to itself.
+ * Bounds BOTH the prune's reads and its deletes. The prune takes CAP+1 rows,
+ * so reads are 4,001 — under the 4,096-read per-function limit that this
+ * mutation actually hits first, measured live on 2026-08-12 (plan 115-09):
+ *   "Too many reads in a single function execution (limit: 4096)"
+ *
+ * CORRECTION: this constant's original comment justified 4,000 as "headroom
+ * under the ~16,000-doc per-mutation write ceiling". That write ceiling is
+ * real (Convex docs: Documents written 16,000) and is what MAX_DIRS_PER_INGEST
+ * guards, but it is NOT what bounded this loop — the READ limit is roughly 4x
+ * tighter and was never considered. The value 4,000 survives the correction by
+ * coincidence, not by design, so do not raise it above 4,094 (CAP+1 must stay
+ * under 4,096, leaving room for the meta-doc read).
  */
 export const WORKSPACE_DELETE_CAP = 4000;
 
@@ -192,12 +199,23 @@ export const upsertWorkspaceSnapshot = internalMutation({
     // Exactly ONE version per ingest, never more (mirrors graphSnapshots'
     // sweep, and keeps each ingest's total write volume bounded).
     const versionToDelete = toDelete[0];
+    // BOUNDED READ, not .collect() (fixed 2026-08-12, plan 115-09 live proof).
+    // .collect() read EVERY row of the stale version before WORKSPACE_DELETE_CAP
+    // was applied, so the cap bounded the DELETES but never the READS. At 4,912
+    // dirs/version that threw at runtime:
+    //   "Too many reads in a single function execution (limit: 4096)"
+    // The binding limit here is READS (4,096), NOT the ~16,000-doc WRITE ceiling
+    // this file's constants were reasoned against — the write ceiling is real but
+    // was never what this loop hit first. Taking CAP+1 keeps reads at 4,001 and
+    // still detects "more remain" from the presence of the extra row.
     const staleRows = await ctx.db
       .query("workspaceDirs")
       .withIndex("by_snapshot_version", (q) =>
         q.eq("snapshotId", args.snapshotId).eq("version", versionToDelete)
       )
-      .collect();
+      .take(WORKSPACE_DELETE_CAP + 1);
+
+    const moreRemain = staleRows.length > WORKSPACE_DELETE_CAP;
 
     let deleteCount = 0;
     for (const row of staleRows) {
@@ -206,7 +224,7 @@ export const upsertWorkspaceSnapshot = internalMutation({
       deleteCount++;
     }
 
-    if (deleteCount >= WORKSPACE_DELETE_CAP && staleRows.length > deleteCount) {
+    if (moreRemain) {
       // Cap hit — leave versionToDelete IN storedVersions so the next
       // ingest's selectVersionDeletes re-selects it and finishes the job.
       // NEVER raise the cap to "finish it this time" — that is the mass

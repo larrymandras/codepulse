@@ -15,7 +15,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { getFunctionName } from "convex/server";
 import { internal } from "./_generated/api";
-import { workspaceIngestPostHandler } from "./workspaceHttp";
+import { workspaceIngestPostHandler, MAX_DIRS_PER_INGEST } from "./workspaceHttp";
+import { WORKSPACE_DELETE_CAP } from "./workspace";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -246,14 +247,33 @@ describe("workspaceIngestPostHandler — field validation", () => {
     stubAuthKey();
     const ctx = makeMockCtx();
     const body: any = validBody();
-    body.dirs = Array.from({ length: 20001 }, () => validDir());
+    body.dirs = Array.from({ length: 8001 }, () => validDir());
     const response = await workspaceIngestPostHandler(ctx, makeReq(body));
     expect(response.status).toBe(413);
     const parsed = await response.json();
     expect(parsed.error).toBe("PAYLOAD_TOO_LARGE");
-    expect(parsed.dirs).toBe(20001);
-    expect(parsed.max).toBe(20000);
+    expect(parsed.dirs).toBe(8001);
+    expect(parsed.max).toBe(8000);
     expect(ctx.runMutation.mock.calls.length).toBe(0);
+  });
+
+  // Case 9b — the bound must stay inside the write budget it exists to protect.
+  // Regression guard for the 2026-08-12 defect: this constant was 20,000, which
+  // EXCEEDED the 16,000-doc write ceiling the guard's own comment cites, so the
+  // guard admitted payloads that then died inside the mutation. Asserting the
+  // relationship rather than the literal is what makes this catch a re-widening.
+  it("MAX_DIRS_PER_INGEST leaves room for the prune and the meta patches", () => {
+    const CONVEX_WRITE_CEILING = 16000; // Convex docs: "Documents written 16,000"
+    const META_PATCHES = 2; // workspace.ts patches the meta doc in step 5 and again in step 6
+    // Asserted against the REAL exported constant, not a value re-typed here -
+    // a test that re-declares the number it is guarding cannot fail when the
+    // number changes, which is the whole failure mode this test exists for.
+    expect(
+      MAX_DIRS_PER_INGEST + WORKSPACE_DELETE_CAP + META_PATCHES
+    ).toBeLessThanOrEqual(CONVEX_WRITE_CEILING);
+    // And the prune's bounded read (CAP+1) must stay under the 4,096-read limit
+    // that actually threw live on 2026-08-12.
+    expect(WORKSPACE_DELETE_CAP + 1).toBeLessThan(4096);
   });
 
   // Case 10 — a bad element inside dirs, at a non-zero index.
