@@ -216,14 +216,14 @@ describe("nextVersion — monotonic, server-side-only allocation", () => {
 // ---------------------------------------------------------------------------
 
 it.todo(
-  "upsertWorkspaceSnapshot re-POST same snapshotId → activeVersion increments to 2, never two active versions (DB round-trip)"
+  "upsertWorkspaceSnapshot re-POST same snapshotId → activeVersion increments to 2, never two active versions (DB round-trip) — VERIFIED LIVE 2026-08-12, activeVersion observed at 1,2,3,4,5,6 with getWorkspaceMap returning only the active version's rows each time; see 115-LIVE-EVIDENCE.md"
 );
 it.todo(
-  "the inline prune deletes the OLDEST version's rows and never the active version's rows (DB round-trip)"
+  "the inline prune deletes the OLDEST version's rows and never the active version's rows (DB round-trip) — VERIFIED LIVE 2026-08-12, both halves: oldest row physically remaining in workspaceDirs is version 4 (so versions 1-3 hold zero rows) while the active version returned 4,912 of 4,912; see 115-LIVE-EVIDENCE.md. NOTE the prune is no longer inline — it moved to its own mutation, see WORKSPACE_DELETE_CAP"
 );
 it.todo(
-  "a crash between the delete loop and the second meta patch self-heals on the next ingest (DB round-trip)"
+  "a crash between the delete loop and the second meta patch self-heals on the next ingest (DB round-trip) — PARTIALLY VERIFIED LIVE 2026-08-12: the deferred-remainder path was exercised for real (pruneIncomplete went true at version 5 with 412 rows of version 2 left, then false at version 6 once finished, converging to storedVersions [4,5,6]). The CRASH path specifically was NOT exercised — no crash was induced; see 115-LIVE-EVIDENCE.md"
 );
 it.todo(
-  "getWorkspaceMap returns null before any ingest and the active version's rows after (DB round-trip)"
+  "getWorkspaceMap returns null before any ingest and the active version's rows after (DB round-trip) — VERIFIED LIVE 2026-08-12, control-paired: returned {status:success,value:null} pre-ingest while a bogus function name returned 'Could not find public function'; see 115-LIVE-EVIDENCE.md"
 );
