@@ -86,6 +86,27 @@ export const RETENTION_DAYS: Record<string, number> = {
   // long-horizon tables.
   controlVerbSwaps: 30,
 
+  // Phase 112 D-06 — new table, bounded BEFORE it can ever grow (same
+  // pre-emptive move as gatewayQuotaSnapshots/toolPolicyEvents/
+  // activeEngineSnapshots/controlVerbSwaps above). Measured 2026-08-12:
+  // 83.3 rows/day, 1,168 rows in the 14-day window — read via a bounded
+  // `.take()` audit list, same read pattern as controlVerbSwaps, not a
+  // latest-per-key lookup, so it takes the same 30-day tier. Applied
+  // pre-emptively, before this table can ever need a mass delete — a mass
+  // delete is exactly what created the tombstone storms this module
+  // exists to avoid.
+  governorDecisions: 30,
+  // Phase 112 D-06 — new table, bounded BEFORE it can ever grow, same
+  // rationale as governorDecisions above. Measured 2026-08-12: 0.7-1.2
+  // rows/day, 10 rows in the 14-day window — rare-event tier, matching
+  // toolPolicyEvents' tier rather than controlVerbSwaps'/
+  // activeEngineSnapshots' 30-day tier, since at this volume the window
+  // is pure headroom regardless of value chosen. Applied pre-emptively,
+  // before this table can ever need a mass delete — a mass delete is
+  // exactly what created the tombstone storms this module exists to
+  // avoid.
+  messageRoutes: 90,
+
   // Phase 110 D-01/D-04: `aggregates` is bounded period-aware, not simply
   // added to the 90-day build/history tier above like its siblings. Only
   // `period:"hourly"` rows are prunable; `period:"daily"` rows are kept
