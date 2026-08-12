@@ -9,6 +9,7 @@
     "allowJs": true,
     "outDir": "dist",
     "types": ["node"],
+    "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"]
     }
