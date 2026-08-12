@@ -4,6 +4,7 @@
   "snapshotId": "larry-workspace",
   "departments": ["Work", "Consulting", "Personal", "Unclassified"],
   "excludeDirs": [
+    ".tmp",
     "node_modules",
     ".git",
     ".venv",
@@ -51,24 +52,13 @@
     },
     "byRoot": {}
   },
+  "_rootExclusionRationale": "Roots removed 2026-08-12 at the D-12 review, because the first REAL scan measured 15,648 directories and the ingest mutation chunk-inserts under a ~16,000-doc per-invocation write ceiling that it SHARES with its own inline prune (convex/workspaceHttp.ts:44-47, convex/workspace.ts:51-57). Inserts alone were 98% of that ceiling, so the first pruning ingest would have exceeded it at any WORKSPACE_DELETE_CAP value - raising the cap makes it worse, not better. Removed here: `claude` (C:/Users/mandr/.claude, 3,458 dirs) and `claude-alt` (C:/Users/mandr/.claude-alt, 1,077 dirs) - agent config trees, near-zero workspace-map value per directory. Removed in config/workspace.local.json for the same reason: `pgsql-16` (3,089 dirs, a vendored Postgres install) and the ten astridr-*-wt / astridr-wt-* worktrees (3,112 dirs), which are near-identical copies of the separately-scanned `astridr-repo`. Net effect 15,648 -> ~4,900 dirs. NOTE: mergeWorkspaceConfig has no root-REMOVAL mechanism (local wins on id collision and appends new ids, hooks/workspaceConfig.mjs:68-71), so a root can only be dropped by deleting it from the file that declares it - that is why this edit spans both the tracked and local configs.",
   "roots": [
     {
       "id": "vault",
       "path": "C:/Users/mandr/Mandras",
       "department": "Unclassified",
       "evidence": "D-15: demonstrably contains Work, Consulting and Personal material mixed together; any single root-level department label would be an assertion the scanner inferred rather than knew."
-    },
-    {
-      "id": "claude",
-      "path": "C:/Users/mandr/.claude",
-      "department": "Unclassified",
-      "evidence": "D-15"
-    },
-    {
-      "id": "claude-alt",
-      "path": "C:/Users/mandr/.claude-alt",
-      "department": "Unclassified",
-      "evidence": "D-15"
     },
     {
       "id": "codepulse",
