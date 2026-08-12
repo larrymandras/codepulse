@@ -420,6 +420,59 @@ export function resolveControlVerbSwapEvent(
   };
 }
 
+interface ResolvedGovernorDecisionEvent {
+  emitter: string;
+  priority: string;
+  spoke: boolean;
+  heldReason?: string;
+  timestamp: number;
+}
+
+/**
+ * resolveGovernorDecisionEvent — resolves a `governor_decision` event
+ * payload into the args for `internal.governorDecisions.record`, or `null`
+ * when the event must be skipped (Phase 112, TELE-03, D-04/D-14).
+ *
+ * D-14 is the load-bearing part of this resolver. Measured across the 646
+ * `spoke:false` rows in the live 14-day window (2026-08-12), `held_reason`
+ * arrives in three wire shapes: **424 explicit JSON `null`**, 146
+ * key-absent, 76 real string. `isOptionalString` treats `null` as absent —
+ * it only decides SKIP vs PROCEED, it never strips the `null` itself.
+ * `normalizeOptional` is what converts the explicit `null` to `undefined`
+ * before it reaches `governorDecisions.record`'s `v.optional(v.string())`
+ * validator, which rejects an explicit `null` outright. Applying one
+ * without the other just relocates the throw from this guard to the
+ * validator — the exact defect class already fixed once for
+ * `control_verb_swap`'s `session_id` above (108-07 gap closure).
+ *
+ * `spoke` is a BOOLEAN — checked with `typeof spoke !== "boolean"`, not a
+ * truthiness test. A truthiness test would map an absent/falsy field to
+ * `false` and silently invent a "held" decision that never happened.
+ */
+export function resolveGovernorDecisionEvent(
+  data: unknown,
+  timestamp: number
+): ResolvedGovernorDecisionEvent | null {
+  const d = (data ?? {}) as Record<string, any>;
+  const emitter = d.emitter;
+  const priority = d.priority;
+  const spoke = d.spoke;
+  if (typeof emitter !== "string" || !emitter) return null;
+  if (typeof priority !== "string" || !priority) return null;
+  if (typeof spoke !== "boolean") return null;
+
+  const heldReason = d.heldReason ?? d.held_reason;
+  if (!isOptionalString(heldReason)) return null;
+
+  return {
+    emitter,
+    priority,
+    spoke,
+    heldReason: normalizeOptional(heldReason),
+    timestamp,
+  };
+}
+
 /**
  * HTTP action: POST /runtime-ingest
  *
@@ -1047,6 +1100,28 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
               break;
             }
             await ctx.runMutation(internal.controlVerbSwaps.record, resolved);
+            break;
+          }
+          case "governor_decision": {
+            // Phase 112 (TELE-03, D-04/D-14): routes a governor
+            // gate-evaluation event into the governorDecisions domain table
+            // (convex/governorDecisions.ts, plan 112-03), in addition to the
+            // generic runtime_events row this file already writes for every
+            // event above. D-14: held_reason arrives as an explicit JSON
+            // null on 424 of 646 held rows (2026-08-12 measurement) —
+            // isOptionalString treats null as absent, normalizeOptional
+            // strips it before it reaches governorDecisions.record's
+            // v.optional(v.string()) validator, which rejects an explicit
+            // null outright. See resolveGovernorDecisionEvent above.
+            const resolved = resolveGovernorDecisionEvent(data, timestamp);
+            if (!resolved) {
+              skippedCount++;
+              console.warn(
+                "[runtimeIngest] skipped governor_decision event: resolveGovernorDecisionEvent rejected the payload (missing/wrong-typed emitter, priority, or spoke, or a wrong-typed optional held_reason)"
+              );
+              break;
+            }
+            await ctx.runMutation(internal.governorDecisions.record, resolved);
             break;
           }
           case "git_commit": {
