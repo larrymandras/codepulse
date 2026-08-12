@@ -7,10 +7,17 @@ stopped_at: Phase 112 plan 112-08 complete (gap-closure: normalized tool_execute
 last_updated: "2026-08-12T16:16:53.000Z"
 last_activity: 2026-08-12 -- Plan 115-03 executed (hooks/workspaceApproval.mjs pure D-12 gate — stableStringify recursive canonical serializer, canonicalReportHash sha256, isDryRunApproved fail-closed comparison, buildApprovalMarkerContents; 24 tests implementing 115-VALIDATION.md's mandatory five-case table cases 1-4 + nested-mutation regression guard, case 1 baseline control observed passing; gate mutation-proven RED (7 failed/17 passed, named tests recorded) then GREEN (24/24) after byte-identical restore; full suite 312 files/4157 tests passed, 0 failed; no deploy; commits 3f0637e4/4266f997)
 progress:
+  # Re-derived from disk 2026-08-12 (see Current Position note). Do not hand-increment:
+  # total_plans   = count of .planning/phases/{108..119}/NNN-NN-PLAN.md      -> 60
+  # completed_plans = count of .planning/phases/{108..119}/NNN-NN-SUMMARY.md -> 52
+  # completed_phases counts 117 + 119 too: they shipped with a PHASE-level
+  #   NNN-SUMMARY.md and no per-plan PLAN.md files, which is why plan-counting
+  #   verbs under-report completed_phases as 6.
+  # percent is PHASE-based (8/12), not plan-based.
   total_phases: 12
   completed_phases: 8
-  total_plans: 50
-  completed_plans: 51
+  total_plans: 60
+  completed_plans: 52
   percent: 67
 ---
 
