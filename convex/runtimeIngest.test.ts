@@ -17,6 +17,8 @@ import {
   resolveCommandExecutionToolRow,
   resolveModelRoutingEvent,
   resolveControlVerbSwapEvent,
+  resolveGovernorDecisionEvent,
+  resolveMessageRoutedEvent,
   TOOL_POLICY_EVENT_KINDS,
   TOOL_POLICY_ERROR_MAX_LEN,
   ASTRIDR_TOOL_PROVIDER,
@@ -1398,5 +1400,175 @@ describe("108-07 fix 2 — silent resolver skips are now counted and surfaced as
     consoleErrorSpy.mockRestore();
     consoleWarnSpy.mockRestore();
     vi.unstubAllEnvs();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 112 (TELE-03, D-04/D-14) — governor_decision and (D-05/D-13)
+// message_routed resolver coverage. D-14 is the load-bearing case here:
+// held_reason arrives in three live wire shapes (424 explicit null, 146
+// key-absent, 76 real string, of 646 held rows measured 2026-08-12) and a
+// suite that only covers the string/absent shapes would pass against a
+// broken resolver that never normalizes the explicit null — see the
+// mutation-proof block below, which observes exactly that failure.
+// ---------------------------------------------------------------------------
+
+describe("112-04 — governor_decision resolver: held_reason three-wire-shape coverage (D-14)", () => {
+  it("held_reason: real string (explicit string wire shape, 76 of 646 live held rows) resolves to that exact string", () => {
+    expect(
+      resolveGovernorDecisionEvent(
+        { emitter: "governor", priority: "high", spoke: false, held_reason: "focus" },
+        1000
+      )?.heldReason
+    ).toBe("focus");
+    expect(
+      resolveGovernorDecisionEvent(
+        { emitter: "governor", priority: "high", spoke: false, held_reason: "quiet-hours" },
+        1000
+      )?.heldReason
+    ).toBe("quiet-hours");
+  });
+
+  it("held_reason: null (explicit JSON null, the MAJORITY live shape — 424 of 646 held rows) resolves to a non-null result whose heldReason is undefined, with no :null in the serialized form", () => {
+    const result = resolveGovernorDecisionEvent(
+      { emitter: "governor", priority: "high", spoke: false, held_reason: null },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.heldReason).toBeUndefined();
+    // The observable difference that matters to the Convex validator: a
+    // JSON-serialized `null` key survives; an `undefined` key is dropped.
+    expect(JSON.stringify(result)).not.toMatch(/:null/);
+  });
+
+  it("held_reason: key entirely absent (146 of 646 live held rows) resolves identically — heldReason is undefined", () => {
+    const result = resolveGovernorDecisionEvent(
+      { emitter: "governor", priority: "high", spoke: false },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.heldReason).toBeUndefined();
+  });
+
+  it("a genuinely wrong-typed held_reason (not null) is still rejected — the null carve-out does not widen to arbitrary types", () => {
+    expect(
+      resolveGovernorDecisionEvent(
+        { emitter: "governor", priority: "high", spoke: false, held_reason: 42 },
+        1000
+      )
+    ).toBeNull();
+  });
+
+  it("required fields (emitter/priority/spoke) individually null or wrong-typed still refuse the event, including a truthy-but-wrong-typed spoke string", () => {
+    expect(resolveGovernorDecisionEvent({ emitter: null, priority: "high", spoke: false }, 1000)).toBeNull();
+    expect(resolveGovernorDecisionEvent({ emitter: "governor", priority: null, spoke: false }, 1000)).toBeNull();
+    expect(resolveGovernorDecisionEvent({ emitter: "governor", priority: "high", spoke: null }, 1000)).toBeNull();
+    // A truthiness test would have accepted this — it must be refused.
+    expect(resolveGovernorDecisionEvent({ emitter: "governor", priority: "high", spoke: "true" }, 1000)).toBeNull();
+    expect(resolveGovernorDecisionEvent({ emitter: 42, priority: "high", spoke: false }, 1000)).toBeNull();
+    expect(resolveGovernorDecisionEvent({ emitter: "governor", priority: 42, spoke: false }, 1000)).toBeNull();
+  });
+
+  it("a spoke:true row with no held reason resolves with heldReason undefined", () => {
+    const result = resolveGovernorDecisionEvent(
+      { emitter: "governor", priority: "high", spoke: true },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.spoke).toBe(true);
+    expect(result?.heldReason).toBeUndefined();
+  });
+
+  it("does not throw on a malformed/null payload and returns null instead (WR-06/168-06 batch-poisoning guard)", () => {
+    expect(() => resolveGovernorDecisionEvent(null, 1000)).not.toThrow();
+    expect(() => resolveGovernorDecisionEvent({}, 1000)).not.toThrow();
+    expect(resolveGovernorDecisionEvent(null, 1000)).toBeNull();
+    expect(resolveGovernorDecisionEvent({}, 1000)).toBeNull();
+  });
+});
+
+describe("112-04 — message_routed resolver: sender/session_id null-normalization (D-05/D-13)", () => {
+  it("a full valid payload resolves with every field populated", () => {
+    const result = resolveMessageRoutedEvent(
+      { channel: "codepulse-control-center", profile: "personal", sender: "governor", session_id: "sess-1" },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.channel).toBe("codepulse-control-center");
+    expect(result?.profile).toBe("personal");
+    expect(result?.sender).toBe("governor");
+    expect(result?.sessionId).toBe("sess-1");
+  });
+
+  it("sender and session_id explicitly null resolve to undefined, with no :null in the serialized result", () => {
+    const result = resolveMessageRoutedEvent(
+      { channel: "codepulse-control-center", profile: "personal", sender: null, session_id: null },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.sender).toBeUndefined();
+    expect(result?.sessionId).toBeUndefined();
+    expect(JSON.stringify(result)).not.toMatch(/:null/);
+  });
+
+  it("sender and session_id both keys absent resolve the same way", () => {
+    const result = resolveMessageRoutedEvent(
+      { channel: "codepulse-control-center", profile: "personal" },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.sender).toBeUndefined();
+    expect(result?.sessionId).toBeUndefined();
+  });
+
+  it("a missing or wrong-typed channel or profile refuses the event", () => {
+    expect(resolveMessageRoutedEvent({ profile: "personal" }, 1000)).toBeNull();
+    expect(resolveMessageRoutedEvent({ channel: "codepulse-control-center" }, 1000)).toBeNull();
+    expect(resolveMessageRoutedEvent({ channel: 42, profile: "personal" }, 1000)).toBeNull();
+    expect(resolveMessageRoutedEvent({ channel: "c", profile: null }, 1000)).toBeNull();
+  });
+
+  it("does not throw on a malformed/null payload and returns null instead (WR-06/168-06 batch-poisoning guard)", () => {
+    expect(() => resolveMessageRoutedEvent(null, 1000)).not.toThrow();
+    expect(() => resolveMessageRoutedEvent({}, 1000)).not.toThrow();
+    expect(resolveMessageRoutedEvent(null, 1000)).toBeNull();
+    expect(resolveMessageRoutedEvent({}, 1000)).toBeNull();
+  });
+});
+
+describe("runtimeIngest — governor_decision / message_routed case wiring (static source check)", () => {
+  it("the governor_decision case calls resolveGovernorDecisionEvent and forwards its result to internal.governorDecisions.record, never api.governorDecisions — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    // Bounded to the next `case "` rather than to a fixed brace-indent depth
+    // (the existing control_verb_swap/model_routing checks in this file use
+    // a `{8}`-space-indent boundary that does not match this file's actual
+    // 10-space case-brace indentation and only happens to pass because the
+    // lazy match runs on past the intended case looking for ANY 8-space
+    // line elsewhere in the switch — an unmatched-regex risk. This slice
+    // stops exactly at the next case label instead.)
+    const caseMatch = source.match(/case "governor_decision": \{[\s\S]*?(?=\n\s*case ")/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).toContain("resolveGovernorDecisionEvent(");
+    expect(caseBody).toContain("internal.governorDecisions.record");
+    expect(caseBody).not.toContain("api.governorDecisions");
+  });
+
+  it("the message_routed case calls resolveMessageRoutedEvent and forwards its result to internal.messageRoutes.record, never api.messageRoutes — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "message_routed": \{[\s\S]*?(?=\n\s*case ")/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).toContain("resolveMessageRoutedEvent(");
+    expect(caseBody).toContain("internal.messageRoutes.record");
+    expect(caseBody).not.toContain("api.messageRoutes");
   });
 });
