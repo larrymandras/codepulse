@@ -489,6 +489,41 @@ describe("tool_executed → toolExecutions (Phase 105 D-01)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 112-08 — the one CONFIRMED live instance of D-14's defect class closed by
+// this plan: astridr/agent/loop.py:2090-2097 sends "round" unconditionally
+// (telemetry.py:683 -> int | None), so a tool call outside a round context
+// puts an explicit JSON null on the wire, which toolExecutions.round
+// (v.optional(v.float64())) rejects outright, dropping the whole row while
+// ingest reports success.
+// ---------------------------------------------------------------------------
+
+describe("112-08 — tool_executed resolver: round three-wire-shape coverage (D-14)", () => {
+  it("round: real number (explicit numeric wire shape) resolves to that exact number", () => {
+    expect(resolveToolExecutionRow({ toolName: "web_search", round: 3 }, 1000).round).toBe(3);
+    expect(resolveToolExecutionRow({ toolName: "web_search", round: 0 }, 1000).round).toBe(0);
+  });
+
+  it("round: null (explicit JSON null, the confirmed live shape for a tool call outside a round context) resolves to a non-null result whose round is undefined, with no :null in the serialized form", () => {
+    const result = resolveToolExecutionRow({ toolName: "web_search", round: null }, 1000);
+    expect(result).not.toBeNull();
+    expect(result.round).toBeUndefined();
+    // The observable difference that matters to the Convex validator: a
+    // JSON-serialized `null` key survives; an `undefined` key is dropped.
+    expect(JSON.stringify(result)).not.toMatch(/:null/);
+    // The row itself must still be produced — normalization, not refusal.
+    expect(result.toolName).toBe("web_search");
+    expect(result.provider).toBe(ASTRIDR_TOOL_PROVIDER);
+  });
+
+  it("round: key entirely absent resolves identically — round is undefined", () => {
+    const result = resolveToolExecutionRow({ toolName: "web_search" }, 1000);
+    expect(result).not.toBeNull();
+    expect(result.round).toBeUndefined();
+    expect(JSON.stringify(result)).not.toMatch(/:null/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Phase 105-09 (live gate, 2026-08-04) — command_execution's toolExecutions
 // insert was a second, untagged row for every Ástríðr tool call (this event
 // is sent exclusively by astridr/engine/execution_tracker.py, which wraps
