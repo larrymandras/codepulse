@@ -89,9 +89,25 @@ export function resolveToolExecutionRow(d: any, timestamp: number) {
     sessionId: d.sessionId ?? d.session_id ?? "unknown",
     toolName: d.toolName ?? d.tool_name ?? "unknown",
     success: d.success ?? true,
+    // durationMs/traceId are left as bare `??` chains, not a defect (112-08):
+    // astridr/agent/loop.py:2090-2097 sends only the camelCase key for each
+    // and never sends `duration_ms`/`trace_id` at all, so the RHS of both
+    // coalesces is always `undefined`, and `null ?? undefined` evaluates to
+    // `undefined` — never an explicit null reaching the validator. Measured
+    // exclusion, not an oversight.
     durationMs: d.durationMs ?? d.duration_ms,
     traceId: d.traceId ?? d.trace_id,
-    round: d.round,
+    // round IS exposed: astridr/agent/loop.py:2090-2097 sends
+    // `"round": get_round_context()` UNCONDITIONALLY, and
+    // astridr/engine/telemetry.py:683 declares `get_round_context() ->
+    // int | None`, so a tool call made outside a round context puts an
+    // explicit JSON `null` on the wire. `toolExecutions.round` is
+    // `v.optional(v.float64())`, which rejects an explicit null outright —
+    // contrast with `llm_call`'s emitters, which guard the identical value
+    // behind `if _rnd is not None:` (anthropic_provider.py:681, ollama.py:232,
+    // openrouter.py:361) so the key is simply absent there. Normalize rather
+    // than refuse (112-08, D-14 class): the row must still be produced.
+    round: normalizeOptional(d.round),
     provider: ASTRIDR_TOOL_PROVIDER,
     timestamp,
   };
