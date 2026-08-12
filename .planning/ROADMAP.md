@@ -842,7 +842,7 @@ Plans:
   2. Every remaining Group B event kind (excluding `control_verb_swap`, already disposed in Phase 108) has a recorded disposition — routed to a domain table and surfaced, or explicitly kept generic-table-by-design — with a stated reason per kind, none left ambiguous.
   3. `governor_decision` (the one kind confirmed arriving live) is evaluated as the strongest routing candidate, and whatever disposition it receives is justified in writing rather than built purely for switch-coverage symmetry.
 
-**Plans**: 7 plans in 5 waves
+**Plans**: 8 plans in 5 waves (112-08 added mid-execution as a wave-4 gap-closure plan, after adversarial verification of 112-04 confirmed a live silent-drop on `tool_executed.round`)
 
 Plans:
 **Wave 1** *(parallel, no file overlap - different repos / different files)*
@@ -861,9 +861,10 @@ Plans:
 
 **Wave 4** *(blocked on 112-04)*
 
-- [ ] 112-06-PLAN.md - the D-10/D-11 disposition record: GROUP_B_DISPOSITIONS const + three-layer drift guard, mutation-proven against three distinct drifts (TELE-03; D-01, D-03, D-05, D-10, D-11, D-12)
+- [x] 112-06-PLAN.md - the D-10/D-11 disposition record: GROUP_B_DISPOSITIONS const + three-layer drift guard, mutation-proven against three distinct drifts (TELE-03; D-01, D-03, D-05, D-10, D-11, D-12) — complete 2026-08-12, commits `5420f694`/`f8d27799`, see `112-06-SUMMARY.md`
+- [ ] 112-08-PLAN.md - gap closure: normalize `tool_executed.round`'s explicit-null wire shape (confirmed live via `loop.py:2090-2097`/`get_round_context()`), plus `noFallthroughCasesInSwitch` (added mid-execution, not in the original 7-plan count)
 
-**Wave 5** *(blocked on 112-04, 112-05, 112-06)*
+**Wave 5** *(blocked on 112-04, 112-05, 112-06, 112-08)*
 
 - [ ] 112-07-PLAN.md - **`autonomous: false`**: [BLOCKING] `--env-file` deploy to the self-hosted backend, then live control-paired arrival proof where an empty result is a FAILURE, plus an operator checkpoint (TELE-03; D-02, D-04, D-13, D-14)
 
