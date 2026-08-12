@@ -947,7 +947,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 115-05-PLAN.md - The pure classifier `(path, config) → {department, access, isSecret}` and the compose-mount derivation `access` reads from (wave 2, depends on 115-02) — complete 2026-08-12, deny-by-default proven against the 4 measured leaks, D-09 proven against the real compose file at 18 mounts, 52 tests/17 suites mutation-proven twice, see `115-05-SUMMARY.md`
-- [ ] 115-06-PLAN.md - `POST /workspace-ingest` route and handler, reusing the existing ingest auth surface, dispatching to 115-04's `internalMutation` (wave 2, depends on 115-04)
+- [x] 115-06-PLAN.md - `POST /workspace-ingest` route and handler, reusing the existing ingest auth surface, dispatching to 115-04's `internalMutation` (wave 2, depends on 115-04) — complete 2026-08-12, fail-closed auth first (line 103 vs first ctx.* access at line 191), full field validation, dispatch exclusively via `internal.workspace.upsertWorkspaceSnapshot`, 16 vitest tests, no deploy — see `115-06-SUMMARY.md`
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
