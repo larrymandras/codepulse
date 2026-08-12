@@ -6,6 +6,7 @@
 // `finally` block with rmSync({ recursive: true, force: true }).
 import { describe, it, expect } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, statSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -427,6 +428,59 @@ describe("Suite 11 — access is applied", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+});
+
+// =========================================================================================
+// Suite 12 — a REAL filesystem cycle terminates and is bounded, with a control.
+//
+// `mklink /J` (a Windows junction) works from an UNELEVATED shell — verified live in this
+// environment before writing this test (only `mklink /D` symlinks need elevation/Developer
+// Mode). This constructs an actual on-disk directory cycle: dir -> sub -> loop(junction back
+// to dir) -> sub -> loop -> ... and runs the real walkRoot against it with real
+// readdirSync/statSync (never injected fakes) — the whole point is exercising what the OS
+// actually reports for a reparse point on this system, not a synthetic stand-in for it.
+// =========================================================================================
+describe("Suite 12 — a real filesystem cycle (Windows junction) terminates and is bounded", () => {
+  it("walkRoot terminates against a real on-disk junction loop, counts it, and still finds the sibling shareable file (control)", () => {
+    const dir = mkRoot("workspace-scan-cycle-");
+    try {
+      const sub = join(dir, "sub");
+      mkdirSync(sub);
+      writeFileSync(join(sub, "note.md"), "shareable file that must survive the cycle");
+
+      const linkPath = join(sub, "loop");
+      execSync(`cmd /c mklink /J "${linkPath}" "${dir}"`, { encoding: "utf-8", windowsHide: true });
+
+      const root = { id: "fixture", path: dir };
+      const config = makeConfig({ roots: [{ id: "fixture", path: dir, department: "Personal" }] });
+
+      const start = Date.now();
+      const result = walkRoot(root, config, { readdirSync, statSync, mountedSet: new Set() });
+      const elapsedMs = Date.now() - start;
+
+      // TERMINATION: the call above returned at all (no hang) and did so fast — a walk that
+      // actually looped forever would time out this whole test (default vitest timeout), not
+      // merely run slowly.
+      expect(elapsedMs).toBeLessThan(5000);
+      expect(result.covered).toBe(true);
+      expect(result.cyclesSkipped).toBeGreaterThanOrEqual(1);
+
+      // CONTROL: the real subdirectory's file is still present. Without this, "terminated
+      // with cyclesSkipped>=1" is indistinguishable from a walk that bailed out of the whole
+      // root at the first sign of a reparse point rather than genuinely descending into `sub`
+      // and only refusing to re-enter the loop.
+      const subRow = result.rows.find((r) => r.dirPath === "sub");
+      expect(subRow).toBeDefined();
+      expect(subRow.fileCount).toBe(1);
+      expect(subRow.withheldCount).toBe(0);
+    } finally {
+      // Verified separately (throwaway probe, not part of this suite): plain recursive
+      // rmSync on the tree root does NOT follow the junction into its target — it completes
+      // in ~1ms rather than hanging or deleting the target's contents twice. No special
+      // junction-first removal step is required.
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 15000);
 });
 
 // =========================================================================================
