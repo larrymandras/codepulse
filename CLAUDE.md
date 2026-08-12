@@ -15,9 +15,20 @@ npm run build            # Production build
 npm test                 # Vitest unit tests
 npm run test:ui          # Vitest with browser UI
 npm run test:e2e         # Playwright E2E tests
-npx convex deploy --yes  # Deploy Convex backend to prod
-npm run deploy           # Deploy Convex + build frontend
 ```
+
+**Deploying the Convex backend.** The production backend is SELF-HOSTED (see the operational-rules
+section below), so the deploy MUST name it explicitly:
+
+```bash
+npx convex deploy --env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile
+```
+
+`--env-file` is not optional. A bare `npx convex deploy`, `npx convex deploy --yes`, or
+`npm run deploy` can target the retired cloud deployment `tidy-whale-981` (frozen 2026-07-15)
+instead of the live self-hosted instance. If the CLI prompts for confirmation, add `-y`
+*alongside* `--env-file`, never instead of it. Established by Phase 112
+(`.planning/phases/112-telemetry-coverage-closure/112-07-PLAN.md:62-65`).
 
 Run a single test file: `npx vitest run src/App.test.tsx`
 
