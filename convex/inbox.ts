@@ -47,6 +47,12 @@ export interface RaiseArgs {
   source?: string;
   sourceId?: string; // Phase 188.2 D-08 — stable per-item id, forwarded unchanged
   createdAt?: number;
+  /** Phase 188.5 WR-04 — lets a MACHINE-only signal row be born read.
+   * Omitted (the overwhelmingly common case) the row is inserted unacked
+   * exactly as before, so this changes nothing for human-facing cards and
+   * notifications. Only writers that emit rows no human will ever ack
+   * should set it — see the ackedAt note on raiseHandler. */
+  ackedAt?: number;
 }
 
 /**
@@ -54,6 +60,18 @@ export interface RaiseArgs {
  * itemType="held" + heldReason for suppressed events and passes intentId
  * inline for high-priority deliveries (D-10). There is no setIntentId/update
  * op — intentId is only ever written at raise time.
+ *
+ * ackedAt (Phase 188.5 WR-04): previously hardcoded to `undefined` here, so
+ * every row was necessarily born unread. That is right for anything a human
+ * acts on, but astridr also writes MACHINE-only signal rows (emitter
+ * `watch_pulse_grace`, itemType "signal") that exist purely to be COUNTED by
+ * an operator instrument. Nothing ever acks them — the producing module is
+ * read-only by design — so they accumulated in the Inbox surface as
+ * permanently-unread notifications: `inboxRowToInboxItem` coerces every
+ * itemType other than "card"/"held" to "notification", and derives
+ * `read: row.ackedAt != null`. Honouring a caller-supplied ackedAt lets such
+ * a row be born read. Defaults to `undefined` when absent, so every existing
+ * caller is unaffected.
  */
 export async function raiseHandler(
   ctx: { db: InboxDb } | any,
@@ -73,7 +91,7 @@ export async function raiseHandler(
     source: args.source,
     sourceId: args.sourceId,
     createdAt: args.createdAt ?? now,
-    ackedAt: undefined,
+    ackedAt: args.ackedAt,
   });
 }
 
@@ -91,6 +109,7 @@ export const raise = mutation({
     source: v.optional(v.string()),
     sourceId: v.optional(v.string()),
     createdAt: v.optional(v.float64()),
+    ackedAt: v.optional(v.float64()),
   },
   handler: async (ctx, args) => raiseHandler(ctx, args, Date.now() / 1000),
 });

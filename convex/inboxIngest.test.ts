@@ -605,6 +605,67 @@ describe("inbox.ts raiseHandler + listByProfileHandler (D-10)", () => {
     expect(rows[0].body).toBe("Due now");
     expect(rows[0].itemType).toBe("card");
   });
+
+  // ── Phase 188.5 WR-04: machine-only signal rows are born read ─────────
+  //
+  // ackedAt was hardcoded to `undefined` here, so every row was necessarily
+  // born unread. astridr writes machine-only signal rows (emitter
+  // watch_pulse_grace, itemType "signal") that exist purely to be COUNTED
+  // by an operator instrument; nothing ever acks them, so they accumulated
+  // in the human Inbox as permanently-unread notifications forever
+  // (inboxRowToInboxItem coerces any itemType other than card/held to
+  // "notification", and derives read: row.ackedAt != null).
+
+  it("round-trips ackedAt so a machine signal row is born read (188.5 WR-04)", async () => {
+    const db = makeFakeDb();
+
+    await raiseHandler(
+      { db },
+      {
+        profileId: "personal",
+        emitter: "watch_pulse_grace",
+        priority: "low",
+        title: "Invoice due",
+        body: "grace-saved sourceId=gmail-msg-1 absent_scans=2",
+        spoken: false,
+        itemType: "signal",
+        sourceId: "gmail-msg-1",
+        ackedAt: 1234.5,
+      },
+      1000
+    );
+
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].ackedAt).toBe(1234.5);
+    // ...which is what the Inbox surface reads as "already read".
+    expect(rows[0].ackedAt != null).toBe(true);
+  });
+
+  it("leaves ackedAt undefined when omitted — every human-facing caller (back-compat)", async () => {
+    const db = makeFakeDb();
+
+    await raiseHandler(
+      { db },
+      {
+        profileId: "personal",
+        emitter: "watch_pulse",
+        priority: "high",
+        title: "Invoice due",
+        body: "please pay",
+        spoken: false,
+        itemType: "card",
+        // ackedAt intentionally absent — a human card must still be born
+        // UNREAD. If this ever flips, every card silently stops showing as
+        // unread, which is far worse than the noise WR-04 fixes.
+      },
+      1000
+    );
+
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].ackedAt).toBeUndefined();
+  });
 });
 
 describe("inbox.ts listAllHandler — aggregate all-profiles read (D-12)", () => {

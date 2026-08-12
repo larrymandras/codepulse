@@ -62,6 +62,11 @@ export const inboxIngest = httpAction(async (ctx, request) => {
         source: body.source as string | undefined,
         sourceId: body.sourceId as string | undefined,
         createdAt: body.createdAt as number | undefined,
+        // Phase 188.5 WR-04: machine-only signal rows (emitter
+        // watch_pulse_grace) are born read, since nothing ever acks them
+        // and they would otherwise sit in the Inbox as permanently-unread
+        // notifications forever. Absent for every human-facing caller.
+        ackedAt: body.ackedAt as number | undefined,
       });
     } else if (op === "ack") {
       if (!body.id) {
