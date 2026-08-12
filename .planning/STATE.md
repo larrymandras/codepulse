@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Phase 112 UI-SPEC approved
-last_updated: "2026-08-12T12:50:38.000Z"
-last_activity: 2026-08-12 -- Phase 113 complete (DEBT-06 closed GUARDED)
+stopped_at: Phase 112 UI-SPEC approved; Phase 115 context gathered (parallel sessions)
+last_updated: "2026-08-12T13:02:00.000Z"
+last_activity: 2026-08-12 -- Phase 115 context gathered; Phase 112 planning in a concurrent session
 progress:
   total_phases: 12
   completed_phases: 8
@@ -51,8 +51,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 Phase: 113 (debt-sweep) — COMPLETE (8/8), VERIFIED `passed-with-amended-criterion`
 Plan: 8 of 8
-Status: Phase 113 complete — DEBT-05 and DEBT-07 delivered and verified live; DEBT-06 closed GUARDED
-Last activity: 2026-08-12 -- Phase 113 complete (DEBT-06 closed GUARDED)
+Status: Two phases in flight in parallel sessions — 112 (telemetry coverage, planning) and 115 (workspace scanner, context gathered). Phase 113 complete.
+Last activity: 2026-08-12 -- Phase 115 context gathered; Phase 112 planning in a concurrent session
+
+**Phase 115 — workspace-scanner: CONTEXT GATHERED 2026-08-12 (`115-CONTEXT.md`, 14 decisions, no plans yet).** Picked up as parallel work alongside a concurrent session's Phase 112. Produces the data Phase 114's map renders. **The ROADMAP's "115 depends on 114" was the dependency INVERTED and is corrected in this commit** — the approved design's own graph (`Mandras/02-projects/agentic-os-second-brain.md:48`) reads "C2 → enables C1's workspace lens", so the scanner comes first; the old line was a sequential default from `gsd-phase add`. Three decisions compose into a producer that structurally cannot leak, which matters because it walks the vault, `.claude` and `.claude-alt`: payload is path + metadata and **never contents** (the donor's only content read, `scan.js:149`, is explicitly dropped), secret detection is **deny-by-default per root** rather than a secret-shaped regex, and secret paths are **omitted entirely** rather than flagged. The regex decision is measured, not preferred — the donor's `SECRET_RE` returned **PUBLIC** for `selfhosted.envfile` (holds `INSTANCE_SECRET`), `.claude.json` (inline Bearer token) and `.mcp.json`. Storage changed on evidence found mid-discussion: `graphSnapshots` looked like the obvious reuse, but `crons.ts:145-151` has its retention sweep commented out — `DISABLED 2026-07-14 — times out on self-hosted Convex` — so 115 gets its own tables and bounds growth by an **inline batch-capped prune at ingest**, bounded by construction rather than by a schedule that can be silently disabled. Granularity is grounded in a count: **21,029 files** across `.claude`/`.claude-alt`/vault before any repos, so directories are nodes and files are counts. Also recorded: `schtasks /query` returns zero lines from this environment and is **proven broken by a control** (it cannot find `ConvexNightlyRestart` either), so scheduled-task state is unverified, not absent. Next: `/gsd-plan-phase 115`.
 
 **Phase 113 — debt-sweep: COMPLETE (8/8, 2026-08-12), VERIFIED `passed-with-amended-criterion` (`113-VERIFICATION.md`).** Two of three requirements delivered outright; the third was closed honestly rather than counted as met. **DEBT-05** is a fail-closed guard, not a widened tolerance — `skillSync.ts:142` returns zero prunes unless the producer positively asserts a complete scan (`scannedOriginsComplete === true`, exact-`true` per `:45`, so a malformed snapshot cannot engage pruning), killing the 185 → 131 → 185 oscillation; 34 tests pass. **DEBT-07** verified against the live directory rather than 113-08's own claim: `convex-selfhost/` is a git repo at `880befa`, the **committed** `docker-compose.yml` carries the `logging:` block (json-file, 10m, 3 files), and `restart-convex.ps1` plus 13 sibling scripts are tracked with a clean tree. **DEBT-06 is closed GUARDED and the cause was never identified** — the brain-pill flake did not reproduce across **80 clean full-suite iterations** (tiered 30 + 50, the budget Larry set), each tier preceded by a fresh positive control proving the detector's FAIL path still fired, so no capture ever existed to diagnose from and D-11 forbids fixing without one. The ROADMAP's criterion 2 and `REQUIREMENTS.md`'s DEBT-06 line were both **amended** to say so — a deliberate, visible admission, not a silent green. The `waitFor` half of the bar WAS met and is asserted mechanically: `Chat.test.tsx` untouched, `waitFor` count unchanged at 23, no added `{ timeout:`. The defect remains latent; 113-05's query-site instrumentation makes the next occurrence self-diagnosing. One unattributed finding carried forward: `src/App.test.tsx`'s `/memory` lazy-route timeout, seen once in 86 runs, with the machine-contention hypothesis overturned by tier1b's own slower-but-passing 93s iteration. Full record: `113-FLAKE-EVIDENCE.md`.
 
@@ -934,8 +936,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-12T12:50:38.000Z
-Stopped at: Phase 112 UI-SPEC approved
+Last session: 2026-08-12T13:02:00.000Z
+Stopped at: Phase 112 UI-SPEC approved; Phase 115 context gathered (parallel sessions)
 
 --- Prior (superseded by the above) --- Completed 111-01-PLAN.md (JobsPanel mission history rewrite)
 

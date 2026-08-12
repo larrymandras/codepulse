@@ -1,0 +1,16 @@
+{
+  "phase": 115,
+  "phaseName": "workspace-scanner",
+  "created": "2026-08-12T12:59:21.345Z",
+  "history": [
+    {
+      "timestamp": "2026-08-12T12:59:21.345Z",
+      "command": "discuss-phase",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-12T12:59:21.345Z",
+  "isFrontend": false,
+  "artifacts": {}
+}
