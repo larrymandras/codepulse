@@ -164,6 +164,7 @@ import type * as swarmTasks from "../swarmTasks.js";
 import type * as systemResources from "../systemResources.js";
 import type * as tasks from "../tasks.js";
 import type * as teamPresets from "../teamPresets.js";
+import type * as telemetryDispositions from "../telemetryDispositions.js";
 import type * as toolAnalytics from "../toolAnalytics.js";
 import type * as toolExecutions from "../toolExecutions.js";
 import type * as toolGovernance from "../toolGovernance.js";
@@ -343,6 +344,7 @@ declare const fullApi: ApiFromModules<{
   systemResources: typeof systemResources;
   tasks: typeof tasks;
   teamPresets: typeof teamPresets;
+  telemetryDispositions: typeof telemetryDispositions;
   toolAnalytics: typeof toolAnalytics;
   toolExecutions: typeof toolExecutions;
   toolGovernance: typeof toolGovernance;
