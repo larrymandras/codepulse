@@ -951,7 +951,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 115-07-PLAN.md - The read-incapable filesystem walk, per-directory rollup, snapshot payload and D-12 dry-run report (wave 3, depends on 115-02 + 115-05)
+- [x] 115-07-PLAN.md - The read-incapable filesystem walk, per-directory rollup, snapshot payload and D-12 dry-run report (wave 3, depends on 115-02 + 115-05) — complete 2026-08-12, deps destructuring exactly {readdirSync, statSync, mountedSet} (line 72), content-read grep = 1, 27 tests/11 fixture suites, 4 mutation proofs confirmed RED then GREEN, see `115-07-SUMMARY.md`
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
