@@ -940,7 +940,7 @@ Plans:
 **Wave 1** *(no dependencies — four fully parallel plans, zero `files_modified` overlap, verified mechanically)*
 
 - [x] 115-01-PLAN.md - Extract `scanner.mjs`'s inline POST-with-bearer block into shared `hooks/ingestPost.mjs` so D-04's "import, don't copy" becomes possible (wave 1) — complete 2026-08-12, extraction landed (no fallback needed), see `115-01-SUMMARY.md`
-- [ ] 115-02-PLAN.md - Split classification config (D-08 + D-17) and its fail-closed two-half loader, plus the `.gitignore` rules keeping the sensitive half out of this public repo (wave 1)
+- [x] 115-02-PLAN.md - Split classification config (D-08 + D-17) and its fail-closed two-half loader, plus the `.gitignore` rules keeping the sensitive half out of this public repo (wave 1) — complete 2026-08-12, 61 local roots declared, loader mutation-proven twice, see `115-02-SUMMARY.md`
 - [ ] 115-03-PLAN.md - D-12's structural dry-run gate as pure functions, with the mandatory mutation test proving the refusal fires (wave 1)
 - [ ] 115-04-PLAN.md - Versioned `workspace*` tables and the `internalMutation` that ingests a snapshot with an inline, batch-capped prune (wave 1)
 
