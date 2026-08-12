@@ -52,10 +52,38 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
 
 - **D-04: A separate `hooks/workspaceScan.mjs`, importing shared helpers from the existing scanner
   rather than copying them.** `hooks/scanner.mjs` (338 lines) already owns the POST/bearer/dry-run
-  plumbing, but it is the **SessionStart** environment scan — wired at *user* scope for BOTH
-  launchers (`.claude/settings.json` and `.claude-alt/settings.json`, verified), so it fires on every
-  session. Folding a vault + all-repos walk into that path would violate the project's
-  fire-and-forget hook rule outright. SessionStart must remain untouched by this phase.
+  plumbing, but it is the **SessionStart** environment scan, so it fires on every session. Folding a
+  vault + all-repos walk into that path would violate the project's fire-and-forget hook rule
+  outright. SessionStart must remain untouched by this phase.
+
+  **Two mechanism corrections, measured at planning time 2026-08-12. Neither changes D-04's
+  conclusion; both change how the executor must implement it.**
+
+  1. *How SessionStart actually reaches the scanner.* `hooks/scanner.mjs` is **not** named in either
+     `settings.json` — a fixed-string grep for `scanner` in both files returns only an unrelated
+     `gsd-read-injection-scanner.js` (control: `hooks` appears 83× and 81× in those same files, so
+     the grep works). The real path is indirect: `hooks/codepulse-hook.mjs` is wired at *user* scope
+     in BOTH launchers (`.claude/settings.json:117`, `.claude-alt/settings.json:78`, among 8 event
+     bindings each), and at `hooks/codepulse-hook.mjs:142-145` it does
+     `const { runScan } = await import(scannerPath); await runScan(...)` when
+     `resolvedEventType === "SessionStart"`. The call is **awaited inline in the dispatcher**, which
+     makes D-04's constraint *stronger* than originally stated, not weaker — anything slow added
+     under `runScan` blocks the hook directly.
+
+  2. *There are no shared helpers to import yet.* `hooks/scanner.mjs` exports exactly ONE symbol —
+     `runScan` (`hooks/scanner.mjs:33`); it is the only `^export` line in the file. The
+     POST-with-bearer block is **inline inside `runScan`** at `hooks/scanner.mjs:220-241`, not
+     factored out. So "importing shared helpers rather than copying them" is not currently possible
+     as written: it requires first EXTRACTING that block into a shared module (e.g.
+     `hooks/ingestPost.mjs`) that both `scanner.mjs` and the new `workspaceScan.mjs` import.
+     Consequence the planner must handle explicitly: this phase therefore **does** edit a file on the
+     awaited SessionStart path, which D-04's own rationale makes the highest-risk edit in the phase.
+     That extraction task must be (a) strictly behavior-preserving, (b) verified by the existing
+     `hooks/__tests__/scanner.test.mjs` staying green — note its header records that `scanner.mjs`
+     had ZERO test coverage until Phase 113 added it, so those tests are the only regression net —
+     and (c) checked against the ~40ms fire-and-forget budget. Copying the block instead of
+     extracting it is the sanctioned fallback if the extraction cannot be made safely; duplicating 20
+     lines is a smaller risk than regressing every session start.
 
 - **D-05: Nightly scheduled task + an on-demand flag.** Two constraints are non-negotiable and both
   come from recorded incidents: the task is launched via `C:\Users\mandr\scripts\run-hidden.vbs`
