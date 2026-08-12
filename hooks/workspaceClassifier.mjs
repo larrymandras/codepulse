@@ -111,3 +111,170 @@ export function classifyFile({ rootId, relPath, basename }, config) {
     isSecret: !isShareable(basename, rootId, config),
   };
 }
+
+// ---------------------------------------------------------------------------------------
+// D-09: access derived from Ástríðr's compose bind mounts. Still zero I/O — these take an
+// already-parsed compose document (a YAML-parser `load()` result), never a file path.
+//
+// `access` reflects DECLARED bind-mount coverage from docker-compose.yml, NOT a live
+// reachability probe: a mount can exist while the container lacks read permission, or
+// while a Docker/WSL hiccup has left the mount empty. No live probe is in scope, and the
+// field is deliberately named `access`, not `astridrCanRead` — Phase 114 must not render
+// it as liveness.
+// ---------------------------------------------------------------------------------------
+
+const COMPOSE_TOKEN_RE = /\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}/g;
+const COMPOSE_TOKEN_ANY_RE = /\$\{[^}]*\}/;
+
+/**
+ * Replace every `${NAME:-default}` token, in place, anywhere in the string, with its
+ * literal default — never a live environment variable, and never a real dotenv file under
+ * astridr-repo (this project's env-file-guard hook blocks that read anyway; this module
+ * doesn't even try). A token can
+ * be a prefix of the source, not the whole source (`${FORGE_REPO_PATH:-C:\...}\.claude\
+ * skills`), so this is a global in-place replace, not a whole-string check. If a `${...}`
+ * token WITHOUT a `:-default` remains afterward, the source is unresolvable: return null.
+ */
+export function substituteComposeDefaults(raw) {
+  const substituted = String(raw).replace(COMPOSE_TOKEN_RE, (_match, _name, def) => def);
+  if (COMPOSE_TOKEN_ANY_RE.test(substituted)) return null;
+  return substituted;
+}
+
+// Resolve a `./`/`../` relative path against a base by plain string segment arithmetic —
+// deliberately not `path.resolve`, to keep this pure and platform-stable. Preserves a
+// leading drive letter (`C:`) when the base has one.
+function resolveAgainstBase(relPath, base) {
+  const normBase = normalizeRel(base);
+  const isDriveAbs = /^[A-Za-z]:(\/|$)/.test(normBase);
+  const baseSegs = normBase.split("/").filter(Boolean);
+  const relSegs = relPath.split("/").filter((s) => s !== "" && s !== ".");
+
+  const segs = [...baseSegs];
+  for (const seg of relSegs) {
+    if (seg === "..") segs.pop();
+    else segs.push(seg);
+  }
+
+  return isDriveAbs ? `${segs[0]}/${segs.slice(1).join("/")}` : `/${segs.join("/")}`;
+}
+
+/**
+ * Normalize one mount SOURCE to an absolute forward-slash host path, or null if it is
+ * not a host path at all (a named volume or a container-internal posix path).
+ */
+export function resolveComposeSource(rawSource, opts = {}) {
+  const { composeDir = "", homeDir = "", platform } = opts;
+
+  const substituted = substituteComposeDefaults(rawSource);
+  if (substituted === null) return null;
+
+  let s = normalizeRel(substituted);
+  if (!s) return null;
+
+  if (/^[A-Za-z]:\//.test(s)) {
+    // Windows drive-absolute — use as-is.
+  } else if (s === "~" || s.startsWith("~/")) {
+    // `~` expansion — this is what makes `.claude-alt` reachable; it appears only as
+    // cli-gateway's `~/.claude-alt`.
+    const home = normalizeRel(homeDir);
+    s = s === "~" ? home : home + s.slice(1);
+  } else if (s === "." || s === ".." || s.startsWith("./") || s.startsWith("../")) {
+    s = resolveAgainstBase(s, composeDir);
+  } else if (s.startsWith("/")) {
+    // Leading `/` and NOT drive-absolute -> a container-internal posix path
+    // (/var/run/docker.sock). Not a host path.
+    return null;
+  } else {
+    // No recognized separator prefix at all -> a named volume (astridr-data,
+    // supabase-db-data). Not a host path.
+    return null;
+  }
+
+  s = s.replace(/\/+$/, "");
+  return lowerIfWin32(s, platform);
+}
+
+/**
+ * One `volumes:` list element -> resolved host source, or null.
+ * Object form (`{ type, source, target }`): only `type === "bind"` carries a host source;
+ * the live compose file has zero object-form entries (30 of 30 are strings), so this
+ * branch is future-proofing.
+ * String form `src:dst[:mode]`: substitute defaults FIRST (so a drive-letter colon inside
+ * a substituted default is not mistaken for a `src:dst` separator), THEN split on `:`.
+ * Drive-letter handling: a single-character first segment matching [A-Za-z] means the
+ * source is `letter:secondSegment` (`C:\Users\...`), not the bare letter.
+ */
+export function parseComposeVolumeEntry(entry, opts) {
+  if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+    if (entry.type === "bind" && typeof entry.source === "string") {
+      return resolveComposeSource(entry.source, opts);
+    }
+    return null;
+  }
+
+  if (typeof entry !== "string") return null;
+
+  const substituted = substituteComposeDefaults(entry);
+  if (substituted === null) return null;
+
+  const parts = substituted.split(":");
+  const source =
+    parts.length > 1 && parts[0].length === 1 && /^[A-Za-z]$/.test(parts[0])
+      ? `${parts[0]}:${parts[1]}`
+      : parts[0];
+
+  return resolveComposeSource(source, opts);
+}
+
+/**
+ * Union every service's bind mounts from a parsed compose document into one Set of
+ * resolved host paths. Does NOT hardcode any service name — a named subset would miss
+ * `.claude-alt` and `.claude.json`, which appear only under `cli-gateway`, not
+ * `astridr`.
+ *
+ * `ok` is false when `parsedCompose` is null/malformed OR when the resulting set is
+ * EMPTY. An empty set from a file that plainly has mounts is a silent parse failure
+ * whose exact signature is every directory reporting `access: local-only` — treating
+ * empty as `ok: false` is what makes that visible via `accessDerivationOk` on the
+ * snapshot meta, instead of silent.
+ */
+export function deriveMountedPaths(parsedCompose, opts) {
+  if (
+    !parsedCompose ||
+    typeof parsedCompose !== "object" ||
+    !parsedCompose.services ||
+    typeof parsedCompose.services !== "object"
+  ) {
+    return { mounted: new Set(), ok: false };
+  }
+
+  const mounted = new Set();
+  for (const service of Object.values(parsedCompose.services)) {
+    const volumes = service && Array.isArray(service.volumes) ? service.volumes : [];
+    for (const entry of volumes) {
+      const resolved = parseComposeVolumeEntry(entry, opts);
+      if (resolved) mounted.add(resolved);
+    }
+  }
+
+  return { mounted, ok: mounted.size > 0 };
+}
+
+/**
+ * Whether `absDirPath` is under one of `mountedSet`'s resolved mount roots.
+ * Fails CLOSED: an empty/absent `mountedSet` returns "local-only" for everything.
+ * Compares with a trailing-separator guard so a sibling-prefix directory
+ * (`codepulse-old` next to a `codepulse` mount) is never mistaken for a descendant.
+ */
+export function resolveAccess(absDirPath, mountedSet, platform) {
+  if (!mountedSet || !(mountedSet instanceof Set) || mountedSet.size === 0) {
+    return "local-only";
+  }
+
+  const dir = lowerIfWin32(normalizeRel(absDirPath), platform);
+  for (const mount of mountedSet) {
+    if (dir === mount || dir.startsWith(`${mount}/`)) return "astridr-reachable";
+  }
+  return "local-only";
+}
