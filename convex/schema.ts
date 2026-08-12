@@ -2171,6 +2171,63 @@ export default defineSchema({
     .index("by_timestamp", ["timestamp"]),
 
   // ============================================================
+  // GOVERNOR DECISIONS (Phase 112, D-04) — governor_decision audit
+  // trail, append-only.
+  // ============================================================
+
+  // astridr's governor emits one `governor_decision` event per decision
+  // (deliver/hold), carrying `emitter`, `priority`, `spoke`, and an
+  // optional `held_reason`. Measured 2026-08-12: 83.3 rows/day (1,168 rows
+  // in the 14-day window), 13 distinct emitters (`cron:task_delivery`,
+  // `startup_test`, `cron_failure`, `focus_exit_digest`,
+  // `watch_pulse_duplicate_alert`, every `cron:<taskname>`, etc.) — most
+  // absent from the contract's illustrative list, so `emitter`/`priority`
+  // are kept v.string(), never a Literal union, matching this schema's
+  // defensive-boundary convention (activeEngineSnapshots/controlVerbSwaps
+  // above). `timestamp` is epoch SECONDS, not milliseconds. No `profileId`
+  // exists on this kind — do not add a by_profileId/by_scope index with
+  // nothing to key on.
+  governorDecisions: defineTable({
+    emitter: v.string(),
+    priority: v.string(),
+    spoke: v.boolean(),
+    heldReason: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // MESSAGE ROUTES (Phase 112, D-13) — message_routed audit trail,
+  // append-only. Routed but not yet surfaced in the UI this phase.
+  // ============================================================
+
+  // astridr emits one `message_routed` event per routed message, carrying
+  // `channel`, `profile`, `sender`, `session_id`. Measured 2026-08-12:
+  // 0.7-1.2 rows/day (10 rows in the 14-day window) — low-volume, not a
+  // firehose, but bounded pre-emptively per D-06 anyway. `sender` and
+  // `sessionId` are OPTIONAL even though contract section 2.16 lists them
+  // as required: a required field arriving as an explicit JSON `null`
+  // makes the resolver refuse the whole event and the row is dropped
+  // silently — the exact TELE-02 defect (Phase 108, control_verb_swap,
+  // zero rows ever landed) this phase exists to avoid repeating. Storing
+  // a partial row is strictly better than losing it silently. `channel`
+  // and `profile` stay required. `timestamp` is epoch SECONDS, not
+  // milliseconds. by_profile is currently UNCONSUMED — no UI reads it
+  // this phase — kept in place because `profile` is a real field on this
+  // kind (unlike governor_decision) and a future per-profile inbound view
+  // is the obvious consumer, matching controlVerbSwaps' own precedent for
+  // a deliberately-unconsumed index (schema.ts:2160-2171 above).
+  messageRoutes: defineTable({
+    channel: v.string(),
+    profile: v.string(),
+    sender: v.optional(v.string()),
+    sessionId: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_profile", ["profile", "timestamp"]),
+
+  // ============================================================
   // GALDR PROMPT LIBRARY (Phase 116, Seiðr suite)
   // ============================================================
 
