@@ -73,8 +73,12 @@ already in use across the surfaces this component imitates (`DeliveryHistory.tsx
 | 3xl | 64px | Not used by this component |
 
 Exceptions: `gap-1.5` / `px-1.5 py-0.5` (6px) — an already-established non-4px convention for
-compact badge/icon-label spacing, reused unchanged from `SwapHistoryList.tsx:62,96` and
-`InboxCard.tsx:108,142`. Not a new exception introduced by this phase.
+compact badge/icon-label spacing, reused unchanged from `SwapHistoryList.tsx:62` (`gap-1.5`) and
+`InboxCard.tsx:108,142` (`px-1.5 py-0.5`, `RiskBadge`/`ProfileBadge`). Not a new exception
+introduced by this phase. (Correction: `SwapHistoryList.tsx:96`'s own `Badge` actually uses
+`px-1 py-0`, a *different*, smaller override on that one badge — not evidence for this 6px
+exception. Dropped as a citation for this row; the 6px convention stands on the `InboxCard.tsx`
+citations alone.)
 
 ---
 
@@ -83,7 +87,7 @@ compact badge/icon-label spacing, reused unchanged from `SwapHistoryList.tsx:62,
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body (table cells, row content) | 14px (`text-sm`) | 400 regular | 1.5 (default leading) |
-| Label (timestamps, badges, captions, truncation note) | 12px (`text-xs`) | 400–500 | 1.4 |
+| Label (timestamps, badges, captions, truncation note) | 12px (`text-xs`) | 400 regular | 1.4 |
 | Heading (section eyebrow) | 16px (`text-base`), uppercase, tracking-wide | 600 semibold | 1.2 (`SectionHeader.tsx:12`) |
 | Display | not applicable | — | — |
 
@@ -92,6 +96,21 @@ metric widget, so there is no hero-number treatment to spec. `Table`'s own defau
 (`table.tsx:13`) is `text-base`; this component overrides table body/meta cells down to
 `text-sm`/`text-xs` the same way `DeliveryHistory.tsx:82-89` does, keeping the un-overridden
 `TableHead` at its component default (`text-base`, `font-medium`, `table.tsx:71`).
+
+**Weight cap (exactly 2, not 3):** `badge.tsx:8` bakes `font-medium` (500) into
+`badgeVariants`'s base class, applied to every variant including `outline` (`badge.tsx:17-18`,
+which adds no weight override) — so the Priority `Badge` this spec calls for would silently
+inherit a *third* weight (500) alongside body/label 400 and heading 600 unless overridden.
+`SwapHistoryList.tsx:96` confirms the failure mode: its own `Badge` override
+(`className="text-xs uppercase px-1 py-0"`) changes size and padding but never touches weight, so
+500 survives there. Fix: the Priority `Badge` in this component MUST carry an explicit
+`font-normal` override (e.g. `<Badge variant="outline" className="font-normal">`) —
+`badge.tsx:42`'s `cn(badgeVariants({ variant }), className)` applies the passed `className`
+*after* the variant class, and this project's `cn()` is `twMerge(clsx(inputs))`
+(`src/lib/utils.ts:4-6`), which resolves same-group Tailwind conflicts in favor of the
+later-applied class — so `font-normal` genuinely wins here, it is not a class that loses the
+specificity fight. With that override the component totals exactly 2 weights: 400
+(body/label/Priority badge) and 600 (heading).
 
 ---
 
@@ -108,13 +127,23 @@ property each role resolves to instead.
 | Accent (10%) | `var(--status-ok)` | Reserved for: the "Spoke" outcome icon only (see below) |
 | Destructive | `var(--destructive)` | Not used — this surface has no destructive action |
 
+**Focal point:** the Status icon column is the table's visual anchor. It is the *only*
+accent-colored element in the entire surface (`--status-ok` on `Check`, held rows deliberately
+muted — see below), every column's font weight is otherwise uniform (400, per the Typography
+cap above), and it is the leftmost column, so it is both the first thing the eye lands on and the
+only thing carrying color. This is a deliberate choice, not an incidental one: an operator
+scanning this table needs "did it speak or not" answered before any other field, and putting the
+one spot of color there makes that scan a single glance rather than a row-by-row read.
+
 Accent reserved for: **only** the `Check` icon on a `spoke:true` row (mirrors
 `SwapHistoryList.tsx:90`'s `text-(--status-ok)` success icon). Explicitly NOT used for:
 - **Priority** (`money`/`high`/`normal`/`low`) — rendered as plain text or a neutral `outline`
   Badge, never color-coded by level. Rationale: `InboxCard.tsx:122-126`'s held-item rule states a
   suppressed item's stripe is "never upgraded even for an underlying high-priority event" — the
   same principle applies here in reverse: a `held` decision must never visually read as an alarm
-  just because its `priority` was `high` or `money`. Color-coding priority would fight that rule.
+  just because its `priority` was `high` or `money`. Color-coding priority would fight that rule
+  — and would also compete with the Status column for the eye's attention, undermining the single
+  focal point above.
 - **`held` (spoke:false) rows** — rendered with a muted/neutral icon (`EyeOff` or `Ban`,
   `text-muted-foreground`), NOT `--status-warn` or `--status-error`. A held decision is a working-
   as-designed suppression (`held_reason: "focus" | "quiet-hours"`, contract §2.40), not a failure
@@ -144,14 +173,17 @@ read-only decision table.
   already holding the fleet-wide decision/delivery history family (`DeliveryHistory`,
   `NotificationPreferences`).
 - **Structure:** `SectionHeader` (title: "Governor Decisions") + shadcn `Table` — 5 columns:
-  Status (icon), Emitter, Priority, Reason, When. Not `Tabs` (unlike `DeliveryHistory`, which
-  tabs Email/PagerDuty) — there is exactly one decision stream, no sub-source split.
+  Status (icon, the focal point — see Color section), Emitter, Priority, Reason, When. Not
+  `Tabs` (unlike `DeliveryHistory`, which tabs Email/PagerDuty) — there is exactly one decision
+  stream, no sub-source split.
 - **Row shape** (from contract §2.40's 4 fields, all required except `held_reason`):
   - Status: `Check` icon (`text-(--status-ok)`) + "Spoke" label when `spoke:true`; `EyeOff` icon
     (`text-muted-foreground`) + "Held" label when `spoke:false`.
   - Emitter: plain text, e.g. `reminder_nudge`, `watch_pulse` (§2.40's enumerated callers).
-  - Priority: plain text or neutral outline `Badge`, one of `money`/`high`/`normal`/`low` —
-    never color-coded (see Color section above).
+  - Priority: plain text or a neutral `outline` `Badge` — `<Badge variant="outline"
+    className="font-normal">` (the `font-normal` override is REQUIRED, see Typography's weight
+    cap above; without it this Badge silently inherits `font-medium`/500 from `badge.tsx:8` and
+    breaks the 2-weight cap) — one of `money`/`high`/`normal`/`low`, never color-coded.
   - Reason: `held_reason` value (`"focus"` / `"quiet-hours"`) formatted as prose, same convention
     as `InboxCard.tsx:170-174`'s `heldReasonCopy` (e.g. "held during focus mode"); an em dash
     (`—`) when `spoke:true` (no reason applies).
