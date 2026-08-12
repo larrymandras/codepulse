@@ -908,7 +908,7 @@ Plans:
 
 **Goal:** [To be planned]
 **Requirements**: TBD
-**Depends on:** Phase 114
+**Depends on:** Nothing. *(Corrected 2026-08-12: this line previously read "Phase 114", which is the dependency **inverted**. The approved design's own dependency graph — `Mandras/02-projects/agentic-os-second-brain.md:48` — states "C2 → enables C1's workspace lens", where C2 is this phase and C1 is Phase 114. The scanner produces the data the map view renders, so 115 comes first. The original line was a sequential default from `gsd-phase add`, not a real constraint. See `115-CONTEXT.md` § Phase Boundary.)*
 **Plans:** 0 plans
 
 Plans:
