@@ -178,6 +178,7 @@ import type * as warRoomIngest from "../warRoomIngest.js";
 import type * as webhookDelivery from "../webhookDelivery.js";
 import type * as wizardDrafts from "../wizardDrafts.js";
 import type * as workspace from "../workspace.js";
+import type * as workspaceHttp from "../workspaceHttp.js";
 import type * as worktreeEvents from "../worktreeEvents.js";
 import type * as worktrees from "../worktrees.js";
 import type * as wsl2 from "../wsl2.js";
@@ -359,6 +360,7 @@ declare const fullApi: ApiFromModules<{
   webhookDelivery: typeof webhookDelivery;
   wizardDrafts: typeof wizardDrafts;
   workspace: typeof workspace;
+  workspaceHttp: typeof workspaceHttp;
   worktreeEvents: typeof worktreeEvents;
   worktrees: typeof worktrees;
   wsl2: typeof wsl2;
