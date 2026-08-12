@@ -2353,4 +2353,90 @@ export default defineSchema({
   })
     .index("by_pipelineSlug", ["pipelineSlug"])
     .index("by_startedAt", ["startedAt"]),
+
+  // ============================================================
+  // WORKSPACE SCANNER (Phase 115, D-10/D-11/D-13)
+  // ============================================================
+  //
+  // Row-based storage, one row per DIRECTORY not per file (D-13): 21,029 files
+  // were measured across just .claude/.claude-alt/the vault at planning time,
+  // and graphSnapshots' own header comment above records the same 8,192-element
+  // array-field / ~1 MiB document limits that forced row-based storage there —
+  // a per-file array field would blow both limits on this project's real tree.
+  //
+  // Versioned pointer-last contract (D-10), copied from graphSnapshots.ts
+  // (:84-155): entity rows are inserted for a new version FIRST, and the meta
+  // doc's activeVersion pointer is patched LAST, so a mid-scan crash can never
+  // make a partial version visible to a reader.
+  //
+  // NOT a reuse of graphSnapshotNodes: that table's fixed fields (nodeId,
+  // label, type, community, source) have nowhere for department/access/size/
+  // mtime/withheldCount, so reuse would mean a lossy overload of a contract
+  // Phase 83-87's /graphs hub already depends on.
+  //
+  // Growth is bounded by an INLINE, batch-capped prune inside the same ingest
+  // mutation (D-11) — never a cron. graphSnapshots' own cron-based sweep
+  // (sweepGraphSnapshotVersions) is DISABLED at crons.ts:145-151 because its
+  // candidate-selection read times out on this self-hosted backend. That is
+  // why workspaceSnapshots.storedVersions exists: it lets the prune discover
+  // which versions exist from the meta doc alone, with no scan over entity
+  // rows at all (see convex/workspace.ts).
+  //
+  // Side-channel rule (Pitfall 1 / D-03): fileCount/totalSize count VISIBLE
+  // files only. withheldCount is deliberately COUNT-ONLY — there is no
+  // byte-total field for withheld files, because a byte total is a far
+  // higher-resolution side channel onto a withheld (secret-classified) file
+  // than a plain count.
+
+  // One meta row per snapshotId. Holds the activeVersion pointer, coverage/
+  // completeness flags, aggregate totals and inline-prune bookkeeping.
+  workspaceSnapshots: defineTable({
+    snapshotId:      v.string(),          // fixed "larry-workspace" (config/workspace.json)
+    activeVersion:   v.number(),          // monotonic int — incremented on each ingest, never reused
+    storedVersions:  v.array(v.number()), // versions whose workspaceDirs rows are still present;
+                                           // bounded by WORKSPACE_KEEP_VERSIONS + 1 (~4 elements) —
+                                           // this is the read the inline prune uses INSTEAD OF a scan
+                                           // over workspaceDirs, see convex/workspace.ts.
+    generatedAt:     v.float64(),         // epoch SECONDS — host scan time (graphSnapshots.ts convention)
+    receivedAt:      v.float64(),         // epoch SECONDS — Convex ingest time
+    rootCount:       v.number(),
+    coveredRoots:    v.array(v.string()), // root ids whose walk actually, successfully enumerated
+    scannedRootsComplete: v.boolean(),    // false when any declared root failed to enumerate —
+                                           // paired with coveredRoots per hooks/skillScan.mjs's
+                                           // coverage-honest convention: a partial walk must be
+                                           // visible, never silently rendered as a complete map.
+    unclassifiedRootIds: v.array(v.string()), // D-14/D-15/D-16 — small, bounded by root count
+    accessDerivationOk: v.boolean(),      // false when the compose parse failed and every directory
+                                           // fell back to local-only (D-09/Pitfall 4)
+    localConfigStatus: v.string(),        // "merged" | "absent" | "version-mismatch" (D-17 fail-closed
+                                           // loader status from hooks/workspaceConfig.mjs)
+    totalDirs:          v.number(),
+    totalFiles:          v.number(),
+    totalWithheldFiles:  v.number(),
+    totalBytes:          v.float64(),
+    dryRunReportHash: v.string(),         // D-12 — the approved report hash this ingest was gated on
+    prunedVersion:   v.optional(v.number()), // the version the last ingest's inline prune targeted;
+                                              // absent on the very first ingest, when there is nothing
+                                              // to prune (schema.ts:1913's optional-needs-a-reason precedent)
+    pruneIncomplete: v.boolean(),         // true when the prune hit WORKSPACE_DELETE_CAP and left rows
+                                           // behind for the next ingest to finish
+  }).index("by_snapshotId", ["snapshotId"]),
+
+  // Entity rows for directories, keyed by (snapshotId, version). One row per
+  // DIRECTORY (D-13) — never a per-file array field on this table.
+  workspaceDirs: defineTable({
+    snapshotId: v.string(),
+    version:    v.number(),
+    rootId:     v.string(),   // which declared root this directory belongs to (D-06)
+    dirPath:    v.string(),   // forward-slash relative to the root; "" means the root itself
+    department: v.string(),   // "Work" | "Consulting" | "Personal" | "Unclassified" (D-07/D-14)
+    access:     v.string(),   // "astridr-reachable" | "local-only" (D-09) — reflects DECLARED
+                               // bind-mount coverage, not a live reachability probe (Pitfall 2)
+    fileCount:  v.number(),   // VISIBLE files directly in this directory only — never withheld
+                               // files, never subdirectories' files
+    totalSize:  v.float64(),  // bytes of VISIBLE files only (Pitfall 1)
+    latestMtime: v.float64(), // epoch seconds — max over visible files
+    withheldCount: v.number(), // D-03 — secret-classified files whose paths are never transmitted;
+                                // deliberately count-only, see the header note above
+  }).index("by_snapshot_version", ["snapshotId", "version"]),
 });
