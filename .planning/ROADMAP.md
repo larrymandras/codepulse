@@ -856,7 +856,7 @@ Plans:
 
 **Wave 3** *(blocked on 112-03; the two plans below run in parallel - no file overlap)*
 
-- [ ] 112-04-PLAN.md - ingest routing: resolveGovernorDecisionEvent / resolveMessageRoutedEvent + both dispatch cases, with held_reason null-normalization from the first commit and three-wire-shape tests (TELE-03; D-04, D-05, D-13, D-14)
+- [x] 112-04-PLAN.md - ingest routing: resolveGovernorDecisionEvent / resolveMessageRoutedEvent + both dispatch cases, with held_reason null-normalization from the first commit and three-wire-shape tests (TELE-03; D-04, D-05, D-13, D-14) — complete 2026-08-12, commits `0e4a3150`/`60ea4727`/`ba64bcc3`, see `112-04-SUMMARY.md`
 - [ ] 112-05-PLAN.md - the approved UI surface: GovernorDecisionLog on the Settings notifications tab with honest loading/empty/error states (TELE-03; D-04, D-13)
 
 **Wave 4** *(blocked on 112-04)*

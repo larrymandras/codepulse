@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Phase 112 plan 112-03 complete (governorDecisions.ts + messageRoutes.ts internalMutation record + capped listRecent, CR-01 mutation-proven, api.d.ts regenerated, TELE-03); 4 plans remain across waves 3-5; Phase 115 context gathered (parallel sessions)
-last_updated: "2026-08-12T14:41:14.000Z"
-last_activity: 2026-08-12 -- Phase 112 plan 112-03 executed (governorDecisions/messageRoutes domain modules, internalMutation record + bounded query listRecent, 24 new guard tests, CR-01 mutation-proven RED/GREEN, convex/_generated/api.d.ts regenerated via bare `npx convex codegen`, no deploy; commits 4649ec93/dd64983d/947908fa/35e4493c)
+stopped_at: Phase 112 plan 112-04 complete (governor_decision + message_routed routed into runtimeIngest dispatch, D-04/D-05/D-13/D-14, held_reason null-normalization mutation-proven, 14 new tests); 3 plans remain across waves 4-5; Phase 115 context gathered (parallel sessions)
+last_updated: "2026-08-12T15:00:00.000Z"
+last_activity: 2026-08-12 -- Phase 112 plan 112-04 executed (resolveGovernorDecisionEvent/resolveMessageRoutedEvent + case "governor_decision"/case "message_routed" in runtimeIngest.ts, forwarding to internal.governorDecisions.record/internal.messageRoutes.record, held_reason D-14 null-normalization mutation-proven RED/GREEN, 14 new tests (83->97), 5-site repo-wide defect-class sweep logged to deferred-items.md, no deploy; commits 0e4a3150/60ea4727/ba64bcc3)
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 49
-  completed_plans: 45
+  completed_plans: 46
   percent: 67
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 112 (telemetry coverage) in progress — 3/7 plans complete; 114, 115, 118 not started
+**Current focus:** Phase 112 (telemetry coverage) in progress — 4/7 plans complete; 114, 115, 118 not started
 
 **Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
@@ -49,10 +49,12 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 112 (telemetry-coverage-closure) — IN PROGRESS (3/7 plans)
-Plan: 3 of 7 (112-01, 112-02, 112-03 complete)
-Status: Phase 112 wave 1 plans 112-01 (cross-repo, astridr-repo) and 112-02 (schema + retention, this repo) executed; wave 2 plan 112-03 (domain modules: governorDecisions.ts + messageRoutes.ts) executed. 4 plans remain across waves 3-5. Phase 115 (workspace scanner) context gathered in a parallel session, not yet planned into plans. Phase 113 complete (8/8).
-Last activity: 2026-08-12 -- Plan 112-03 executed (governorDecisions/messageRoutes internalMutation record + capped listRecent, 24 new guard tests, CR-01 mutation-proven RED/GREEN, api.d.ts regenerated, TELE-03, commits 4649ec93/dd64983d/947908fa/35e4493c)
+Phase: 112 (telemetry-coverage-closure) — IN PROGRESS (4/7 plans)
+Plan: 4 of 7 (112-01, 112-02, 112-03, 112-04 complete)
+Status: Phase 112 wave 1 plans 112-01 (cross-repo, astridr-repo) and 112-02 (schema + retention, this repo) executed; wave 2 plan 112-03 (domain modules: governorDecisions.ts + messageRoutes.ts) executed; wave 3 plan 112-04 (ingest routing: governor_decision + message_routed dispatch cases, D-14 null-normalization) executed. 3 plans remain across waves 4-5. Phase 115 (workspace scanner) context gathered in a parallel session, not yet planned into plans. Phase 113 complete (8/8).
+Last activity: 2026-08-12 -- Plan 112-04 executed (resolveGovernorDecisionEvent/resolveMessageRoutedEvent + case "governor_decision"/case "message_routed" routed into runtimeIngest.ts dispatch, forwarding to internal.governorDecisions.record/internal.messageRoutes.record, held_reason D-14 null-normalization mutation-proven RED/GREEN, 14 new tests (83->97), no deploy, commits 0e4a3150/60ea4727/ba64bcc3)
+
+**Plan 112-04 complete (2026-08-12).** Wired `governor_decision` (D-04) and `message_routed` (D-05/D-13) into the `runtimeIngest` dispatch. `resolveGovernorDecisionEvent` requires non-empty-string `emitter`/`priority` and a real boolean `spoke` (checked via `typeof`, never truthiness), and normalizes `held_reason` through `isOptionalString`/`normalizeOptional` before forwarding to `internal.governorDecisions.record` — the D-14 fix, load-bearing because 424 of 646 live held rows carry `held_reason` as an explicit JSON `null`, which `v.optional(v.string())` rejects outright. `resolveMessageRoutedEvent` requires `channel`/`profile` and applies the same null carve-out to `sender`/`session_id` before forwarding to `internal.messageRoutes.record`; routed because it was measured low-volume (10 rows/14-day window) per D-05's resolved gate, deliberately without a UI surface this phase (D-13) — no `src/` file was touched. Both resolver refusals increment `skippedCount` and log a named warning. `runtimeIngest.test.ts` grew from 83 to 97 tests: three-wire-shape coverage for `held_reason` (explicit string / explicit null-majority / key-absent) plus wrong-typed-optional and required-field controls (including a `spoke: "true"` string control, which a truthiness test would have wrongly accepted), an equivalent smaller block for `message_routed`, and static case-wiring source checks for both. The D-14 null-normalization was mutation-proven: removing `normalizeOptional(` from `held_reason`'s return line made exactly the explicit-null test fail (1 of 97, 96 passed, every other assertion on the same resolver stayed green), restored byte-identical, re-observed 97/97 green. A repo-wide sweep for the same defect class (any `v.optional(v.string())`/`v.optional(v.float64())` field forwarded from `runtimeIngest.ts` without the null carve-out) found 5 further unguarded sites in this same file (`kg_benchmark`'s `workflowRunUrl`, `task_quality`'s `idempotencyKey`, `parseToolPolicyEvent`'s `tool`/`sessionId`/`agentId`/`taskCategory`/`round`/`field`, and both tool-execution resolvers' `durationMs`/`traceId`/`errorMessage`) — none has a confirmed live-null incident behind it, so they were logged to `deferred-items.md`, not fixed (out of this plan's D-04/D-13/D-14 scope). `npx tsc --noEmit` clean; full `convex/` suite (79 files, 1490 tests, 1476 baseline + 14 new) passed with no regression. No deploy was run (reserved for 112-07, operator-gated). Each of the three task commits was verified via `git show --stat HEAD` to touch exactly its intended file — no foreign files swept in from the concurrent Phase 115 session. See `112-04-SUMMARY.md`.
 
 **Plan 112-03 complete (2026-08-12).** Built the Convex-side write/read modules for both Phase 112 tables. `governorDecisions.ts` exports `record` (`internalMutation`, append-only, args match `schema.ts` field-for-field) and `listRecent` (`query`, bounded `.take(GOVERNOR_DECISION_CAP)` over `by_timestamp`), with `GOVERNOR_DECISION_CAP = 50` in a sibling dependency-free `governorDecisionsFilters.ts` (zero imports, mirrors the `controlVerbSwapsFilters.ts` 108-06 client-bundle-defect precedent) so plan 05's component can import the cap without pulling in the Convex server runtime. `messageRoutes.ts` has the same `record`/`listRecent` shape but declares `MESSAGE_ROUTE_CAP = 50` in-file (no filters split — no browser consumer this phase, D-13 deliberately unsurfaced); `listRecent` is kept as plan 07's live post-deploy probe target, not dead code. Both `record` mutations are `internalMutation`, never `mutation` (CR-01), closing the client-callable `api.` namespace per this repo's SEED-008 standing rule. 24 new guard tests (12+12) cover CR-01 (with a raw-file vacuity control), the bounded-read shape, and live-validator args assertions read via `record.exportArgs()`. The CR-01 guard was mutation-proven live: `record` was temporarily downgraded to a public `mutation()`, observed RED (exactly the 2 CR-01 assertions failed, 10/12 passed), restored byte-identical (`git diff --stat` empty), re-observed GREEN (24/24). `convex/_generated/api.d.ts` regenerated via bare `npx convex codegen` (`--env-file` rejected as an unknown option on this subcommand, the plan's documented fallback fired) — +6 lines, alphabetically correct, naming all three new modules; `api.js` needed no edit (uses `anyApi`). `npx tsc --noEmit` clean; full `convex/` suite (79 files, 1476 tests, 1452 baseline + 24 new) passed with no regression. No ingest wiring, no UI — explicit scope boundary per the plan, deferred to 112-04/05. No deploy was run (reserved for 112-07, operator-gated). Each of the four commits was verified via `git show --stat HEAD` to touch exactly its intended file(s) — no foreign files swept in from the concurrent Phase 115 session (6 untracked `115-0N-PLAN.md` files present throughout, correctly left untouched). See `112-03-SUMMARY.md`.
 
@@ -944,8 +946,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-12T14:41:14.000Z
-Stopped at: Phase 112 plan 112-03 complete (governorDecisions.ts + messageRoutes.ts internalMutation record + capped listRecent, CR-01 mutation-proven, api.d.ts regenerated, TELE-03); 4 plans remain across waves 3-5; Phase 115 context gathered (parallel sessions)
+Last session: 2026-08-12T15:00:00.000Z
+Stopped at: Phase 112 plan 112-04 complete (governor_decision + message_routed routed into runtimeIngest dispatch, D-04/D-05/D-13/D-14, held_reason null-normalization mutation-proven, 14 new tests, TELE-03); 3 plans remain across waves 4-5; Phase 115 context gathered (parallel sessions)
+
+--- Prior (superseded by the above) --- Completed 112-03-PLAN.md (governorDecisions.ts + messageRoutes.ts internalMutation record + capped listRecent, CR-01 mutation-proven, api.d.ts regenerated, TELE-03, commits 4649ec93/dd64983d/947908fa/35e4493c)
 
 --- Prior (superseded by the above) --- Completed 112-02-PLAN.md (governorDecisions + messageRoutes schema tables, RETENTION_DAYS bounds, TELE-03, commits 65a4870e/bb3b4099/4314916a)
 
