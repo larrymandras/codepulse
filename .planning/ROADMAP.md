@@ -858,6 +858,8 @@ Plans:
   2. **CLOSED GUARDED (2026-08-12) — the original bar was not met and was deliberately amended, not quietly satisfied.** The intermittent `Chat.test.tsx` brain-pill failure did not reproduce across **80 clean full-suite iterations** (tiered 30 + 50, the budget Larry set), so no captured failure ever existed to diagnose from and the "fixed from a captured root cause" criterion as originally written is **unmet**. Delivered instead: query-site instrumentation that records the match count, each match's `textContent`, and the body HTML length, so the next occurrence is self-diagnosing. The `waitFor` half of the criterion **was** met and is asserted mechanically — `src/pages/Chat.test.tsx` is untouched, its `waitFor` count is unchanged at 23, and it contains no added `{ timeout:`. The defect remains latent. See `phases/113-debt-sweep/113-FLAKE-EVIDENCE.md`.
   3. `convex-selfhost/`'s compose `logging:` block and restart scripts are committed to version control and reproducible from a fresh checkout.
 
+**Carried forward from this phase:** `SEED-009` — `src/App.test.tsx`'s `/memory` lazy-route timeout, caught once in 86 full-suite soak iterations and **not** DEBT-06 (different test, different file). Cause unidentified; both leading hypotheses refuted by evidence rather than left open. See `seeds/SEED-009-app-lazy-route-timeout.md`.
+
 **Plans**: 8 plans in 3 waves
 
 Plans:

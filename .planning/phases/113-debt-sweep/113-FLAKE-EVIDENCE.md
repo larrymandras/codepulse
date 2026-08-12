@@ -169,8 +169,27 @@ Recorded here as a distinct, separately-tracked observation, not folded into DEB
   iterations is not enough to characterize a mechanism, and no further investigation was performed
   here. Do not manufacture a cause. It is fair to say only: seen once, unattributed, and distinct
   from DEBT-06 (a different test, in a different file that appears in no phase-113 document).
-- **Not a candidate for DEBT-06's disposition.** Flagged for separate future triage (a candidate
-  follow-up phase item), not fixed or investigated further here.
+- **Not a candidate for DEBT-06's disposition.** Flagged for separate future triage, not fixed here.
+
+**UPDATE 2026-08-12 — promoted out of this file to `.planning/seeds/SEED-009-app-lazy-route-timeout.md`.**
+Leaving it recorded only here was wrong: a finding buried in another requirement's evidence file has
+no owner and no trigger. It now has both. Two things were also established after this section was
+first written, and they sharpen it materially:
+
+- **It is a hang, not slowness.** Measured in isolation on 2026-08-12
+  (`npx vitest run src/App.test.tsx --reporter=verbose`), the `/memory` case takes **433ms** against
+  its 25,000ms budget — a **58x margin** — and is not even the slowest case in the file (`/` is, at
+  922ms). A case with 58x headroom does not fail by drifting over its bound; 433ms → >25,000ms is a
+  58x blowup, i.e. something stopped it progressing.
+- **The shared-fixture hypothesis is refuted.** Leaked fake timers starving `findByRole`'s polling
+  was the obvious candidate under this project's "intermittent = shared-fixture corruption until
+  proven otherwise" rule. It is impossible here: `vitest.config.ts` sets no `isolate` override, so
+  vitest's default per-file environment teardown applies, and the only file with asymmetric timer
+  counts (`src/hooks/useIntakeFeed.test.tsx`) restores via a file-level
+  `afterEach(() => vi.useRealTimers())` at `:47-49`.
+
+No mechanism is asserted. The residual worker-starvation suspicion remains a guess, not a finding —
+the 93s passing iteration above is precisely why it cannot be assumed.
 
 ## Machine quietness check (before Run 2)
 

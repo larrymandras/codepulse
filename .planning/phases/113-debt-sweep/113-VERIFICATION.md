@@ -108,9 +108,15 @@ its shipped instrumentation are recorded in both `REQUIREMENTS.md` and the ROADM
 ## Carried forward
 
 1. **`src/App.test.tsx` `/memory` lazy-route timeout — UNATTRIBUTED.** Seen once in 86 full-suite
-   runs. The machine-contention hypothesis is overturned by `tier1b`'s own data: a 93167ms iteration
-   (2.4× baseline, slower than the 55237ms run that failed) passed the same test cleanly. No
-   mechanism is asserted; no fix attempted. Distinct from DEBT-06.
+   runs. Distinct from DEBT-06. **Owned by `.planning/seeds/SEED-009-app-lazy-route-timeout.md`**
+   (planted 2026-08-12), which carries the capture, the refutations, and an explicit
+   trigger-on-second-occurrence. Two hypotheses are dead, not open: machine contention is overturned
+   by `tier1b`'s own 93167ms iteration (slower than the 55237ms run that failed) passing the same
+   test, and leaked fake timers are impossible under vitest's default per-file isolation with
+   `useIntakeFeed.test.tsx:47-49` restoring anyway. Isolation measurement puts the case at **433ms
+   against a 25,000ms budget (58× margin)**, so this is a hang rather than a slow test drifting over
+   its bound. No mechanism is asserted; no fix attempted, because the only fixes available without a
+   cause would mask it — the move D-11 forbids.
 2. **The surviving DEBT-06 hypothesis is untested** — that more than one element carries the
    `chat-brain-pill-label` testid — for want of a capture. The 113-05 instrumentation records the
    match count, so the next occurrence answers it directly.
