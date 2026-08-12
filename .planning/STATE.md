@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Phase 112 UI-SPEC approved; Phase 115 context gathered (parallel sessions)
-last_updated: "2026-08-12T13:02:00.000Z"
-last_activity: 2026-08-12 -- Phase 115 context gathered; Phase 112 planning in a concurrent session
+stopped_at: Phase 112 PLANNED (7 plans, 5 waves), ready to execute; Phase 115 context gathered (parallel sessions)
+last_updated: "2026-08-12T13:47:00.000Z"
+last_activity: 2026-08-12 -- Phase 112 planned (7 plans, 5 waves); Phase 115 context gathered in a parallel session
 progress:
   total_phases: 12
   completed_phases: 8
-  total_plans: 42
+  total_plans: 49
   completed_plans: 42
   percent: 67
 ---
@@ -51,8 +51,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 Phase: 113 (debt-sweep) — COMPLETE (8/8), VERIFIED `passed-with-amended-criterion`
 Plan: 8 of 8
-Status: Two phases in flight in parallel sessions — 112 (telemetry coverage, planning) and 115 (workspace scanner, context gathered). Phase 113 complete.
-Last activity: 2026-08-12 -- Phase 115 context gathered; Phase 112 planning in a concurrent session
+Status: Two phases in flight in parallel sessions — 112 (telemetry coverage, PLANNED 7 plans / 5 waves, ready to execute) and 115 (workspace scanner, context gathered). Phase 113 complete.
+Last activity: 2026-08-12 -- Phase 112 planned (7 plans, 5 waves); Phase 115 context gathered in a parallel session
+
+**Phase 112 — telemetry-coverage-closure: PLANNED 2026-08-12.** 7 plans across 5 waves, gsd-plan-checker returned **0 blockers, 0 warnings**; requirements TELE-01 + TELE-03 both covered; the blocking decision-coverage gate returns `total: 14, covered: 14, skipped: false` for D-01..D-14 (run with both positional args — the one-arg form self-skips to a false green). Wave shape: 112-01 (astridr-repo contract banners, doc-only, different repo) ‖ 112-02 (schema tables + retention) → 112-03 (domain modules) → 112-04 (ingest routing) ‖ 112-05 (UI surface) → 112-06 (disposition const + drift guard) → 112-07 (**`autonomous: false`** deploy + live proof). **D-05's volume gate was measured and resolved during planning, changing the phase's scope:** `message_routed` returned **10 rows in the 14-day window** (~0.7–1.2/day) against `governor_decision`'s **1,168 rows / 83.3 per day**, both uncapped at `limit: 2000`, control-paired in the same run (`llm_call` present → 1,261; a bogus kind → 0) and unit-checked against wall clock (epoch **seconds**). Measured by the researcher and independently re-run by the orchestrator before being written down. So `message_routed` is low-volume, not a firehose: it is **routed but deliberately NOT surfaced** this phase (new D-13), because the approved `112-UI-SPEC.md` designed only the `governor_decision` surface and the UI-SPEC itself warns its routing-metadata fields are not a reskin of that one. Planning also surfaced a live-data defect CONTEXT.md did not have: `governor_decision.held_reason` arrives as an explicit JSON `null` on **424 of 646** held rows, and `v.optional(v.string())` rejects an explicit `null` outright — **the identical mechanism that made Phase 108's `control_verb_swap` route land zero rows while reporting `dropped: 0`**. New D-14 requires the `isOptionalString`/`normalizeOptional` pair (`runtimeIngest.ts:207-268`) in the same commit that adds the dispatch case, with tests over all three wire shapes. 112-07 accordingly treats an empty domain table as a pre-declared FAILURE, and records `message_routed`'s end-to-end proof as **OPEN** rather than passed, since at ~1 row/day nothing will arrive in the verification window. **Counter note:** `gsd-sdk query state.planned-phase` was run and produced the documented clobber — it regressed `completed_phases` 8→6 and *inflated* `completed_plans` 42→44 although nothing was executed (planning is not completion, which is the tell on its own), while its own JSON claimed it touched only "Status" and "Last Activity". STATE.md was restored from HEAD and only `total_plans` (42→49, +7) plus this paragraph were re-applied by hand, in **both** the frontmatter and body copies. `completed_plans: 42` and `completed_phases: 8` re-derived from disk: 49 `*-PLAN.md`, 42 plan-level `*-SUMMARY.md`, 8 `*-VERIFICATION.md`. Next: `/gsd-execute-phase 112`.
 
 **Phase 115 — workspace-scanner: CONTEXT GATHERED 2026-08-12 (`115-CONTEXT.md`, 14 decisions, no plans yet).** Picked up as parallel work alongside a concurrent session's Phase 112. Produces the data Phase 114's map renders. **The ROADMAP's "115 depends on 114" was the dependency INVERTED and is corrected in this commit** — the approved design's own graph (`Mandras/02-projects/agentic-os-second-brain.md:48`) reads "C2 → enables C1's workspace lens", so the scanner comes first; the old line was a sequential default from `gsd-phase add`. Three decisions compose into a producer that structurally cannot leak, which matters because it walks the vault, `.claude` and `.claude-alt`: payload is path + metadata and **never contents** (the donor's only content read, `scan.js:149`, is explicitly dropped), secret detection is **deny-by-default per root** rather than a secret-shaped regex, and secret paths are **omitted entirely** rather than flagged. The regex decision is measured, not preferred — the donor's `SECRET_RE` returned **PUBLIC** for `selfhosted.envfile` (holds `INSTANCE_SECRET`), `.claude.json` (inline Bearer token) and `.mcp.json`. Storage changed on evidence found mid-discussion: `graphSnapshots` looked like the obvious reuse, but `crons.ts:145-151` has its retention sweep commented out — `DISABLED 2026-07-14 — times out on self-hosted Convex` — so 115 gets its own tables and bounds growth by an **inline batch-capped prune at ingest**, bounded by construction rather than by a schedule that can be silently disabled. Granularity is grounded in a count: **21,029 files** across `.claude`/`.claude-alt`/vault before any repos, so directories are nodes and files are counts. Also recorded: `schtasks /query` returns zero lines from this environment and is **proven broken by a control** (it cannot find `ConvexNightlyRestart` either), so scheduled-task state is unverified, not absent. Next: `/gsd-plan-phase 115`.
 
@@ -936,8 +938,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-12T13:02:00.000Z
-Stopped at: Phase 112 UI-SPEC approved; Phase 115 context gathered (parallel sessions)
+Last session: 2026-08-12T13:47:00.000Z
+Stopped at: Phase 112 PLANNED (7 plans, 5 waves), ready to execute; Phase 115 context gathered (parallel sessions)
 
 --- Prior (superseded by the above) --- Completed 111-01-PLAN.md (JobsPanel mission history rewrite)
 
