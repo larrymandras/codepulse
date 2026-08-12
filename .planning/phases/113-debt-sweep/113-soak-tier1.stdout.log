@@ -1,0 +1,8 @@
+  PASS  iteration 1/30 — status=PASS exit=0 duration_ms=38767
+  PASS  iteration 2/30 — status=PASS exit=0 duration_ms=39117
+  PASS  iteration 3/30 — status=PASS exit=0 duration_ms=39042
+  PASS  iteration 4/30 — status=PASS exit=0 duration_ms=39266
+  PASS  iteration 5/30 — status=PASS exit=0 duration_ms=40515
+  Captured full output: C:\Users\mandr\codepulse\.planning\phases\113-debt-sweep\113-soak-tier1.log.tier1-2026-08-11T22-00-58-953Z.iteration-6.txt
+  FAIL  iteration 6/30 — status=FAIL exit=1 duration_ms=55237
+iterations_run=6 passed=5 failed=1 timed_out=0 harness_errors=0 (stopped early)

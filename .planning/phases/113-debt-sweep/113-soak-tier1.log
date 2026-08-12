@@ -1,0 +1,7 @@
+# 2026-08-11T22:00:58.953Z soak-start label=tier1 iterations=30 timeout_ms=300000 command="npx vitest run"
+2026-08-11T22:01:37.721Z label=tier1 iteration=1/30 status=PASS exit=0 duration_ms=38767 capture=(none)
+2026-08-11T22:02:16.839Z label=tier1 iteration=2/30 status=PASS exit=0 duration_ms=39117 capture=(none)
+2026-08-11T22:02:55.881Z label=tier1 iteration=3/30 status=PASS exit=0 duration_ms=39042 capture=(none)
+2026-08-11T22:03:35.148Z label=tier1 iteration=4/30 status=PASS exit=0 duration_ms=39266 capture=(none)
+2026-08-11T22:04:15.663Z label=tier1 iteration=5/30 status=PASS exit=0 duration_ms=40515 capture=(none)
+2026-08-11T22:05:10.901Z label=tier1 iteration=6/30 status=FAIL exit=1 duration_ms=55237 capture=C:\Users\mandr\codepulse\.planning\phases\113-debt-sweep\113-soak-tier1.log.tier1-2026-08-11T22-00-58-953Z.iteration-6.txt

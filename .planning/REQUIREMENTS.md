@@ -61,7 +61,7 @@ Closes **BSC-01**, the one requirement v13.0 left PARTIAL. Cross-repo: the astri
 Numbering continues from v13.0's DEBT-01..04.
 
 - [x] **DEBT-05** — A transient scan that misses part of the skill catalog no longer prunes live skill rows. *(`computeSkillPrunes` deletes rows for any name absent from an incoming snapshot; observed dropping ~56 live plugin skills, 185 → 131 → 185. Nothing permanently lost, but the catalog is briefly wrong.)*
-- [ ] **DEBT-06** — The intermittent `Chat.test.tsx` brain-pill failure (`D-106-04-01`) is deterministic, root-caused from a **captured failure** rather than masked with a `waitFor`. *(Three candidate causes already refuted and recorded; the outstanding lever is capturing the actual `textContent` on failure.)*
+- [x] **DEBT-06** — **CLOSED GUARDED on 2026-08-12. The cause was never identified and this requirement's original criterion was NOT met.** The intermittent `Chat.test.tsx` brain-pill failure (`D-106-04-01`) did **not** reproduce across the full decided soak budget of **80 clean full-suite iterations** (30 + 50, tiered), so no captured failure ever existed to diagnose from. What shipped instead: instrumentation at the query site that records the match count, each match's `textContent`, and `document.body.innerHTML` length, so the next occurrence is self-diagnosing; plus the recorded refutation set (shared-fixture contamination of the brain mocks, the async catalogue changing the label mid-assertion, and `useGlobalModelNames` — all refuted; the surviving untested hypothesis is more than one element carrying the testid). The `waitFor` prohibition **was** met and is asserted mechanically, not promised: `src/pages/Chat.test.tsx` is untouched (`git diff` empty), its `waitFor` count is unchanged at 23, and it contains no added `{ timeout:`. The defect remains latent. *(Full per-iteration soak record, positive controls, tree-stability checks and the disposition: `phases/113-debt-sweep/113-FLAKE-EVIDENCE.md`.)*
 - [ ] **DEBT-07** — `convex-selfhost/`'s compose `logging:` block and restart scripts are under version control, not living only on disk.
 
 ---
@@ -97,7 +97,7 @@ Filled by the roadmapper.
 | TELE-02 | Phase 109 | Complete |
 | TELE-03 | Phase 112 | Pending |
 | DEBT-05 | Phase 113 | Complete |
-| DEBT-06 | Phase 113 | Pending |
+| DEBT-06 | Phase 113 | Closed GUARDED (2026-08-12) — not root-caused; 80 clean soak iterations, no reproduction captured |
 | DEBT-07 | Phase 113 | Pending |
 
 ---
