@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Phase 112 PLANNED (7 plans, 5 waves), ready to execute; Phase 115 context gathered (parallel sessions)
-last_updated: "2026-08-12T13:47:00.000Z"
-last_activity: 2026-08-12 -- Phase 112 planned (7 plans, 5 waves); Phase 115 context gathered in a parallel session
+stopped_at: Phase 112 plan 112-01 complete (astridr-repo Group A contract correction, TELE-01); 6 plans remain across waves 2-5; Phase 115 context gathered (parallel sessions)
+last_updated: "2026-08-12T14:08:00.000Z"
+last_activity: 2026-08-12 -- Phase 112 plan 112-01 executed (astridr-repo cross-repo doc fix, commit 7f61ba1d); Phase 115 context gathered in a parallel session
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 49
-  completed_plans: 42
+  completed_plans: 43
   percent: 67
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 113 complete — next unstarted: 112 (telemetry coverage), 114, 115, 118
+**Current focus:** Phase 112 (telemetry coverage) in progress — 1/7 plans complete; 114, 115, 118 not started
 
 **Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
@@ -49,10 +49,12 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 113 (debt-sweep) — COMPLETE (8/8), VERIFIED `passed-with-amended-criterion`
-Plan: 8 of 8
-Status: Two phases in flight in parallel sessions — 112 (telemetry coverage, PLANNED 7 plans / 5 waves, ready to execute) and 115 (workspace scanner, context gathered). Phase 113 complete.
-Last activity: 2026-08-12 -- Phase 112 planned (7 plans, 5 waves); Phase 115 context gathered in a parallel session
+Phase: 112 (telemetry-coverage-closure) — IN PROGRESS (1/7 plans)
+Plan: 1 of 7 (112-01 complete)
+Status: Phase 112 wave 1 plan 112-01 executed (cross-repo, astridr-repo). 6 plans remain across waves 2-5. Phase 115 (workspace scanner) context gathered in a parallel session, not yet planned into plans. Phase 113 complete (8/8).
+Last activity: 2026-08-12 -- Plan 112-01 executed (astridr-repo Group A contract correction, TELE-01, commit 7f61ba1d)
+
+**Plan 112-01 complete (2026-08-12).** Cross-repo doc-only plan: `astridr-repo/docs/astridr-contract.md` §2.20-§2.24 (`instructions_loaded`, `loop_lifecycle`, `worktree_lifecycle`, `batch_execution`, `auto_memory`) each gained a dated `NOT EMITTED - aspirational` banner in place (D-07/D-09), citing v1.6.0/2026-03-09/`docs/new_claude_capabilities.md`; section numbering §2.19-§2.40 verified unchanged. The three critical-events rows for those same three unfirable kinds (`worktree_lifecycle`, `batch_execution`, `loop_lifecycle`) were removed from the operator-alerting table (D-08), leaving `mcp_connection`/`subagent_job` intact. Task 1's zero-emitter claim was control-paired against `governor_decision` (a real emitter) in the same search run; a bare-substring hit on `worktree_lifecycle` (a pytest function name, not an emitter) was investigated and resolved with a stricter quoted-string-literal search before any prose was written, per this project's verification-discipline rules. Committed once in astridr-repo (`7f61ba1d554568264bdd55797890cd0b9c00a31c`, `feature/brain-swap`, branch not switched), `git show --stat HEAD` confirmed to touch exactly one file. No CodePulse source file was modified. See `112-01-SUMMARY.md`.
 
 **Phase 112 — telemetry-coverage-closure: PLANNED 2026-08-12.** 7 plans across 5 waves, gsd-plan-checker returned **0 blockers, 0 warnings**; requirements TELE-01 + TELE-03 both covered; the blocking decision-coverage gate returns `total: 14, covered: 14, skipped: false` for D-01..D-14 (run with both positional args — the one-arg form self-skips to a false green). Wave shape: 112-01 (astridr-repo contract banners, doc-only, different repo) ‖ 112-02 (schema tables + retention) → 112-03 (domain modules) → 112-04 (ingest routing) ‖ 112-05 (UI surface) → 112-06 (disposition const + drift guard) → 112-07 (**`autonomous: false`** deploy + live proof). **D-05's volume gate was measured and resolved during planning, changing the phase's scope:** `message_routed` returned **10 rows in the 14-day window** (~0.7–1.2/day) against `governor_decision`'s **1,168 rows / 83.3 per day**, both uncapped at `limit: 2000`, control-paired in the same run (`llm_call` present → 1,261; a bogus kind → 0) and unit-checked against wall clock (epoch **seconds**). Measured by the researcher and independently re-run by the orchestrator before being written down. So `message_routed` is low-volume, not a firehose: it is **routed but deliberately NOT surfaced** this phase (new D-13), because the approved `112-UI-SPEC.md` designed only the `governor_decision` surface and the UI-SPEC itself warns its routing-metadata fields are not a reskin of that one. Planning also surfaced a live-data defect CONTEXT.md did not have: `governor_decision.held_reason` arrives as an explicit JSON `null` on **424 of 646** held rows, and `v.optional(v.string())` rejects an explicit `null` outright — **the identical mechanism that made Phase 108's `control_verb_swap` route land zero rows while reporting `dropped: 0`**. New D-14 requires the `isOptionalString`/`normalizeOptional` pair (`runtimeIngest.ts:207-268`) in the same commit that adds the dispatch case, with tests over all three wire shapes. 112-07 accordingly treats an empty domain table as a pre-declared FAILURE, and records `message_routed`'s end-to-end proof as **OPEN** rather than passed, since at ~1 row/day nothing will arrive in the verification window. **Counter note:** `gsd-sdk query state.planned-phase` was run and produced the documented clobber — it regressed `completed_phases` 8→6 and *inflated* `completed_plans` 42→44 although nothing was executed (planning is not completion, which is the tell on its own), while its own JSON claimed it touched only "Status" and "Last Activity". STATE.md was restored from HEAD and only `total_plans` (42→49, +7) plus this paragraph were re-applied by hand, in **both** the frontmatter and body copies. `completed_plans: 42` and `completed_phases: 8` re-derived from disk: 49 `*-PLAN.md`, 42 plan-level `*-SUMMARY.md`, 8 `*-VERIFICATION.md`. Next: `/gsd-execute-phase 112`.
 
