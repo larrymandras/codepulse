@@ -855,7 +855,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. `computeSkillPrunes` no longer drops live plugin skills on a transient/partial catalog scan — the skill count stays stable across a scan cycle that previously showed 185 → 131 → 185.
-  2. The intermittent `Chat.test.tsx` brain-pill failure runs deterministically (fixed from a captured root cause) rather than being masked by a widened `waitFor`.
+  2. **CLOSED GUARDED (2026-08-12) — the original bar was not met and was deliberately amended, not quietly satisfied.** The intermittent `Chat.test.tsx` brain-pill failure did not reproduce across **80 clean full-suite iterations** (tiered 30 + 50, the budget Larry set), so no captured failure ever existed to diagnose from and the "fixed from a captured root cause" criterion as originally written is **unmet**. Delivered instead: query-site instrumentation that records the match count, each match's `textContent`, and the body HTML length, so the next occurrence is self-diagnosing. The `waitFor` half of the criterion **was** met and is asserted mechanically — `src/pages/Chat.test.tsx` is untouched, its `waitFor` count is unchanged at 23, and it contains no added `{ timeout:`. The defect remains latent. See `phases/113-debt-sweep/113-FLAKE-EVIDENCE.md`.
   3. `convex-selfhost/`'s compose `logging:` block and restart scripts are committed to version control and reproducible from a fresh checkout.
 
 **Plans**: 8 plans in 3 waves
@@ -872,11 +872,11 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 113-04-PLAN.md - DEBT-05 migration: one-shot dry-run-by-default re-origin of existing plugin rows (wave 2)
-- [ ] 113-08-PLAN.md - DEBT-07: bootstrap README, preflight validator, reviewed first commit, temp-clone proof (wave 2)
+- [x] 113-08-PLAN.md - DEBT-07: bootstrap README, preflight validator, reviewed first commit, temp-clone proof (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 113-06-PLAN.md - DEBT-06: tiered 30/50 full-suite soak and honest disposition (wave 3)
+- [x] 113-06-PLAN.md - DEBT-06: tiered 30/50 full-suite soak and honest disposition (wave 3)
 
 ---
 
@@ -889,7 +889,7 @@ Plans:
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
-| 113. Debt Sweep | 6/8 | In Progress|  |
+| 113. Debt Sweep | 8/8 | Complete (DEBT-06 GUARDED) | 2026-08-12 |
 
 ### Phase 114: Workspace Map view
 

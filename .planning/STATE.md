@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
-status: planning
-stopped_at: Phase 113 planned (8 plans, 3 waves)
-last_updated: "2026-08-11T16:30:05.000Z"
-last_activity: 2026-08-11
+status: executing
+stopped_at: Phase 113 complete (8/8 plans; DEBT-06 closed GUARDED, not root-caused)
+last_updated: "2026-08-12T12:26:24.000Z"
+last_activity: 2026-08-12 -- Phase 113 complete (DEBT-06 closed GUARDED)
 progress:
   total_phases: 12
-  completed_phases: 5
+  completed_phases: 8
   total_plans: 42
-  completed_plans: 34
-  percent: 42
+  completed_plans: 42
+  percent: 67
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 113 — debt sweep
+**Current focus:** Phase 113 complete — next unstarted: 112 (telemetry coverage), 114, 115, 118
 
 **Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
@@ -49,10 +49,14 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 113
-Plan: 0 of 8
-Status: Ready to execute
-Last activity: 2026-08-11
+Phase: 113 (debt-sweep) — COMPLETE (8/8), VERIFIED `passed-with-amended-criterion`
+Plan: 8 of 8
+Status: Phase 113 complete — DEBT-05 and DEBT-07 delivered and verified live; DEBT-06 closed GUARDED
+Last activity: 2026-08-12 -- Phase 113 complete (DEBT-06 closed GUARDED)
+
+**Phase 113 — debt-sweep: COMPLETE (8/8, 2026-08-12), VERIFIED `passed-with-amended-criterion` (`113-VERIFICATION.md`).** Two of three requirements delivered outright; the third was closed honestly rather than counted as met. **DEBT-05** is a fail-closed guard, not a widened tolerance — `skillSync.ts:142` returns zero prunes unless the producer positively asserts a complete scan (`scannedOriginsComplete === true`, exact-`true` per `:45`, so a malformed snapshot cannot engage pruning), killing the 185 → 131 → 185 oscillation; 34 tests pass. **DEBT-07** verified against the live directory rather than 113-08's own claim: `convex-selfhost/` is a git repo at `880befa`, the **committed** `docker-compose.yml` carries the `logging:` block (json-file, 10m, 3 files), and `restart-convex.ps1` plus 13 sibling scripts are tracked with a clean tree. **DEBT-06 is closed GUARDED and the cause was never identified** — the brain-pill flake did not reproduce across **80 clean full-suite iterations** (tiered 30 + 50, the budget Larry set), each tier preceded by a fresh positive control proving the detector's FAIL path still fired, so no capture ever existed to diagnose from and D-11 forbids fixing without one. The ROADMAP's criterion 2 and `REQUIREMENTS.md`'s DEBT-06 line were both **amended** to say so — a deliberate, visible admission, not a silent green. The `waitFor` half of the bar WAS met and is asserted mechanically: `Chat.test.tsx` untouched, `waitFor` count unchanged at 23, no added `{ timeout:`. The defect remains latent; 113-05's query-site instrumentation makes the next occurrence self-diagnosing. One unattributed finding carried forward: `src/App.test.tsx`'s `/memory` lazy-route timeout, seen once in 86 runs, with the machine-contention hypothesis overturned by tier1b's own slower-but-passing 93s iteration. Full record: `113-FLAKE-EVIDENCE.md`.
+
+**Counter correction, same session (2026-08-12).** `completed_plans` was **36** and `completed_phases` **5**; both were re-derived from disk ground truth to **42** and **8**. Derivation: `.planning/phases/` holds exactly 42 `*-PLAN.md` (matching the already-correct `total_plans: 42`) and 42 plan-level `*-SUMMARY.md` — every plan in the milestone has a summary. `completed_phases: 8` = the 7 phases carrying a `*-VERIFICATION.md` (108, 109, 110, 111, 116, 117, 119) plus 113, verified this session. The two remaining `*-SUMMARY.md` on disk (44 total) are **phase-level** summaries for plan-less phases 117 and 119, not orphans — `gsd-state-coherence.ps1` counts all 44 and compares `total_plans` against the *current phase dir* only, so its findings 2 and 3 are scoping artifacts, not defects. Its finding 1 **was** real and is fixed here: `last_updated` disagreed between frontmatter (`16:52:36`) and body (`16:30:05`), the half-edit that silently reverts on the next `state.*` verb — both copies now carry the same value. No `gsd-sdk state.*` verb was run; every field above was hand-edited in both its frontmatter and body copy.
 
 **Phase 113 — debt-sweep: PLANNED 2026-08-11 (8 plans, 3 waves).** Research ran the controls D-08 mandated and two of them changed the plan. Control 1 confirmed Vitest *does* print the actual `textContent` on the `Chat.test.tsx:585-586` `toBe` failure (`Received: "anthropic-sonnet-5"`), so the deferred item's "unobtainable" framing was wrong. Control 2 **falsified D-08's own mechanism**: `@vitest/runner` always runs `afterEach` before `onFailed`, and `@testing-library/react` auto-registers `afterEach(cleanup)` because `vitest.config.ts:14` sets `globals: true` — so the global `src/test/setup.ts` DOM-dump D-08 specified would have captured an empty `<body>` forever. D-08 was amended on disk; capture moves to the query site. Three decisions were added at Larry's call: **D-17** folds the frontend origin-coupling fix into DEBT-05 (8 sites across 4 files — `Skills.tsx:132,148` filter the Global tab with an exact `.includes("claude-code")`, so D-02 alone would silently drop ~57 plugin skills from the tab; `skillVault.ts:12` is safe by design and must not be touched), **D-18** parameterizes the live `INSTANCE_SECRET` at `docker-compose.yml:89` before DEBT-07's first commit with rotation explicitly out of scope, and the soak budget was set from a measured 37.98s full-suite run to a tiered 30-then-50 iterations. Plan-checker returned VERIFICATION PASSED (1 non-blocking cosmetic warning, since closed). **The decision-coverage gate self-skipped** (`passed: true` but `skipped: true, total: 0` — CONTEXT.md's whole-title-bolded `- **D-01: …**` style parses to zero decisions), so D-01…D-18 coverage was verified by hand instead, with a `D-99` control returning 0 to prove the grep discriminates. Two planner findings no source artifact named: the origin split defeats `hooks/skillScan.mjs:161`'s `${origin}::${name}` dedup key, and `hooks/__tests__/skillScan.test.mjs:139`'s `origin === "claude-code"` filter would have gone **vacuous rather than red** — both independently confirmed and folded into 113-01.
 
@@ -930,8 +934,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-11T16:30:05.000Z
-Stopped at: Phase 113 planned (8 plans, 3 waves)
+Last session: 2026-08-12T12:26:24.000Z
+Stopped at: Phase 113 complete (8/8 plans; DEBT-06 closed GUARDED, not root-caused)
 
 --- Prior (superseded by the above) --- Completed 111-01-PLAN.md (JobsPanel mission history rewrite)
 
