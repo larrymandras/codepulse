@@ -929,14 +929,47 @@ Plans:
 
 ### Phase 115: Workspace scanner
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Larry's declared workspace roots are walked nightly and stored as a versioned, department-classified directory map in Convex — with secret-classified file paths structurally unable to leave the host, and no snapshot transmitted until a dry-run report has been reviewed and approved.
+**Requirements**: none mapped — design-doc-driven phase (`Mandras/02-projects/agentic-os-second-brain.md` § "CodePulse" bullet C2). The acceptance-bearing units are the 17 locked decisions D-01..D-17 in `115-CONTEXT.md`; plans are traced to those instead of REQ-IDs, following Phase 116's precedent.
 **Depends on:** Nothing. *(Corrected 2026-08-12: this line previously read "Phase 114", which is the dependency **inverted**. The approved design's own dependency graph — `Mandras/02-projects/agentic-os-second-brain.md:48` — states "C2 → enables C1's workspace lens", where C2 is this phase and C1 is Phase 114. The scanner produces the data the map view renders, so 115 comes first. The original line was a sequential default from `gsd-phase add`, not a real constraint. See `115-CONTEXT.md` § Phase Boundary.)*
-**Plans:** 0 plans
+**Plans:** 10 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 115 to break down)
+**Wave 1** *(no dependencies — four fully parallel plans, zero `files_modified` overlap, verified mechanically)*
+
+- [ ] 115-01-PLAN.md - Extract `scanner.mjs`'s inline POST-with-bearer block into shared `hooks/ingestPost.mjs` so D-04's "import, don't copy" becomes possible (wave 1)
+- [ ] 115-02-PLAN.md - Split classification config (D-08 + D-17) and its fail-closed two-half loader, plus the `.gitignore` rules keeping the sensitive half out of this public repo (wave 1)
+- [ ] 115-03-PLAN.md - D-12's structural dry-run gate as pure functions, with the mandatory mutation test proving the refusal fires (wave 1)
+- [ ] 115-04-PLAN.md - Versioned `workspace*` tables and the `internalMutation` that ingests a snapshot with an inline, batch-capped prune (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 115-05-PLAN.md - The pure classifier `(path, config) → {department, access, isSecret}` and the compose-mount derivation `access` reads from (wave 2, depends on 115-02)
+- [ ] 115-06-PLAN.md - `POST /workspace-ingest` route and handler, reusing the existing ingest auth surface, dispatching to 115-04's `internalMutation` (wave 2, depends on 115-04)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 115-07-PLAN.md - The read-incapable filesystem walk, per-directory rollup, snapshot payload and D-12 dry-run report (wave 3, depends on 115-02 + 115-05)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 115-08-PLAN.md - Entry-point wiring (load → walk → classify → report → **gate** → POST) and D-12 case 5, proving the refusal precedes the network call (wave 4, depends on 115-01 + 115-03 + 115-07)
+
+**Wave 5** *(blocked on Wave 4 completion — `autonomous: false`, attended)*
+
+- [ ] 115-09-PLAN.md - [BLOCKING] deploy to the self-hosted instance, Larry's review of the real dry-run report, first genuine ingest, and 115-04's `it.todo` markers converted to live evidence (wave 5, depends on 115-06 + 115-08)
+
+**Wave 6** *(blocked on Wave 5 completion — `autonomous: false`, attended)*
+
+- [ ] 115-10-PLAN.md - D-05's nightly scheduled task: logging wrapper plus an installer routing around this machine's two known Task Scheduler traps (wave 6, depends on 115-09)
+
+Cross-cutting constraints:
+
+- **D-01/D-03 hold by construction, not by omission** — no file-content read exists anywhere in the walk path, and secret-classified paths are omitted entirely rather than flagged, since a filename is itself a disclosure.
+- **Every gate carries a passing control** — four `false` results are indistinguishable from an always-false function, so each mutation test pairs its negatives with a positive.
+- **Self-hosted Convex safety** — no `import --replace-all`, no bulk delete or bulk patch; the prune is batch-capped by construction, not by a schedule that can be silently disabled.
+- **The deploy is [BLOCKING] and asserts on the instance name** — `npx convex deploy --env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile`; build and typecheck pass whether or not the schema reached the live backend.
 
 ### Phase 116: Galdr prompt library
 
