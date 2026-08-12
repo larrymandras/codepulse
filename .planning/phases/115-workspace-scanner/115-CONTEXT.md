@@ -135,6 +135,49 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
   114's force-graph canvas. This also composes with D-01/D-03: individual filenames never need to
   leave the host to draw the map at all.
 
+### Root classification (resolved at planning time, 2026-08-12)
+
+Research surfaced two open questions that D-07/D-14 could not answer from disk. Both were put to
+Larry during plan-phase and are now locked:
+
+- **D-15: The vault, `.claude` and `.claude-alt` each map to a single "Unclassified" department at
+  the ROOT level.** They demonstrably contain Work, Consulting and Personal material mixed together,
+  and D-14 assigns departments per root — so any single department label for them would be an
+  assertion the scanner inferred rather than knew. Both alternatives were rejected: declaring
+  narrower vault sub-roots (each new vault folder then needs a config edit or silently goes
+  Unclassified), and reintroducing the donor's sub-path `deptOf()` matching (`scan.js:63`), which
+  D-07/D-14 explicitly replaced. Consequence the map must own: one large grey Unclassified group is
+  expected and correct on the first cut, and D-12's dry-run report is what tells Larry whether it is
+  too large to live with.
+
+- **D-16: Every ambiguous root under `C:\Users\mandr\` ships as a DECLARED root mapped to
+  Unclassified — never omitted, never guessed into a real department.** Research found ~10
+  directories it could not classify from the name alone; several read as consulting-client names, but
+  on directory naming alone with zero corroborating evidence. Declaring them Unclassified satisfies
+  both failure modes at once: no wrong department lands silently (D-14's rule), and no real work is
+  invisible (which a narrowed root list would have caused). D-12's dry-run report must list them with
+  file counts and sizes so Larry can re-map the real ones in a single local config edit before first
+  ingest. Their names are not recorded in this file — see D-17.
+
+- **D-17: The classification config is SPLIT — a tracked rules file plus a gitignored local root
+  list. This AMENDS D-08.** D-08 said "classification rules live in a config JSON checked into this
+  repo," which is still true of the *rules*. But `larrymandras/codepulse` is a **public** repo
+  (measured at planning time: `gh repo view` → `"visibility":"PUBLIC"`), and D-16's root list is an
+  inventory of Larry's project directory names, several of which read like client engagements. Of
+  those ~10 names, **7 appear in zero tracked files at HEAD** — committing them would be a new,
+  permanent, one-way disclosure (git history survives deletion). So:
+  - **Tracked** (`config/workspace.json`): the schema, `EXCLUDE_DIRS`/`EXCLUDE_FILES`, the D-02
+    allowlist patterns, the department vocabulary, and the non-sensitive roots (the vault, `.claude`,
+    `.claude-alt`, `codepulse`, `astridr-repo`). D-08's real goal — rules reviewable in a diff — is
+    preserved in full, and the classifier stays a pure function of (path, config).
+  - **Gitignored** (`config/workspace.local.json`): the sensitive root entries and their department
+    mapping. Must be added to `.gitignore` in the same task that creates it.
+  - The loader merges tracked ← local, local winning on key collision, and must **fail closed** if
+    the local file is absent or malformed: missing local config means "scan only the tracked roots",
+    never "scan everything unclassified" and never a crash that a nightly task would swallow.
+  - Note the home-path question is separate and already settled by precedent: 188 tracked `.md` files
+    already contain `C:\Users\mandr`, so paths of that form are not what this decision protects.
+
 ### Claude's Discretion
 
 - Exact table/column names and index choice for the `workspace*` tables, within D-10's versioned
