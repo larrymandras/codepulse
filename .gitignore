@@ -27,6 +27,14 @@ open-design/
 .audits/
 .vercel
 
+# Phase 115 workspace scanner: the local root list holds Larry's project
+# directory names (several read as client engagements) and this repo is PUBLIC —
+# committing them is a one-way disclosure (D-17). The dry-run report and its
+# approval marker are machine-local derived state (D-12), regenerated per run.
+config/workspace.local.json
+config/workspace-scan-report.json
+config/workspace-scan.approved.sha256
+
 # Nightly /gsd-progress --forensic snapshot (scripts/gsd-progress-snapshot.ps1,
 # scheduled task "GSD-Progress-Snapshot", 2026-07-31) — regenerated every run,
 # git history of it would just be daily noise commits. Local-read-only by design.

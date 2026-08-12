@@ -1,0 +1,88 @@
+{
+  "_readme": "This file is TRACKED and PUBLIC (larrymandras/codepulse). Sensitive/ambiguous root names belong in config/workspace.local.json, which is gitignored (D-17). The allowlist below is deny-by-default (D-02): any file whose basename/extension is not explicitly matched is withheld from the snapshot, never shared.",
+  "schemaVersion": 1,
+  "snapshotId": "larry-workspace",
+  "departments": ["Work", "Consulting", "Personal", "Unclassified"],
+  "excludeDirs": [
+    "node_modules",
+    ".git",
+    ".venv",
+    "__pycache__",
+    ".next",
+    ".cache",
+    "dist",
+    "coverage",
+    ".turbo",
+    ".pytest_cache",
+    ".idea",
+    ".vscode-server",
+    "graphify-out",
+    ".worktrees",
+    "node_modules.bak",
+    "venv",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".gradle",
+    "build",
+    "out",
+    "target",
+    ".svelte-kit",
+    ".parcel-cache",
+    ".nuxt"
+  ],
+  "excludeFiles": [".DS_Store", "Thumbs.db", "desktop.ini"],
+  "shareableAllowlist": {
+    "_excludedFromAllowlistRationale": "The extensions deliberately absent from `default.extensions` below are NOT an omission to fill: .json .yml .yaml .toml .ini .cfg .conf .env .envfile .pem .key .crt .cer .p12 .pfx .ppk .sh .bash .zsh .ps1 .psm1 .bat .cmd .vbs .sql .db .sqlite .sqlite3 .log .csv .tsv .bak .keychain .kdbx, plus any extensionless file. The classification decides whether a FILENAME is transmitted, and a config/script/credential filename is itself a disclosure — generate_admin_key.sh and selfhosted.envfile are the two measured proofs (D-02, D-17). Do not add any of these back.",
+    "_byRootSemantics": "When byRoot[id] is present for a root, it REPLACES `default` for that root entirely — it does not merge with `default`.",
+    "default": {
+      "requireNonDotBasename": true,
+      "extensions": [
+        ".md", ".markdown", ".txt", ".rst", ".adoc",
+        ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+        ".py", ".rb", ".go", ".rs", ".java", ".kt",
+        ".c", ".h", ".cpp", ".cs", ".swift",
+        ".css", ".scss", ".less", ".html", ".vue", ".svelte",
+        ".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".ico", ".bmp",
+        ".mp3", ".wav", ".flac", ".mp4", ".mov", ".webm",
+        ".pdf", ".docx", ".xlsx", ".pptx", ".odt",
+        ".woff", ".woff2", ".ttf", ".otf", ".eot",
+        ".ipynb", ".lock"
+      ]
+    },
+    "byRoot": {}
+  },
+  "roots": [
+    {
+      "id": "vault",
+      "path": "C:/Users/mandr/Mandras",
+      "department": "Unclassified",
+      "evidence": "D-15: demonstrably contains Work, Consulting and Personal material mixed together; any single root-level department label would be an assertion the scanner inferred rather than knew."
+    },
+    {
+      "id": "claude",
+      "path": "C:/Users/mandr/.claude",
+      "department": "Unclassified",
+      "evidence": "D-15"
+    },
+    {
+      "id": "claude-alt",
+      "path": "C:/Users/mandr/.claude-alt",
+      "department": "Unclassified",
+      "evidence": "D-15"
+    },
+    {
+      "id": "codepulse",
+      "path": "C:/Users/mandr/codepulse",
+      "department": "Personal",
+      "evidence": "CodePulse is the telemetry dashboard for Astridr, which Larry's global CLAUDE.md lists under Personal as 'Astridr (personal AI assistant framework)'."
+    },
+    {
+      "id": "astridr-repo",
+      "path": "C:/Users/mandr/astridr-repo",
+      "department": "Personal",
+      "evidence": "Larry's global CLAUDE.md lists 'Astridr (personal AI assistant framework)' under Personal."
+    }
+  ],
+  "composeFile": "C:/Users/mandr/astridr-repo/docker-compose.yml",
+  "localConfigPath": "config/workspace.local.json"
+}
