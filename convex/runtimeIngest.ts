@@ -473,6 +473,57 @@ export function resolveGovernorDecisionEvent(
   };
 }
 
+interface ResolvedMessageRoutedEvent {
+  channel: string;
+  profile: string;
+  sender?: string;
+  sessionId?: string;
+  timestamp: number;
+}
+
+/**
+ * resolveMessageRoutedEvent — resolves a `message_routed` event payload
+ * into the args for `internal.messageRoutes.record`, or `null` when the
+ * event must be skipped (Phase 112, TELE-03, D-05/D-13).
+ *
+ * D-13: `message_routed` is routed because it was MEASURED low-volume — 10
+ * rows in the whole 14-day window, roughly 0.7–1.2 rows/day as of
+ * 2026-08-12 — not because the switch wanted coverage symmetry, which
+ * REQUIREMENTS.md:57 forbids. It is routed WITHOUT a UI surface this phase
+ * (D-13): the surface is a recorded follow-up, because `message_routed`'s
+ * routing metadata (`channel`/`sender`/`session_id`) is structurally
+ * unlike `governor_decision`'s spoke/held outcome and needs its own design
+ * pass rather than a reskin of the `governor_decision` surface.
+ *
+ * `sender` and `sessionId` are optional here even though astridr-contract
+ * §2.16 calls them required — a required field that arrives as an explicit
+ * `null` loses the entire row silently, which is the TELE-02 failure. Plan
+ * 112-02 already made the columns optional to match; the same
+ * `isOptionalString`/`normalizeOptional` null carve-out applies to both.
+ */
+export function resolveMessageRoutedEvent(
+  data: unknown,
+  timestamp: number
+): ResolvedMessageRoutedEvent | null {
+  const d = (data ?? {}) as Record<string, any>;
+  const channel = d.channel;
+  const profile = d.profile ?? d.profileId ?? d.profile_id;
+  if (typeof channel !== "string" || !channel) return null;
+  if (typeof profile !== "string" || !profile) return null;
+
+  const sender = d.sender;
+  const sessionId = d.sessionId ?? d.session_id;
+  if (!isOptionalString(sender) || !isOptionalString(sessionId)) return null;
+
+  return {
+    channel,
+    profile,
+    sender: normalizeOptional(sender),
+    sessionId: normalizeOptional(sessionId),
+    timestamp,
+  };
+}
+
 /**
  * HTTP action: POST /runtime-ingest
  *
@@ -1122,6 +1173,27 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
               break;
             }
             await ctx.runMutation(internal.governorDecisions.record, resolved);
+            break;
+          }
+          case "message_routed": {
+            // Phase 112 (TELE-03, D-05/D-13): routed because it was
+            // MEASURED low-volume — 10 rows in the whole 14-day window,
+            // roughly 0.7–1.2 rows/day as of 2026-08-12 — not because the
+            // switch wanted coverage symmetry, which REQUIREMENTS.md:57
+            // forbids. Routed WITHOUT a UI surface this phase by decision
+            // D-13; the surface is a recorded follow-up because
+            // message_routed's routing metadata needs its own design pass
+            // rather than a reskin of the governor_decision surface. See
+            // resolveMessageRoutedEvent above.
+            const resolved = resolveMessageRoutedEvent(data, timestamp);
+            if (!resolved) {
+              skippedCount++;
+              console.warn(
+                "[runtimeIngest] skipped message_routed event: resolveMessageRoutedEvent rejected the payload (missing/wrong-typed channel or profile, or a wrong-typed optional sender/session_id)"
+              );
+              break;
+            }
+            await ctx.runMutation(internal.messageRoutes.record, resolved);
             break;
           }
           case "git_commit": {
