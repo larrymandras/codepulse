@@ -314,3 +314,230 @@ export function buildSnapshot({ config, rollup, mountedOk, dryRunReportHash, gen
     })),
   };
 }
+
+// ---------------------------------------------------------------------------------------
+// Task 2: the D-12 dry-run report builder
+// ---------------------------------------------------------------------------------------
+
+const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+const byRootThenDirPath = (a, b) => cmp(a.rootId, b.rootId) || cmp(a.dirPath, b.dirPath);
+const DIR_COUNT_WARNING_THRESHOLD = 5000;
+const SAMPLE_LIMIT = 40;
+
+function emptyRootAgg() {
+  return { dirCount: 0, fileCount: 0, bytes: 0, withheldCount: 0 };
+}
+
+/** Aggregate rollup.dirs rows per rootId. Pure. */
+function aggregateByRoot(dirs) {
+  const perRoot = new Map();
+  for (const row of dirs) {
+    const acc = perRoot.get(row.rootId) ?? emptyRootAgg();
+    acc.dirCount++;
+    acc.fileCount += row.fileCount;
+    acc.bytes += row.totalSize;
+    acc.withheldCount += row.withheldCount;
+    perRoot.set(row.rootId, acc);
+  }
+  return perRoot;
+}
+
+/**
+ * Deterministic sample selection (never random — a nondeterministic sample would make the
+ * report hash unstable and the D-12 gate would refuse a report Larry legitimately approved):
+ * the largest fileCount per root, then the largest withheldCount per root (not already
+ * picked), then fill by sorted (rootId, dirPath) up to SAMPLE_LIMIT. Final output is re-sorted
+ * by (rootId, dirPath) for a stable emission order.
+ */
+function buildSample(dirs) {
+  const byRoot = new Map();
+  for (const row of dirs) {
+    if (!byRoot.has(row.rootId)) byRoot.set(row.rootId, []);
+    byRoot.get(row.rootId).push(row);
+  }
+  const rootIds = [...byRoot.keys()].sort();
+  const pickedKeys = new Set();
+  const picked = [];
+  const keyOf = (row) => `${row.rootId}::${row.dirPath}`;
+
+  for (const rootId of rootIds) {
+    const rows = [...byRoot.get(rootId)].sort(
+      (a, b) => b.fileCount - a.fileCount || cmp(a.dirPath, b.dirPath)
+    );
+    const top = rows[0];
+    if (top && !pickedKeys.has(keyOf(top))) {
+      picked.push(top);
+      pickedKeys.add(keyOf(top));
+    }
+  }
+  for (const rootId of rootIds) {
+    if (picked.length >= SAMPLE_LIMIT) break;
+    const rows = [...byRoot.get(rootId)].sort(
+      (a, b) => b.withheldCount - a.withheldCount || cmp(a.dirPath, b.dirPath)
+    );
+    const top = rows[0];
+    if (top && !pickedKeys.has(keyOf(top))) {
+      picked.push(top);
+      pickedKeys.add(keyOf(top));
+    }
+  }
+  const remaining = [...dirs].filter((row) => !pickedKeys.has(keyOf(row))).sort(byRootThenDirPath);
+  for (const row of remaining) {
+    if (picked.length >= SAMPLE_LIMIT) break;
+    picked.push(row);
+    pickedKeys.add(keyOf(row));
+  }
+
+  return picked
+    .slice(0, SAMPLE_LIMIT)
+    .sort(byRootThenDirPath)
+    .map((row) => ({
+      rootId: row.rootId,
+      dirPath: row.dirPath,
+      department: row.department,
+      access: row.access,
+      fileCount: row.fileCount,
+      withheldCount: row.withheldCount,
+      totalSize: row.totalSize,
+    }));
+}
+
+/**
+ * Pure; the four D-12-mandated contents (departmentCounts, totals.withheldFiles,
+ * unclassifiedRoots, sample) plus rootSummary/coverage/accessSummary/warnings. Deterministic
+ * under repeated calls on the same rollup — every array is sorted by a stable key, and the
+ * only per-run-varying field is `generatedAt`, which `hashableView` strips before hashing.
+ *
+ * @param {{ config: object, rollup: ReturnType<typeof rollupRootResults>, mountedOk: boolean, generatedAt: number }} args
+ */
+export function buildDryRunReport({ config, rollup, mountedOk, generatedAt }) {
+  const roots = Array.isArray(config?.roots) ? config.roots : [];
+  const perRootAgg = aggregateByRoot(rollup.dirs);
+
+  const departmentCounts = {};
+  for (const dep of DEPARTMENTS) departmentCounts[dep] = { dirs: 0, files: 0, bytes: 0 };
+  for (const row of rollup.dirs) {
+    const dep = DEPARTMENTS.includes(row.department) ? row.department : UNCLASSIFIED;
+    departmentCounts[dep].dirs++;
+    departmentCounts[dep].files += row.fileCount;
+    departmentCounts[dep].bytes += row.totalSize;
+  }
+
+  const totals = {
+    dirs: rollup.totalDirs,
+    files: rollup.totalFiles,
+    bytes: rollup.totalBytes,
+    withheldFiles: rollup.totalWithheldFiles,
+    statFailures: rollup.statFailures,
+    cyclesSkipped: rollup.cyclesSkipped,
+  };
+
+  const unclassifiedRoots = roots
+    .filter((r) => resolveRootDepartment(r.id, config) === UNCLASSIFIED)
+    .map((r) => {
+      const acc = perRootAgg.get(r.id) ?? emptyRootAgg();
+      return { rootId: r.id, dirCount: acc.dirCount, fileCount: acc.fileCount, bytes: acc.bytes, withheldCount: acc.withheldCount };
+    })
+    .sort((a, b) => b.fileCount - a.fileCount || cmp(a.rootId, b.rootId));
+
+  const rootSummary = [...roots]
+    .sort((a, b) => cmp(a.id, b.id))
+    .map((r) => {
+      const acc = perRootAgg.get(r.id) ?? emptyRootAgg();
+      const rootOwnRow = rollup.dirs.find((d) => d.rootId === r.id && d.dirPath === "");
+      return {
+        rootId: r.id,
+        department: resolveRootDepartment(r.id, config),
+        evidence: r.evidence || "",
+        covered: rollup.coveredRoots.includes(r.id),
+        dirCount: acc.dirCount,
+        fileCount: acc.fileCount,
+        bytes: acc.bytes,
+        withheldCount: acc.withheldCount,
+        access: rootOwnRow ? rootOwnRow.access : "local-only",
+      };
+    });
+
+  const sample = buildSample(rollup.dirs);
+
+  const coverage = {
+    coveredRoots: [...rollup.coveredRoots].sort(),
+    scannedRootsComplete: rollup.scannedRootsComplete,
+    declaredRootCount: roots.length,
+  };
+
+  let astridrReachableDirs = 0;
+  let localOnlyDirs = 0;
+  for (const row of rollup.dirs) {
+    if (row.access === "astridr-reachable") astridrReachableDirs++;
+    else localOnlyDirs++;
+  }
+  const accessSummary = { astridrReachableDirs, localOnlyDirs };
+
+  const warnings = [];
+  if (!rollup.scannedRootsComplete) {
+    warnings.push(
+      "Scan incomplete: one or more declared roots failed to fully enumerate (scannedRootsComplete=false)."
+    );
+  }
+  if (!mountedOk) {
+    warnings.push(
+      "Access derivation failed: docker-compose.yml could not be read or parsed; every directory reports access=local-only (accessDerivationOk=false)."
+    );
+  }
+  if (rollup.statFailures > 0) {
+    warnings.push(
+      `${rollup.statFailures} file(s) could not be stat'd and were counted as neither visible nor withheld.`
+    );
+  }
+  if (rollup.cyclesSkipped > 0) {
+    warnings.push(
+      `${rollup.cyclesSkipped} filesystem cycle/reparse-point entr${rollup.cyclesSkipped === 1 ? "y" : "ies"} skipped to bound the walk.`
+    );
+  }
+  if (config?.localConfigStatus !== "merged") {
+    warnings.push(
+      `Local config status is "${config?.localConfigStatus}", not "merged" — local roots may be missing from this scan (D-17 fail-closed path).`
+    );
+  }
+  if (totals.dirs > DIR_COUNT_WARNING_THRESHOLD) {
+    warnings.push(
+      `Directory count ${totals.dirs} exceeds ${DIR_COUNT_WARNING_THRESHOLD} — re-check D-11's WORKSPACE_KEEP_VERSIONS/WORKSPACE_DELETE_CAP and MAX_DIRS_PER_INGEST for headroom.`
+    );
+  }
+  if (mountedOk && astridrReachableDirs === 0) {
+    warnings.push(
+      "accessDerivationOk is true but zero directories resolved astridr-reachable — possible silent compose-parse failure (RESEARCH Pitfall 4)."
+    );
+  }
+  warnings.sort();
+
+  return {
+    schemaVersion: 1,
+    generatedAt, // epoch seconds; excluded from the hashed view by hashableView()
+    snapshotId: config?.snapshotId,
+    departmentCounts,
+    totals,
+    unclassifiedRoots,
+    rootSummary,
+    sample,
+    coverage,
+    accessDerivationOk: mountedOk,
+    accessSummary,
+    localConfigStatus: config?.localConfigStatus,
+    warnings,
+  };
+}
+
+/**
+ * The report view that gets hashed (hooks/workspaceApproval.mjs's canonicalReportHash). Strips
+ * `generatedAt` — the only wall-clock, per-run-varying field this report carries — so an
+ * approval invalidates on CONTENT change only, never merely on the passage of time.
+ *
+ * @param {object} report - buildDryRunReport() output
+ * @returns {object}
+ */
+export function hashableView(report) {
+  const { generatedAt, ...rest } = report;
+  return rest;
+}
