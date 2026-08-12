@@ -180,7 +180,13 @@ export const upsertWorkspaceSnapshot = internalMutation({
     //    version's rows) has no analogue here.
     const toDelete = selectVersionDeletes(storedVersionsAfterFlip, WORKSPACE_KEEP_VERSIONS);
     if (toDelete.length === 0) {
-      return; // nothing to prune this ingest — defaults set in step 5 already hold.
+      // Nothing to prune this ingest — defaults set in step 5 already hold.
+      // Plan 115-06 deviation: this mutation previously returned undefined
+      // on every path, but its caller (the ingest HTTP route) needs the new
+      // version number in its 200 response — plan 115-09's live proof
+      // asserts on it. Returning the meta doc's own just-written fields here
+      // keeps the response honest with zero extra reads.
+      return { version: newVersion, prunedVersion: undefined, pruneIncomplete: false };
     }
 
     // Exactly ONE version per ingest, never more (mirrors graphSnapshots'
@@ -206,7 +212,7 @@ export const upsertWorkspaceSnapshot = internalMutation({
       // NEVER raise the cap to "finish it this time" — that is the mass
       // delete ./CLAUDE.md forbids on this self-hosted instance (T-115-04-02).
       await ctx.db.patch(metaId, { pruneIncomplete: true });
-      return;
+      return { version: newVersion, prunedVersion: undefined, pruneIncomplete: true };
     }
 
     // Fully deleted. Patch the meta doc a SECOND time with versionToDelete
@@ -221,6 +227,7 @@ export const upsertWorkspaceSnapshot = internalMutation({
       prunedVersion: versionToDelete,
       pruneIncomplete: false,
     });
+    return { version: newVersion, prunedVersion: versionToDelete, pruneIncomplete: false };
   },
 });
 

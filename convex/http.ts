@@ -32,6 +32,7 @@ import { gagLedgerIngest } from "./gagLedgerIngest";
 import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
 import { galdrPromptGet, galdrListGet, galdrPromptPost, galdrUsagePost } from "./galdrHttp";
 import { loomEventPost } from "./loomHttp";
+import { workspaceIngestPost } from "./workspaceHttp";
 
 const http = httpRouter();
 
@@ -136,5 +137,13 @@ http.route({ path: "/galdr/usage",  method: "POST", handler: galdrUsagePost });
 // Phase 119 Loom (D-02/D-04). One emit route, agent/CLI only — no OPTIONS
 // partner and no CORS headers, same boundary as the /galdr routes above.
 http.route({ path: "/loom/event", method: "POST", handler: loomEventPost });
+
+// Phase 115 workspace scanner (D-04/D-10). One ingest route, host-script only:
+// the producer is hooks/workspaceScan.mjs, which sends no Origin and issues no
+// preflight, and Phase 114 reads this data through useQuery rather than here.
+// The absence of an OPTIONS partner and of CORS headers IS the boundary, not an
+// oversight — same shape as the /loom/event and /galdr routes above. Anyone
+// adding an OPTIONS route here is widening the surface for no consumer.
+http.route({ path: "/workspace-ingest", method: "POST", handler: workspaceIngestPost });
 
 export default http;
