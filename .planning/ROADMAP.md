@@ -862,7 +862,7 @@ Plans:
 **Wave 4** *(blocked on 112-04)*
 
 - [x] 112-06-PLAN.md - the D-10/D-11 disposition record: GROUP_B_DISPOSITIONS const + three-layer drift guard, mutation-proven against three distinct drifts (TELE-03; D-01, D-03, D-05, D-10, D-11, D-12) — complete 2026-08-12, commits `5420f694`/`f8d27799`, see `112-06-SUMMARY.md`
-- [ ] 112-08-PLAN.md - gap closure: normalize `tool_executed.round`'s explicit-null wire shape (confirmed live via `loop.py:2090-2097`/`get_round_context()`), plus `noFallthroughCasesInSwitch` (added mid-execution, not in the original 7-plan count)
+- [x] 112-08-PLAN.md - gap closure: normalize `tool_executed.round`'s explicit-null wire shape (confirmed live via `loop.py:2090-2097`/`get_round_context()`), plus `noFallthroughCasesInSwitch` (added mid-execution, not in the original 7-plan count) — complete 2026-08-12, commits `13afcadf`/`05312b01`/`3846a2d3`, see `112-08-SUMMARY.md`
 
 **Wave 5** *(blocked on 112-04, 112-05, 112-06, 112-08)*
 
