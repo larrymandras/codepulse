@@ -194,3 +194,9 @@ None — no external service configuration required. No build, restart, or deplo
 ---
 *Phase: 112-telemetry-coverage-closure*
 *Completed: 2026-08-12*
+
+## Self-Check: PASSED
+
+- `C:\Users\mandr\astridr-repo\docs\astridr-contract.md` — FOUND (edited, committed).
+- astridr-repo commit `7f61ba1d554568264bdd55797890cd0b9c00a31c` — FOUND in `git log --oneline --all`.
+- `.planning/phases/112-telemetry-coverage-closure/112-01-SUMMARY.md` — FOUND (this file).
