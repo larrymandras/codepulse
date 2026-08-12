@@ -2,8 +2,8 @@
 phase: 115
 slug: workspace-scanner
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-08-12
 ---
 
@@ -100,11 +100,37 @@ pattern:
 
 ## Validation Sign-Off
 
-- [ ] All tasks have automated verify or a named manual-only entry above
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] D-12's five-case mutation test present and its control (case 1) passing
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+Measured against the 10 plans at planning time, 2026-08-12 (25 tasks across 6 waves):
+
+- [x] All tasks have automated verify or a named manual-only entry above — **25 of 25 tasks carry an
+      `<automated>` block**, including the three `checkpoint:human-verify` tasks, which each pair a
+      `<human-check>` with an automated assertion. Measured by parsing every `<task>` block.
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify — trivially satisfied at
+      25/25 coverage.
+- [ ] D-12's five-case mutation test present and its control (case 1) passing — **PLANNED, not yet
+      passing.** This box is deliberately left unticked: it is an execution-time property, not a
+      planning-time one. The five cases are *specified* and split across two plans by design —
+      cases 1-4 in `115-03` (`hooks/__tests__/workspaceApproval.test.mjs`, including the passing
+      control) and case 5, the integration control asserting an injected `postSnapshot` spy is never
+      called, in `115-08` (`hooks/__tests__/workspaceScan.test.mjs`). Both plans additionally require
+      a mutation proof that the suite FAILS when the gate is inverted or moved after the POST — a green
+      suite under that mutation means the suite is not a gate. Tick this only once both are observed
+      green with their mutation proofs recorded.
+- [x] No watch-mode flags — every `<automated>` invocation uses `npx vitest run ...` or `npm test`;
+      measured zero bare-`vitest` occurrences.
+- [x] Feedback latency < 30s — the quick command targets single files; the repo baseline is ~5s.
+- [x] `nyquist_compliant: true` set in frontmatter.
+
+### Note on the decision-coverage gate (recorded because its green was initially false)
+
+Run at planning time, the blocking gate returned `{passed: true, skipped: true, total: 0, reason: "no
+trackable decisions"}` — a **false green**: it parsed ZERO decisions and its pass therefore evaluated
+nothing. Cause: `bin/lib/decisions.cjs:70`'s bullet regex requires the bold to close immediately after
+the id (`- **D-NN:** text`), and it is line-anchored, so CONTEXT.md's whole-title-bolded style
+(`- **D-01: Title.**`, several spanning two lines) could never match. CONTEXT.md's 17 decision bullets
+were reformatted to `- **D-NN:** ...` — an **emphasis-only** change, asserted by confirming the file is
+byte-identical once every `**` is stripped. The gate then returned `{passed: true, skipped: false,
+total: 17, covered: 17}`, and the Phase-112 control returned its independently-documented
+`total: 14, covered: 14`, proving the invocation form and the parser are both working.
 
 **Approval:** pending

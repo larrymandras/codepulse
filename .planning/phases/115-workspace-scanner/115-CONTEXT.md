@@ -26,7 +26,7 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
 
 ### Payload and secrets (the highest-stakes area)
 
-- **D-01: A snapshot carries path + metadata, NEVER file contents.** Each record carries its
+- **D-01:** A snapshot carries path + metadata, NEVER file contents. Each record carries its
   relative path, size, mtime and derived classifications (department, access, isSecret). The donor's
   markdown link-extraction is **explicitly dropped** — `scan.js:149`'s
   `fs.readFileSync(path.join(ROOT, f.rel), 'utf8')` is the only place the donor reads file bodies,
@@ -34,7 +34,7 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
   exclude content reading by construction, not by omission. The scanner must be structurally unable
   to transmit file contents.
 
-- **D-02: Secret detection is DENY-BY-DEFAULT per root, not a secret-shaped regex.** A file is
+- **D-02:** Secret detection is DENY-BY-DEFAULT per root, not a secret-shaped regex. A file is
   treated as shareable only if it matches an explicit allowlist for its root; anything unmatched is
   treated as sensitive. Rationale is measured, not theoretical — the donor's `SECRET_RE`
   (`scan.js:46`) was tested against Larry's real tree and returned **PUBLIC** for all three of:
@@ -42,7 +42,7 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
   `Authorization: Bearer` token), and `.mcp.json`. An enumerating regex fails OPEN on every shape
   nobody anticipated; a deny-by-default allowlist fails CLOSED.
 
-- **D-03: Secret-classified paths are omitted from the snapshot entirely.** They never leave the
+- **D-03:** Secret-classified paths are omitted from the snapshot entirely. They never leave the
   host — not even as a flagged/locked row, because a filename is itself a disclosure. The snapshot
   carries a **withheld count** per directory so the omission is visible in the map rather than
   silent. (This deliberately diverges from the donor's `accessOf()`, which ingests secrets and merely
@@ -50,8 +50,8 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
 
 ### Scanner home and triggering
 
-- **D-04: A separate `hooks/workspaceScan.mjs`, importing shared helpers from the existing scanner
-  rather than copying them.** `hooks/scanner.mjs` (338 lines) already owns the POST/bearer/dry-run
+- **D-04:** A separate `hooks/workspaceScan.mjs`, importing shared helpers from the existing scanner
+  rather than copying them. `hooks/scanner.mjs` (338 lines) already owns the POST/bearer/dry-run
   plumbing, but it is the **SessionStart** environment scan, so it fires on every session. Folding a
   vault + all-repos walk into that path would violate the project's fire-and-forget hook rule
   outright. SessionStart must remain untouched by this phase.
@@ -85,14 +85,14 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
      extracting it is the sanctioned fallback if the extraction cannot be made safely; duplicating 20
      lines is a smaller risk than regressing every session start.
 
-- **D-05: Nightly scheduled task + an on-demand flag.** Two constraints are non-negotiable and both
+- **D-05:** Nightly scheduled task + an on-demand flag. Two constraints are non-negotiable and both
   come from recorded incidents: the task is launched via `C:\Users\mandr\scripts\run-hidden.vbs`
   (verified present, 826 bytes) because `powershell -WindowStyle Hidden` does **not** hide when
   Windows Terminal is the default terminal; and the task must **not** carry
   `DisallowStartIfOnBatteries`, which silently no-ops the entire action and cost ClaudeConfigPull
   5+ weeks of never running.
 
-- **D-06: The walk is bounded by an explicit root list plus the donor's `EXCLUDE_DIRS`**
+- **D-06:** The walk is bounded by an explicit root list plus the donor's `EXCLUDE_DIRS`
   (`node_modules`, `.git`, `.venv`, `__pycache__`, `.next`, `.cache`, `dist`, `coverage`, `.turbo`,
   `.pytest_cache`, `.idea`, `.vscode-server`, …). Roots are named, not discovered. No depth cap was
   taken — the exclude set removes the pathological trees, and a silent depth truncation would
@@ -100,42 +100,42 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
 
 ### Classification model
 
-- **D-07: Departments are Larry's three operating contexts — Work / Consulting / Personal.** This
+- **D-07:** Departments are Larry's three operating contexts — Work / Consulting / Personal. This
   mirrors how he defines his own operating model in his global CLAUDE.md. A department answers what
   a thing is FOR, which is the question a map should answer at a glance. Chosen over the donor's
   artifact-type model (skills/memory/projects/docs), which is derivable from paths but blurs Work
   and Personal together.
 
-- **D-08: Classification rules live in a config JSON checked into this repo.** Mirrors the donor's
+- **D-08:** Classification rules live in a config JSON checked into this repo. Mirrors the donor's
   own design (it reads `config/workspace.json`). Two consequences that matter downstream: the rules
   are reviewable in a diff, and the classifier becomes a **pure function of (path, config)** — which
   is what makes D-12's dry-run gate meaningful and the classifier unit-testable against alternate
   rule sets.
 
-- **D-09: `access` (Ástríðr-reachable vs local-only) is DERIVED from Ástríðr's compose bind mounts,
-  not hand-maintained.** Parse the mount sources from `astridr-repo/docker-compose.yml` — measured at
+- **D-09:** `access` (Ástríðr-reachable vs local-only) is DERIVED from Ástríðr's compose bind mounts,
+  not hand-maintained. Parse the mount sources from `astridr-repo/docker-compose.yml` — measured at
   discussion time: the vault → `/app/vault` (`:344`), `.claude` (`:345`, `:359`), `.agents` (`:360`),
   three repos' `.claude\skills` (`:369-371`), `.claude-alt` (`:539-541`), and `.claude.json` itself
   (`:540`). All are `:ro`. Derivation is self-correcting — change a mount and the map follows —
   whereas a hand-maintained prefix list is a second source of truth that goes stale silently.
 
-- **D-14: Root→department assignment is an explicit map in the same config; unmapped roots render as
-  a visible "Unclassified" group.** Nothing on disk records that `codepulse` is Personal and a
+- **D-14:** Root→department assignment is an explicit map in the same config; unmapped roots render as
+  a visible "Unclassified" group. Nothing on disk records that `codepulse` is Personal and a
   ProtectAll repo is Work, so the mapping must be declared. It must **never silently default into a
   real department** — an unmapped root appearing as "Personal" would make the map assert a context it
   actually inferred. The dry-run report surfaces everything Unclassified.
 
 ### Storage, growth and the gate
 
-- **D-10: New `workspace*` tables copying the proven versioned pattern — NOT reuse of
-  `graphSnapshots`.** The pattern to copy is real and built: meta row holding an `activeVersion`
+- **D-10:** New `workspace*` tables copying the proven versioned pattern — NOT reuse of
+  `graphSnapshots`. The pattern to copy is real and built: meta row holding an `activeVersion`
   pointer, entity rows keyed by `(snapshotId, version)`, and the pointer patched **LAST**
   (`graphSnapshots.ts:137`, "7. LAST: patch-or-insert meta doc with new activeVersion pointer") so a
   mid-scan crash can never show a partial map. Two reasons not to reuse the tables themselves:
   `graphSnapshotNodes` has fixed fields (`nodeId, label, type, community, source`) with nowhere for
   department/access/isSecret/size/mtime, forcing a lossy encoding into `type`/`source`; and see D-11.
 
-- **D-11: Growth is bounded by an inline, batch-capped prune at ingest — not by a cron.** The writer
+- **D-11:** Growth is bounded by an inline, batch-capped prune at ingest — not by a cron. The writer
   deletes the oldest version's rows as part of the same ingest that adds a new one. This is a direct
   consequence of a live defect found during discussion: `sweepGraphSnapshotVersions` exists
   (`graphSnapshots.ts:168`, keeps 7 versions) but its cron registration is **commented out** at
@@ -144,8 +144,8 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
   never issue a mass delete — the self-hosted instance's MVCC tombstone GC cannot absorb one (see
   CLAUDE.md's 2026-07-22 incident rules). Bounded by construction beats bounded by a schedule.
 
-- **D-12: The dry-run gate is STRUCTURAL — the dry-run writes a reviewable report, and the ingest
-  path hard-refuses until an approval marker recording that report exists.** The design mandates
+- **D-12:** The dry-run gate is STRUCTURAL — the dry-run writes a reviewable report, and the ingest
+  path hard-refuses until an approval marker recording that report exists. The design mandates
   "classifier dry-run against the real tree reviewed before first ingest"; a procedural instruction
   would rest on discipline. The report carries per-department counts, the withheld-secret count, the
   Unclassified list, and a sample of classifications. **The refusal must be mutation-tested** —
@@ -154,7 +154,7 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
 
 ### Granularity
 
-- **D-13: Directories are nodes; individual files are counts, never nodes.** Each directory node
+- **D-13:** Directories are nodes; individual files are counts, never nodes. Each directory node
   carries aggregate counts (file count, total size, department mix, withheld-secret count). Measured
   at discussion time: **21,029 files** across just `.claude` (12,152), `.claude-alt` (5,183) and the
   vault (3,694) — with repos not yet counted. A file-per-node graph is neither storable at that shape
@@ -168,8 +168,8 @@ That ROADMAP line should be corrected; it is not a constraint on this phase.
 Research surfaced two open questions that D-07/D-14 could not answer from disk. Both were put to
 Larry during plan-phase and are now locked:
 
-- **D-15: The vault, `.claude` and `.claude-alt` each map to a single "Unclassified" department at
-  the ROOT level.** They demonstrably contain Work, Consulting and Personal material mixed together,
+- **D-15:** The vault, `.claude` and `.claude-alt` each map to a single "Unclassified" department at
+  the ROOT level. They demonstrably contain Work, Consulting and Personal material mixed together,
   and D-14 assigns departments per root — so any single department label for them would be an
   assertion the scanner inferred rather than knew. Both alternatives were rejected: declaring
   narrower vault sub-roots (each new vault folder then needs a config edit or silently goes
@@ -178,8 +178,8 @@ Larry during plan-phase and are now locked:
   expected and correct on the first cut, and D-12's dry-run report is what tells Larry whether it is
   too large to live with.
 
-- **D-16: Every ambiguous root under `C:\Users\mandr\` ships as a DECLARED root mapped to
-  Unclassified — never omitted, never guessed into a real department.** Research found ~10
+- **D-16:** Every ambiguous root under `C:\Users\mandr\` ships as a DECLARED root mapped to
+  Unclassified — never omitted, never guessed into a real department. Research found ~10
   directories it could not classify from the name alone; several read as consulting-client names, but
   on directory naming alone with zero corroborating evidence. Declaring them Unclassified satisfies
   both failure modes at once: no wrong department lands silently (D-14's rule), and no real work is
@@ -187,8 +187,8 @@ Larry during plan-phase and are now locked:
   file counts and sizes so Larry can re-map the real ones in a single local config edit before first
   ingest. Their names are not recorded in this file — see D-17.
 
-- **D-17: The classification config is SPLIT — a tracked rules file plus a gitignored local root
-  list. This AMENDS D-08.** D-08 said "classification rules live in a config JSON checked into this
+- **D-17:** The classification config is SPLIT — a tracked rules file plus a gitignored local root
+  list. This AMENDS D-08. D-08 said "classification rules live in a config JSON checked into this
   repo," which is still true of the *rules*. But `larrymandras/codepulse` is a **public** repo
   (measured at planning time: `gh repo view` → `"visibility":"PUBLIC"`), and D-16's root list is an
   inventory of Larry's project directory names, several of which read like client engagements. Of
