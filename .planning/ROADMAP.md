@@ -842,7 +842,30 @@ Plans:
   2. Every remaining Group B event kind (excluding `control_verb_swap`, already disposed in Phase 108) has a recorded disposition — routed to a domain table and surfaced, or explicitly kept generic-table-by-design — with a stated reason per kind, none left ambiguous.
   3. `governor_decision` (the one kind confirmed arriving live) is evaluated as the strongest routing candidate, and whatever disposition it receives is justified in writing rather than built purely for switch-coverage symmetry.
 
-**Plans**: TBD
+**Plans**: 7 plans in 5 waves
+
+Plans:
+**Wave 1** *(parallel, no file overlap - different repos / different files)*
+
+- [ ] 112-01-PLAN.md - TELE-01, astridr-repo docs only: five dated NOT EMITTED banners in place on sections 2.20-2.24 plus removal of the three unfirable critical-events rows (TELE-01; D-07, D-08, D-09)
+- [ ] 112-02-PLAN.md - governorDecisions + messageRoutes tables in schema.ts, both bounded in RETENTION_DAYS with dated reasons, plus a mutation-proven drift assertion (TELE-03; D-06)
+
+**Wave 2** *(blocked on 112-02)*
+
+- [ ] 112-03-PLAN.md - domain modules: internalMutation writes + bounded .take() reads for both tables, CR-01 and bounded-read guard tests, Convex API codegen (TELE-03; D-04, D-13)
+
+**Wave 3** *(blocked on 112-03; the two plans below run in parallel - no file overlap)*
+
+- [ ] 112-04-PLAN.md - ingest routing: resolveGovernorDecisionEvent / resolveMessageRoutedEvent + both dispatch cases, with held_reason null-normalization from the first commit and three-wire-shape tests (TELE-03; D-04, D-05, D-13, D-14)
+- [ ] 112-05-PLAN.md - the approved UI surface: GovernorDecisionLog on the Settings notifications tab with honest loading/empty/error states (TELE-03; D-04, D-13)
+
+**Wave 4** *(blocked on 112-04)*
+
+- [ ] 112-06-PLAN.md - the D-10/D-11 disposition record: GROUP_B_DISPOSITIONS const + three-layer drift guard, mutation-proven against three distinct drifts (TELE-03; D-01, D-03, D-05, D-10, D-11, D-12)
+
+**Wave 5** *(blocked on 112-04, 112-05, 112-06)*
+
+- [ ] 112-07-PLAN.md - **`autonomous: false`**: [BLOCKING] `--env-file` deploy to the self-hosted backend, then live control-paired arrival proof where an empty result is a FAILURE, plus an operator checkpoint (TELE-03; D-02, D-04, D-13, D-14)
 
 ---
 
@@ -890,7 +913,7 @@ Plans:
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
-| 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
+| 112. Telemetry Coverage Closure | 0/7 | Planned | - |
 | 113. Debt Sweep | 8/8 | Complete (DEBT-06 GUARDED) | 2026-08-12 |
 
 ### Phase 114: Workspace Map view
