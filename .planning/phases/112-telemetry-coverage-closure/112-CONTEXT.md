@@ -85,11 +85,57 @@ TELE-01 is a doc fix), and any rework of the `control_verb_swap` route.
   — which is a legitimate D-01 outcome, not an exception to it, and the reason is recorded
   either way. **Neither outcome may be left ambiguous** (`REQUIREMENTS.md:57`).
 
+  **GATE RESOLVED 2026-08-12 (during plan-phase research).** The measurement was taken and
+  independently re-run by the orchestrator, control-paired per D-02 in both runs
+  (`llm_call` present → 1,261 rows; `definitely_not_a_real_kind_9x7q2` absent → 0 rows):
+
+  | Kind | Rows in 14-day window | Rate | Uncapped? |
+  |---|---|---|---|
+  | `message_routed` | **10** | ~0.7–1.2 rows/day, bursty | yes — 10 « limit 2000 |
+  | `governor_decision` | **1,168** | **83.3 rows/day** over a 14.02-day span | yes — 1,168 « limit 2000 |
+
+  Timestamp unit re-confirmed as epoch **seconds** (newest `governor_decision` row
+  2026-08-12T13:00:31Z against wall clock 13:08:12Z — a coherent 8 minutes, not a 1970
+  date). `message_routed` is therefore **low-volume, not a firehose**: D-05's
+  "may be routed in this phase" branch applies, not the volume-justified-generic branch.
+  See D-13 for how much of that route lands in this phase.
+
 - **D-06:** Any new domain table introduced here is **bounded in `RETENTION_DAYS` before it
   can ever grow**, following the established pre-emptive pattern documented in-line at
   `convex/retention.ts` for `gatewayQuotaSnapshots` (D-20), `toolPolicyEvents` (Phase 105
   D-05) and `activeEngineSnapshots` (Phase 108 D-10). The window itself is the planner's
   call within that pattern; the requirement to bound it up front is not.
+
+### Scope resolution from the D-05 measurement (added 2026-08-12, plan-phase)
+
+- **D-13:** `message_routed` is **routed to a domain table in this phase but NOT given a UI
+  surface in this phase.** It gets the same treatment as `governor_decision` on every
+  non-visual seam — ingest case, domain table + index, `RETENTION_DAYS` bound (D-06), and a
+  disposition-record entry (D-10/D-11) reading "bar-passing, routed, measured 0.7–1.2
+  rows/day (10 rows in the 14-day window), 2026-08-12". Its UI surface is a recorded
+  follow-up, **not** an ambiguity: the disposition is decided and written down, satisfying
+  `REQUIREMENTS.md:57`. Rationale for splitting it this way: the approved `112-UI-SPEC.md`
+  designed only the `governor_decision` surface, and the UI-SPEC itself warns that
+  `message_routed`'s fields (`channel`/`sender`/`session_id` routing metadata) are
+  structurally unlike `governor_decision`'s spoke/held outcome — so a surface for it is a
+  new design pass, not a reskin. Routing now means its history begins accruing immediately
+  rather than starting from zero whenever that surface is designed. Rejected alternatives:
+  "route + surface both" (requires re-running `/gsd-ui-phase 112` for an unreviewed second
+  surface before planning can proceed), and "`governor_decision` only" (knowingly leaves a
+  kind that passed the phase's own bar unrouted).
+
+- **D-14:** The `governor_decision` resolver MUST normalize an explicit JSON `null` on
+  `held_reason` from the first commit, reusing the existing `isOptionalString` /
+  `normalizeOptional` pair that `resolveControlVerbSwapEvent` already applies
+  (`convex/runtimeIngest.ts:369-421`, the same defect class fixed once for
+  `control_verb_swap`'s `session_id` at `runtimeIngest.ts:207-268`). This is not a
+  hypothetical edge case: measured across the 646 `spoke:false` rows in the live 14-day
+  window (2026-08-12), `held_reason` arrives in three wire shapes — **424 explicit `null`**,
+  146 key-absent, 76 real string. Convex's `v.optional(v.string())` rejects an explicit
+  `null` outright, and per the per-event try/catch at `runtimeIngest.ts:482-509` the
+  offending event is silently dropped into `droppedCount` rather than failing loudly — so a
+  naive resolver loses 424 of 646 held rows (36% of all `governor_decision` rows) with no
+  error surfaced. A test must cover all three wire shapes.
 
 ### TELE-01 — Group A correction in astridr-repo
 
@@ -232,9 +278,13 @@ TELE-01 is a doc fix), and any rework of the `control_verb_swap` route.
   that would have caught the entire Group A defect class at source rather than ~5 months
   later. Deliberately out of scope: new guard, second repo, beyond TELE-01/03's letter.
   Strong candidate for a future astridr-repo phase.
-- **`message_routed` domain route** — if D-05's volume measurement disqualifies it in this
-  phase, the route itself carries forward as a candidate once volume is known or once the
-  instance's read-growth posture changes.
+- **`message_routed` UI surface** — SUPERSEDED 2026-08-12: this entry previously deferred the
+  *route* pending D-05's volume measurement. That measurement was taken (10 rows / 14 days,
+  low-volume) and the route is now IN this phase per D-13. What carries forward is only the
+  **UI surface**: `112-UI-SPEC.md` designed the `governor_decision` surface alone, and
+  `message_routed`'s routing metadata needs its own design pass. Data begins accruing in the
+  domain table as of this phase, so the surface can be built against real history whenever
+  it is designed.
 - **Group A implementation** — actually emitting the 5 aspirational kinds is an astridr-side
   feature, not a contract fix. Out of scope by REQUIREMENTS.md:74.
 
