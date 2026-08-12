@@ -15,7 +15,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { getFunctionName } from "convex/server";
 import { internal } from "./_generated/api";
-import { workspaceIngestPostHandler, MAX_DIRS_PER_INGEST } from "./workspaceHttp";
+import {
+  workspaceIngestPostHandler,
+  MAX_DIRS_PER_INGEST,
+  MAX_PRUNE_CALLS,
+} from "./workspaceHttp";
 import { WORKSPACE_DELETE_CAP } from "./workspace";
 
 afterEach(() => {
@@ -86,8 +90,54 @@ describe("workspaceIngestPostHandler — control", () => {
     const response = await workspaceIngestPostHandler(ctx, makeReq(validBody()));
     expect(response.status).toBe(200);
     const parsed = await response.json();
-    expect(parsed).toEqual({ ok: true, version: 1, prunedVersion: undefined, pruneIncomplete: false });
+    expect(parsed).toEqual({
+      ok: true,
+      version: 1,
+      prunedVersion: undefined,
+      pruneIncomplete: false,
+      pruneCalls: 0,
+    });
+    // prunePending is falsy on this mock, so the prune mutation must NOT be
+    // called — exactly one mutation for the insert.
     expect(ctx.runMutation.mock.calls.length).toBe(1);
+  });
+
+  // The prune moved into its own mutation on 2026-08-12; these cover the loop
+  // the route now owns.
+  it("prunePending -> calls the prune mutation until moreWork is false", async () => {
+    stubAuthKey();
+    const results = [
+      { version: 5, prunePending: true },
+      { moreWork: true, prunedVersion: undefined, pruneIncomplete: true },
+      { moreWork: false, prunedVersion: 2, pruneIncomplete: false },
+    ];
+    let i = 0;
+    const ctx = { runMutation: vi.fn(async () => results[i++]) };
+    const response = await workspaceIngestPostHandler(ctx, makeReq(validBody()));
+    const parsed = await response.json();
+    expect(response.status).toBe(200);
+    // 1 insert + 2 prune calls, stopping as soon as moreWork went false.
+    expect(ctx.runMutation.mock.calls.length).toBe(3);
+    expect(parsed.pruneCalls).toBe(2);
+    expect(parsed.prunedVersion).toBe(2);
+    expect(parsed.pruneIncomplete).toBe(false);
+  });
+
+  it("a prune that never reports done is bounded by MAX_PRUNE_CALLS", async () => {
+    stubAuthKey();
+    let first = true;
+    const ctx = {
+      runMutation: vi.fn(async () => {
+        if (first) { first = false; return { version: 5, prunePending: true }; }
+        // Never satisfied — the loop must stop on its own bound, not run away.
+        return { moreWork: true, prunedVersion: undefined, pruneIncomplete: true };
+      }),
+    };
+    const response = await workspaceIngestPostHandler(ctx, makeReq(validBody()));
+    const parsed = await response.json();
+    expect(parsed.pruneCalls).toBe(MAX_PRUNE_CALLS);
+    expect(ctx.runMutation.mock.calls.length).toBe(1 + MAX_PRUNE_CALLS);
+    expect(parsed.pruneIncomplete).toBe(true);
   });
 });
 
@@ -271,9 +321,20 @@ describe("workspaceIngestPostHandler — field validation", () => {
     expect(
       MAX_DIRS_PER_INGEST + WORKSPACE_DELETE_CAP + META_PATCHES
     ).toBeLessThanOrEqual(CONVEX_WRITE_CEILING);
-    // And the prune's bounded read (CAP+1) must stay under the 4,096-read limit
-    // that actually threw live on 2026-08-12.
-    expect(WORKSPACE_DELETE_CAP + 1).toBeLessThan(4096);
+    // The prune runs in its OWN mutation, so its reads are
+    // 1 meta + (CAP+1) take + CAP deletes, which must clear the 4,096-read
+    // limit that threw live on 2026-08-12.
+    expect(1 + (WORKSPACE_DELETE_CAP + 1) + WORKSPACE_DELETE_CAP).toBeLessThan(4096);
+  });
+
+  // An ingest must be able to drain at least as many rows as it adds, or
+  // workspaceDirs grows without bound. This is the invariant the 2026-08-12
+  // run exposed the hard way: the original design could delete 4,000/ingest
+  // while adding 15,648.
+  it("one ingest can drain at least as many rows as it can add", () => {
+    expect(MAX_PRUNE_CALLS * WORKSPACE_DELETE_CAP).toBeGreaterThanOrEqual(
+      MAX_DIRS_PER_INGEST
+    );
   });
 
   // Case 10 — a bad element inside dirs, at a non-zero index.

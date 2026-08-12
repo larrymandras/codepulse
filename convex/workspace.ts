@@ -48,20 +48,29 @@ export const WORKSPACE_SNAPSHOT_ID = "larry-workspace";
 export const WORKSPACE_KEEP_VERSIONS = 3;
 
 /**
- * Bounds BOTH the prune's reads and its deletes. The prune takes CAP+1 rows,
- * so reads are 4,001 — under the 4,096-read per-function limit that this
- * mutation actually hits first, measured live on 2026-08-12 (plan 115-09):
- *   "Too many reads in a single function execution (limit: 4096)"
+ * Rows deleted per pruneWorkspaceVersions CALL. Reads per call are
+ * 1 meta + (CAP+1) take + CAP deletes ~= 3,002 at 1,500, under the 4,096-read
+ * per-function limit.
  *
- * CORRECTION: this constant's original comment justified 4,000 as "headroom
- * under the ~16,000-doc per-mutation write ceiling". That write ceiling is
- * real (Convex docs: Documents written 16,000) and is what MAX_DIRS_PER_INGEST
- * guards, but it is NOT what bounded this loop — the READ limit is roughly 4x
- * tighter and was never considered. The value 4,000 survives the correction by
- * coincidence, not by design, so do not raise it above 4,094 (CAP+1 must stay
- * under 4,096, leaving room for the meta-doc read).
+ * TWO CORRECTIONS, both from plan 115-09's live run on 2026-08-12, because the
+ * original 4,000 was justified against the wrong limit twice over:
+ *
+ *  1. The original comment called 4,000 "headroom under the ~16,000-doc
+ *     per-mutation WRITE ceiling". That ceiling is real (Convex docs:
+ *     "Documents written 16,000") and is what MAX_DIRS_PER_INGEST guards, but
+ *     it is not what this code hit. The READ limit is ~4x tighter.
+ *  2. The real blocker was not this constant at all. While the prune lived
+ *     INSIDE the ingest mutation, a query after N inserts had to merge the
+ *     transaction's own pending write set at ~N reads, so 4,912 inserts blew
+ *     the read limit before the cap was ever consulted. Caps of 4000, 2000,
+ *     1000 and 500 all failed identically; the same prune with a 100-row
+ *     insert batch succeeded. That control is what moved the prune out into
+ *     its own mutation rather than tuning this number further.
+ *
+ * Keep CAP+1 under 4,096. Do not move the prune back inside the ingest
+ * mutation at any value.
  */
-export const WORKSPACE_DELETE_CAP = 4000;
+export const WORKSPACE_DELETE_CAP = 1500;
 
 const CHUNK = 1000; // matches graphSnapshots.ts:102
 
@@ -179,35 +188,60 @@ export const upsertWorkspaceSnapshot = internalMutation({
       metaId = await ctx.db.insert("workspaceSnapshots", metaDoc);
     }
 
-    // 6. INLINE PRUNE (D-11), strictly after the flip. Candidate selection
-    //    reads storedVersionsAfterFlip — the array just written to the meta
-    //    doc — NEVER a query over workspaceDirs. This is the entire A2
-    //    mitigation: the read that times out sweepGraphSnapshotVersions
-    //    (graphSnapshots.ts:176-185, a full .collect() over every stored
-    //    version's rows) has no analogue here.
-    const toDelete = selectVersionDeletes(storedVersionsAfterFlip, WORKSPACE_KEEP_VERSIONS);
+    // 6. NO PRUNE HERE. See pruneWorkspaceVersions below — D-11's prune moved
+    //    out of this mutation on 2026-08-12 (plan 115-09) because it could not
+    //    work here at any cap. Measured, with a control: a query issued AFTER
+    //    N inserts in the same mutation must merge this transaction's own
+    //    pending write set, and that costs ~N reads against a 4,096-read limit.
+    //    Identical prune work with 4,912 inserts FAILED and with 100 inserts
+    //    SUCCEEDED, which is what isolated the insert batch — not the cap — as
+    //    the cost. WORKSPACE_DELETE_CAP was tested at 4000/2000/1000/500 and
+    //    every value failed identically.
+    //
+    //    D-11's substance is unchanged: the prune is still request-driven and
+    //    still a single-version capped delete, never a cron and never a mass
+    //    delete. What changed is "same mutation" -> "same request".
+    const prunePending =
+      selectVersionDeletes(storedVersionsAfterFlip, WORKSPACE_KEEP_VERSIONS).length > 0;
+
+    return { version: newVersion, prunePending };
+  },
+});
+
+/**
+ * D-11's prune, as its OWN mutation so it runs in its own transaction with a
+ * fresh read budget and no pending write set to merge. Deletes at most
+ * WORKSPACE_DELETE_CAP rows from exactly ONE version per call; the caller
+ * (convex/workspaceHttp.ts) invokes it repeatedly until `moreWork` is false or
+ * its own call cap is reached.
+ *
+ * Reads per call: 1 meta + (CAP+1) take + CAP deletes. Never the pending-write
+ * merge that made the inline form impossible.
+ *
+ * Idempotent by construction: a crash between the delete loop and the final
+ * patch leaves a stale entry in storedVersions pointing at a partially deleted
+ * version, which the next call re-selects and finishes. activeVersion is never
+ * touched by any path here.
+ */
+export const pruneWorkspaceVersions = internalMutation({
+  args: { snapshotId: v.string() },
+  handler: async (ctx, args) => {
+    const meta = await ctx.db
+      .query("workspaceSnapshots")
+      .withIndex("by_snapshotId", (q) => q.eq("snapshotId", args.snapshotId))
+      .unique();
+    if (!meta) return { moreWork: false, prunedVersion: undefined, pruneIncomplete: false };
+
+    const toDelete = selectVersionDeletes(meta.storedVersions, WORKSPACE_KEEP_VERSIONS);
     if (toDelete.length === 0) {
-      // Nothing to prune this ingest — defaults set in step 5 already hold.
-      // Plan 115-06 deviation: this mutation previously returned undefined
-      // on every path, but its caller (the ingest HTTP route) needs the new
-      // version number in its 200 response — plan 115-09's live proof
-      // asserts on it. Returning the meta doc's own just-written fields here
-      // keeps the response honest with zero extra reads.
-      return { version: newVersion, prunedVersion: undefined, pruneIncomplete: false };
+      if (meta.pruneIncomplete) await ctx.db.patch(meta._id, { pruneIncomplete: false });
+      return { moreWork: false, prunedVersion: undefined, pruneIncomplete: false };
     }
 
-    // Exactly ONE version per ingest, never more (mirrors graphSnapshots'
-    // sweep, and keeps each ingest's total write volume bounded).
+    // Exactly ONE version per call, never more.
     const versionToDelete = toDelete[0];
-    // BOUNDED READ, not .collect() (fixed 2026-08-12, plan 115-09 live proof).
-    // .collect() read EVERY row of the stale version before WORKSPACE_DELETE_CAP
-    // was applied, so the cap bounded the DELETES but never the READS. At 4,912
-    // dirs/version that threw at runtime:
-    //   "Too many reads in a single function execution (limit: 4096)"
-    // The binding limit here is READS (4,096), NOT the ~16,000-doc WRITE ceiling
-    // this file's constants were reasoned against — the write ceiling is real but
-    // was never what this loop hit first. Taking CAP+1 keeps reads at 4,001 and
-    // still detects "more remain" from the presence of the extra row.
+    // BOUNDED READ, never .collect(): taking CAP+1 both bounds the read and
+    // detects "more remain" from the presence of the extra row.
     const staleRows = await ctx.db
       .query("workspaceDirs")
       .withIndex("by_snapshot_version", (q) =>
@@ -225,27 +259,30 @@ export const upsertWorkspaceSnapshot = internalMutation({
     }
 
     if (moreRemain) {
-      // Cap hit — leave versionToDelete IN storedVersions so the next
-      // ingest's selectVersionDeletes re-selects it and finishes the job.
-      // NEVER raise the cap to "finish it this time" — that is the mass
-      // delete ./CLAUDE.md forbids on this self-hosted instance (T-115-04-02).
-      await ctx.db.patch(metaId, { pruneIncomplete: true });
-      return { version: newVersion, prunedVersion: undefined, pruneIncomplete: true };
+      // Cap hit — leave versionToDelete IN storedVersions so the next call
+      // re-selects it and finishes the job. NEVER raise the cap to "finish it
+      // this time" — that is the mass delete ./CLAUDE.md forbids on this
+      // self-hosted instance (T-115-04-02).
+      await ctx.db.patch(meta._id, { pruneIncomplete: true });
+      return { moreWork: true, prunedVersion: undefined, pruneIncomplete: true };
     }
 
-    // Fully deleted. Patch the meta doc a SECOND time with versionToDelete
-    // removed from storedVersions. A crash between the delete loop above and
-    // this patch leaves a stale entry in storedVersions pointing at a
-    // partially/fully-deleted version — that is SAFE and self-healing: the
-    // next ingest's selectVersionDeletes selects it again (a no-op over any
-    // rows already gone) and finishes the bookkeeping. activeVersion is
-    // never affected by any of this. Idempotent by construction.
-    await ctx.db.patch(metaId, {
-      storedVersions: storedVersionsAfterFlip.filter((ver) => ver !== versionToDelete),
+    await ctx.db.patch(meta._id, {
+      storedVersions: meta.storedVersions.filter((ver) => ver !== versionToDelete),
       prunedVersion: versionToDelete,
       pruneIncomplete: false,
     });
-    return { version: newVersion, prunedVersion: versionToDelete, pruneIncomplete: false };
+    // More work remains only if ANOTHER whole version is still over the keep
+    // limit after this one was fully removed.
+    const remaining = selectVersionDeletes(
+      meta.storedVersions.filter((ver) => ver !== versionToDelete),
+      WORKSPACE_KEEP_VERSIONS
+    );
+    return {
+      moreWork: remaining.length > 0,
+      prunedVersion: versionToDelete,
+      pruneIncomplete: false,
+    };
   },
 });
 

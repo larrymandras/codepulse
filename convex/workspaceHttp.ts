@@ -63,6 +63,16 @@ function jsonResponse(payload: unknown, status: number): Response {
  */
 export const MAX_DIRS_PER_INGEST = 8000;
 
+/**
+ * How many times one ingest request may invoke pruneWorkspaceVersions. Each
+ * call is its own transaction deleting at most WORKSPACE_DELETE_CAP rows from
+ * one version. 6 * 1,500 = 9,000 >= MAX_DIRS_PER_INGEST, so an ingest can
+ * always drain at least as many rows as it adds — the condition for a bounded
+ * workspaceDirs table. Raising MAX_DIRS_PER_INGEST without raising this (or the
+ * cap) reintroduces unbounded growth.
+ */
+export const MAX_PRUNE_CALLS = 6;
+
 const LOCAL_CONFIG_STATUSES = new Set(["merged", "absent", "version-mismatch"]);
 
 function isFiniteNumber(x: unknown): x is number {
@@ -223,12 +233,47 @@ export const workspaceIngestPostHandler = async (ctx: any, request: Request) => 
       })),
     });
 
+    // D-11's prune, as SEPARATE mutation calls after the insert has committed.
+    // Each call is its own transaction with a fresh read budget and no pending
+    // write set — the inline form could not work at any cap (see
+    // convex/workspace.ts's WORKSPACE_DELETE_CAP comment for the measurement).
+    //
+    // Bounded loop, never `while (moreWork)`: a bug or a pathological version
+    // count must not turn one ingest into unbounded delete traffic against the
+    // single-node self-hosted backend.
+    //
+    // The bound that matters for steady state: MAX_PRUNE_CALLS *
+    // WORKSPACE_DELETE_CAP must be >= MAX_DIRS_PER_INGEST, or each ingest adds
+    // more rows than it can ever drain and workspaceDirs grows without limit.
+    // 6 * 1,500 = 9,000 >= 8,000. Asserted in workspaceHttp.test.ts rather than
+    // left to this comment, because that is exactly the kind of arithmetic
+    // relationship that rots silently when one constant is tuned alone.
+    let prunedVersion: number | undefined;
+    let pruneIncomplete = false;
+    let pruneCalls = 0;
+    if (result?.prunePending) {
+      while (pruneCalls < MAX_PRUNE_CALLS) {
+        const p = await ctx.runMutation(internal.workspace.pruneWorkspaceVersions, {
+          snapshotId: body.snapshotId,
+        });
+        // Counted where the call actually happens, not in a for-header — a
+        // `break` there skips the increment and under-reports by one, which is
+        // the kind of quiet off-by-one that makes a bounded loop look like it
+        // ran less work than it did.
+        pruneCalls++;
+        if (p?.prunedVersion !== undefined) prunedVersion = p.prunedVersion;
+        pruneIncomplete = Boolean(p?.pruneIncomplete);
+        if (!p?.moreWork) break;
+      }
+    }
+
     return jsonResponse(
       {
         ok: true,
         version: result?.version,
-        prunedVersion: result?.prunedVersion,
-        pruneIncomplete: result?.pruneIncomplete,
+        prunedVersion,
+        pruneIncomplete,
+        pruneCalls,
       },
       200
     );
