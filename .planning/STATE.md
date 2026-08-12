@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Phase 112 plan 112-04 complete (governor_decision + message_routed routed into runtimeIngest dispatch, D-04/D-05/D-13/D-14, held_reason null-normalization mutation-proven, 14 new tests); 3 plans remain across waves 4-5; Phase 115 context gathered (parallel sessions)
-last_updated: "2026-08-12T15:00:00.000Z"
-last_activity: 2026-08-12 -- Phase 112 plan 112-04 executed (resolveGovernorDecisionEvent/resolveMessageRoutedEvent + case "governor_decision"/case "message_routed" in runtimeIngest.ts, forwarding to internal.governorDecisions.record/internal.messageRoutes.record, held_reason D-14 null-normalization mutation-proven RED/GREEN, 14 new tests (83->97), 5-site repo-wide defect-class sweep logged to deferred-items.md, no deploy; commits 0e4a3150/60ea4727/ba64bcc3)
+stopped_at: Phase 112 plan 112-05 complete (GovernorDecisionLog UI built + mounted on Settings notifications tab, loading/empty/populated states, 7 tests mutation-proven, TELE-03); 2 plans remain (112-06, 112-07); Phase 115 context gathered (parallel sessions)
+last_updated: "2026-08-12T15:30:00.000Z"
+last_activity: 2026-08-12 -- Phase 112 plan 112-05 executed (GovernorDecisionLog.tsx read-only audit table calling api.governorDecisions.listRecent directly, GOVERNOR_DECISION_CAP imported from dependency-free governorDecisionsFilters.ts, mounted in Settings.tsx between DeliveryHistory and NotificationPreferences via SectionErrorBoundary, 7 new tests mutation-proven RED/GREEN, full suite 4096 passed/193 todo/0 failed, no deploy; commits f25f297d/72fbe0f4)
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 49
-  completed_plans: 46
+  completed_plans: 47
   percent: 67
 ---
 
@@ -952,8 +952,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-12T15:00:00.000Z
-Stopped at: Phase 112 plan 112-04 complete (governor_decision + message_routed routed into runtimeIngest dispatch, D-04/D-05/D-13/D-14, held_reason null-normalization mutation-proven, 14 new tests, TELE-03); 3 plans remain across waves 4-5; Phase 115 context gathered (parallel sessions)
+Last session: 2026-08-12T15:30:00.000Z
+Stopped at: Phase 112 plan 112-05 complete (GovernorDecisionLog UI built + mounted on Settings notifications tab, loading/empty/populated states, 7 tests mutation-proven, TELE-03); 2 plans remain (112-06, 112-07); Phase 115 context gathered (parallel sessions)
+
+--- Prior (superseded by the above) --- Completed 112-04-PLAN.md (governor_decision + message_routed routed into runtimeIngest dispatch, D-04/D-05/D-13/D-14, held_reason null-normalization mutation-proven, 14 new tests, TELE-03)
 
 --- Prior (superseded by the above) --- Completed 112-03-PLAN.md (governorDecisions.ts + messageRoutes.ts internalMutation record + capped listRecent, CR-01 mutation-proven, api.d.ts regenerated, TELE-03, commits 4649ec93/dd64983d/947908fa/35e4493c)
 
