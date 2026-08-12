@@ -955,7 +955,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 115-08-PLAN.md - Entry-point wiring (load → walk → classify → report → **gate** → POST) and D-12 case 5, proving the refusal precedes the network call (wave 4, depends on 115-01 + 115-03 + 115-07)
+- [x] 115-08-PLAN.md - Entry-point wiring (load → walk → classify → report → **gate** → POST) and D-12 case 5, proving the refusal precedes the network call (wave 4, depends on 115-01 + 115-03 + 115-07) — complete 2026-08-12, runWorkspaceScan + isDirectRun CLI branch, gate strictly precedes the single postSnapshot call site (line 710 < 729), 11 new tests + 4 mutation proofs closing the mandatory five-case table, verified live against Larry's real tree (15647 dirs/274660 files), no deploy — see `115-08-SUMMARY.md`
 
 **Wave 5** *(blocked on Wave 4 completion — `autonomous: false`, attended)*
 
