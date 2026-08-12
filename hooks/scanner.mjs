@@ -16,6 +16,7 @@ import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import { collectClaudeCodeSkillsWithCoverage } from "./skillScan.mjs";
 import { readSkillUsage, mergeUsage } from "./skillUsage.mjs";
+import { postSnapshot } from "./ingestPost.mjs";
 
 /**
  * Run a full environment scan and POST results to CodePulse /scan endpoint.
@@ -218,27 +219,7 @@ export async function runScan(sessionId, codepulseUrl, ingestKey, deps = {}) {
   }
 
   // ── POST to /scan ───────────────────────────────────────────────────
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
-
-  try {
-    const headers = { "Content-Type": "application/json" };
-    if (ingestKey) headers["Authorization"] = `Bearer ${ingestKey}`;
-    else console.warn("[codepulse-scanner] no ASTRIDR_INGEST_API_KEY set — posting unauthenticated (server may reject)");
-    const resp = await fetch(`${codepulseUrl}/scan`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(snapshot),
-      signal: controller.signal,
-    });
-    if (!resp.ok) {
-      console.error(`[codepulse-scanner] /scan responded ${resp.status}: ${await resp.text()}`);
-    }
-  } catch (err) {
-    console.error(`[codepulse-scanner] /scan failed: ${err.message}`);
-  } finally {
-    clearTimeout(timeout);
-  }
+  await postSnapshot(`${codepulseUrl}/scan`, ingestKey, snapshot);
 }
 
 /**
