@@ -852,7 +852,7 @@ Plans:
 
 **Wave 2** *(blocked on 112-02)*
 
-- [ ] 112-03-PLAN.md - domain modules: internalMutation writes + bounded .take() reads for both tables, CR-01 and bounded-read guard tests, Convex API codegen (TELE-03; D-04, D-13)
+- [x] 112-03-PLAN.md - domain modules: internalMutation writes + bounded .take() reads for both tables, CR-01 and bounded-read guard tests, Convex API codegen (TELE-03; D-04, D-13) — complete 2026-08-12, commits `4649ec93`/`dd64983d`/`947908fa`/`35e4493c`, see `112-03-SUMMARY.md`
 
 **Wave 3** *(blocked on 112-03; the two plans below run in parallel - no file overlap)*
 
