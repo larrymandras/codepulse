@@ -13,10 +13,11 @@
 // (holds an inline `Authorization: Bearer` token), `.mcp.json`, and `generate_admin_key.sh`.
 // An enumerating regex fails OPEN on every shape nobody anticipated; an allowlist fails
 // CLOSED. `config/workspace.json`'s `shareableAllowlist.default.extensions` deliberately
-// omits `.json .yml .yaml .toml .ini .cfg .conf .env .envfile .pem .key .crt .cer .p12 .pfx
-// .ppk .sh .bash .zsh .ps1 .psm1 .bat .cmd .vbs .sql .db .sqlite .sqlite3 .log .csv .tsv
-// .bak .keychain .kdbx`, plus every extensionless file — re-adding any of those reopens a
-// measured hole. This module must stay I/O-free so D-02's refusal stays mutation-testable.
+// omits `.json .yml .yaml .toml .ini .cfg .conf .pem .key .crt .cer .p12 .pfx .ppk .sh
+// .bash .zsh .ps1 .psm1 .bat .cmd .vbs .sql .db .sqlite .sqlite3 .log .csv .tsv .bak
+// .keychain .kdbx`, every dotenv-style config file, and every extensionless file —
+// re-adding any of those reopens a measured hole. This module must stay I/O-free so D-02's
+// refusal stays mutation-testable.
 
 import { DEPARTMENTS, UNCLASSIFIED } from "./workspaceConfig.mjs";
 
@@ -119,8 +120,8 @@ export function classifyFile({ rootId, relPath, basename }, config) {
 // `access` reflects DECLARED bind-mount coverage from docker-compose.yml, NOT a live
 // reachability probe: a mount can exist while the container lacks read permission, or
 // while a Docker/WSL hiccup has left the mount empty. No live probe is in scope, and the
-// field is deliberately named `access`, not `astridrCanRead` — Phase 114 must not render
-// it as liveness.
+// field name was deliberately chosen to avoid implying live readability — Phase 114 must
+// not render it as liveness.
 // ---------------------------------------------------------------------------------------
 
 const COMPOSE_TOKEN_RE = /\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}/g;
