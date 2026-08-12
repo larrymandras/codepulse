@@ -41,6 +41,7 @@
 import * as fs from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { load } from "js-yaml";
 import {
   normalizeRel,
@@ -51,7 +52,15 @@ import {
   resolveAccess,
   deriveMountedPaths,
 } from "./workspaceClassifier.mjs";
-import { DEPARTMENTS, UNCLASSIFIED } from "./workspaceConfig.mjs";
+import { DEPARTMENTS, UNCLASSIFIED, loadWorkspaceConfig } from "./workspaceConfig.mjs";
+import {
+  REPORT_RELPATH,
+  APPROVAL_MARKER_RELPATH,
+  canonicalReportHash,
+  isDryRunApproved,
+  buildApprovalMarkerContents,
+} from "./workspaceApproval.mjs";
+import { postSnapshot as realPostSnapshot } from "./ingestPost.mjs";
 
 // ---------------------------------------------------------------------------------------
 // Task 1: the read-incapable walk and the per-directory rollup
@@ -531,13 +540,281 @@ export function buildDryRunReport({ config, rollup, mountedOk, generatedAt }) {
 
 /**
  * The report view that gets hashed (hooks/workspaceApproval.mjs's canonicalReportHash). Strips
- * `generatedAt` — the only wall-clock, per-run-varying field this report carries — so an
- * approval invalidates on CONTENT change only, never merely on the passage of time.
+ * `generatedAt` — the only wall-clock, per-run-varying field buildDryRunReport() itself
+ * produces — so an approval invalidates on CONTENT change only, never merely on the passage of
+ * time. Also strips `reportHash` (115-08 addition): the persisted report file on disk is
+ * `{ ...report, reportHash }` (see runWorkspaceScan below), and that extra key must not change
+ * the hash it is itself recording — otherwise re-reading the written file and re-hashing it
+ * would never equal its own stored value. Both fields are destructured out unconditionally;
+ * on a plain buildDryRunReport() output (which never carries a reportHash key) this is a no-op.
  *
- * @param {object} report - buildDryRunReport() output
+ * @param {object} report - buildDryRunReport() output, or that same object read back off disk
+ *   with a `reportHash` field merged in
  * @returns {object}
  */
 export function hashableView(report) {
-  const { generatedAt, ...rest } = report;
+  const { generatedAt, reportHash, ...rest } = report;
   return rest;
+}
+
+// ---------------------------------------------------------------------------------------
+// 115-08 Task 1: runWorkspaceScan — load -> walk -> classify -> report -> GATE -> POST
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Human-readable dry-run summary: department counts, totals, the Unclassified root list,
+ * every warning, the report path/hash, and the exact next command. Logged only in "dry-run"
+ * mode. Deliberately prints no absolute host path — everything here comes from `report`,
+ * which buildDryRunReport already guarantees is path-free (see its own test coverage).
+ */
+function logDryRunSummary(logger, report, reportHash) {
+  logger.log(`[workspaceScan] dry-run report written to ${REPORT_RELPATH}`);
+  logger.log(
+    `[workspaceScan] totals: dirs=${report.totals.dirs} files=${report.totals.files} withheldFiles=${report.totals.withheldFiles}`
+  );
+  for (const dep of Object.keys(report.departmentCounts)) {
+    const c = report.departmentCounts[dep];
+    logger.log(`[workspaceScan]   ${dep}: dirs=${c.dirs} files=${c.files} bytes=${c.bytes}`);
+  }
+  if (report.unclassifiedRoots.length > 0) {
+    logger.log("[workspaceScan] Unclassified roots:");
+    for (const r of report.unclassifiedRoots) {
+      logger.log(
+        `[workspaceScan]   ${r.rootId}: dirs=${r.dirCount} files=${r.fileCount} withheld=${r.withheldCount}`
+      );
+    }
+  }
+  for (const w of report.warnings) {
+    logger.log(`[workspaceScan] WARNING: ${w}`);
+  }
+  logger.log(`[workspaceScan] reportHash: ${reportHash}`);
+  logger.log(`[workspaceScan] Next: review ${REPORT_RELPATH}, then run: node hooks/workspaceScan.mjs --approve`);
+}
+
+/**
+ * The workspace scanner's entry point (D-04/D-05/D-12). `options.mode` is one of
+ * `"dry-run" | "approve" | "ingest"` (default `"ingest"`, D-05's on-demand-flag CLI branch
+ * below always passes one explicitly). `deps.postSnapshot` defaults to
+ * `hooks/ingestPost.mjs`'s `postSnapshot(endpointUrl, ingestKey, body, deps)` — the shared
+ * POST-with-bearer helper (D-04) — and MUST remain overridable: that seam is the only way
+ * 115-VALIDATION.md's case 5 (an injected spy proving the D-12 gate refuses before any network
+ * call) is provable at all. Every real call site (the CLI branch below) omits `deps` entirely
+ * and gets identical real fs/os/js-yaml/postSnapshot behavior to before this parameter existed.
+ *
+ * Mode semantics, each returning rather than throwing/exiting (the CLI branch translates the
+ * return value to a process exit code):
+ *  - "dry-run": walk the declared roots, build+write the report, log a summary. Never posts.
+ *  - "approve": does NOT re-walk. Reads whatever report is CURRENTLY on disk at
+ *    REPORT_RELPATH (the one a prior --dry-run wrote and Larry reviewed) and writes an
+ *    approval marker for exactly that report's hash. Refuses if no report exists on disk.
+ *    Re-walking here would let --approve silently approve a DIFFERENT, unreviewed snapshot of
+ *    the filesystem than the one actually shown to Larry — precisely the tampering threat
+ *    D-12/T-115-08-02 exists to prevent, so this mode is deliberately NOT "walk then approve
+ *    what you just walked". Never posts.
+ *  - "ingest": walks the declared roots fresh, builds+writes a NEW report reflecting the
+ *    CURRENT filesystem state, then gates: only if that fresh report's hash exactly matches
+ *    the most recently approved hash does it POST. Any drift since approval (a file added, a
+ *    root re-mapped, D-17's local config changed) produces a different hash and refuses.
+ *
+ * @param {{ mode?: "dry-run"|"approve"|"ingest", codepulseUrl?: string, ingestKey?: string }} [options]
+ * @param {object} [deps]
+ * @returns {Promise<{status: string, reportHash?: string, exitCode: number, httpStatus?: number|null}>}
+ */
+export async function runWorkspaceScan(options = {}, deps = {}) {
+  const {
+    loadConfig = loadWorkspaceConfig,
+    readdirSync: doReaddir = fs.readdirSync,
+    statSync: doStat = fs.statSync,
+    readFileSync: doReadFile = fs.readFileSync,
+    writeFileSync: doWriteFile = fs.writeFileSync,
+    existsSync: doExists = fs.existsSync,
+    homedir: getHomedir = homedir,
+    yamlLoad = load,
+    postSnapshot = realPostSnapshot,
+    now = () => Math.floor(Date.now() / 1000),
+    logger = console,
+  } = deps;
+
+  const mode = options.mode ?? "ingest";
+
+  // ── "approve": no walk. Approves whatever report is already on disk. ────────────────────
+  if (mode === "approve") {
+    if (!doExists(REPORT_RELPATH)) {
+      logger.error(
+        `[workspaceScan] refusing to approve: no report exists at ${REPORT_RELPATH} — run --dry-run first.`
+      );
+      return { status: "approve-refused", exitCode: 2 };
+    }
+    let parsedReport;
+    try {
+      parsedReport = JSON.parse(doReadFile(REPORT_RELPATH, "utf-8"));
+    } catch (err) {
+      logger.error(`[workspaceScan] refusing to approve: report at ${REPORT_RELPATH} is unreadable or malformed: ${err.message}`);
+      return { status: "approve-refused", exitCode: 2 };
+    }
+    const approveHash = canonicalReportHash(hashableView(parsedReport));
+    const marker = buildApprovalMarkerContents(approveHash, { approvedAt: now() });
+    doWriteFile(APPROVAL_MARKER_RELPATH, marker, "utf-8");
+    return { status: "approved", reportHash: approveHash, exitCode: 0 };
+  }
+
+  // ── "dry-run" and "ingest" both need a fresh config load + walk. ────────────────────────
+  let config;
+  try {
+    config = loadConfig();
+  } catch (err) {
+    logger.error(`[workspaceScan] config load failed: ${err.message}`);
+    return { status: "config-error", exitCode: 2 };
+  }
+
+  const { mounted: mountedSet, ok: mountedOk } = loadMountedSet(config, {
+    readFileSync: doReadFile,
+    existsSync: doExists,
+    homedir: getHomedir,
+    yamlLoad,
+  });
+
+  const roots = Array.isArray(config?.roots) ? config.roots : [];
+  const perRootResults = roots.map((root) => ({
+    rootId: root.id,
+    ...walkRoot(root, config, { readdirSync: doReaddir, statSync: doStat, mountedSet }),
+  }));
+  const rollup = rollupRootResults(perRootResults);
+
+  const generatedAt = now();
+  const report = buildDryRunReport({ config, rollup, mountedOk, generatedAt });
+  const reportHash = canonicalReportHash(hashableView(report));
+
+  // Always write the report — in both "dry-run" and "ingest" modes. D-12's report must be
+  // diffable rather than scrollback-only, and after an unattended nightly ingest run the
+  // written report is the evidence of what was classified. reportHash is excluded from
+  // hashableView (see above), so including it here does not change the hash.
+  try {
+    doWriteFile(REPORT_RELPATH, JSON.stringify({ ...report, reportHash }, null, 2), "utf-8");
+  } catch (err) {
+    logger.error(`[workspaceScan] failed to write report to ${REPORT_RELPATH}: ${err.message}`);
+    return { status: "config-error", exitCode: 2 };
+  }
+
+  if (mode === "dry-run") {
+    logDryRunSummary(logger, report, reportHash);
+    return { status: "dry-run", reportHash, exitCode: 0 };
+  }
+
+  // ── "ingest": THE GATE (D-12), then the single postSnapshot call site. ──────────────────
+  // This block must appear in source before any reference to postSnapshot, and there is no
+  // code path from here to the postSnapshot call below that bypasses it.
+  const approvalRaw = doExists(APPROVAL_MARKER_RELPATH)
+    ? doReadFile(APPROVAL_MARKER_RELPATH, "utf-8")
+    : null;
+  if (!isDryRunApproved(reportHash, approvalRaw)) {
+    const markerFirstLine =
+      typeof approvalRaw === "string" ? approvalRaw.split(/\r?\n/)[0].trim() : "<absent>";
+    // Deliberately no directory path and no report body in this message (T-115-08-03).
+    logger.error(
+      `[workspaceScan] REFUSED: this report has not been approved, or has changed since approval. ` +
+        `Expected hash ${reportHash}, approval marker currently reads "${markerFirstLine}". ` +
+        `Run: node hooks/workspaceScan.mjs --dry-run, review the report, then: node hooks/workspaceScan.mjs --approve`
+    );
+    return { status: "refused", reportHash, exitCode: 3 };
+  }
+
+  const snapshot = buildSnapshot({
+    config,
+    rollup,
+    mountedOk,
+    dryRunReportHash: reportHash,
+    generatedAt: report.generatedAt,
+  });
+  const resp = await postSnapshot(`${options.codepulseUrl}/workspace-ingest`, options.ingestKey, snapshot);
+  return {
+    status: resp.ok ? "ingested" : "post-failed",
+    httpStatus: resp.status,
+    reportHash,
+    exitCode: resp.ok ? 0 : 4,
+  };
+}
+
+// ---------------------------------------------------------------------------------------
+// 115-08 Task 1: isDirectRun CLI branch — `node hooks/workspaceScan.mjs [--dry-run|--approve]`
+//
+// D-05's on-demand flag. Plan 115-10's scheduled task invokes this with no flags (default
+// "ingest" mode). No shebang here — same reason as every other module in this file (see the
+// module header): Vite/Rolldown's SSR transform (used by this file's own test file) hoists
+// import statements above line 1, and a shebang left there breaks parsing.
+//
+// Exit codes — a hidden scheduled task swallows stdout, so the exit code and 115-10's log
+// file are Larry's only unattended signal:
+//   0  success (dry-run written, approved, or ingested)
+//   2  config/usage error (tracked config missing/malformed, --dry-run + --approve together,
+//      approving with no report on disk, no Convex URL resolved for an ingest run)
+//   3  D-12 refusal (report unapproved or approval stale)
+//   4  POST failed (unreachable backend or a non-2xx response)
+//   5  unexpected throw — the .catch() below, so an uncaught error never exits 0
+// ---------------------------------------------------------------------------------------
+
+const __workspaceScan_dirname = dirname(fileURLToPath(import.meta.url));
+const isDirectRun =
+  process.argv[1] && process.argv[1].replace(/\\/g, "/").includes("workspaceScan.mjs");
+
+if (isDirectRun) {
+  const wantsDryRun = process.argv.includes("--dry-run");
+  const wantsApprove = process.argv.includes("--approve");
+
+  if (wantsDryRun && wantsApprove) {
+    console.error("[workspaceScan] usage: pass at most one of --dry-run / --approve, not both.");
+    process.exit(2);
+  }
+
+  const cliMode = wantsDryRun ? "dry-run" : wantsApprove ? "approve" : "ingest";
+
+  // URL/key resolution — same idiom as hooks/scanner.mjs:288-318 (CODEPULSE_URL env first,
+  // then a regex-matched .env.local read). Never logs any value read from .env.local; only
+  // "ingest" mode requires a resolved URL (dry-run/approve never call postSnapshot at all).
+  let url = process.env.CODEPULSE_URL || "";
+  if (!url) {
+    const envPath = join(__workspaceScan_dirname, "..", ".env.local");
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, "utf-8");
+        const siteMatch = content.match(/^CONVEX_SITE_URL\s*=\s*(.+)$/m);
+        if (siteMatch) url = siteMatch[1].trim();
+        else {
+          const viteMatch = content.match(/^VITE_CONVEX_URL\s*=\s*(.+)$/m);
+          if (viteMatch) url = viteMatch[1].trim().replace(".convex.cloud", ".convex.site");
+        }
+      } catch {
+        // Unreadable .env.local — fall through; "ingest" mode's own url check below exits 2.
+      }
+    }
+  }
+
+  if (cliMode === "ingest" && !url) {
+    console.error("[workspaceScan] no Convex URL resolved — set CODEPULSE_URL or .env.local's CONVEX_SITE_URL.");
+    process.exit(2);
+  }
+
+  let ingestKey = process.env.ASTRIDR_INGEST_API_KEY || "";
+  if (!ingestKey) {
+    const envPath = join(__workspaceScan_dirname, "..", ".env.local");
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, "utf-8");
+        const m = content.match(/^ASTRIDR_INGEST_API_KEY\s*=\s*(.+)$/m);
+        if (m) ingestKey = m[1].trim();
+      } catch {
+        // Unreadable — proceed unauthenticated; postSnapshot logs its own warning.
+      }
+    }
+  }
+
+  runWorkspaceScan({ mode: cliMode, codepulseUrl: url, ingestKey })
+    .then((result) => {
+      console.log(`[workspaceScan] ${result.status} (exit ${result.exitCode})`);
+      process.exit(result.exitCode);
+    })
+    .catch((err) => {
+      console.error(`[workspaceScan] unexpected error: ${err.message}`);
+      process.exit(5);
+    });
 }
