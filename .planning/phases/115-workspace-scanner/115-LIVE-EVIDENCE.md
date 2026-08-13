@@ -471,6 +471,92 @@ snapshots.
 
 ---
 
+## Plan 115-10 — Task 2: registration, 2026-08-13
+
+### Installer output, verbatim (Larry, elevated PowerShell)
+
+```
+node v22.23.2
+
+Registered CodePulse-WorkspaceScan (daily 04:15)
+
+Read-back verification (control first):
+    control OK: ConvexNightlyRestart is visible, so this API works here.
+    PASS launches via wscript.exe
+    PASS launches via run-hidden.vbs
+    PASS DisallowStartIfOnBatteries = false
+    PASS StopIfGoingOnBatteries = false
+    PASS trigger contains 04:15
+    PASS LogonType = S4U
+```
+
+**The control resolved**, so the six PASS lines are trustworthy rather than an unverifiable green.
+This settles an open question from the plan: `Get-ScheduledTask` is NOT subject to the failure that
+makes `schtasks /query` return zero lines from the agent shell — they are different code paths
+(CIM/WMI vs the legacy console tool), and only the control could distinguish "task absent" from
+"read API blind here".
+
+### AC-power condition — verified programmatically, control-paired
+
+Read from the agent shell rather than by eye, because the same control proves the read is real:
+
+```
+control OK: ConvexNightlyRestart visible from this shell
+DisallowStartIfOnBatteries : False   <- the "Start the task only if the computer is on AC power" checkbox, UNCHECKED
+StopIfGoingOnBatteries     : False
+StartWhenAvailable         : True
+Trigger                    : 2026-08-13T04:15:00-04:00
+Execute                    : C:\Windows\System32\wscript.exe
+State                      : Ready
+```
+
+`DisallowStartIfOnBatteries` is the API field behind that Conditions checkbox. This is the setting
+that silently no-ops the entire action with no error and no log, and that ran ClaudeConfigPull for
+5+ weeks without a single execution.
+
+### Manual trigger — Larry, 2026-08-13
+
+Larry's response, verbatim: **"i did not see a window pop up"**.
+
+Log at `C:\Users\mandr\.forge\codepulse-workspace-scan.log`, verbatim:
+
+```
+2026-08-13T08:30:02-04:00 START RepoRoot=C:\Users\mandr\codepulse
+2026-08-13T08:30:07-04:00 EXIT=0 success (ingested)
+    | [workspaceScan] ingested (exit 0)
+2026-08-13T08:30:40-04:00 START RepoRoot=C:\Users\mandr\codepulse
+2026-08-13T08:30:44-04:00 EXIT=0 success (ingested)
+    | [workspaceScan] ingested (exit 0)
+```
+
+`EXIT=0` is the scanner reporting on its own outcome, so it was cross-checked against the database
+rather than believed:
+
+```
+activeVersion  : 10          (was 8 before these runs - two ingests, matching two log lines)
+storedVersions : [8, 9, 10]
+totalDirs      : 4912
+receivedAt     : Thu Aug 13 2026 08:30:43 EDT
+```
+
+`receivedAt` matches the second log line's 08:30:44 to the second, which is what ties the database
+write to THIS task run rather than to any earlier manual ingest. The prune also kept up unaided —
+`storedVersions` is still exactly three.
+
+So the launcher chain is proven end to end: `wscript.exe` + `run-hidden.vbs` created no console
+window, the wrapper wrote its log line, the exit code propagated, and real data landed.
+
+**Unexplained and recorded rather than smoothed over:** the log shows TWO runs 38 seconds apart from
+a single reported trigger. No harm resulted; the cause was not established.
+
+### What Task 2 does NOT establish
+
+D-05's actual claim is that the task fires **unattended**. A manual `Start-ScheduledTask` proves the
+ACTION works; it does not prove the SCHEDULER fires it. That requires a log line near 04:15 that
+nobody triggered, which cannot exist before 2026-08-14. **OPEN, due 2026-08-14 morning.**
+
+---
+
 ## Open issues
 
 **1. `graphSnapshots.ts` carries the same `.collect()`-with-a-delete-cap defect** (see Corrections).
@@ -480,6 +566,10 @@ Inert today because its cron is disabled at `crons.ts:145-151`. Not fixed — ou
 exercised for real; the crash-between-delete-and-patch path rests on code reading only, and the
 `it.todo` text says so.
 
-**3. D-05's unattended firing is still unproven.** The gate no longer blocks it and two consecutive
-ingests now succeed on one approval, but no scheduled task has been registered and no overnight run has
-been observed. That is plan 115-10's work and is not claimed here.
+**3. D-05's unattended firing is still unproven — OPEN, due 2026-08-14 morning.** The task is now
+registered and its action is proven end to end (no window, log line, exit code propagated, real data
+landed). What remains is a log line stamped near 04:15 that nobody triggered. Until that exists, D-05
+is not verified, and no artifact in this phase may record it as complete.
+
+**4. Two task runs were logged from one reported trigger** (2026-08-13 08:30:02 and 08:30:40). Cause
+not established. No harm: versions rolled 8 -> 9 -> 10 and the prune kept `storedVersions` at three.
