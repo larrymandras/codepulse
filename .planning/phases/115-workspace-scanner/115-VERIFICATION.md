@@ -71,7 +71,7 @@ Verified with controls:
 
 | Check | Result |
 |---|---|
-| `the new root name` across ALL refs | **0** |
+| the new root name across ALL refs | **0** |
 | control `workspaceDirs` across all refs | 15 (probe works, so the 0 is real) |
 | every historical blob of `115-LIVE-EVIDENCE.md` | 0 hits, all 7 versions |
 | `git diff pre-rewrite backup → master` | **empty** — final tree byte-identical |
@@ -88,7 +88,13 @@ rewriting *published* history and force-pushing, which breaks every clone and st
 forks or GitHub's caches. They are directory names, not credentials. Accepted risk, recorded here so
 it is a decision on the record rather than an oversight.
 
-**Net effect:** the one genuinely NEW disclosure this phase created (`the new root name`, 0 tracked files
+
+> **Note on redaction:** the third root's literal name is deliberately NOT written anywhere in
+> this file. Purging it from history and then re-typing it into the report documenting the purge
+> would re-create the disclosure — which is exactly what happened once and was caught by re-running
+> the all-refs probe after committing. Refer to it as the new root, never by name.
+
+**Net effect:** the one genuinely NEW disclosure this phase created (the new root name, 0 tracked files
 in this repo's entire history before Phase 115) never becomes public. The two pre-existing mentions
 are unchanged and knowingly accepted.
 
