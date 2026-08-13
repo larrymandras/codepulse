@@ -660,7 +660,7 @@ Plans:
 - [x] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition — **COMPLETE 2026-08-13**, verified `passed` (9/9 must-haves), 8/8 plans
 - [ ] **Phase 113 — Debt Sweep** — skill-registry prune churn, the intermittent `Chat.test.tsx` failure, and `convex-selfhost/` under version control
 - [ ] **Phase 114 — Workspace Map view** — ARMS radial map on `ForceGraphCanvas`, two switchable lenses (Larry's workspace ↔ Ástríðr's world)
-- [ ] **Phase 115 — Workspace scanner** — host-side classifier over workspace roots, versioned `kind:"workspace"` snapshot ingest
+- [x] **Phase 115 — Workspace scanner** — host-side classifier over workspace roots, versioned `kind:"workspace"` snapshot ingest — **COMPLETE 2026-08-13**, 10/10 plans. Live: 4,912 classified directories ingested to the self-hosted backend, `activeVersion` 10 with `storedVersions` held at 3 by the prune, nightly task registered 04:15. *(D-05's unattended firing is OPEN, due 2026-08-14 morning — a manual trigger proves the ACTION works, not that the SCHEDULER fires it. The phase is closed; that decision is not.)*
 - [x] **Phase 116 — Galdr prompt library** — `prompts` tables + `/galdr` live-fetch skills + send-to-Chat/clipboard (Seiðr Suite) (completed 2026-08-10; ticked 2026-08-11 at Phase 111 close — the box lagged the work. Evidence: `116-VERIFICATION.md` status=passed, 8 plans/8 summaries.)
 - [ ] **Phase 117 — Bifrost link hub** — `links` table, command-palette jump, liveness dots (Seiðr Suite; /gsd-quick-shaped)
 - [ ] **Phase 118 — Studio media gallery** — media-vault + sidecar provenance, thumbs-only in Convex, watcher, styles/models, G-drive backup (Seiðr Suite)
@@ -916,6 +916,7 @@ Plans:
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
 | 112. Telemetry Coverage Closure | 8/8 | Complete | 2026-08-13 |
 | 113. Debt Sweep | 8/8 | Complete (DEBT-06 GUARDED) | 2026-08-12 |
+| 115. Workspace Scanner | 10/10 | Complete (D-05 unattended firing OPEN) | 2026-08-13 |
 
 ### Phase 114: Workspace Map view
 
@@ -959,11 +960,11 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion — `autonomous: false`, attended)*
 
-- [ ] 115-09-PLAN.md - [BLOCKING] deploy to the self-hosted instance, Larry's review of the real dry-run report, first genuine ingest, and 115-04's `it.todo` markers converted to live evidence (wave 5, depends on 115-06 + 115-08)
+- [x] 115-09-PLAN.md - [BLOCKING] deploy to the self-hosted instance, Larry's review of the real dry-run report, first genuine ingest, and 115-04's `it.todo` markers converted to live evidence (wave 5, depends on 115-06 + 115-08) — complete 2026-08-13. Deploy named `http://127.0.0.1:3210` with `No indexes are deleted by this push`; Larry reviewed over THREE rounds and approved; eight live ingests; all four `it.todo` markers converted, incl. the deferred-remainder self-heal genuinely exercised. Three blocking defects found by running it: D-11's inline prune could not execute at ANY cap (isolated by a payload-size control after TWO wrong diagnoses), `MAX_DIRS_PER_INGEST` sat above the ceiling its own comment cited, and D-12's hash covered the file inventory. See `115-09-SUMMARY.md` + `115-LIVE-EVIDENCE.md`
 
 **Wave 6** *(blocked on Wave 5 completion — `autonomous: false`, attended)*
 
-- [ ] 115-10-PLAN.md - D-05's nightly scheduled task: logging wrapper plus an installer routing around this machine's two known Task Scheduler traps (wave 6, depends on 115-09)
+- [x] 115-10-PLAN.md - D-05's nightly scheduled task: logging wrapper plus an installer routing around this machine's two known Task Scheduler traps (wave 6, depends on 115-09) — complete 2026-08-13. `CodePulse-WorkspaceScan` registered daily **04:15** (NOT the plan's 03:15, which sat between ConvexBackup 03:00 and ConvexBackupFull 03:30); read-back control resolved so its six PASS lines are trustworthy; Larry confirmed no window appears and both triggers logged `EXIT=0`, cross-checked against the DB (activeVersion 8→10). **D-05's unattended firing remains OPEN, due 2026-08-14.** See `115-10-SUMMARY.md`
 
 Cross-cutting constraints:
 
