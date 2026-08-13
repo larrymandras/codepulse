@@ -521,9 +521,32 @@ export function buildDryRunReport({ config, rollup, mountedOk, generatedAt }) {
   }
   warnings.sort();
 
+  // The rules that DECIDE what is transmitted, carried in the report so the D-12
+  // approval can cover them. Widening the allowlist changes which files are shared
+  // and is exactly the kind of change that must invalidate an approval — but the
+  // report did not carry the allowlist at all until 2026-08-12, so the gate could
+  // not see it. Everything here comes from the tracked, public config; no root
+  // paths, no filenames.
+  const sortedExt = (a) => [...(a ?? [])].map(String).sort();
+  const allowlistShape = (al) => ({
+    requireNonDotBasename: Boolean(al?.requireNonDotBasename),
+    extensions: sortedExt(al?.extensions),
+  });
+  const byRoot = config?.shareableAllowlist?.byRoot ?? {};
+  const classification = {
+    excludeDirs: sortedExt(config?.excludeDirs),
+    excludeFiles: sortedExt(config?.excludeFiles),
+    allowlistDefault: allowlistShape(config?.shareableAllowlist?.default),
+    allowlistByRoot: Object.fromEntries(
+      Object.keys(byRoot)
+        .sort()
+        .map((k) => [k, allowlistShape(byRoot[k])])
+    ),
+  };
+
   return {
     schemaVersion: 1,
-    generatedAt, // epoch seconds; excluded from the hashed view by hashableView()
+    generatedAt, // epoch seconds; excluded from the hashed view by classificationView()
     snapshotId: config?.snapshotId,
     departmentCounts,
     totals,
@@ -534,28 +557,82 @@ export function buildDryRunReport({ config, rollup, mountedOk, generatedAt }) {
     accessDerivationOk: mountedOk,
     accessSummary,
     localConfigStatus: config?.localConfigStatus,
+    classification,
     warnings,
   };
 }
 
 /**
- * The report view that gets hashed (hooks/workspaceApproval.mjs's canonicalReportHash). Strips
- * `generatedAt` — the only wall-clock, per-run-varying field buildDryRunReport() itself
- * produces — so an approval invalidates on CONTENT change only, never merely on the passage of
- * time. Also strips `reportHash` (115-08 addition): the persisted report file on disk is
- * `{ ...report, reportHash }` (see runWorkspaceScan below), and that extra key must not change
- * the hash it is itself recording — otherwise re-reading the written file and re-hashing it
- * would never equal its own stored value. Both fields are destructured out unconditionally;
- * on a plain buildDryRunReport() output (which never carries a reportHash key) this is a no-op.
+ * The report view that gets hashed (hooks/workspaceApproval.mjs's canonicalReportHash).
  *
- * @param {object} report - buildDryRunReport() output, or that same object read back off disk
- *   with a `reportHash` field merged in
+ * D-12 asks a human to approve a CLASSIFICATION before data is transmitted, so this
+ * projects the classification and nothing else: the allowlist and exclusions, every
+ * root with its department/access/covered flag, the Unclassified set, coverage, and
+ * the two fail-closed status flags. It deliberately excludes the FILE INVENTORY —
+ * totals, per-root counts, byte sizes, mtimes, the sample, and the volatile warnings
+ * derived from them.
+ *
+ * REWRITTEN 2026-08-12 (plan 115-09). It previously returned the WHOLE report minus
+ * `generatedAt`/`reportHash`, which meant the approval hash covered every file count
+ * and byte total. Measured on the real tree: three consecutive dry-runs produced file
+ * counts 229,178 -> 229,180 -> 229,181 and two distinct hashes, and the first
+ * post-approval ingest refused with exit 3 because the tree moved in the seconds
+ * between approving and walking. Over the 24 hours between nightly runs a change is
+ * certain, so D-05's unattended scheduled task (plan 115-10) would have exited 3
+ * EVERY NIGHT, forever. D-12's own text gates "before first ingest"; the old
+ * implementation re-gated every run against data no human reviews line by line.
+ *
+ * The gate is not weakened by this: it still invalidates on every change a reviewer is
+ * actually deciding about — a root added or removed, a department changed, the
+ * allowlist widened, a root dropping out of coverage. What it no longer does is
+ * invalidate because a log file grew. Note the allowlist was not even IN the report
+ * before this change, so the old whole-report hash could not see the single most
+ * important thing the approval is for.
+ *
+ * `reportHash` needs no special handling any more: it is simply not one of the fields
+ * projected here, so re-reading the written report and re-hashing it reproduces the
+ * stored value.
+ *
+ * @param {object} report - buildDryRunReport() output, or that same object read back off
+ *   disk with a `reportHash` field merged in
  * @returns {object}
  */
-export function hashableView(report) {
-  const { generatedAt, reportHash, ...rest } = report;
-  return rest;
+export function classificationView(report) {
+  return {
+    schemaVersion: report?.schemaVersion,
+    snapshotId: report?.snapshotId,
+
+    // WHAT gets shared vs withheld.
+    classification: report?.classification,
+
+    // WHICH roots exist and HOW each is labelled. rootSummary is already sorted
+    // by rootId in buildDryRunReport, so this is order-stable. `evidence` is
+    // deliberately excluded: it is prose explaining a department, and editing a
+    // sentence must not invalidate an approval when the department is unchanged.
+    roots: (report?.rootSummary ?? []).map((r) => ({
+      rootId: r.rootId,
+      department: r.department,
+      access: r.access,
+      covered: r.covered,
+    })),
+    unclassifiedRootIds: (report?.unclassifiedRoots ?? []).map((r) => r.rootId).sort(),
+
+    // Whether the picture is COMPLETE. A root silently dropping out of the map
+    // is exactly what a human should have to look at again.
+    coveredRoots: report?.coverage?.coveredRoots,
+    scannedRootsComplete: report?.coverage?.scannedRootsComplete,
+    declaredRootCount: report?.coverage?.declaredRootCount,
+
+    localConfigStatus: report?.localConfigStatus,
+    accessDerivationOk: report?.accessDerivationOk,
+  };
 }
+
+/**
+ * @deprecated Retained only so the name cannot be reintroduced with the old
+ * whole-report semantics by accident. Delegates to classificationView.
+ */
+export const hashableView = classificationView;
 
 // ---------------------------------------------------------------------------------------
 // 115-08 Task 1: runWorkspaceScan — load -> walk -> classify -> report -> GATE -> POST

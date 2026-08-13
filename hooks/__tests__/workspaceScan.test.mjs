@@ -16,6 +16,7 @@ import {
   buildSnapshot,
   buildDryRunReport,
   hashableView,
+  classificationView,
   runWorkspaceScan,
 } from "../workspaceScan.mjs";
 import {
@@ -559,15 +560,100 @@ describe("buildDryRunReport — D-12 mandated contents", () => {
     expect(canonicalReportHash(hashableView(r1))).toBe(canonicalReportHash(hashableView(r2)));
   });
 
-  it("excludes generatedAt from the hash (two reports differing only there hash identically), while a content change (totals.withheldFiles) hashes differently", () => {
+  it("excludes generatedAt from the hash (two reports differing only there hash identically)", () => {
     const config = fixtureConfig([{ id: "r1", department: "Personal" }]);
     const rollup = fixtureRollup([fixtureRow()]);
     const base = buildDryRunReport({ config, rollup, mountedOk: true, generatedAt: 1000 });
     const laterTime = buildDryRunReport({ config, rollup, mountedOk: true, generatedAt: 999999 });
     expect(canonicalReportHash(hashableView(base))).toBe(canonicalReportHash(hashableView(laterTime)));
+  });
 
-    const mutated = { ...base, totals: { ...base.totals, withheldFiles: base.totals.withheldFiles + 1 } };
-    expect(canonicalReportHash(hashableView(base))).not.toBe(canonicalReportHash(hashableView(mutated)));
+  // The D-12 hash is a CLASSIFICATION hash, not a file-inventory hash (rewritten
+  // 2026-08-12). Both directions are asserted, because a hash that never changes
+  // is as broken as one that always changes — and only the pair distinguishes
+  // "stable across churn" from "stable because it hashes nothing".
+  describe("classificationView — what must and must not invalidate an approval", () => {
+    // makeConfig, NOT fixtureConfig: fixtureConfig declares no excludeDirs and no
+    // allowlist, so every "removing an exclusion invalidates" style assertion would
+    // mutate an empty array and pass vacuously.
+    const config = makeConfig({ roots: [{ id: "r1", department: "Personal" }] });
+    const rollup = fixtureRollup([fixtureRow()]);
+    const base = buildDryRunReport({ config, rollup, mountedOk: true, generatedAt: 1000 });
+    const h = (r) => canonicalReportHash(classificationView(r));
+
+    it("GUARD: the fixture is non-degenerate, so the mutations below are real", () => {
+      expect(base.classification.excludeDirs.length).toBeGreaterThan(0);
+      expect(base.classification.excludeFiles.length).toBeGreaterThan(0);
+      expect(base.classification.allowlistDefault.extensions.length).toBeGreaterThan(0);
+      expect(base.rootSummary.length).toBeGreaterThan(0);
+    });
+
+    it("file CHURN does not invalidate: totals, per-root counts and bytes are excluded", () => {
+      const churned = {
+        ...base,
+        totals: { ...base.totals, files: base.totals.files + 7, bytes: base.totals.bytes + 4096, withheldFiles: base.totals.withheldFiles + 1 },
+        rootSummary: base.rootSummary.map((r) => ({ ...r, fileCount: r.fileCount + 7, bytes: r.bytes + 4096 })),
+        departmentCounts: { ...base.departmentCounts, Personal: { dirs: 99, files: 999, bytes: 9999 } },
+        sample: [],
+      };
+      expect(h(churned)).toBe(h(base));
+    });
+
+    it("a DEPARTMENT change invalidates", () => {
+      const moved = { ...base, rootSummary: base.rootSummary.map((r) => ({ ...r, department: "Work" })) };
+      expect(h(moved)).not.toBe(h(base));
+    });
+
+    it("WIDENING the allowlist invalidates — the change the old whole-report hash could not even see", () => {
+      const widened = {
+        ...base,
+        classification: {
+          ...base.classification,
+          allowlistDefault: {
+            ...base.classification.allowlistDefault,
+            extensions: [...base.classification.allowlistDefault.extensions, ".env"].sort(),
+          },
+        },
+      };
+      expect(h(widened)).not.toBe(h(base));
+    });
+
+    it("dropping a directory EXCLUSION invalidates", () => {
+      const fewer = {
+        ...base,
+        classification: { ...base.classification, excludeDirs: base.classification.excludeDirs.slice(1) },
+      };
+      expect(h(fewer)).not.toBe(h(base));
+    });
+
+    it("a root LOSING coverage invalidates", () => {
+      const partial = {
+        ...base,
+        coverage: { ...base.coverage, coveredRoots: [], scannedRootsComplete: false },
+      };
+      expect(h(partial)).not.toBe(h(base));
+    });
+
+    it("a NEW root invalidates", () => {
+      const added = {
+        ...base,
+        rootSummary: [...base.rootSummary, { rootId: "r2", department: "Unclassified", access: "local-only", covered: true, evidence: "", dirCount: 0, fileCount: 0, bytes: 0, withheldCount: 0 }],
+      };
+      expect(h(added)).not.toBe(h(base));
+    });
+
+    it("editing a root's EVIDENCE prose does not invalidate — the department is what was approved", () => {
+      const reworded = {
+        ...base,
+        rootSummary: base.rootSummary.map((r) => ({ ...r, evidence: "totally different wording" })),
+      };
+      expect(h(reworded)).toBe(h(base));
+    });
+
+    it("localConfigStatus falling off the merged path invalidates (D-17 fail-closed)", () => {
+      const degraded = { ...base, localConfigStatus: "absent" };
+      expect(h(degraded)).not.toBe(h(base));
+    });
   });
 
   it("emits no absolute host path — a fixture with a real tmp-dir root only ever surfaces rootId", () => {
@@ -771,7 +857,13 @@ describe("runWorkspaceScan — D-12 case 5 integration control (115-VALIDATION.m
     }
   });
 
-  it("(c) CASE 5 — marker STALE (content drifted after approval): postSnapshot is NEVER called. The 'someone widened the allowlist and re-ran the nightly task' scenario.", async () => {
+  // CASE 5 was ONE test whose name described widening the allowlist while its body
+  // merely added a file. Those are different events and, since the 2026-08-12 hash
+  // rewrite, they have deliberately different outcomes — so it is now two tests.
+  // Keeping them fused would have meant the "allowlist widened" scenario the name
+  // promises was never actually exercised.
+
+  it("(c1) CASE 5 — a file appearing after approval does NOT refuse: this is the nightly-run case, and refusing here would make D-05 impossible", async () => {
     const dir = mkRoot();
     try {
       writeFileSync(join(dir, "README.md"), "hello");
@@ -786,8 +878,51 @@ describe("runWorkspaceScan — D-12 case 5 integration control (115-VALIDATION.m
       await runWorkspaceScan({ mode: "dry-run" }, deps);
       await runWorkspaceScan({ mode: "approve" }, deps);
 
-      // Drift: a new visible file changes fileCount, and therefore the report hash.
+      // Ordinary churn: a new visible file. On the real tree the file count moved
+      // three times in as many consecutive walks, so over 24 hours this is certain.
       writeFileSync(join(dir, "NEW.md"), "added after approval");
+
+      const result = await runWorkspaceScan(
+        { mode: "ingest", codepulseUrl: "http://example.invalid", ingestKey: "test-key" },
+        deps
+      );
+
+      expect(result.status).toBe("ingested");
+      expect(spyCalls.length).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("(c2) CASE 5 — the allowlist WIDENED after approval: postSnapshot is NEVER called. The scenario the old test named but never exercised.", async () => {
+    const dir = mkRoot();
+    try {
+      writeFileSync(join(dir, "README.md"), "hello");
+      const config = makeFixtureConfig(dir);
+      const spyCalls = [];
+      const postSnapshot = async (...args) => {
+        spyCalls.push(args);
+        return { ok: true, status: 200 };
+      };
+      // The loader is injected, so widening the allowlist between approve and ingest
+      // is exactly what a config edit does in production.
+      let live = config;
+      const { deps } = makeRunDeps({ config, postSnapshot });
+      deps.loadConfig = () => live;
+
+      await runWorkspaceScan({ mode: "dry-run" }, deps);
+      await runWorkspaceScan({ mode: "approve" }, deps);
+
+      live = {
+        ...config,
+        shareableAllowlist: {
+          ...config.shareableAllowlist,
+          default: {
+            ...config.shareableAllowlist.default,
+            extensions: [...config.shareableAllowlist.default.extensions, ".env"],
+          },
+        },
+      };
 
       const result = await runWorkspaceScan(
         { mode: "ingest", codepulseUrl: "http://example.invalid", ingestKey: "test-key" },
@@ -796,6 +931,7 @@ describe("runWorkspaceScan — D-12 case 5 integration control (115-VALIDATION.m
 
       expect(spyCalls.length).toBe(0);
       expect(result.status).toBe("refused");
+      expect(result.exitCode).toBe(3);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
