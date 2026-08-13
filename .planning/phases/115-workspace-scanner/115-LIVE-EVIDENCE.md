@@ -197,8 +197,22 @@ probe, not a bare absence claim. Totals unchanged at 4,912 dirs. Hash
 ### Larry's response, verbatim, 2026-08-12
 
 Round 1 → **"Re-map Work roots first"** and **"Raise the cap, then ingest (Recommended)"**.
-Root placement → **"[THREE ROOT NAMES REDACTED] are Consulting, leave the
-others unclassified for now, I would like to see if we even need those anymore"**.
+Root placement → **"[THREE ROOT NAMES REDACTED] are Consulting, leave the others unclassified for
+now, I would like to see if we even need those anymore"**.
+
+> **Redacted 2026-08-13, D-17.** This quote originally named three Consulting root directories. This
+> file is TRACKED in a PUBLIC repo, and D-17's whole point is that sensitive or ambiguous root names
+> live only in the gitignored `config/workspace.local.json`. Measured before redaction: one of the
+> three had **0** tracked files mentioning it in this repo's entire history and **1** after — a new,
+> permanent, one-way disclosure created by this phase's own evidence artifact, against this phase's
+> own locked decision. Controls for that measurement: `codepulse` 398 files at the pre-phase baseline
+> vs 440 at HEAD (so the probe does read history), and a deliberately bogus token 0/0 (so it does not
+> over-match). The three names are recorded where they belong — in the gitignored local config — and
+> the classification they produced is visible here as department COUNTS, which disclose nothing.
+>
+> Found by the Phase 115 verifier, not by me. I had run a disclosure check earlier in the session and
+> scoped it to `config/workspace.json` alone, never to the evidence file I was writing — the check
+> was real, its scope was wrong, and a narrow check that passes reads exactly like a broad one.
 Round 3, on whether anything needed fixing first → **"Fix astridr-repo coverage too"**, **"Verify the
 ~16,000 ceiling"**.
 Final gate → **"approved"**.
