@@ -24,8 +24,8 @@ host:port liveness join had no data behind it (117 D-02). One §4.3 claim fails 
 | "uploads the thumb to Convex file storage" | ⚠️ **unproven — the path has never carried one byte on this backend.** Measured 2026-08-13 on the live self-hosted instance: `docker exec convex-backend` → `/convex/data/storage/files` contains **0 files** (control: `/convex/data/storage/modules` contains **407**, so the probe discriminates present from absent). Both real `imageStorageId` values on `avatars` resolve to `{"status":"success","value":null}` via `POST /api/query avatars:getImageUrl` (control: `avatars:list` on the same module returns real rows) — they are orphaned cloud-era IDs. The subsystem is *configured*; it has never been *exercised*. See D-01. |
 | "ffmpeg poster frame for video" | ✓ **holds.** `ffmpeg 9.0-full` is on PATH (`Gyan.FFmpeg` via WinGet). No `sharp`/`jimp`/`masonry` dependency exists in `package.json`. |
 | "Higgsfield MCP … generate one image via Higgsfield" (the gate) | ✓ **reachable, but via CLI, not MCP.** `higgsfield account status` → `mandrasle@gmail.com — ultra plan, 3537.27 credits`. The Higgsfield MCP surface available in-session exposes only `authenticate`/`complete_authentication`. Plan against the CLI. |
-| "OpenArt MCP/CLI" | ✗ **`openart` is not on PATH.** Its MCP surface likewise exposes only `authenticate`/`complete_authentication`. Install + auth is an in-phase task (D-09). |
-| "direct API recipe cards (Google AI Studio / Kie / fal)" | ✓ **holds, and a donor exists.** `~/.claude/skills/mandras_made_skills/caught_on_camera/src/ai/veo.ts` is a real direct-API generation path. |
+| "OpenArt MCP/CLI" | ✗ **CORRECTED 2026-08-13 (plan-phase): there is no OpenArt CLI to install.** The original row said "install + auth is an in-phase task"; that premise does not hold. Measured: npm `openart`, `openart-cli`, `@openart/cli` all **404** (control: `convex` → 200, so the probe discriminates); PyPI `openart` returns 200 but is an unrelated abandoned placeholder (v0.0.2, empty summary/description, `github.com/41337/openart`), while `openart-cli`/`openart-api` 404 (control: `requests` → 200); not on PATH (control: `higgsfield` → `AppData/Roaming/npm/higgsfield`). The only candidate programmatic surface is the hosted OAuth-gated MCP. See the D-09 amendment. |
+| "direct API recipe cards (Google AI Studio / Kie / fal)" | ⚠️ **CORRECTED 2026-08-13 (plan-phase): the donor is a STUB, not a working path.** The original row claimed `veo.ts` "is a real direct-API generation path"; it is not. `~/.claude/skills/mandras_made_skills/caught_on_camera/src/ai/veo.ts:73` and `:107` are literal `throw new Error('… not implemented')`, with the fal.ai queue/poll cycle written out only as TODO comments. It remains a useful **shape** donor (retry wrapper, env-key naming, cost accounting, queue/poll design) — but the direct-API leg is write-from-scratch, not port-a-donor. Plan the task accordingly. |
 | "Ástríðr-as-generator" | ⚠️ **another repo's unstarted milestone.** The design doc itself routed it to `astridr-repo/.planning/seeds/SEED-028-seidr-suite-hooks.md` as a **v29 candidate**. See D-10. |
 | media directory `C:\Users\mandr\media-vault\` | ✗ absent — created in-phase, as designed. |
 | backup target `G:\My Drive\media-vault` | ✗ absent — nothing half-built to reconcile. |
@@ -121,6 +121,26 @@ existing media skills (D-11); a quarantine/needs-provenance lane (deferred).
   different code shape from a CLI wrapper, which is what proves the sidecar contract is not
   CLI-shaped (donor: `caught_on_camera/src/ai/veo.ts`); OpenArt requires a local CLI install +
   auth, which is an in-phase task, not a dependency on anyone else.
+
+  **AMENDMENT 2026-08-13 (plan-phase, confirmed with Larry).** The decision's *intent* — three
+  genuinely different code shapes proven end-to-end — is UNCHANGED and still binding. Two of its
+  stated premises were falsified by the pre-flight corrections above, so the mechanisms change:
+
+  1. **OpenArt leg → time-boxed MCP probe with a planned fallback.** There is no CLI to install.
+     Plan an **early discovery task**: authenticate the hosted OpenArt MCP and enumerate the tools
+     that appear *post-auth* (a pre-auth surface exposing only `authenticate` /
+     `complete_authentication` is normal and is not evidence that generation tools are absent —
+     that is exactly the false-negative shape this phase's gate standard exists to prevent). If
+     real generation tools appear, plan the third leg against **MCP**, which is arguably a better
+     third shape than a CLI for proving the sidecar contract is not CLI-shaped. If they do not,
+     **swap in a second direct-API provider** and record the swap as a decision amendment. The
+     probe outcome must be resolved *before* the third leg's implementation task starts — never
+     discovered during it (same rule D-01 applies to the storage round-trip).
+  2. **Direct-API leg targets fal.ai.** Not previously locked by this document; now locked.
+     `veo.ts`'s TODO comments already spell out fal.ai's queue/poll cycle, endpoints and auth
+     header shape, so it is a written recipe rather than a blank page — but see the corrected
+     pre-flight row: the code itself throws, so this is an implementation task, not a port.
+     Requires `FAL_KEY`, which stays in `.env`/1Password per D-12.
 
 - **D-10: Ástríðr as a generator is DEFERRED to `SEED-028` / astridr v29 — stated so the absence
   reads as a decision.** This phase writes the **sidecar contract document** she will implement
