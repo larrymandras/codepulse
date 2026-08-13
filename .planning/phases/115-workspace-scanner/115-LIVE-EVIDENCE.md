@@ -562,12 +562,50 @@ nobody triggered, which cannot exist before 2026-08-14. **OPEN, due 2026-08-14 m
 
 ## Open issues
 
-**1. `graphSnapshots.ts` carries the same `.collect()`-with-a-delete-cap defect** (see Corrections).
-Inert today because its cron is disabled at `crons.ts:145-151`. Not fixed — out of Phase 115's scope.
+**1. `graphSnapshots.ts` — PARTIALLY FIXED 2026-08-13, and my framing of it was WRONG.**
 
-**2. The crash path of the prune's idempotency was never exercised.** The deferred-remainder path was
-exercised for real; the crash-between-delete-and-patch path rests on code reading only, and the
-`it.todo` text says so.
+I stated several times that the cron's recorded reason ("times out on self-hosted Convex") was
+"very likely this same bug misdiagnosed". Reading the function shows that was wrong and the recorded
+reason was accurate. The sweep has **three** unbounded `.collect()`s, and the first is the real
+blocker: candidate selection collects every `graphSnapshotNodes` row across **every stored version**
+for a snapshotId — up to seven full versions — purely to derive the distinct version set. That is
+precisely the read `workspaceSnapshots.storedVersions` exists to avoid, which `115-RESEARCH.md`
+already said. I asserted a misdiagnosis without reading the code.
+
+What *was* a genuine second instance of this phase's defect class, and is now fixed: the per-version
+node and link deletes used `.collect()` with a 15,000 cap justified against the 16,000-doc **write**
+ceiling, when the binding limit is 4,096 **reads** and a `ctx.db.delete()` counts as one. Now a
+bounded `.take()`, with links sharing the same per-invocation budget rather than getting a fresh one.
+
+**The cron remains DISABLED** — the candidate-selection read is unfixed and needs a schema field plus
+a backfill, which is Phase 87 work. `crons.ts` now records the exact mechanism so nobody re-enables it
+against a vague symptom.
+
+**2. The prune's crash path — CLOSED 2026-08-13.**
+
+Inducing a crash was never necessary: the claim is about the **state** a crash leaves behind, and that
+state is constructible directly. `pruneWorkspaceVersions`' body is now exported as
+`pruneWorkspaceVersionsHandler` — the same seam `convex/workspaceHttp.ts` already uses for
+`workspaceIngestPostHandler` — and driven against a fake `ctx`, typed `MutationCtx` so the extraction
+cost no type safety.
+
+Five tests: a CONTROL that a normal over-limit version prunes; the already-gone-rows case (deletes
+nothing, still finishes the bookkeeping and clears the flag); the partially-deleted case; idempotency
+when nothing is over the limit; and that `activeVersion` is never touched on any path.
+**Mutation-proven** — forcing the cap-hit branch (`if (moreRemain)` → `if (true)`) fails 3 of them
+including both SELF-HEAL cases; restored byte-identical and reconfirmed green.
+
+`it.todo` #3 is now annotated CLOSED with both halves named.
+
+**3. Post-fix live state**, after deploying both changes:
+
+```
+activeVersion 10   totalDirs 4912   rowsReturned 4912
+docker stats: MEM=17.76GiB / 64GiB  CPU=1.64%
+/version=200   bogus-control=404
+```
+
+Full suite 4,301 passed / 197 todo / 0 failed (was 4,296). `tsc` clean.
 
 **3. D-05's unattended firing is still unproven — OPEN, due 2026-08-14 morning.** The task is now
 registered and its action is proven end to end (no window, log line, exit code propagated, real data
