@@ -168,14 +168,102 @@ the route works. Confirming it requires either waiting for organic traffic or a 
 
 ---
 
+---
+
+## Final measurement — 2026-08-13T11:56Z (T0 + ~19.75 h)
+
+The Task 2 figures above were taken minutes after the deploy, over a single 88 ms burst of 11
+rows from one emitter. They are **superseded** by this measurement, which spans nearly twenty
+hours and eight distinct emitters. Both are recorded; the earlier one was too thin to carry the
+D-14 verdict on its own, and saying so is part of the evidence.
+
+### Method correction, recorded because the first attempt was wrong
+
+Matching the two tables on `_creationTime` produced a shortfall of **−1** — the domain table
+appearing to hold one row MORE than the generic table. That is not a surplus and not a defect:
+the generic `events` row and the domain row are **two separate inserts** from the same ingest
+call, with `_creationTime` values a few milliseconds apart, so a window whose bounds are taken
+from domain insert times clips the corresponding generic rows at the boundary.
+
+The correct join key is the event's own `timestamp` field, which carries the **same value** into
+both tables. A `-1` was not rounded away or explained as noise; the comparison was rebuilt.
+
+Equally, a naive `74 generic since T0` vs `50 domain rows` comparison would have manufactured a
+false shortfall of 24. `listRecent` is `.take(GOVERNOR_DECISION_CAP)`-bounded at 50, so the domain
+read is truncated by the CAP, not by data loss. The valid comparison is confined to the window the
+capped read actually covers.
+
+### Result
+
+| Measure — window `2026-08-12 15:00:30 ET` → `2026-08-13 07:01:10 ET` | Value |
+|---|---|
+| Domain `governorDecisions` rows in window | **50** |
+| Generic `events` `governor_decision` rows in window | **50** |
+| **Shortfall** | **0** |
+| **Timestamp multisets identical** | **true** |
+| Rows with `heldReason === null` | **0** |
+| Sanity: newest row date | `2026-08-13` (matches wall clock) |
+
+`timestamp multisets identical: true` is a **one-to-one correspondence**, not merely equal counts:
+every generic `governor_decision` event in the window has exactly one matching domain row. This is
+the strongest form of the D-14 proof available without a synthetic injection.
+
+### Live data diversity at final measurement
+
+| Dimension | Observed |
+|---|---|
+| Emitters (8) | `cron:dep_scanner`, `cron:task_section_email`, `cron:task_also_deliver`, `cron:task_delivery`, `watch_pulse`, `cron:operator_score`, `cron:skill_health`, `startup_test` |
+| Priorities (4) | `high`, `normal`, `money`, `low` |
+| `spoke` true / false | 19 / 31 |
+
+The earlier snapshot had one emitter, one priority, and zero `spoke: true` rows. Both the Spoke
+and Held branches of the UI are now exercised by real data.
+
+---
+
+## Task 3 — Operator confirmation
+
+**APPROVED** by the operator, 2026-08-13. Verbatim resume signal: `approve3d` (typo for
+"approved"; the operator had already supplied two screenshots as their report).
+
+The operator's report was delivered as two screenshots of the running Settings → notifications
+tab rather than as prose. Observations, read from that evidence and confirmed by the operator:
+
+| Bullet | Observed |
+|---|---|
+| Rows render, not the empty state | 50 rows; footer reads `Showing the last 50 decisions — earlier decisions may exist.` |
+| At least one `Spoke` and one `Held` | 2× `Spoke` at 1:00:47 PM; many `Held` |
+| `Held` Reason cell | bare `held` — never "Failed" or "Error" |
+| `Spoke` Reason cell | **em dash** (—) |
+| `When` plausible, no 1970 date | `1:00:46 PM`, `1:00:47 PM`, `2:00:48 PM`, `5:01:20 PM` |
+| Priority = neutral outline badges | `normal`, `low`, `money` all render in the same neutral outline style |
+| Only coloured element is the Spoke icon | cyan check on `Spoke`; grey crossed-eye on `Held` |
+
+**One operator-reported discrepancy, investigated and resolved as NOT a defect.** The operator
+reported not seeing rows at the timestamps quoted from the database. Diagnosis: they were viewing
+the bottom of the table; the newest rows sit at the top. Proven rather than asserted — the
+operator's screenshot ended at `1:00:46 PM ×3` and the live query's last three rows were also
+`1:00:46 PM ×3`. Because the 50-row window slides forward as rows arrive, a page stale at the
+5:01 PM snapshot would have had an oldest row around 12:00 PM, seven rows earlier. An identical
+bottom edge is only possible if the page also held the newer rows. Separately confirmed the
+returned sequence is exactly sorted descending on `timestamp` (`ordering agrees: true`), so the
+`by_timestamp` index is behaving.
+
+A note on a 4-second offset that could later be mistaken for drift: the UI renders the event's own
+`timestamp`, while `_creationTime` is Convex's insert time roughly 4 s later. Quoted DB times and
+displayed times differ by that amount consistently, in every burst. The UI is reading the correct
+field.
+
+---
+
 ## Summary of verdicts
 
 | Item | Verdict | Basis |
 |---|---|---|
 | Deploy reached the self-hosted backend | **PASS** | target line `http://127.0.0.1:3210`, exit 0, no `tidy-whale-981` |
 | Both new function surfaces deployed | **PASS** | probe + discriminating control on each |
-| D-04 `governor_decision` → domain table | **PASS** | 11 rows, table not empty |
-| D-14 explicit-null path in production | **PASS** | 11 generic == 11 domain, zero shortfall; 0 rows with `heldReason === null` |
-| D-13 `message_routed` end-to-end | **OPEN** | surface deployed, 0 rows, explained by ~1 row/day measured rate |
-| Deploy provenance before T0 | **UNRESOLVED** | bounded to 15:00:52Z–16:00:53Z, source unidentified |
-| Operator UI confirmation | pending — Task 3 |
+| D-04 `governor_decision` → domain table | **PASS** | 50 rows across 8 emitters; table not empty |
+| D-14 explicit-null path in production | **PASS** | 50 generic == 50 domain over ~19.75 h, **timestamp multisets identical**; 0 rows with `heldReason === null` |
+| D-13 `message_routed` end-to-end | **OPEN** | surface deployed and reachable (control-paired), 0 rows, explained by its measured ~0.7–1.2 rows/day rate |
+| Operator UI confirmation | **PASS** | approved 2026-08-13; all seven bullets evidenced, one reported discrepancy investigated and resolved as a scroll position |
+| Deploy provenance before T0 | **UNRESOLVED** | bounded to 15:00:52Z–16:00:53Z; source unidentified; no `convex dev` running (control-checked) |

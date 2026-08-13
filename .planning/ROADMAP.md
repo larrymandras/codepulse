@@ -866,7 +866,7 @@ Plans:
 
 **Wave 5** *(blocked on 112-04, 112-05, 112-06, 112-08)*
 
-- [ ] 112-07-PLAN.md - **`autonomous: false`**: [BLOCKING] `--env-file` deploy to the self-hosted backend, then live control-paired arrival proof where an empty result is a FAILURE, plus an operator checkpoint (TELE-03; D-02, D-04, D-13, D-14)
+- [x] 112-07-PLAN.md - **`autonomous: false`**: [BLOCKING] `--env-file` deploy to the self-hosted backend, then live control-paired arrival proof where an empty result is a FAILURE, plus an operator checkpoint (TELE-03; D-02, D-04, D-13, D-14) — complete 2026-08-13, operator-authorized deploy exited 0 to `http://127.0.0.1:3210` (no `tidy-whale-981`); D-14 proven live over ~19.75h with 50 generic == 50 domain and **identical timestamp multisets**, 0 rows storing `heldReason === null`; D-13 recorded **OPEN** (surface deployed + control-paired, 0 rows, explained by its measured ~0.7-1.2 rows/day); operator approved the UI checkpoint. See `112-07-SUMMARY.md` / `112-LIVE-EVIDENCE.md`
 
 ---
 
