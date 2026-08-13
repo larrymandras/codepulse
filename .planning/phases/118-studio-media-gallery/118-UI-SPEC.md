@@ -55,9 +55,13 @@ Declared values (must be multiples of 4) — identical to the scale already in u
 | 2xl | 48px | Empty-state panel padding (`p-10`, matches Galdr/Bifröst empty states) |
 | 3xl | 64px | Page-level (`p-6` outer + component spacing composes to this at the page edge) |
 
-Exceptions: none. The 44px icon-only touch-target exception does not apply — every icon-only
-control on this page (Star overlay, Restore, Copy Path) sits inside a `Button size="icon"`
-(shadcn default target), consistent with Galdr's `Button variant="ghost" size="icon"` pattern.
+Exceptions: none. The 44px icon-only touch-target exception does not apply — the page's only
+icon-only controls are the Star toggle (both the card-level overlay instance and the Sheet
+footer instance — see Icon-only control labels below), each sitting inside a `Button
+size="icon"` (shadcn default target), consistent with Galdr's `Button variant="ghost"
+size="icon"` pattern. Every other action on this page (Copy Recipe, Copy Path, Move to Trash,
+Restore) is a standard `Button` carrying a visible text label alongside its icon — not
+icon-only — so no touch-target exception applies to them either.
 
 ---
 
@@ -68,13 +72,15 @@ control on this page (Star overlay, Restore, Copy Path) sits inside a `Button si
 | Body | 12px (`text-xs`) | 400 (regular) | 1.5 |
 | Label | 14px (`text-sm`) | 600 (semibold — shadcn `CardTitle`'s `font-semibold` default) | 1.4 |
 | Heading | 18px (`text-lg`) | 600 (semibold) | 1.2 |
-| Display | 24px (`text-2xl`) | 700 (bold) | 1.2 |
 
-Two weights declared for content **authored in this phase**: 400 regular (body/meta/recipe text)
-and 600 semibold (card titles, section headers, chip labels, empty-state headings). `Display`
-(24px/700 bold) is the pre-existing shared `PageHeader` component's fixed style
-(`src/components/PageHeader.tsx:18`, `text-2xl font-bold`) — this phase does not modify it and
-inherits it as-is, so it is not a third weight this phase introduces.
+Two weights declared, both authored by this phase: 400 regular (body/meta/recipe text) and 600
+semibold (card titles, section headers, chip labels, empty-state headings).
+
+**Inherited primitive chrome (excluded from the authored scale).** `PageHeader`'s title renders
+at 24px/700 bold (`src/components/PageHeader.tsx:18`, `text-2xl font-bold`) — a pre-existing
+shared component this phase does not modify or override. It is deliberately **excluded
+from — not merged into —** the scale above: the weight set this phase authors is {400, 600},
+not {400, 600, 700}.
 
 Recipe body, file paths, and any raw sidecar values render in `font-mono` (JetBrains Mono) at
 the Body size — same treatment Galdr gives prompt bodies (`Galdr.tsx:213`), for the same reason:
@@ -104,6 +110,15 @@ one thing you can act on right now."
 `Galdr.tsx:203` exactly (`fill: "var(--status-warn)", color: "var(--status-warn)"`) and that
 file's own inline warning not to substitute a hardcoded amber literal. Reusing the same token
 keeps "starred" reading identically across Galdr and Studio.
+
+**Primary visual anchor.** Studio has no page-level "create" CTA (media only enters via
+generators/watcher — see Page Shape), so the anchor differs from Galdr's "New Prompt button +
+selected-card border" pattern. In the default Gallery view, the eye's first accent-colored
+landing point is the **active filter chip** (`All` by default) — the one `--primary`-filled
+element outside the content itself — before the gaze moves into the thumbnail grid, where the
+images' own color/contrast (not UI chrome) carry the visual weight. Once the detail Sheet is
+open, the anchor shifts to the **"Copy Recipe" button** — the only accent-filled control in the
+panel, and the one action this whole surface exists to make easy.
 
 ---
 
@@ -294,6 +309,15 @@ proven run, never authored blind in the UI).
   no-provenance item must be visually distinguishable **in the same grid view**, not just after
   opening each one.
 
+**Icon-only control labels.** Only two controls on this page are icon-only (no visible text) —
+everything else (Copy Recipe, Copy Path, Move to Trash, Restore, filter chips, Tabs triggers,
+Collapsible triggers) carries a visible text label and needs no separate `aria-label`:
+
+| Control | Location | `aria-label` |
+|---------|----------|--------------|
+| Star toggle | Card thumbnail overlay (top-right) | `Toggle favorite {filename}` — same pattern as `Galdr.tsx`'s `aria-label={\`Toggle favorite ${prompt.title}\`}` |
+| Star toggle | Sheet footer (Media Detail Sheet) | `Toggle favorite {filename}` — identical label, second instance of the same control |
+
 **Broken/missing thumbnail state (D-01 neutrality).** The row exposes one resolved field,
 `thumbnailUrl` — a plain string the UI treats identically whether it resolved from Convex file
 storage or the local-static-origin fallback (D-01's outcome is unproven at spec time and the UI
@@ -335,11 +359,15 @@ Contents, top to bottom:
    card-badge level.
 4. Technical facts — dimensions/duration, size, created date, absolute path (`font-mono`, small,
    with the **Copy Path** button beside it)
-5. Actions row (`SheetFooter`, matches `PromptEditorDrawer.tsx:328` layout): **Copy Recipe**
-   (primary `Button`, `variant="default"`) · **Copy Path** (`variant="outline"`) · Star toggle ·
-   **Move to Trash** (`variant="ghost"`, muted icon — not `variant="destructive"`, matching the
-   no-alarm treatment established above) — omitted entirely when already viewing a Trash row, in
-   favor of **Restore** (`variant="outline"`) in that context.
+5. Actions row (`SheetFooter`, matches `PromptEditorDrawer.tsx:328` layout). Every control here
+   except the Star toggle carries a **visible text label** (standard `Button`, icon + text, not
+   icon-only): **Copy Recipe** (primary `Button`, `variant="default"`) · **Copy Path**
+   (`variant="outline"`, `Copy` icon + "Copy Path" text) · **Move to Trash** (`variant="ghost"`,
+   muted icon + "Move to Trash" text — not `variant="destructive"`, matching the no-alarm
+   treatment established above) — omitted entirely when already viewing a Trash row, in favor of
+   **Restore** (`variant="outline"`, `RotateCcw` icon + "Restore" text) in that context. The
+   **Star toggle** is the one icon-only control in this row (no text label, same `Star` glyph as
+   the card overlay) — see Icon-only control labels above for its `aria-label`.
 
 "Copy Recipe" copies a single formatted plain-text block (prompt/model/provider/style/params) to
 the clipboard — sized to be pasteable straight into `/studio-generate`. When provenance is
@@ -390,11 +418,45 @@ only).
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS (revision 0)
+- [ ] Dimension 2 Visuals: revision 1 — focal point + icon-only `aria-label`s added; pending
+      re-check
+- [x] Dimension 3 Color: PASS (revision 0)
+- [ ] Dimension 4 Typography: revision 1 (BLOCKING fix) — authored weight set corrected to
+      {400, 600}; `Display`/PageHeader's inherited 700 bold moved out of the table into a
+      standalone "inherited primitive chrome" note; pending re-check
+- [x] Dimension 5 Spacing: PASS (revision 0)
+- [x] Dimension 6 Registry Safety: PASS (revision 0)
 
-**Approval:** pending
+**Approval:** pending re-check (revision 1)
+
+### Revision 1 changelog (2026-08-13)
+
+- **Typography (BLOCKING):** removed the `Display` row (24px/700 bold) from the authored
+  Typography table, dropping the declared weight set from {400, 600, 700} to {400, 600}. Added
+  a new "Inherited primitive chrome" note stating `PageHeader`'s `text-2xl font-bold`
+  (`src/components/PageHeader.tsx:18`) is pre-existing and unmodified by this phase, and is
+  deliberately excluded from — not merged into — the authored 2-weight scale. Rewrote the old
+  "Two weights declared for content authored in this phase... Display is..." paragraph so it no
+  longer presents 700 as a row of the authored scale. Zero rendered pixels changed. (Same
+  structural fix as `116-UI-SPEC.md:470-475`, roles inverted: 116's inherited weight was 600
+  with authored {400, 700}; this spec's inherited weight is 700 with authored {400, 600}.)
+- **Advisory 1 (focal point):** added a "Primary visual anchor" paragraph to the Color section
+  naming the active filter chip (default view) and the "Copy Recipe" button (Sheet open) as the
+  page's declared accent-colored focal points, since Studio has no "New X" create CTA the way
+  Galdr/Bifröst do.
+- **Advisory 2 (icon-only labels + contradiction):** resolved the contradiction between the
+  Spacing-exception note (which listed Star overlay/Restore/Copy Path as icon-only) and the
+  Media Detail Sheet Contract (which described Copy Path/Restore/Move to Trash as
+  labeled buttons). Restore, Copy Path, and Move to Trash are icon **+ text** buttons, not
+  icon-only — the Spacing note and the Sheet-contract actions-row paragraph were both edited to
+  say so explicitly. Only the Star toggle (card overlay + Sheet footer instance) is icon-only.
+  Added an "Icon-only control labels" table (Media Card Contract section) declaring
+  `aria-label="Toggle favorite {filename}"` for both Star toggle instances, following
+  `Galdr.tsx`'s existing `aria-label={\`Toggle favorite ${prompt.title}\`}` convention.
+- Unchanged, reviewed and confirmed still correct: no hardcoded hex/rgb anywhere; D-02
+  no-lightbox treatment; the D-07 provenance control pair (card badge + Sheet field styling);
+  D-01 thumbnail-transport neutrality + broken-thumbnail fallback; the D-08 ingest-lag sync
+  caption and 30-day Trash countdown; the D-16 navRegistry-only nav placement; the no-new-
+  dependency CSS-columns masonry approach; the v15.0 Borealis Console overhaul stays entirely
+  out of scope.
