@@ -28,7 +28,7 @@
  */
 
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, query, type MutationCtx } from "./_generated/server";
 import { selectVersionDeletes } from "./graphSnapshots";
 
 // ---------------------------------------------------------------------------
@@ -223,9 +223,15 @@ export const upsertWorkspaceSnapshot = internalMutation({
  * version, which the next call re-selects and finishes. activeVersion is never
  * touched by any path here.
  */
-export const pruneWorkspaceVersions = internalMutation({
-  args: { snapshotId: v.string() },
-  handler: async (ctx, args) => {
+// Exported separately from the internalMutation wrapper so it can be driven with a
+// fake ctx in tests — the same seam convex/workspaceHttp.ts uses by exporting
+// workspaceIngestPostHandler. That is what makes the crash/self-heal path provable
+// without inducing a crash: the post-crash STATE (a stale entry in storedVersions
+// pointing at an already-deleted version) is constructible directly.
+export async function pruneWorkspaceVersionsHandler(
+  ctx: MutationCtx,
+  args: { snapshotId: string }
+) {
     const meta = await ctx.db
       .query("workspaceSnapshots")
       .withIndex("by_snapshotId", (q) => q.eq("snapshotId", args.snapshotId))
@@ -283,7 +289,11 @@ export const pruneWorkspaceVersions = internalMutation({
       prunedVersion: versionToDelete,
       pruneIncomplete: false,
     };
-  },
+}
+
+export const pruneWorkspaceVersions = internalMutation({
+  args: { snapshotId: v.string() },
+  handler: async (ctx, args) => pruneWorkspaceVersionsHandler(ctx, args),
 });
 
 // ---------------------------------------------------------------------------

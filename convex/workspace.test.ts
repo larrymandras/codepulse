@@ -10,7 +10,11 @@ import { describe, it, expect } from "vitest";
  */
 
 import { selectVersionDeletes } from "./graphSnapshots";
-import { WORKSPACE_KEEP_VERSIONS, WORKSPACE_DELETE_CAP } from "./workspace";
+import {
+  WORKSPACE_KEEP_VERSIONS,
+  WORKSPACE_DELETE_CAP,
+  pruneWorkspaceVersionsHandler,
+} from "./workspace";
 
 // ---------------------------------------------------------------------------
 // Mirror functions — replicate upsertWorkspaceSnapshot's bookkeeping without
@@ -211,6 +215,136 @@ describe("nextVersion — monotonic, server-side-only allocation", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The prune's CRASH / self-heal path, driven against a fake ctx.
+//
+// Plan 115-09 left this as the one it.todo half that live ingests could not
+// settle: the deferred-remainder path was exercised for real, but the crash
+// between the delete loop and the final meta patch was not. Inducing a real
+// crash is not needed — the claim is about the STATE a crash leaves behind
+// ("a stale entry in storedVersions pointing at a partially/fully-deleted
+// version, which the next call re-selects and finishes"), and that state is
+// constructible directly. This uses the same exported-handler + fake-ctx seam
+// convex/workspaceHttp.ts already uses for workspaceIngestPostHandler.
+// ---------------------------------------------------------------------------
+
+function makeFakeCtx(opts: {
+  meta: any;
+  rowsByVersion: Record<number, number>; // version -> row count
+}) {
+  const patches: any[] = [];
+  const deleted: string[] = [];
+  const meta = { ...opts.meta, _id: "meta1" };
+  const rows: Record<number, { _id: string }[]> = {};
+  for (const [ver, n] of Object.entries(opts.rowsByVersion)) {
+    rows[Number(ver)] = Array.from({ length: n }, (_, i) => ({ _id: `v${ver}-r${i}` }));
+  }
+
+  const ctx: any = {
+    db: {
+      query: (_table: string) => ({
+        withIndex: (_name: string, fn: any) => {
+          // Capture whatever the index builder was given so the fake can answer
+          // for the right version, without pretending to implement Convex.
+          const captured: any = {};
+          fn({
+            eq: (field: string, value: any) => {
+              captured[field] = value;
+              return {
+                eq: (f2: string, v2: any) => {
+                  captured[f2] = v2;
+                  return captured;
+                },
+              };
+            },
+          });
+          return {
+            unique: async () => meta,
+            take: async (n: number) => (rows[captured.version] ?? []).slice(0, n),
+          };
+        },
+      }),
+      patch: async (id: string, fields: any) => {
+        patches.push({ id, fields });
+        Object.assign(meta, fields);
+      },
+      delete: async (id: string) => {
+        deleted.push(id);
+        for (const v of Object.keys(rows)) {
+          rows[Number(v)] = rows[Number(v)].filter((r) => r._id !== id);
+        }
+      },
+    },
+  };
+  return { ctx, meta, patches, deleted };
+}
+
+describe("pruneWorkspaceVersionsHandler — crash / self-heal path", () => {
+  it("CONTROL: a normal over-limit version is pruned and removed from storedVersions", async () => {
+    const { ctx, meta, deleted } = makeFakeCtx({
+      meta: { snapshotId: "s", activeVersion: 4, storedVersions: [1, 2, 3, 4], pruneIncomplete: false },
+      rowsByVersion: { 1: 3, 2: 0, 3: 0, 4: 0 },
+    });
+    const r = await pruneWorkspaceVersionsHandler(ctx, { snapshotId: "s" });
+    expect(deleted.length).toBe(3);
+    expect(r.prunedVersion).toBe(1);
+    expect(r.pruneIncomplete).toBe(false);
+    expect(meta.storedVersions).toEqual([2, 3, 4]);
+  });
+
+  it("SELF-HEAL: a stale storedVersions entry whose rows are ALREADY GONE is cleaned up, deleting nothing", async () => {
+    // Exactly the state a crash between the delete loop and the final patch
+    // leaves: version 1's rows are gone, but storedVersions still lists it.
+    const { ctx, meta, deleted } = makeFakeCtx({
+      meta: { snapshotId: "s", activeVersion: 4, storedVersions: [1, 2, 3, 4], pruneIncomplete: true },
+      rowsByVersion: { 1: 0, 2: 0, 3: 0, 4: 0 },
+    });
+    const r = await pruneWorkspaceVersionsHandler(ctx, { snapshotId: "s" });
+
+    expect(deleted.length).toBe(0); // nothing left to delete - a no-op over already-gone rows
+    expect(r.prunedVersion).toBe(1); // but the bookkeeping IS finished
+    expect(r.pruneIncomplete).toBe(false); // and the incomplete flag is cleared
+    expect(meta.storedVersions).toEqual([2, 3, 4]);
+  });
+
+  it("SELF-HEAL: a PARTIALLY deleted version is finished on the next call", async () => {
+    // The other crash shape: some rows deleted, some not, flag left true.
+    const { ctx, meta, deleted } = makeFakeCtx({
+      meta: { snapshotId: "s", activeVersion: 4, storedVersions: [1, 2, 3, 4], pruneIncomplete: true },
+      rowsByVersion: { 1: 5, 2: 0, 3: 0, 4: 0 },
+    });
+    const r = await pruneWorkspaceVersionsHandler(ctx, { snapshotId: "s" });
+
+    expect(deleted.length).toBe(5);
+    expect(r.prunedVersion).toBe(1);
+    expect(r.pruneIncomplete).toBe(false);
+    expect(meta.storedVersions).toEqual([2, 3, 4]);
+  });
+
+  it("IDEMPOTENT: running it again once nothing is over the limit clears pruneIncomplete and does nothing else", async () => {
+    const { ctx, meta, deleted } = makeFakeCtx({
+      meta: { snapshotId: "s", activeVersion: 4, storedVersions: [2, 3, 4], pruneIncomplete: true },
+      rowsByVersion: { 2: 1, 3: 1, 4: 1 },
+    });
+    const r = await pruneWorkspaceVersionsHandler(ctx, { snapshotId: "s" });
+
+    expect(deleted.length).toBe(0);
+    expect(r.moreWork).toBe(false);
+    expect(r.prunedVersion).toBeUndefined();
+    expect(meta.storedVersions).toEqual([2, 3, 4]);
+    expect(meta.pruneIncomplete).toBe(false); // the stale flag is cleared, not left true forever
+  });
+
+  it("NEVER touches activeVersion on any path", async () => {
+    const { ctx, meta } = makeFakeCtx({
+      meta: { snapshotId: "s", activeVersion: 4, storedVersions: [1, 2, 3, 4], pruneIncomplete: true },
+      rowsByVersion: { 1: 2, 2: 0, 3: 0, 4: 0 },
+    });
+    await pruneWorkspaceVersionsHandler(ctx, { snapshotId: "s" });
+    expect(meta.activeVersion).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // DB round-trip tests — deferred to plan 115-09 (requires Convex backend +
 // live ingest route). Per 115-VALIDATION.md § "Deferred to live verification".
 // ---------------------------------------------------------------------------
@@ -222,7 +356,7 @@ it.todo(
   "the inline prune deletes the OLDEST version's rows and never the active version's rows (DB round-trip) — VERIFIED LIVE 2026-08-12, both halves: oldest row physically remaining in workspaceDirs is version 4 (so versions 1-3 hold zero rows) while the active version returned 4,912 of 4,912; see 115-LIVE-EVIDENCE.md. NOTE the prune is no longer inline — it moved to its own mutation, see WORKSPACE_DELETE_CAP"
 );
 it.todo(
-  "a crash between the delete loop and the second meta patch self-heals on the next ingest (DB round-trip) — PARTIALLY VERIFIED LIVE 2026-08-12: the deferred-remainder path was exercised for real (pruneIncomplete went true at version 5 with 412 rows of version 2 left, then false at version 6 once finished, converging to storedVersions [4,5,6]). The CRASH path specifically was NOT exercised — no crash was induced; see 115-LIVE-EVIDENCE.md"
+  "a crash between the delete loop and the second meta patch self-heals on the next ingest (DB round-trip) — CLOSED 2026-08-13. Two halves, both now settled: the deferred-remainder path was VERIFIED LIVE 2026-08-12 (pruneIncomplete true at version 5 with 412 rows of version 2 left, then false at version 6 once finished, converging to storedVersions [4,5,6]); and the CRASH path is covered by the 'pruneWorkspaceVersionsHandler — crash / self-heal path' suite above, which constructs the post-crash STATE directly rather than inducing a crash, and is mutation-proven (forcing the cap-hit branch fails 3 of its tests). See 115-LIVE-EVIDENCE.md"
 );
 it.todo(
   "getWorkspaceMap returns null before any ingest and the active version's rows after (DB round-trip) — VERIFIED LIVE 2026-08-12, control-paired: returned {status:success,value:null} pre-ingest while a bogus function name returned 'Could not find public function'; see 115-LIVE-EVIDENCE.md"

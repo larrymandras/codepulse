@@ -172,8 +172,22 @@ export const sweepGraphSnapshotVersions = internalMutation({
     const allMeta = await ctx.db.query("graphSnapshots").collect();
 
     for (const meta of allMeta) {
-      // Derive distinct stored versions from the graphSnapshotNodes index.
-      // We collect only for this snapshotId so the scan is bounded.
+      // THIS READ IS THE REASON THE CRON IS DISABLED (crons.ts). It collects
+      // EVERY node row across EVERY stored version for this snapshotId purely
+      // to derive the distinct version set — with GRAPH_SNAPSHOT_KEEP_VERSIONS
+      // at 7 that is up to seven full versions of nodes in one query. The
+      // comment above this function calling it "scope index collects to
+      // identified candidate versions (never full-table collect)" is true only
+      // in the sense that it is scoped to one snapshotId; it is NOT scoped to a
+      // version, which is what would make it bounded.
+      //
+      // Phase 115 solved this shape in convex/workspace.ts by storing
+      // `storedVersions` on the meta doc, so candidate selection reads the meta
+      // row alone and never scans entity rows (see that file's header note).
+      // Applying the same fix here means a schema field plus a backfill, which
+      // is a Phase-87 change and out of Phase 115's scope — so the cron stays
+      // disabled and this comment records precisely why, rather than leaving a
+      // future session to re-enable it on the strength of a vague "times out".
       const nodeRows = await ctx.db
         .query("graphSnapshotNodes")
         .withIndex("by_snapshot_version", (q) =>
@@ -190,15 +204,27 @@ export const sweepGraphSnapshotVersions = internalMutation({
       // Process AT MOST ONE stale version per invocation (mutation write limit).
       const versionToDelete = toDelete[0];
       let deleteCount = 0;
-      const MAX_DELETES_PER_INVOCATION = 15000; // safety guard under 16,000 limit
+      // CORRECTED 2026-08-13 (Phase 115 defect-class sweep). This was 15,000,
+      // described as a "safety guard under 16,000 limit" — the 16,000-doc WRITE
+      // ceiling. But the rows were fetched with .collect(), so the cap bounded
+      // the DELETES and never the READS, and the binding limit here is READS:
+      // 4,096 per function execution. Phase 115 hit exactly this in
+      // convex/workspace.ts and the error is unambiguous:
+      //   "Too many reads in a single function execution (limit: 4096)"
+      // Reads per invocation are now (MAX+1) node take + node deletes +
+      // (remaining+1) link take + link deletes, i.e. at most ~3*MAX+2 = 3,002.
+      // A ctx.db.delete() counts toward reads too, which is why MAX cannot
+      // simply be 4,000.
+      const MAX_DELETES_PER_INVOCATION = 1000;
 
-      // Delete graphSnapshotNodes for this version.
+      // BOUNDED READ, never .collect(): take CAP+1 so "more remain" is visible
+      // from the extra row without reading the whole version.
       const staleNodes = await ctx.db
         .query("graphSnapshotNodes")
         .withIndex("by_snapshot_version", (q) =>
           q.eq("snapshotId", meta.snapshotId).eq("version", versionToDelete)
         )
-        .collect();
+        .take(MAX_DELETES_PER_INVOCATION + 1);
 
       for (const node of staleNodes) {
         if (deleteCount >= MAX_DELETES_PER_INVOCATION) break;
@@ -206,13 +232,16 @@ export const sweepGraphSnapshotVersions = internalMutation({
         deleteCount++;
       }
 
-      // Delete graphSnapshotLinks for this version (if doc-count guard allows).
+      // Links share the SAME per-invocation budget, so only take what is left.
+      const linkBudget = MAX_DELETES_PER_INVOCATION - deleteCount;
+      if (linkBudget <= 0) continue;
+
       const staleLinks = await ctx.db
         .query("graphSnapshotLinks")
         .withIndex("by_snapshot_version", (q) =>
           q.eq("snapshotId", meta.snapshotId).eq("version", versionToDelete)
         )
-        .collect();
+        .take(linkBudget + 1);
 
       for (const link of staleLinks) {
         if (deleteCount >= MAX_DELETES_PER_INVOCATION) break;

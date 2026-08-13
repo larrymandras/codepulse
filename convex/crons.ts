@@ -144,6 +144,21 @@ crons.daily(
 
 // Phase 83: Graph snapshot version retention (D-03)
 // DISABLED 2026-07-14 — times out on self-hosted Convex; see note at archive-stale-events.
+//
+// CAUSE PINNED 2026-08-13 (Phase 115 defect-class sweep). Do NOT re-enable on the
+// strength of the line above: "times out" named a symptom, not a mechanism, and the
+// mechanism is still present. sweepGraphSnapshotVersions derives its candidate
+// versions by collecting EVERY graphSnapshotNodes row across EVERY stored version
+// for a snapshotId (graphSnapshots.ts, the `nodeRows` query) — with
+// GRAPH_SNAPSHOT_KEEP_VERSIONS at 7 that is up to seven full versions in one read.
+// Fixing it means storing the version list on the meta doc the way Phase 115 does
+// with workspaceSnapshots.storedVersions, plus a backfill.
+//
+// A SEPARATE defect in the same function WAS fixed on 2026-08-13: its per-version
+// node/link deletes used .collect() with a 15,000 cap justified against the
+// 16,000-doc WRITE ceiling, when the binding limit is 4,096 READS and a
+// ctx.db.delete() counts as one. That is now a bounded .take(). Re-enabling still
+// requires the candidate-selection fix above.
 // crons.daily(
 //   "sweep-graph-snapshot-versions",
 //   { hourUTC: 4, minuteUTC: 30 },
