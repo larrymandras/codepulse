@@ -84,8 +84,12 @@ Concretely, these three pairs are mandatory and a plan may not substitute a sing
 - [ ] `convex/media.test.ts` — D-03 (no `RETENTION_DAYS` key + exemption comment present), D-07
       (query-side provenance), D-08 (mutation halves + janitor batch shape), Pitfall 4
       (`internalMutation` vs `mutation` split)
-- [ ] `convex/studioHttp.test.ts` — D-15 (fail-closed auth, no CORS/OPTIONS), mirroring the
-      `loomHttp.ts` test pattern (confirm at plan time whether one exists)
+- [ ] `convex/studioHttp.test.ts` — D-15 (fail-closed auth, no CORS/OPTIONS). **Donor resolved
+      2026-08-13: `convex/workspaceHttp.test.ts`, NOT `loomHttp.ts`** — `convex/loomHttp.ts` exists
+      but ships no test file (control: `convex/workspaceHttp.test.ts` exists, so the check
+      discriminates). `workspaceHttp.test.ts` demonstrates the control-first auth-gate pattern,
+      field validation, and the plain-handler / `httpAction`-wrapped split that makes a Convex http
+      route testable under Vitest at all.
 - [ ] `e2e/studio.spec.ts` — D-16 nav reachability + the control-paired D-07 and D-08 assertions above
 - [ ] Framework install: **none needed** — Vitest and Playwright are both already configured
 

@@ -1022,14 +1022,28 @@ Plans:
 
 ### Phase 118: Studio media gallery
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 117
-**Plans:** 0 plans
+**Goal:** A `media-vault` directory on disk that generators write media plus sidecar JSON into, a host-side watcher that turns new files into content-hash-identified `media` rows with bounded (<=200KB) thumbnails, and a `/studio` gallery in CodePulse that browses, filters, stars, soft-deletes and exposes the full generation recipe for each item — with a file lacking a sidecar rendering "No provenance recorded" beside a complete-recipe item in the same grid view, and three genuinely different generator backends each proven end-to-end.
+**Requirements**: none mapped — design-doc-driven phase (`docs/proposals/2026-08-07-seidr-suite-design.md` §4.3). The acceptance-bearing units are the 16 locked decisions D-01..D-16 in `118-CONTEXT.md`, same convention as Phases 116 and 119.
+**Depends on:** Nothing. (The auto-generated "Phase 117" stub line was an artifact — §5 of the design doc states 116-119 are mutually independent, and 117 is COMPLETE regardless. §5 lists this phase's only dependency as "media-vault dir + backup task", both created in-phase.)
+**Plans:** 15 plans across 10 waves
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 118 to break down)
+- [ ] 118-01-PLAN.md — D-01 BLOCKING: control-paired Convex file-storage round-trip proof; records the thumbnail-transport branch
+- [ ] 118-02-PLAN.md — D-09 amendment: time-boxed OpenArt MCP post-auth tool enumeration; selects the third generator leg
+- [ ] 118-03-PLAN.md — `media`/`mediaStyles`/`mediaModels` schema + D-03 retention exemption + deploy
+- [ ] 118-04-PLAN.md — `convex/media.ts` read surface + the three public browser-callable mutations (star/soft-delete/restore)
+- [ ] 118-05-PLAN.md — D-15 bearer-gated `POST /studio/ingest`, the `internalMutation` write surface, and deploy
+- [ ] 118-06-PLAN.md — D-08 30-day janitor: batch-capped, cursor-seeked, blob-before-row, nightly cron
+- [ ] 118-07-PLAN.md — media-vault creation (D-13) + watcher scan/SHA-256 identity/sidecar pairing (D-05/D-06/D-07)
+- [ ] 118-08-PLAN.md — bounded ffmpeg webp encoder (D-02), thumbnail upload, ingest POST, trash reconciliation (D-08)
+- [ ] 118-09-PLAN.md — `StudioWatch` (D-04) and `MediaVaultBackup` (D-14) scheduled tasks + `/studio-sync`
+- [ ] 118-10-PLAN.md — `/studio` nav entry (D-16), page shell, CSS-columns masonry grid, media card, filter bar
+- [ ] 118-11-PLAN.md — detail Sheet with field-level provenance pairing, Trash view, Styles/Models panels
+- [ ] 118-12-PLAN.md — sidecar contract doc (D-10 handoff), `/studio-generate` wrapper skill (D-11), Higgsfield leg proven
+- [ ] 118-13-PLAN.md — D-09 leg 2: from-scratch fal.ai direct-API queue/poll client, proven end-to-end
+- [ ] 118-14-PLAN.md — D-09 leg 3: the branch selected by 118-02, proven end-to-end; closes D-09
+- [ ] 118-15-PLAN.md — `e2e/studio.spec.ts` control pairs + full phase gate + D-01..D-16 coverage roll-up
 
 ### Phase 119: Loom curated pipelines
 
