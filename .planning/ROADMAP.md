@@ -657,7 +657,7 @@ Plans:
 - [x] **Phase 109 — Per-Agent Engine UI** — the already-built picker/badge/confirm-modal surfaces light up on real telemetry with honest server-confirmed swap status (completed 2026-08-10; ticked 2026-08-11 at Phase 111 close — the box lagged the work. Evidence: `109-VERIFICATION.md` status=passed, 10 plans/10 summaries.)
 - [x] **Phase 110 — Convex Durability** — `aggregates` bounded by the existing batch-capped retention machinery, a verified full nightly prune pass, and the memory-growth root cause documented (completed 2026-08-11)
 - [x] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` became a truthful **post-hoc history board** over terminal-state rows, and every affordance asserting a mission state the data cannot back was removed (`ActiveAgentsPanel` deleted outright) (completed 2026-08-11). *(Description corrected at phase close: the milestone line still carried the pre-2026-08-10 goal — "live cards, humanized tool labels, honest orphan recovery" — all three of which were struck or deferred when the scope was narrowed on probe evidence. Ticking that text would have made the checklist assert delivery of exactly the work D-03/D-04 deferred to SEED-007.)*
-- [ ] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition
+- [x] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition — **COMPLETE 2026-08-13**, verified `passed` (9/9 must-haves), 8/8 plans
 - [ ] **Phase 113 — Debt Sweep** — skill-registry prune churn, the intermittent `Chat.test.tsx` failure, and `convex-selfhost/` under version control
 - [ ] **Phase 114 — Workspace Map view** — ARMS radial map on `ForceGraphCanvas`, two switchable lenses (Larry's workspace ↔ Ástríðr's world)
 - [ ] **Phase 115 — Workspace scanner** — host-side classifier over workspace roots, versioned `kind:"workspace"` snapshot ingest
@@ -914,7 +914,7 @@ Plans:
 | 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
 | 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
-| 112. Telemetry Coverage Closure | 2/7 | In Progress | - |
+| 112. Telemetry Coverage Closure | 8/8 | Complete | 2026-08-13 |
 | 113. Debt Sweep | 8/8 | Complete (DEBT-06 GUARDED) | 2026-08-12 |
 
 ### Phase 114: Workspace Map view
