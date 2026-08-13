@@ -419,16 +419,22 @@ only).
 ## Checker Sign-Off
 
 - [x] Dimension 1 Copywriting: PASS (revision 0)
-- [ ] Dimension 2 Visuals: revision 1 — focal point + icon-only `aria-label`s added; pending
-      re-check
+- [x] Dimension 2 Visuals: PASS (revision 1) — focal point + icon-only `aria-label`s added
 - [x] Dimension 3 Color: PASS (revision 0)
-- [ ] Dimension 4 Typography: revision 1 (BLOCKING fix) — authored weight set corrected to
-      {400, 600}; `Display`/PageHeader's inherited 700 bold moved out of the table into a
-      standalone "inherited primitive chrome" note; pending re-check
+- [x] Dimension 4 Typography: PASS (revision 1, BLOCKING fix cleared) — authored weight set
+      corrected to {400, 600}; `Display`/PageHeader's inherited 700 bold moved out of the table
+      into a standalone "inherited primitive chrome" note
 - [x] Dimension 5 Spacing: PASS (revision 0)
 - [x] Dimension 6 Registry Safety: PASS (revision 0)
 
-**Approval:** pending re-check (revision 1)
+**Approval:** approved (revision 1) — 6/6 dimensions.
+
+*Sign-off reconciled 2026-08-13 during plan-phase. This checklist had been left showing
+Dimensions 2 and 4 as "pending re-check" after the revision-1 fixes landed, while the recorded
+approval in commit `e278e3c9` ("UI-SPEC approved 6/6 dimensions after one revision round") and
+STATE.md both said approved. The approval is the fact; this checklist was the stale copy.
+Plans `118-10` / `118-11` already implement the revision-1-corrected content (weight set
+{400, 600}), so no plan was affected.*
 
 ### Revision 1 changelog (2026-08-13)
 

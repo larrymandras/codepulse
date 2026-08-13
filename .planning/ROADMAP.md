@@ -1029,21 +1029,67 @@ Plans:
 
 Plans:
 
-- [ ] 118-01-PLAN.md — D-01 BLOCKING: control-paired Convex file-storage round-trip proof; records the thumbnail-transport branch
-- [ ] 118-02-PLAN.md — D-09 amendment: time-boxed OpenArt MCP post-auth tool enumeration; selects the third generator leg
-- [ ] 118-03-PLAN.md — `media`/`mediaStyles`/`mediaModels` schema + D-03 retention exemption + deploy
-- [ ] 118-04-PLAN.md — `convex/media.ts` read surface + the three public browser-callable mutations (star/soft-delete/restore)
-- [ ] 118-05-PLAN.md — D-15 bearer-gated `POST /studio/ingest`, the `internalMutation` write surface, and deploy
-- [ ] 118-06-PLAN.md — D-08 30-day janitor: batch-capped, cursor-seeked, blob-before-row, nightly cron
-- [ ] 118-07-PLAN.md — media-vault creation (D-13) + watcher scan/SHA-256 identity/sidecar pairing (D-05/D-06/D-07)
-- [ ] 118-08-PLAN.md — bounded ffmpeg webp encoder (D-02), thumbnail upload, ingest POST, trash reconciliation (D-08)
-- [ ] 118-09-PLAN.md — `StudioWatch` (D-04) and `MediaVaultBackup` (D-14) scheduled tasks + `/studio-sync`
-- [ ] 118-10-PLAN.md — `/studio` nav entry (D-16), page shell, CSS-columns masonry grid, media card, filter bar
-- [ ] 118-11-PLAN.md — detail Sheet with field-level provenance pairing, Trash view, Styles/Models panels
-- [ ] 118-12-PLAN.md — sidecar contract doc (D-10 handoff), `/studio-generate` wrapper skill (D-11), Higgsfield leg proven
-- [ ] 118-13-PLAN.md — D-09 leg 2: from-scratch fal.ai direct-API queue/poll client, proven end-to-end
-- [ ] 118-14-PLAN.md — D-09 leg 3: the branch selected by 118-02, proven end-to-end; closes D-09
-- [ ] 118-15-PLAN.md — `e2e/studio.spec.ts` control pairs + full phase gate + D-01..D-16 coverage roll-up
+**Wave 1**
+
+- [ ] 118-01-PLAN.md — D-01 [BLOCKING]: control-paired Convex file-storage round-trip proof; records the thumbnail-transport branch (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion — nothing starts until `118-D01-EVIDENCE.md` carries a `BRANCH:` line)*
+
+- [ ] 118-02-PLAN.md — D-09 amendment: time-boxed OpenArt MCP post-auth tool enumeration; selects the third generator leg (wave 2)
+- [ ] 118-03-PLAN.md — `media`/`mediaStyles`/`mediaModels` schema + D-03 retention exemption + deploy (wave 2)
+- [ ] 118-07-PLAN.md — media-vault creation (D-13) + watcher scan/SHA-256 identity/sidecar pairing (D-05/D-06/D-07) (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 118-04-PLAN.md — `convex/media.ts` read surface + the three public browser-callable mutations (star/soft-delete/restore) (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 118-05-PLAN.md — D-15 bearer-gated `POST /studio/ingest`, the `internalMutation` write surface, and deploy (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 118-06-PLAN.md — D-08 30-day janitor: batch-capped, cursor-seeked, blob-before-row, nightly cron (wave 5)
+- [ ] 118-08-PLAN.md — bounded ffmpeg webp encoder (D-02), thumbnail upload, ingest POST, trash reconciliation (D-08) (wave 5)
+- [ ] 118-10-PLAN.md — `/studio` nav entry (D-16), page shell, CSS-columns masonry grid, media card, filter bar (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 118-09-PLAN.md — `StudioWatch` (D-04) and `MediaVaultBackup` (D-14) scheduled tasks + `/studio-sync` (wave 6)
+- [ ] 118-11-PLAN.md — detail Sheet with field-level provenance pairing, Trash view, Styles/Models panels (wave 6)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 118-12-PLAN.md — sidecar contract doc (D-10 handoff), `/studio-generate` wrapper skill (D-11), Higgsfield leg proven (wave 7)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 118-13-PLAN.md — D-09 leg 2: from-scratch fal.ai direct-API queue/poll client, proven end-to-end (wave 8)
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 118-14-PLAN.md — D-09 leg 3: the branch selected by 118-02, proven end-to-end; closes D-09 (wave 9)
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 118-15-PLAN.md — `e2e/studio.spec.ts` control pairs + full phase gate + D-01..D-16 coverage roll-up (wave 10)
+
+Cross-cutting constraints *(truths appearing in 2 or more plans)*:
+
+- **D-07** (6 plans) — a missing signal must never render as a positive one; absent provenance renders "No provenance recorded", never blank and never inferred from the filename.
+- **D-02** (5 plans) — hard ≤200 KB webp cap, enforced before any upload is attempted; the browser never loads the original.
+- **D-08** (5 plans) — soft-delete is mutation-flags-then-watcher-moves; the thumb blob is deleted only with the file at the 30-day janitor, so Restore stays whole.
+- **D-12** (5 plans) — a `recipeMd` card exists only for a model actually proven end-to-end in this phase, and references key NAMES only; Convex stores no keys.
+- **D-09** (4 plans) — three genuinely different code shapes proven end-to-end; the third leg's branch is selected by 118-02 before 118-14 writes any code.
+- **D-01** (3 plans) — the thumbnail transport branch is decided from the wave-1 probe result, never discovered during UI work.
+- **D-05 / D-06** (3 plans) — row identity is the file's content SHA-256; a duplicate hash is an idempotent no-op, never a second row.
+
+*Wave headers and cross-cutting constraints added by hand 2026-08-13, derived from the 15 plans'
+own `wave` / `depends_on` / `must_haves` frontmatter (verified acyclic, `wave = max(dep waves)+1`
+for all 15). `gsd-sdk query roadmap.annotate-dependencies` was NOT used — it is documented in
+`~/.claude/CLAUDE.md` LESSONS as having returned a clean `{updated:true, waves:5}` payload while
+deleting 5 real plan rows and inserting ~70 blank lines across unrelated phases, and a concurrent
+Phase 114 session is live in this checkout.*
 
 ### Phase 119: Loom curated pipelines
 

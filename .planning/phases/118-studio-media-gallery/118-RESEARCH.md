@@ -641,7 +641,18 @@ Convex self-hosted backend are both current as installed.
 
 ## Open Questions
 
+> **All three RESOLVED at plan-phase close (2026-08-13)** — annotated per question below.
+> Questions 1 and 2 are resolved *procedurally*: each is owned by a dedicated blocking discovery
+> plan whose evidence artifact is cross-checked against `118-CONTEXT.md` by an automated
+> consistency check, so the answer is measured before anything depends on it rather than assumed
+> now. Question 3 is resolved *substantively* by a CONTEXT.md `AMENDMENT`.
+
 1. **Does D-01's round-trip actually succeed on this backend?**
+   **(RESOLVED — deferred to measurement by design.)** Owned by `118-01-PLAN.md`, the phase's sole
+   wave-1 BLOCKING plan. Nothing else is built until it writes `118-D01-EVIDENCE.md` with a
+   `BRANCH:` line, and the fallback transport (a second static file server, since self-hosted
+   Convex runs in Docker with no host-dir access) is planned as real work rather than a one-line
+   pivot. No further research could have substituted for running it.
    - What we know: the mechanism and URL contract are well-documented and this backend's
      `CONVEX_SITE_ORIGIN`/`CONVEX_CLOUD_ORIGIN` config looks correctly set (docker-compose.yml).
    - What's unclear: whether anything else about this specific self-hosted deployment (network
@@ -651,6 +662,15 @@ Convex self-hosted backend are both current as installed.
      research can substitute for running it.
 
 2. **Does a real OpenArt developer API exist beyond the MCP connector?**
+   **(RESOLVED — owned by `118-02-PLAN.md`, a wave-2 time-boxed discovery probe.)** The
+   orchestrator independently confirmed no installable CLI exists: npm `openart` / `openart-cli` /
+   `@openart/cli` all 404 (control: `convex` → 200); PyPI `openart` returns 200 but is an
+   unrelated abandoned placeholder (v0.0.2, empty description) while `openart-cli` / `openart-api`
+   404 (control: `requests` → 200); not on PATH (control: `higgsfield` resolves). Per the D-09
+   AMENDMENT in CONTEXT.md, `118-02` authenticates the hosted MCP and enumerates the tools that
+   appear **post-auth**, writing a `THIRD_LEG:` measurement that `118-14` Task 1 mechanically
+   asserts against before any third-leg code is written. If no real generation tools appear, the
+   leg swaps to a second direct-API provider.
    - What we know: no CLI, no npm package, and the clearest/most authoritative source (OpenArt's
      own `/mcp` marketing page) describes MCP-only, OAuth, zero-API-keys access.
    - What's unclear: one lower-quality 2026 source claims a separate developer API exists with no
@@ -660,6 +680,12 @@ Convex self-hosted backend are both current as installed.
      "interactive MCP session, hand-placed sidecar" framing.
 
 3. **Which direct-API provider (fal.ai / Google AI Studio / Kie) does D-09's second proof target?**
+   **(RESOLVED — locked to fal.ai, confirmed with Larry; see the D-09 AMENDMENT in
+   `118-CONTEXT.md`.)** Caveat now recorded in CONTEXT.md's corrected pre-flight row: `veo.ts:73`
+   and `:107` are literal `throw new Error('… not implemented')`, so it is a **shape** donor
+   (retry wrapper, env-key naming, cost accounting, queue/poll design) and the leg is a
+   write-from-scratch implementation task, not a port. Owned by `118-13-PLAN.md`. Requires
+   `FAL_KEY`, which stays in `.env`/1Password per D-12.
    - What we know: the design doc names all three as candidates; `veo.ts` is shaped around fal.ai
      specifically (`FAL_VEO_ENDPOINT`) but is unimplemented.
    - What's unclear: CONTEXT.md doesn't lock a specific provider for this leg.
