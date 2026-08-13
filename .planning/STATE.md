@@ -9,16 +9,19 @@ last_activity: 2026-08-12 -- Plan 115-08 executed (hooks/workspaceScan.mjs: runW
 progress:
   # Re-derived from disk 2026-08-12 (see Current Position note). Do not hand-increment:
   # total_plans   = count of .planning/phases/{108..119}/NNN-NN-PLAN.md      -> 60
-  # completed_plans = count of .planning/phases/{108..119}/NNN-NN-SUMMARY.md -> 57
+  # completed_plans = count of .planning/phases/{108..119}/NNN-NN-SUMMARY.md -> 58
   # completed_phases counts 117 + 119 too: they shipped with a PHASE-level
   #   NNN-SUMMARY.md and no per-plan PLAN.md files, which is why plan-counting
   #   verbs under-report completed_phases as 6.
-  # percent is PHASE-based (8/12), not plan-based.
+  # percent is PHASE-based (9/12), not plan-based.
+  # Re-derived from disk again 2026-08-13 at Phase 112 close: 9 phases now carry a
+  #   *-VERIFICATION.md (108, 109, 110, 111, 112, 113, 116, 117, 119), and 112-07-SUMMARY.md
+  #   brought completed_plans to 58. Coherence checked: 58 <= 60, 9 <= 12.
   total_phases: 12
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 60
-  completed_plans: 57
-  percent: 67
+  completed_plans: 58
+  percent: 75
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).

@@ -1,0 +1,87 @@
+{
+  "phase": 112,
+  "phaseName": "telemetry-coverage-closure",
+  "created": "2026-08-13T12:08:15.952Z",
+  "history": [
+    {
+      "timestamp": "2026-08-13T12:08:15.952Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-13T12:08:15.952Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "112-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "112-DISCUSSION-LOG.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "112-UI-SPEC.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "112-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 8,
+      "files": [
+        "112-01-PLAN.md",
+        "112-02-PLAN.md",
+        "112-03-PLAN.md",
+        "112-04-PLAN.md",
+        "112-05-PLAN.md",
+        "112-06-PLAN.md",
+        "112-07-PLAN.md",
+        "112-08-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 8,
+      "files": [
+        "112-01-SUMMARY.md",
+        "112-02-SUMMARY.md",
+        "112-03-SUMMARY.md",
+        "112-04-SUMMARY.md",
+        "112-05-SUMMARY.md",
+        "112-06-SUMMARY.md",
+        "112-07-SUMMARY.md",
+        "112-08-SUMMARY.md"
+      ]
+    },
+    "VERIFICATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "112-VERIFICATION.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "112-VALIDATION.md"
+      ]
+    }
+  }
+}
