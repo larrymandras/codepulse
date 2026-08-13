@@ -65,7 +65,7 @@ completed: 2026-08-13
 - **Duration:** ~2h40m (2026-08-12 15:42–18:18) plus ~1h of post-checkpoint fixes (2026-08-13 07:55–07:56 commits)
 - **Completed:** 2026-08-13
 - **Tasks:** 3/3 completed, plus 2 post-checkpoint fixes Larry flagged
-- **Commits:** `674403d2`, `65a0e7bf`, `7ca97783`, `810b236e`, `f36be958`, `89924f78`, `5c4851c5`
+- **Commits:** `674403d2`, `65a0e7bf`, `7ca97783`, `810b236e`, `65b5ac9e`, `f6ceafcd`, `5bf57a1d`
 
 ## Must-haves — all four proven live
 
@@ -128,6 +128,6 @@ Full suite after all changes: **316 files passed, 17 skipped; 4,286 tests passed
 ## Follow-ups created
 
 1. **`convex/graphSnapshots.ts:193-219` carries the same defect** — caps deletes at 15,000 while reading via `.collect()`. Inert today because its cron is disabled at `crons.ts:145-151` for a "candidate-selection read [that] times out", very likely this same bug under a wrong diagnosis. Out of Phase 115's scope.
-   - **RESOLVED 2026-08-13, and the "wrong diagnosis" claim above was itself wrong.** Reading the function shows the recorded "times out" reason was accurate: candidate selection collects every node row across *every* stored version (up to 7) to derive the version set — exactly the read `workspaceSnapshots.storedVersions` exists to avoid. The per-version node/link `.collect()`s *were* a genuine second instance of the defect class and are now bounded `.take()`s sharing one budget. The cron stays disabled — the candidate-selection read needs a schema field plus a backfill (Phase 87 work) — and `crons.ts` now records the exact mechanism so it cannot be re-enabled against a vague symptom. Commit `5451750c`.
+   - **RESOLVED 2026-08-13, and the "wrong diagnosis" claim above was itself wrong.** Reading the function shows the recorded "times out" reason was accurate: candidate selection collects every node row across *every* stored version (up to 7) to derive the version set — exactly the read `workspaceSnapshots.storedVersions` exists to avoid. The per-version node/link `.collect()`s *were* a genuine second instance of the defect class and are now bounded `.take()`s sharing one budget. The cron stays disabled — the candidate-selection read needs a schema field plus a backfill (Phase 87 work) — and `crons.ts` now records the exact mechanism so it cannot be re-enabled against a vague symptom. Commit `dd67293c`.
 2. **The prune's crash path was never exercised.** The deferred-remainder path was exercised for real; the crash-between-delete-and-patch path rests on code reading only, and the `it.todo` text says so.
-   - **CLOSED 2026-08-13.** No crash needed: the claim is about the *state* a crash leaves, which is constructible directly. `pruneWorkspaceVersionsHandler` is now exported (the seam `workspaceHttp.ts` already uses) and driven against a fake `ctx` typed `MutationCtx`. Five tests incl. a CONTROL and the already-gone-rows case; mutation-proven — forcing the cap-hit branch fails 3 of them. Commit `5451750c`.
+   - **CLOSED 2026-08-13.** No crash needed: the claim is about the *state* a crash leaves, which is constructible directly. `pruneWorkspaceVersionsHandler` is now exported (the seam `workspaceHttp.ts` already uses) and driven against a fake `ctx` typed `MutationCtx`. Five tests incl. a CONTROL and the already-gone-rows case; mutation-proven — forcing the cap-hit branch fails 3 of them. Commit `dd67293c`.

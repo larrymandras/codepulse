@@ -73,8 +73,8 @@ completed: 2026-08-13
 
 ## Task Commits
 
-1. **Task 1: wrapper + installer** — `7e213c8b` (feat)
-2. **Task 2: registration evidence** — `300b40ce`, `f6e3d947` (docs)
+1. **Task 1: wrapper + installer** — `c02bc1d4` (feat)
+2. **Task 2: registration evidence** — `56d60f73`, `45d5274f` (docs)
 
 ## Decisions Made
 

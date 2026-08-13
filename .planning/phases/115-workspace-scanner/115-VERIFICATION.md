@@ -60,13 +60,13 @@ human_verification:
 The verifier returned `failed` on one blocker: three Consulting root directory names committed to a
 public repo by this phase's own evidence artifact. All three of its `missing` items are now closed.
 
-**1. Redact the names from `115-LIVE-EVIDENCE.md`** — done, commit `d186b8b1`. Marked
+**1. Redact the names from `115-LIVE-EVIDENCE.md`** — done, commit `00b5fca2`. Marked
 `[THREE ROOT NAMES REDACTED]` with the measurement recorded, rather than silently reworded. The whole
 file was then rescanned for every other client/employer root name: all zero, against a known-present
 control.
 
 **2. Rewrite the local-only commits that introduced them** — done. `git filter-branch` over the 18
-commits from `f36be958` to HEAD, purging the names from every historical version of that file.
+commits from `65b5ac9e` to HEAD, purging the names from every historical version of that file.
 Verified with controls:
 
 | Check | Result |
@@ -79,7 +79,7 @@ Verified with controls:
 | other session's 5 Phase 112 commits | all present, new hashes |
 
 Backup refs (`refs/original`, the interim tag) were then dropped, because a stray tag is exactly what
-`git push --tags` would republish. Reflog recovery remains at `b1e0fbfc`.
+`git push --tags` would republish. Reflog recovery remains at `65be2dfb`.
 
 **3. Decide the pre-existing `93-CALIBRATION.md` mention** — **Larry's decision, 2026-08-13:
 accepted as-is.** `global-legal-crisis` and `mission-control-aws` remain in `04111c15`, which is an
