@@ -916,7 +916,7 @@ Plans:
 | 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
 | 112. Telemetry Coverage Closure | 8/8 | Complete | 2026-08-13 |
 | 113. Debt Sweep | 8/8 | Complete (DEBT-06 GUARDED) | 2026-08-12 |
-| 115. Workspace Scanner | 10/10 | Complete - VERIFIER status=failed, 1 D-17 disclosure blocker redacted forward, history decision open; D-05 unattended firing OPEN | 2026-08-13 |
+| 115. Workspace Scanner | 10/10 | Complete - verified passed-with-concerns (D-17 blocker remediated: redacted + unpushed history rewritten; residual public Phase 93 mentions accepted by Larry); D-05 unattended firing OPEN until 2026-08-14 | 2026-08-13 |
 
 ### Phase 114: Workspace Map view
 

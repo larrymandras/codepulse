@@ -1,8 +1,16 @@
 ---
 phase: 115-workspace-scanner
 verified: 2026-08-13T13:13:07Z
-status: failed
-score: 15/17 decisions verified, 1 partial (openly recorded), 1 failed
+status: passed-with-concerns
+status_history:
+  - "failed 2026-08-13T13:13Z — D-17 public-repo disclosure blocker (see gaps below)"
+  - "passed-with-concerns 2026-08-13 — blocker remediated and Larry accepted the residual; D-05 still open by design (see Resolution)"
+score: 15/17 decisions verified, 1 partial (D-05, open by design), 1 failed-then-remediated
+resolution_note: >
+  The status change was NOT made by re-running the verifier. It records that the three
+  remediation items it listed under `missing` were each carried out and independently
+  re-probed with controls, plus Larry's explicit accepted-risk decision on the fourth.
+  A second verifier pass has not been run.
 verifier_note: >
   Goal-backward verification against the 17 locked decisions in 115-CONTEXT.md.
   No claim in any SUMMARY or in 115-LIVE-EVIDENCE.md was accepted as evidence;
@@ -44,6 +52,52 @@ human_verification:
 ---
 
 # Phase 115: Workspace scanner — Verification Report
+
+---
+
+## Resolution of the D-17 blocker (2026-08-13, after this report was written)
+
+The verifier returned `failed` on one blocker: three Consulting root directory names committed to a
+public repo by this phase's own evidence artifact. All three of its `missing` items are now closed.
+
+**1. Redact the names from `115-LIVE-EVIDENCE.md`** — done, commit `d186b8b1`. Marked
+`[THREE ROOT NAMES REDACTED]` with the measurement recorded, rather than silently reworded. The whole
+file was then rescanned for every other client/employer root name: all zero, against a known-present
+control.
+
+**2. Rewrite the local-only commits that introduced them** — done. `git filter-branch` over the 18
+commits from `f36be958` to HEAD, purging the names from every historical version of that file.
+Verified with controls:
+
+| Check | Result |
+|---|---|
+| `the new root name` across ALL refs | **0** |
+| control `workspaceDirs` across all refs | 15 (probe works, so the 0 is real) |
+| every historical blob of `115-LIVE-EVIDENCE.md` | 0 hits, all 7 versions |
+| `git diff pre-rewrite backup → master` | **empty** — final tree byte-identical |
+| commit count before / after | 2765 / 2765 |
+| other session's 5 Phase 112 commits | all present, new hashes |
+
+Backup refs (`refs/original`, the interim tag) were then dropped, because a stray tag is exactly what
+`git push --tags` would republish. Reflog recovery remains at `b1e0fbfc`.
+
+**3. Decide the pre-existing `93-CALIBRATION.md` mention** — **Larry's decision, 2026-08-13:
+accepted as-is.** `global-legal-crisis` and `mission-control-aws` remain in `04111c15`, which is an
+ancestor of `origin/master` and has therefore been public since Phase 93. Removing them would require
+rewriting *published* history and force-pushing, which breaks every clone and still would not clear
+forks or GitHub's caches. They are directory names, not credentials. Accepted risk, recorded here so
+it is a decision on the record rather than an oversight.
+
+**Net effect:** the one genuinely NEW disclosure this phase created (`the new root name`, 0 tracked files
+in this repo's entire history before Phase 115) never becomes public. The two pre-existing mentions
+are unchanged and knowingly accepted.
+
+**Still open, by design:** D-05's unattended firing. A one-shot local task
+(`CodePulse-WorkspaceScan-D05Check`, 2026-08-14 08:00) will read the log and report the verdict by
+Telegram; its verdict logic is self-tested including the control that a manual-only run must read
+NOT PROVEN, and the Telegram path was proven live before anything came to depend on it.
+
+---
 
 **Phase Goal (ROADMAP.md:934):** Larry's declared workspace roots are walked nightly and stored as a
 versioned, department-classified directory map in Convex — with secret-classified file paths
