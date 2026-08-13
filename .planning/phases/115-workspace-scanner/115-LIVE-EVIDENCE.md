@@ -402,19 +402,84 @@ Four deploys, all via
 
 ---
 
+## Resolved after the first checkpoint report
+
+Both items Larry flagged were fixed the same session; the evidence is below rather than a claim that
+they were.
+
+### R1. D-12's hash now covers the CLASSIFICATION, not the file inventory — **FIXED**
+
+`hashableView` returned the whole report minus `generatedAt`/`reportHash`, so the approval hash covered
+every file count and byte total. Measured: three consecutive dry-runs gave 229,178 → 229,180 → 229,181
+files and two distinct hashes, and the first post-approval ingest refused with exit 3 after seconds of
+drift. Over 24 hours a change is certain, so plan 115-10's nightly task would have exited 3 **every
+night, forever**.
+
+`classificationView()` now projects only the allowlist and exclusions, every root with its
+department/access/covered flag, the Unclassified set, coverage, `localConfigStatus` and
+`accessDerivationOk`. `buildDryRunReport` also emits a new `classification` block carrying the
+allowlist and exclude lists — **the report did not contain the allowlist at all before**, so the old
+whole-report hash could not see the single most important thing the approval exists for: widening the
+allowlist changed which files transmit and invalidated nothing.
+
+Proven in both directions, since a hash that never changes is as broken as one that always does.
+
+*Live control, on the real tree.* Two walks differing by exactly one planted, then removed,
+allowlisted file:
+
+```
+walk A: files=229205 bytes=32958930029
+walk B: files=229206 bytes=32958930071
+tree moved between walks: true
+
+OLD whole-report hash equal?   false   <- the old rule WOULD have refused
+NEW classification hash equal? true
+```
+
+A first attempt at this control returned `tree moved between walks: false` and was reported
+**INCONCLUSIVE** rather than as a pass — a quiet tree explains an unchanged hash just as well as a
+correct fix does.
+
+*Live end-to-end.* One `--dry-run` + one `--approve`, then **two consecutive ingests with no
+re-approval** — versions 7 and 8, both `ingested (exit 0)`. Under the old rule the second would have
+refused. That is the nightly case.
+
+*Unit.* File churn, byte totals, the sample, and reworded `evidence` prose do **not** invalidate; a
+department change, a widened allowlist, a dropped directory exclusion, lost coverage, a new root, and a
+degraded `localConfigStatus` all **do**. A GUARD test asserts the fixture is non-degenerate — the first
+version of these tests mutated an empty `excludeDirs` array and passed vacuously.
+
+The D-12 case 5 control was also split. Its name promised "someone widened the allowlist and re-ran the
+nightly task" while its body only added a file — so the scenario it advertised was never exercised.
+Now `(c1)` a file appearing after approval **ingests**, and `(c2)` the allowlist widened after approval
+**refuses** with exit 3 and never calls `postSnapshot`.
+
+### R2. The version-4 truncation I caused is gone — **FIXED**
+
+Cleaned up by letting the versions roll forward rather than by hand-deleting rows. Final state:
+
+```
+activeVersion    8      totalDirs 4912   rowsReturned 4912
+storedVersions   [6, 7, 8]
+prunedVersion    5      pruneIncomplete false
+oldest row physically remaining in workspaceDirs: version 6
+```
+
+The oldest surviving row is version **6**, so version 4's 100-directory snapshot is physically deleted
+along with versions 1, 2, 3 and 5. All three retained versions are real, complete 4,912-directory
+snapshots.
+
+---
+
 ## Open issues
 
-**1. D-12's hash gate makes D-05's unattended nightly run impossible.** `hashableView` strips only
-`generatedAt` and `reportHash`, so the hash covers the full file inventory — file counts, byte totals,
-mtimes. Measured: three consecutive dry-runs produced file counts 229,178 → 229,180 → 229,181 and two
-distinct hashes, and the very first post-approval ingest refused with exit 3. Over a 24-hour gap a hash
-change is certain, so `node hooks/workspaceScan.mjs` run unattended by plan 115-10's scheduled task
-will exit 3 **every night**. D-12's own text says the report is reviewed "before first ingest"; the
-implementation re-gates every run. A structural hash — over roots, departments, allowlist, coverage and
-`localConfigStatus`, i.e. the classification Larry actually approves — would be stable across file
-churn while still invalidating on what the gate is for. **This is unresolved and blocks 115-10's
-premise.**
+**1. `graphSnapshots.ts` carries the same `.collect()`-with-a-delete-cap defect** (see Corrections).
+Inert today because its cron is disabled at `crons.ts:145-151`. Not fixed — out of Phase 115's scope.
 
-**2. `graphSnapshots.ts` carries the same `.collect()`-with-a-delete-cap defect** (above).
+**2. The crash path of the prune's idempotency was never exercised.** The deferred-remainder path was
+exercised for real; the crash-between-delete-and-patch path rests on code reading only, and the
+`it.todo` text says so.
 
-**3. The crash path of the prune's idempotency was never exercised** (above).
+**3. D-05's unattended firing is still unproven.** The gate no longer blocks it and two consecutive
+ingests now succeed on one approval, but no scheduled task has been registered and no overnight run has
+been observed. That is plan 115-10's work and is not claimed here.
