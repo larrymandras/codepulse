@@ -546,8 +546,11 @@ write to THIS task run rather than to any earlier manual ingest. The prune also 
 So the launcher chain is proven end to end: `wscript.exe` + `run-hidden.vbs` created no console
 window, the wrapper wrote its log line, the exit code propagated, and real data landed.
 
-**Unexplained and recorded rather than smoothed over:** the log shows TWO runs 38 seconds apart from
-a single reported trigger. No harm resulted; the cause was not established.
+**The two runs 38 seconds apart are accounted for:** Larry triggered it twice ("i fired it twice",
+2026-08-13). Not an anomaly. Worth keeping in the record anyway, because it doubles as evidence that
+`-MultipleInstances IgnoreNew` and the version machinery both behave under back-to-back invocations:
+two triggers produced exactly two ingests, versions 9 and 10, with the prune holding `storedVersions`
+at three.
 
 ### What Task 2 does NOT establish
 
@@ -571,5 +574,5 @@ registered and its action is proven end to end (no window, log line, exit code p
 landed). What remains is a log line stamped near 04:15 that nobody triggered. Until that exists, D-05
 is not verified, and no artifact in this phase may record it as complete.
 
-**4. Two task runs were logged from one reported trigger** (2026-08-13 08:30:02 and 08:30:40). Cause
-not established. No harm: versions rolled 8 -> 9 -> 10 and the prune kept `storedVersions` at three.
+_(A fourth item — two logged runs from one apparent trigger — was resolved the same day: Larry
+triggered it twice. Recorded above, not an open issue.)_
