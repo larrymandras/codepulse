@@ -119,7 +119,15 @@ The production backend is SELF-HOSTED (single node, SQLite) at `C:\Users\mandr\c
 
 ## Testing
 
-Vitest with jsdom. Setup file at `src/test/setup.ts` mocks heavy externals (Clerk, Recharts, Three.js, Globe, React Flow, Tone.js). Tests live alongside source: `src/**/*.test.tsx`, `convex/**/*.test.ts`.
+Vitest with jsdom. Setup file at `src/test/setup.ts` (139 lines) installs jsdom polyfills for
+`SpeechRecognition`/`Audio`/`Worker`/`AudioWorkletNode` plus one `vi.mock` for `livekit-client` —
+it does **not** globally mock Clerk, Recharts, Three.js, Globe, React Flow, or Tone.js (a prior
+version of this line claimed it did; verified false by a full read of the file, Phase 114
+plan 09). **Heavy render libraries are mocked per test file, not globally** — see
+`src/components/graph/ForceGraphCanvas.test.tsx` and
+`src/components/workspace/WorkspaceMapCanvas.test.tsx` for the live `vi.hoisted` +
+`vi.mock("react-force-graph-2d", ...)` props-capture pattern. Tests live alongside source:
+`src/**/*.test.tsx`, `convex/**/*.test.ts`.
 
 Path alias `@/` resolves to `./src/` in both Vite and tsconfig.
 
