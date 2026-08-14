@@ -2439,4 +2439,90 @@ export default defineSchema({
     withheldCount: v.number(), // D-03 — secret-classified files whose paths are never transmitted;
                                 // deliberately count-only, see the header note above
   }).index("by_snapshot_version", ["snapshotId", "version"]),
+
+  // Phase 118 (Studio) D-01/D-05/D-07/D-08/D-13. One row per media file
+  // ingested from the media-vault watcher. contentHash (D-05) is the row's
+  // real identity — path/rename/restore-safe, unlike absPath. Every
+  // provenance field is optional (D-07): a file with no sidecar is ingested
+  // anyway, with provenance explicitly absent, never inferred from the
+  // filename. Both thumbnail-transport fields are declared (D-01) even
+  // though exactly one is populated per row — see the inline comment below;
+  // this branch was resolved live in plan 118-01
+  // (118-D01-EVIDENCE.md: BRANCH: convex-storage). No migration, seed or
+  // backfill exists for this table (D-13) — it starts empty.
+  media: defineTable({
+    filename: v.string(),
+    absPath: v.string(),
+    mediaType: v.string(), // "image" | "video" | "audio"
+    kind: v.string(), // "gen" | "ref" | "style"
+    contentHash: v.string(), // SHA-256 hex of the file's bytes (D-05) — the row identity;
+                              // required, not optional — a row without one is not a valid row
+    sizeBytes: v.number(),
+    starred: v.boolean(),
+    createdAt: v.number(),
+
+    // Provenance (D-07) — absent (not blank, not inferred) on a file ingested
+    // with no sidecar JSON. The UI renders "No provenance recorded" for a row
+    // where these are absent, never a blank field.
+    model: v.optional(v.string()),
+    provider: v.optional(v.string()),
+    prompt: v.optional(v.string()),
+    project: v.optional(v.string()),
+    styleId: v.optional(v.id("mediaStyles")),
+    params: v.optional(v.string()), // sidecar's `params` object, serialised as JSON —
+                                     // v.any() here would defeat validation for no benefit
+
+    // Media facts — absent for kinds/types that don't carry them (e.g. no
+    // width/height on audio).
+    tags: v.optional(v.array(v.string())),
+    width: v.optional(v.number()),
+    height: v.optional(v.number()),
+    durationSec: v.optional(v.number()),
+
+    // Thumbnail transport (D-01): BOTH declared, exactly one populated per
+    // row. This deployment resolved to BRANCH: convex-storage (118-01) —
+    // thumbStorageId is the field every row currently populates.
+    // thumbRelPath stays declared-but-unpopulated so the row shape survives
+    // a future revisit of the local-static-origin fallback branch without a
+    // schema migration.
+    thumbStorageId: v.optional(v.id("_storage")),
+    thumbRelPath: v.optional(v.string()),
+
+    // Lifecycle (D-08): the mutation sets this; the watcher moves the file
+    // to trash\ on its next cycle; the 30-day janitor deletes the file and
+    // its thumb blob together, never at soft-delete time (so Restore stays
+    // whole).
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_contentHash", ["contentHash"]) // D-05/D-06 dedup lookup from ingest
+    .index("by_createdAt", ["createdAt"]) // Gallery grid's newest-first sort
+    .index("by_deletedAt", ["deletedAt"]) // Trash tab + D-08 janitor's 30-day sweep
+    .index("by_kind", ["kind"]), // Kind filter Select
+
+  // Phase 118 (Studio) D-12. Curated model cards — exist ONLY for models
+  // proven end-to-end in this phase, never seeded wholesale from a provider's
+  // model list (that would be transcription, not verification).
+  mediaModels: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    type: v.string(), // "image" | "video" | "audio"
+    provider: v.string(),
+    recipeMd: v.string(), // D-12: references env-var NAMES only — Convex stores no keys.
+                           // Plain string, never v.any() — rendered read-only, never
+                           // dangerouslySetInnerHTML (T-118-05).
+    docsUrl: v.optional(v.string()),
+    aspect: v.optional(v.string()),
+    resolution: v.optional(v.string()),
+    duration: v.optional(v.number()),
+    enabled: v.boolean(),
+  }).index("by_slug", ["slug"]),
+
+  // Phase 118 (Studio). Curated style presets referenced by media.styleId.
+  mediaStyles: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    prompt: v.optional(v.string()),
+    previewMediaId: v.optional(v.id("media")),
+  }).index("by_slug", ["slug"]),
 });
