@@ -923,7 +923,7 @@ Plans:
 **Goal:** Larry can open `/workspace-map` and read the live workspace snapshot as a deterministic radial map — center, four department hubs, 53 roots, then directories — where node fill encodes department, a halo marks what Ástríðr can reach, node size encodes rolled-up file count, an always-visible coverage strip states scan freshness and every honesty flag, a side panel names the files withheld from each directory rather than silently omitting them, and a lens switcher offers Ástríðr's world with an honest, live-probed empty state.
 **Requirements**: none mapped — design-doc-driven phase (`Mandras/02-projects/agentic-os-second-brain.md` § "CodePulse" bullet C1). The acceptance-bearing units are the 18 locked decisions D-01..D-18 in `114-CONTEXT.md`; plans are traced to those instead of REQ-IDs, following Phase 116's precedent and Phase 115's application of it.
 **Depends on:** Phase 115. *(Corrected 2026-08-13: this line previously read "Phase 113", a sequential default emitted by `gsd-phase add` rather than a real constraint. The approved design's own dependency graph — `Mandras/02-projects/agentic-os-second-brain.md:48` — states "C2 → enables C1's workspace lens", where C2 is Phase 115 (the scanner, which produces the data) and C1 is this phase (the map, which renders it). Both 113 and 115 are complete, so nothing was blocked; the line was simply wrong, and is corrected here the same way 115's inverted line was on 2026-08-12.)*
-**Plans:** 9/11 plans executed
+**Plans:** 10/11 plans executed
 
 Plans:
 
@@ -950,7 +950,7 @@ Plans:
 
 **Wave 5**
 
-- [ ] 114-10-PLAN.md - `/workspace-map` page, closed-set `?lens=` URL param including the unrecognized-value default (D-12), two independent `SectionErrorBoundary`s, App route and GRAPHS nav entry (wave 5, depends on 114-02 + 114-04 + 114-06 + 114-09)
+- [x] 114-10-PLAN.md - `/workspace-map` page, closed-set `?lens=` URL param including the unrecognized-value default (D-12), two independent `SectionErrorBoundary`s, App route and GRAPHS nav entry (wave 5, depends on 114-02 + 114-04 + 114-06 + 114-09)
 
 **Wave 6** *(`autonomous: false`, attended)*
 
