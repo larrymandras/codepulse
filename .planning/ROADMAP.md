@@ -659,7 +659,7 @@ Plans:
 - [x] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` became a truthful **post-hoc history board** over terminal-state rows, and every affordance asserting a mission state the data cannot back was removed (`ActiveAgentsPanel` deleted outright) (completed 2026-08-11). *(Description corrected at phase close: the milestone line still carried the pre-2026-08-10 goal — "live cards, humanized tool labels, honest orphan recovery" — all three of which were struck or deferred when the scope was narrowed on probe evidence. Ticking that text would have made the checklist assert delivery of exactly the work D-03/D-04 deferred to SEED-007.)*
 - [x] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition — **COMPLETE 2026-08-13**, verified `passed` (9/9 must-haves), 8/8 plans
 - [x] **Phase 113 — Debt Sweep** — skill-registry prune churn, the intermittent `Chat.test.tsx` failure, and `convex-selfhost/` under version control (completed 2026-08-12; ticked 2026-08-13 — the box lagged the work. Evidence: `113-VERIFICATION.md` status=`passed-with-amended-criterion` covering DEBT-05/06/07, 8 plans/8 summaries, and this file's own Progress table already recorded "Complete (DEBT-06 GUARDED) 2026-08-12".)
-- [ ] **Phase 114 — Workspace Map view** — ARMS radial map on `ForceGraphCanvas`, two switchable lenses (Larry's workspace ↔ Ástríðr's world)
+- [x] **Phase 114 — Workspace Map view** — ARMS radial map on `ForceGraphCanvas`, two switchable lenses (Larry's workspace ↔ Ástríðr's world) (completed 2026-08-14)
 - [x] **Phase 115 — Workspace scanner** — host-side classifier over workspace roots, versioned `kind:"workspace"` snapshot ingest — **COMPLETE 2026-08-13**, 10/10 plans. Live: 4,912 classified directories ingested to the self-hosted backend, `activeVersion` 10 with `storedVersions` held at 3 by the prune, nightly task registered 04:15. *(D-05's unattended firing is OPEN, due 2026-08-14 morning — a manual trigger proves the ACTION works, not that the SCHEDULER fires it. The phase is closed; that decision is not.)*
 - [x] **Phase 116 — Galdr prompt library** — `prompts` tables + `/galdr` live-fetch skills + send-to-Chat/clipboard (Seiðr Suite) (completed 2026-08-10; ticked 2026-08-11 at Phase 111 close — the box lagged the work. Evidence: `116-VERIFICATION.md` status=passed, 8 plans/8 summaries.)
 - [x] **Phase 117 — Bifrost link hub** — `links` table, command-palette jump, liveness dots (Seiðr Suite; /gsd-quick-shaped) (completed 2026-08-10; ticked 2026-08-13 — the box lagged the work. Evidence: `117-VERIFICATION.md` status=`passed`, 4/4 goal clauses, 0 overrides; shipped with a phase-level `117-SUMMARY.md` rather than per-plan PLAN/SUMMARY files, which is why plan-counting verbs under-report it.)
@@ -923,7 +923,7 @@ Plans:
 **Goal:** Larry can open `/workspace-map` and read the live workspace snapshot as a deterministic radial map — center, four department hubs, 53 roots, then directories — where node fill encodes department, a halo marks what Ástríðr can reach, node size encodes rolled-up file count, an always-visible coverage strip states scan freshness and every honesty flag, a side panel names the files withheld from each directory rather than silently omitting them, and a lens switcher offers Ástríðr's world with an honest, live-probed empty state.
 **Requirements**: none mapped — design-doc-driven phase (`Mandras/02-projects/agentic-os-second-brain.md` § "CodePulse" bullet C1). The acceptance-bearing units are the 18 locked decisions D-01..D-18 in `114-CONTEXT.md`; plans are traced to those instead of REQ-IDs, following Phase 116's precedent and Phase 115's application of it.
 **Depends on:** Phase 115. *(Corrected 2026-08-13: this line previously read "Phase 113", a sequential default emitted by `gsd-phase add` rather than a real constraint. The approved design's own dependency graph — `Mandras/02-projects/agentic-os-second-brain.md:48` — states "C2 → enables C1's workspace lens", where C2 is Phase 115 (the scanner, which produces the data) and C1 is this phase (the map, which renders it). Both 113 and 115 are complete, so nothing was blocked; the line was simply wrong, and is corrected here the same way 115's inverted line was on 2026-08-12.)*
-**Plans:** 10/11 plans executed
+**Plans:** 11/11 plans complete
 
 Plans:
 
@@ -954,7 +954,7 @@ Plans:
 
 **Wave 6** *(`autonomous: false`, attended)*
 
-- [ ] 114-11-PLAN.md - Operator checkpoint: live 4,912-row smoke, five-theme legibility, privacy-masked screenshot safety, and D-18's Chrome Issues-tab observation recorded verbatim (observe-and-record only) (wave 6, depends on 114-10)
+- [x] 114-11-PLAN.md - Operator checkpoint: live 4,912-row smoke, five-theme legibility, privacy-masked screenshot safety, and D-18's Chrome Issues-tab observation recorded verbatim (observe-and-record only) (wave 6, depends on 114-10)
 
 ### Phase 115: Workspace scanner
 
