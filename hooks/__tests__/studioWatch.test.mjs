@@ -1,7 +1,7 @@
 // Control-paired tests for hooks/studioWatch.mjs's scan core (Phase 118 Plan 07,
 // D-05/D-06/D-07). Every fixture lives under os.tmpdir() and is torn down in afterEach —
 // NEVER point a test at C:\Users\mandr\media-vault, which is real operator data (T-118-25).
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -12,7 +12,20 @@ import {
   hashFile,
   readSidecar,
   scanVault,
+  encodeThumbnail,
+  uploadThumbnail,
+  ingestCandidate,
+  reconcileTrash,
+  runWatchCycle,
+  main,
+  THUMB_MAX_BYTES,
+  THUMB_MAX_ATTEMPTS,
 } from "../studioWatch.mjs";
+
+/** Minimal fetch-Response-shaped mock — every injected fetchImpl below returns one of these. */
+function jsonResp(status, body) {
+  return { ok: status >= 200 && status < 300, status, json: async () => body };
+}
 
 const fixtureRoots = [];
 
@@ -313,5 +326,510 @@ describe("main() — missing STUDIO_API_KEY is a configuration error, exit code 
     );
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("candidate(s) found");
+  });
+
+  it("control: with STUDIO_API_KEY unset, main() exits 2 and fetchImpl is NEVER called (in-process, via injected exitImpl — proves the halt happens before any network call, not just that an error is eventually returned)", async () => {
+    const root = makeFixture();
+    const fetchImpl = vi.fn();
+    const exitCalls = [];
+    await main(
+      { MEDIA_VAULT_ROOT: root, STUDIO_API_KEY: "" },
+      { fetchImpl, existsSyncImpl: () => false, exitImpl: (code) => exitCalls.push(code) }
+    );
+    expect(exitCalls).toEqual([2]);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+// ── D-02: encodeThumbnail — bounded ffmpeg webp encoder (plan 118-08 Task 1) ───────────────
+describe("encodeThumbnail — D-02 bounded search", () => {
+  const stillCandidate = { absPath: "C:\\vault\\gen\\pic.png", mediaType: "image" };
+  const videoCandidate = { absPath: "C:\\vault\\gen\\clip.mp4", mediaType: "video" };
+  const audioCandidate = { mediaType: "audio" };
+
+  it("under-cap on the first attempt -> exactly one invocation, attempts=1. Control: always-oversized -> exactly THUMB_MAX_ATTEMPTS invocations, ok=false, THUMB_OVER_CAP", async () => {
+    const underCalls = [];
+    const underResult = await encodeThumbnail(stillCandidate, "C:\\out\\under.webp", {
+      runFfmpeg: (args) => {
+        underCalls.push(args);
+        return { ok: true, stderr: "" };
+      },
+      statSyncImpl: () => ({ size: 1000 }),
+      unlinkSyncImpl: () => {},
+    });
+    expect(underResult.ok).toBe(true);
+    expect(underResult.attempts).toBe(1);
+    expect(underCalls.length).toBe(1);
+
+    // Control: a loop that never iterates would also pass a one-sided "eventually refuses"
+    // check — assert the exact invocation count, not just the final ok:false.
+    const overCalls = [];
+    const overResult = await encodeThumbnail(stillCandidate, "C:\\out\\over.webp", {
+      runFfmpeg: (args) => {
+        overCalls.push(args);
+        return { ok: true, stderr: "" };
+      },
+      statSyncImpl: () => ({ size: THUMB_MAX_BYTES + 1 }),
+      unlinkSyncImpl: () => {},
+    });
+    expect(overResult.ok).toBe(false);
+    expect(overResult.reason).toBe("THUMB_OVER_CAP");
+    expect(overCalls.length).toBe(THUMB_MAX_ATTEMPTS);
+  });
+
+  it("oversized for two attempts then under -> ok=true, attempts=3, and the quality used on attempt 3 is strictly lower than on attempt 1 (asserts the STEPPING, not just eventual success)", async () => {
+    const calls = [];
+    const sizes = [THUMB_MAX_BYTES + 500, THUMB_MAX_BYTES + 100, 1000];
+    let i = 0;
+    const result = await encodeThumbnail(stillCandidate, "C:\\out\\step.webp", {
+      runFfmpeg: (args) => {
+        calls.push(args);
+        return { ok: true, stderr: "" };
+      },
+      statSyncImpl: () => ({ size: sizes[i++] }),
+      unlinkSyncImpl: () => {},
+    });
+    expect(result.ok).toBe(true);
+    expect(result.attempts).toBe(3);
+    expect(calls.length).toBe(3);
+
+    function qualityOf(args) {
+      return Number(args[args.indexOf("-quality") + 1]);
+    }
+    expect(qualityOf(calls[2])).toBeLessThan(qualityOf(calls[0]));
+  });
+
+  it("the refusal path deletes the oversized temp output — asserted via the unlink call", async () => {
+    const unlinkCalls = [];
+    const result = await encodeThumbnail(stillCandidate, "C:\\out\\refuse.webp", {
+      runFfmpeg: () => ({ ok: true, stderr: "" }),
+      statSyncImpl: () => ({ size: THUMB_MAX_BYTES + 1 }),
+      unlinkSyncImpl: (p) => unlinkCalls.push(p),
+    });
+    expect(result.ok).toBe(false);
+    expect(unlinkCalls).toEqual(["C:\\out\\refuse.webp"]);
+  });
+
+  it("every generated argument list contains -quality and never the older per-frame quality flag ffmpeg silently ignores for libwebp", async () => {
+    const calls = [];
+    await encodeThumbnail(stillCandidate, "C:\\out\\q.webp", {
+      runFfmpeg: (args) => {
+        calls.push(args);
+        return { ok: true, stderr: "" };
+      },
+      statSyncImpl: () => ({ size: 1000 }),
+    });
+    expect(calls.length).toBeGreaterThan(0);
+    for (const args of calls) {
+      expect(args).toContain("-quality");
+      expect(args.join(" ")).not.toContain("-q:v");
+    }
+  });
+
+  it("video candidates include the thumbnail filter and -frames:v; still candidates include neither (both asserted together)", async () => {
+    const stillCalls = [];
+    await encodeThumbnail(stillCandidate, "C:\\out\\still.webp", {
+      runFfmpeg: (args) => {
+        stillCalls.push(args);
+        return { ok: true, stderr: "" };
+      },
+      statSyncImpl: () => ({ size: 1000 }),
+    });
+    const videoCalls = [];
+    await encodeThumbnail(videoCandidate, "C:\\out\\video.webp", {
+      runFfmpeg: (args) => {
+        videoCalls.push(args);
+        return { ok: true, stderr: "" };
+      },
+      statSyncImpl: () => ({ size: 1000 }),
+    });
+
+    expect(stillCalls[0].some((a) => typeof a === "string" && a.includes("thumbnail,"))).toBe(false);
+    expect(stillCalls[0]).not.toContain("-frames:v");
+
+    expect(videoCalls[0].some((a) => typeof a === "string" && a.includes("thumbnail,"))).toBe(true);
+    expect(videoCalls[0]).toContain("-frames:v");
+  });
+
+  it("audio candidates produce no ffmpeg invocation at all and a no-thumbnail result", async () => {
+    const calls = [];
+    const result = await encodeThumbnail(audioCandidate, "C:\\out\\audio.webp", {
+      runFfmpeg: (args) => {
+        calls.push(args);
+        return { ok: true, stderr: "" };
+      },
+    });
+    expect(calls.length).toBe(0);
+    expect(result.ok).toBe(true);
+    expect(result.noThumbnail).toBe(true);
+  });
+
+  it("arguments are passed as an Array, and a filename with a space and & survives intact as one argument value", async () => {
+    const trickyCandidate = { absPath: "C:\\vault\\gen\\a tricky & file.png", mediaType: "image" };
+    const calls = [];
+    await encodeThumbnail(trickyCandidate, "C:\\out\\tricky.webp", {
+      runFfmpeg: (args) => {
+        calls.push(args);
+        return { ok: true, stderr: "" };
+      },
+      statSyncImpl: () => ({ size: 1000 }),
+    });
+    expect(Array.isArray(calls[0])).toBe(true);
+    expect(calls[0]).toContain("C:\\vault\\gen\\a tricky & file.png");
+  });
+
+  it("ffmpeg absent from PATH (ENOENT) refuses immediately with FFMPEG_NOT_FOUND after exactly one invocation, not the whole ladder", async () => {
+    const calls = [];
+    const result = await encodeThumbnail(stillCandidate, "C:\\out\\missing.webp", {
+      runFfmpeg: (args) => {
+        calls.push(args);
+        return { ok: false, notFound: true, error: "spawn ffmpeg ENOENT", stderr: "" };
+      },
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("FFMPEG_NOT_FOUND");
+    expect(calls.length).toBe(1);
+  });
+});
+
+// ── D-15: uploadThumbnail + ingestCandidate — bearer-authenticated pipeline (plan 118-08 Task 2) ──
+describe("uploadThumbnail + ingestCandidate — full network pipeline", () => {
+  it("a candidate with a good thumbnail: exactly one upload-url mint, one raw upload, one ingest POST IN THAT ORDER; ingest body carries contentHash/thumbStorageId/thumbBytes; every /studio/* call carries the bearer header", async () => {
+    const root = makeFixture();
+    writeMedia(root, "gen/pic.png", "fake-image-bytes");
+
+    const calls = [];
+    const fetchImpl = async (url, init) => {
+      calls.push({ url, init });
+      if (url.endsWith("/studio/upload-url")) {
+        return jsonResp(200, { ok: true, uploadUrl: "https://storage.example/upload?token=x" });
+      }
+      if (url.includes("/upload?token=")) {
+        return jsonResp(200, { storageId: "storage-abc" });
+      }
+      if (url.endsWith("/studio/ingest")) {
+        return jsonResp(200, { ok: true, mediaId: "m1", created: true });
+      }
+      if (url.endsWith("/studio/media-hashes")) {
+        return jsonResp(200, { ok: true, rows: [], truncated: false });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    };
+
+    const config = {
+      mediaVaultRoot: root,
+      codepulseUrl: "http://127.0.0.1:3211",
+      studioApiKey: "test-key-123",
+    };
+    const deps = {
+      fetchImpl,
+      runFfmpeg: () => ({ ok: true, stderr: "" }),
+      statSyncImpl: () => ({ size: 1000 }),
+      readFileSyncImpl: () => Buffer.from("thumb-bytes"),
+      unlinkSyncImpl: () => {},
+    };
+
+    const result = await runWatchCycle(config, deps);
+    expect(result.totals.ingested).toBe(1);
+
+    const mintCall = calls.find((c) => c.url.endsWith("/studio/upload-url"));
+    const uploadCall = calls.find((c) => c.url.includes("/upload?token="));
+    const ingestCall = calls.find((c) => c.url.endsWith("/studio/ingest"));
+    expect(mintCall).toBeDefined();
+    expect(uploadCall).toBeDefined();
+    expect(ingestCall).toBeDefined();
+
+    // Order: mint, then raw upload, then ingest.
+    expect(calls.indexOf(mintCall)).toBeLessThan(calls.indexOf(uploadCall));
+    expect(calls.indexOf(uploadCall)).toBeLessThan(calls.indexOf(ingestCall));
+
+    // Bearer header on every /studio/* call.
+    expect(mintCall.init.headers.Authorization).toBe("Bearer test-key-123");
+    expect(ingestCall.init.headers.Authorization).toBe("Bearer test-key-123");
+
+    const ingestBody = JSON.parse(ingestCall.init.body);
+    expect(ingestBody.contentHash).toBeTruthy();
+    expect(ingestBody.thumbStorageId).toBe("storage-abc");
+    expect(ingestBody.thumbBytes).toBe(1000);
+  });
+
+  it("a 401 from /studio/ingest halts the run immediately — later candidates are never processed, asserted on the fetch call count", async () => {
+    const root = makeFixture();
+    writeMedia(root, "gen/a.mp3", "aaa");
+    writeMedia(root, "gen/b.mp3", "bbb");
+
+    let fetchCallCount = 0;
+    const fetchImpl = async (url) => {
+      fetchCallCount++;
+      if (url.endsWith("/studio/ingest")) return jsonResp(401, { error: "Unauthorized" });
+      throw new Error(`unexpected fetch: ${url}`);
+    };
+
+    const config = { mediaVaultRoot: root, codepulseUrl: "http://127.0.0.1:3211", studioApiKey: "wrong-key" };
+    const result = await runWatchCycle(config, { fetchImpl, warn: () => {} });
+
+    expect(result.haltedUnauthorized).toBe(true);
+    expect(result.totals.scanned).toBe(1);
+    // Audio candidates skip encode entirely (no upload-url/upload calls), so ONE ingest POST is
+    // the only fetch call this run should ever make — the second candidate is never reached, and
+    // reconcileTrash is skipped entirely on a halted run.
+    expect(fetchCallCount).toBe(1);
+  });
+
+  it("200 with created:false counts as a duplicate: no warning, no retry, no non-zero halt", async () => {
+    const root = makeFixture();
+    writeMedia(root, "gen/song.mp3", "aaa");
+
+    const warnCalls = [];
+    const fetchImpl = async (url) => {
+      if (url.endsWith("/studio/ingest")) {
+        return jsonResp(200, { ok: true, mediaId: "existing", created: false });
+      }
+      if (url.endsWith("/studio/media-hashes")) return jsonResp(200, { ok: true, rows: [], truncated: false });
+      throw new Error(`unexpected fetch: ${url}`);
+    };
+
+    const config = { mediaVaultRoot: root, codepulseUrl: "http://127.0.0.1:3211", studioApiKey: "k" };
+    const result = await runWatchCycle(config, { fetchImpl, warn: (m) => warnCalls.push(m) });
+
+    expect(result.haltedUnauthorized).toBe(false);
+    expect(result.totals.duplicates).toBe(1);
+    expect(result.totals.refused).toBe(0);
+    expect(warnCalls.some((m) => /refused/i.test(m))).toBe(false);
+  });
+
+  it("a THUMB_OVER_CAP-refused candidate is STILL ingested with no thumbStorageId/thumbBytes; a candidate with a good thumbnail DOES carry them (control pair, same test — proves an oversized file becomes a thumbnail-less row rather than disappearing)", async () => {
+    const candidate = {
+      contentHash: "hash-1",
+      filename: "pic.png",
+      absPath: "C:\\vault\\gen\\pic.png",
+      mediaType: "image",
+      kind: "gen",
+      sizeBytes: 5000,
+    };
+    const config = { codepulseUrl: "http://127.0.0.1:3211", studioApiKey: "k" };
+
+    let refusedBody;
+    await ingestCandidate(candidate, { ok: false, reason: "THUMB_OVER_CAP" }, config, {
+      fetchImpl: async (_url, init) => {
+        refusedBody = JSON.parse(init.body);
+        return jsonResp(200, { ok: true, mediaId: "m1", created: true });
+      },
+    });
+    expect(refusedBody.thumbStorageId).toBeUndefined();
+    expect(refusedBody.thumbBytes).toBeUndefined();
+
+    let goodBody;
+    await ingestCandidate(
+      candidate,
+      { ok: true, noThumbnail: false, bytes: 12345, thumbStorageId: "storage-xyz", width: 100, height: 80 },
+      config,
+      {
+        fetchImpl: async (_url, init) => {
+          goodBody = JSON.parse(init.body);
+          return jsonResp(200, { ok: true, mediaId: "m2", created: true });
+        },
+      }
+    );
+    expect(goodBody.thumbStorageId).toBe("storage-xyz");
+    expect(goodBody.thumbBytes).toBe(12345);
+  });
+
+  it("no captured log line contains the actual STUDIO_API_KEY value, exercised via a 401 halt (control: the captured log IS non-empty, so this isn't a vacuous pass)", async () => {
+    const SECRET = "super-secret-studio-key-do-not-leak";
+    const root = makeFixture();
+    writeMedia(root, "gen/a.mp3", "aaa");
+
+    const captured = [];
+    const fetchImpl = async (url) => {
+      if (url.endsWith("/studio/ingest")) return jsonResp(401, { error: "Unauthorized" });
+      throw new Error(`unexpected fetch: ${url}`);
+    };
+    const config = { mediaVaultRoot: root, codepulseUrl: "http://127.0.0.1:3211", studioApiKey: SECRET };
+    await runWatchCycle(config, { fetchImpl, warn: (msg) => captured.push(msg) });
+
+    expect(captured.length).toBeGreaterThan(0);
+    expect(captured.join("\n")).not.toContain(SECRET);
+  });
+});
+
+// ── D-08: reconcileTrash — move out / move back / reclaim orphans (plan 118-08 Task 3) ────
+describe("reconcileTrash — D-08 host-side reconciliation", () => {
+  const baseConfig = { codepulseUrl: "http://127.0.0.1:3211", studioApiKey: "k" };
+
+  it("move-out: a gen\\ file whose row has deletedAt set moves to trash\\ with its sidecar; a sibling with no deletedAt stays put (control)", async () => {
+    const root = makeFixture();
+    writeMedia(root, "gen/deleted.png", "deleted-bytes");
+    writeSidecarRaw(root, "gen/deleted.png.json", JSON.stringify({ prompt: "x" }));
+    writeMedia(root, "gen/kept.png", "kept-bytes");
+
+    const { candidates } = await scanVault(root, {});
+    const deletedCandidate = candidates.find((c) => c.filename === "deleted.png");
+    const keptCandidate = candidates.find((c) => c.filename === "kept.png");
+
+    const fetchImpl = async () =>
+      jsonResp(200, {
+        ok: true,
+        truncated: false,
+        rows: [
+          { contentHash: deletedCandidate.contentHash, deletedAt: 12345, kind: "gen" },
+          { contentHash: keptCandidate.contentHash, deletedAt: undefined, kind: "gen" },
+        ],
+      });
+
+    const result = await reconcileTrash(root, candidates, baseConfig, { fetchImpl });
+
+    expect(result.skipped).toBe(false);
+    expect(result.moved).toBe(1);
+    expect(fs.existsSync(path.join(root, "trash", "deleted.png"))).toBe(true);
+    expect(fs.existsSync(path.join(root, "trash", "deleted.png.json"))).toBe(true);
+    expect(fs.existsSync(path.join(root, "gen", "deleted.png"))).toBe(false);
+    // Control: the sibling with no deletedAt stays exactly where it was.
+    expect(fs.existsSync(path.join(root, "gen", "kept.png"))).toBe(true);
+    expect(fs.existsSync(path.join(root, "trash", "kept.png"))).toBe(false);
+  });
+
+  it("move-back: a trash\\ file whose row has deletedAt cleared returns to gen\\; a trash\\ file whose row is still deleted stays in trash\\ (control)", async () => {
+    const root = makeFixture();
+    const restoredAbs = writeMedia(root, "trash/restored.png", "restored-bytes");
+    const stillDeletedAbs = writeMedia(root, "trash/still-deleted.png", "still-bytes");
+    const restoredHash = await hashFile(restoredAbs);
+    const stillDeletedHash = await hashFile(stillDeletedAbs);
+
+    const fetchImpl = async () =>
+      jsonResp(200, {
+        ok: true,
+        truncated: false,
+        rows: [
+          { contentHash: restoredHash, deletedAt: undefined, kind: "gen" },
+          { contentHash: stillDeletedHash, deletedAt: 99999, kind: "gen" },
+        ],
+      });
+
+    const result = await reconcileTrash(root, [], baseConfig, { fetchImpl });
+
+    expect(result.skipped).toBe(false);
+    expect(result.movedBack).toBe(1);
+    expect(fs.existsSync(path.join(root, "gen", "restored.png"))).toBe(true);
+    expect(fs.existsSync(path.join(root, "trash", "restored.png"))).toBe(false);
+    // Control: the still-deleted file stays exactly in trash.
+    expect(fs.existsSync(path.join(root, "trash", "still-deleted.png"))).toBe(true);
+  });
+
+  it("orphan reclaim: a trash\\ file matching no row is deleted; a trash\\ file whose hash IS in a row (still deleted) survives (control)", async () => {
+    const root = makeFixture();
+    const orphanAbs = writeMedia(root, "trash/orphan.png", "orphan-bytes");
+    const knownAbs = writeMedia(root, "trash/known.png", "known-bytes");
+    const knownHash = await hashFile(knownAbs);
+
+    const fetchImpl = async () =>
+      jsonResp(200, {
+        ok: true,
+        truncated: false,
+        rows: [{ contentHash: knownHash, deletedAt: 55555, kind: "gen" }],
+      });
+
+    const result = await reconcileTrash(root, [], baseConfig, { fetchImpl });
+
+    expect(result.skipped).toBe(false);
+    expect(result.reclaimed).toBe(1);
+    expect(fs.existsSync(orphanAbs)).toBe(false);
+    expect(fs.existsSync(knownAbs)).toBe(true);
+  });
+
+  it("read-failure safety: a FAILED read causes zero unlinks/renames; a SUCCEEDED-but-EMPTY read over one orphan trash file causes exactly one unlink (control pair — distinguishes 'the read failed' from 'there genuinely are no rows')", async () => {
+    const rootFail = makeFixture();
+    const orphanFailAbs = writeMedia(rootFail, "trash/orphan.png", "aaa");
+    const failFetch = async () => {
+      throw new Error("network down");
+    };
+    const failResult = await reconcileTrash(rootFail, [], baseConfig, { fetchImpl: failFetch, warn: () => {} });
+    expect(failResult.skipped).toBe(true);
+    expect(fs.existsSync(orphanFailAbs)).toBe(true);
+
+    const rootEmpty = makeFixture();
+    const orphanEmptyAbs = writeMedia(rootEmpty, "trash/orphan.png", "bbb");
+    const emptyFetch = async () => jsonResp(200, { ok: true, truncated: false, rows: [] });
+    const emptyResult = await reconcileTrash(rootEmpty, [], baseConfig, { fetchImpl: emptyFetch });
+    expect(emptyResult.skipped).toBe(false);
+    expect(emptyResult.reclaimed).toBe(1);
+    expect(fs.existsSync(orphanEmptyAbs)).toBe(false);
+  });
+
+  it("truncated: true is treated identically to a failed read — zero unlinks, reconciliation skipped", async () => {
+    const root = makeFixture();
+    const orphanAbs = writeMedia(root, "trash/orphan.png", "aaa");
+    const fetchImpl = async () => jsonResp(200, { ok: true, truncated: true, rows: [] });
+    const result = await reconcileTrash(root, [], baseConfig, { fetchImpl, warn: () => {} });
+    expect(result.skipped).toBe(true);
+    expect(result.reason).toBe("TRUNCATED");
+    expect(fs.existsSync(orphanAbs)).toBe(true);
+  });
+
+  it("traversal refusal: a crafted candidate path resolving outside the vault root is refused with NO fs call (existsSync/renameSync both unspied-on)", async () => {
+    const root = makeFixture();
+    const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "studio-watch-outside-"));
+    fixtureRoots.push(outsideDir);
+    const outsideFile = writeMedia(outsideDir, "evil.png", "evil-bytes");
+    const outsideHash = await hashFile(outsideFile);
+
+    const craftedCandidate = { absPath: outsideFile, contentHash: outsideHash };
+    const fetchImpl = async () =>
+      jsonResp(200, { ok: true, truncated: false, rows: [{ contentHash: outsideHash, deletedAt: 111, kind: "gen" }] });
+
+    const renameCalls = [];
+    const existsCalls = [];
+    const result = await reconcileTrash(root, [craftedCandidate], baseConfig, {
+      fetchImpl,
+      renameSyncImpl: (...args) => renameCalls.push(args),
+      existsSyncImpl: (...args) => {
+        existsCalls.push(args);
+        return fs.existsSync(...args);
+      },
+    });
+
+    expect(result.moved).toBe(0);
+    expect(renameCalls.length).toBe(0);
+    expect(existsCalls.length).toBe(0);
+    expect(fs.existsSync(outsideFile)).toBe(true);
+  });
+
+  it("collision: an existing destination filename does not get overwritten — the moved file lands under a suffixed name instead", async () => {
+    const root = makeFixture();
+    writeMedia(root, "gen/photo.png", "new-content");
+    const preExistingAbs = path.join(root, "trash", "photo.png");
+    fs.writeFileSync(preExistingAbs, "PRE-EXISTING-TRASH-CONTENT");
+    // The pre-existing trash\ file must correspond to a row that is STILL deleted, or Rules
+    // 2/3 (which also run this same cycle) would treat it as an orphan/restore candidate and
+    // move or delete it — this test isolates the COLLISION property from those two rules.
+    const preExistingHash = await hashFile(preExistingAbs);
+
+    const { candidates } = await scanVault(root, {});
+    const candidate = candidates[0];
+    const fetchImpl = async () =>
+      jsonResp(200, {
+        ok: true,
+        truncated: false,
+        rows: [
+          { contentHash: candidate.contentHash, deletedAt: 777, kind: "gen" },
+          { contentHash: preExistingHash, deletedAt: 888, kind: "gen" },
+        ],
+      });
+
+    const result = await reconcileTrash(root, candidates, baseConfig, { fetchImpl });
+
+    expect(result.moved).toBe(1);
+    expect(fs.readFileSync(path.join(root, "trash", "photo.png"), "utf-8")).toBe("PRE-EXISTING-TRASH-CONTENT");
+    expect(fs.existsSync(path.join(root, "trash", "photo (1).png"))).toBe(true);
+    expect(fs.readFileSync(path.join(root, "trash", "photo (1).png"), "utf-8")).toBe("new-content");
+  });
+
+  it("nothing to reconcile: empty active candidates AND an empty trash\\ directory makes ZERO network calls", async () => {
+    const root = makeFixture();
+    const fetchImpl = vi.fn();
+    const result = await reconcileTrash(root, [], baseConfig, { fetchImpl });
+    expect(result.skipped).toBe(true);
+    expect(result.reason).toBe("NOTHING_TO_RECONCILE");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
