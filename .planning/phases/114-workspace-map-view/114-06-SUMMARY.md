@@ -176,3 +176,10 @@ Fixed-string grep (`grep -F 'C:\Users\mandr'`) run against both changed files, p
 ---
 *Phase: 114-workspace-map-view*
 *Completed: 2026-08-14*
+
+## Self-Check: PASSED
+
+- FOUND: src/components/workspace/WorkspaceCoverageStrip.tsx
+- FOUND: src/components/workspace/WorkspaceCoverageStrip.test.tsx
+- FOUND: .planning/phases/114-workspace-map-view/114-06-SUMMARY.md
+- FOUND commits: fd357148, 7f9495fe, 77cac221, 98d9367a
