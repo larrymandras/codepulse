@@ -923,16 +923,16 @@ Plans:
 **Goal:** Larry can open `/workspace-map` and read the live workspace snapshot as a deterministic radial map — center, four department hubs, 53 roots, then directories — where node fill encodes department, a halo marks what Ástríðr can reach, node size encodes rolled-up file count, an always-visible coverage strip states scan freshness and every honesty flag, a side panel names the files withheld from each directory rather than silently omitting them, and a lens switcher offers Ástríðr's world with an honest, live-probed empty state.
 **Requirements**: none mapped — design-doc-driven phase (`Mandras/02-projects/agentic-os-second-brain.md` § "CodePulse" bullet C1). The acceptance-bearing units are the 18 locked decisions D-01..D-18 in `114-CONTEXT.md`; plans are traced to those instead of REQ-IDs, following Phase 116's precedent and Phase 115's application of it.
 **Depends on:** Phase 115. *(Corrected 2026-08-13: this line previously read "Phase 113", a sequential default emitted by `gsd-phase add` rather than a real constraint. The approved design's own dependency graph — `Mandras/02-projects/agentic-os-second-brain.md:48` — states "C2 → enables C1's workspace lens", where C2 is Phase 115 (the scanner, which produces the data) and C1 is this phase (the map, which renders it). Both 113 and 115 are complete, so nothing was blocked; the line was simply wrong, and is corrected here the same way 115's inverted line was on 2026-08-12.)*
-**Plans:** 11 plans
+**Plans:** 4/11 plans executed
 
 Plans:
 
 **Wave 1** *(no dependencies — four fully parallel plans, zero `files_modified` overlap)*
 
 - [x] 114-01-PLAN.md - Shared substrate: additive `cooldownTicks` prop on `ForceGraphCanvas` (D-08), three `--dept-*` CSS tokens across `:root` + four themes, four new `ThemeColors` fields (D-06) (wave 1) — complete 2026-08-14, additive-only edits verified non-breaking (CodeVaultGraph control test unchanged, index.css diff additions-only, build + tsc clean), see `114-01-SUMMARY.md`
-- [ ] 114-02-PLAN.md - The phase's only backend change — `listSnapshots` gains `sources` (D-13) — plus `useWorkspaceMap` (D-02) and the live `useArmsProbe` (D-11) (wave 1)
-- [ ] 114-03-PLAN.md - Wave 0 fixture: `workspaceMapFixture.ts` with an all-green default, four single-flag degraded presets and query-discriminating mock helpers, synthetic names only (D-16) (wave 1)
-- [ ] 114-04-PLAN.md - `AstridrLensEmptyState`, prop-driven across all three probe states so D-11's "live, not hardcoded" property is measured (D-10) (wave 1)
+- [x] 114-02-PLAN.md - The phase's only backend change — `listSnapshots` gains `sources` (D-13) — plus `useWorkspaceMap` (D-02) and the live `useArmsProbe` (D-11) (wave 1)
+- [x] 114-03-PLAN.md - Wave 0 fixture: `workspaceMapFixture.ts` with an all-green default, four single-flag degraded presets and query-discriminating mock helpers, synthetic names only (D-16) (wave 1)
+- [x] 114-04-PLAN.md - `AstridrLensEmptyState`, prop-driven across all three probe states so D-11's "live, not hardcoded" property is measured (D-10) (wave 1)
 
 **Wave 2** *(blocked on the Wave 0 fixture)*
 
