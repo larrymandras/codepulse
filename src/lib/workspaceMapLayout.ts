@@ -125,9 +125,7 @@ export function buildTree(dirs: WorkspaceDirRow[]): DirTree {
 }
 
 // ---------------------------------------------------------------------------
-// Rollup types (implementation lands in Task 2 — declared here alongside the
-// rest of the module's shared types since later plans build against this
-// interface before computeRollups exists).
+// Rollup types
 // ---------------------------------------------------------------------------
 
 export interface RollupTotals {
@@ -137,6 +135,67 @@ export interface RollupTotals {
 }
 
 export type RollupMap = Map<string, RollupTotals>;
+
+/** Depth is derivable from dirPath: "" (a root) is depth 0. */
+function depthOf(dirPath: string): number {
+  return dirPath === "" ? 0 : dirPath.split("/").length;
+}
+
+/**
+ * Subtree-inclusive rollup of fileCount/totalSize/withheldCount, keyed by
+ * `nodeKey`. Order-independent, non-mutating, O(n), no recursion.
+ *
+ * Algorithm (114-RESEARCH.md § Pattern 4): sort node keys once by
+ * DESCENDING depth, then walk that order accumulating each node's own direct
+ * values plus its already-computed children's rolled-up totals. Because
+ * children are strictly deeper than their parent, every child is finished
+ * before its parent is visited, so this never revisits a node twice and
+ * never needs a recursive self-call — depth is not a stack-size dependency.
+ *
+ * Does not mutate the input rows: the direct-contents values from the
+ * payload must remain readable unchanged, because the side panel (D-09)
+ * shows BOTH the direct figure and the rolled-up figure, explicitly
+ * labeled — rollups are a parallel derived map, never an overwrite.
+ *
+ * Deliberately does NOT roll up a byte figure for withheld files — the
+ * schema carries none (schema.ts:2385-2389's side-channel rule) and deriving
+ * one client-side would reconstruct exactly the higher-resolution channel
+ * the producer refused to emit.
+ */
+export function computeRollups(tree: DirTree): RollupMap {
+  const rollups: RollupMap = new Map();
+
+  // Every row in the tree, sorted by descending depth so a child is always
+  // resolved before its parent is visited. tree.byKey.values() is read-only
+  // iteration over the existing rows — no row is copied or mutated.
+  const rowsDeepestFirst = [...tree.byKey.values()].sort(
+    (a, b) => depthOf(b.dirPath) - depthOf(a.dirPath)
+  );
+
+  for (const row of rowsDeepestFirst) {
+    const key = nodeKey(row.rootId, row.dirPath);
+    const children = tree.childrenByParent.get(key) ?? [];
+
+    let fileCount = row.fileCount;
+    let totalSize = row.totalSize;
+    let withheldCount = row.withheldCount;
+
+    for (const child of children) {
+      const childKey = nodeKey(child.rootId, child.dirPath);
+      const childRollup = rollups.get(childKey);
+      // Deepest-first ordering guarantees childRollup is already populated.
+      if (childRollup) {
+        fileCount += childRollup.fileCount;
+        totalSize += childRollup.totalSize;
+        withheldCount += childRollup.withheldCount;
+      }
+    }
+
+    rollups.set(key, { fileCount, totalSize, withheldCount });
+  }
+
+  return rollups;
+}
 
 // ---------------------------------------------------------------------------
 // Rendered-node contract — declared here even though `layoutNodes` (plan
