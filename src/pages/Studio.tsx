@@ -30,6 +30,8 @@ import {
   MediaDetailSheet,
   type MediaDetailRow,
 } from "@/components/studio/MediaDetailSheet";
+import { StylesPanel } from "@/components/studio/StylesPanel";
+import { ModelsPanel } from "@/components/studio/ModelsPanel";
 import {
   StudioFilterBar,
   applyStudioFilters,
@@ -176,6 +178,12 @@ function GalleryTab({ search }: { search: string }) {
         filters={filters}
         onFiltersChange={setFilters}
       />
+
+      {/* Both default COLLAPSED, and both Gallery-only — the Trash tab is a
+          structurally different list and shows neither (UI-SPEC's Filter
+          Contract). */}
+      <StylesPanel />
+      <ModelsPanel />
 
       {visible.length === 0 ? (
         <ZeroMatchState />

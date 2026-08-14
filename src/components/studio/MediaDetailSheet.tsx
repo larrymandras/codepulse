@@ -68,6 +68,14 @@ export const NO_PROVENANCE_COPY = "No provenance recorded";
 export const NO_RECIPE_TOOLTIP_COPY =
   "No recipe to copy — this file has no sidecar.";
 
+/** The disabled button's accessible description. A Radix tooltip alone is a
+ * POINTER affordance: a `disabled` button is not focusable, so a keyboard or
+ * screen-reader user can never trigger the hover that would explain why the
+ * control is dead. The same copy is therefore also wired as an always-present
+ * `aria-describedby` target, so the reason reaches every user, not only the
+ * one holding a mouse. */
+const NO_RECIPE_REASON_ID = "studio-detail-copy-recipe-reason";
+
 /**
  * D-07's field-level pair. These two class strings MUST differ — that
  * difference IS the mechanism, and `Studio.test.tsx` asserts they differ
@@ -357,6 +365,7 @@ export function MediaDetailSheet({
                         type="button"
                         variant="default"
                         disabled
+                        aria-describedby={NO_RECIPE_REASON_ID}
                         data-testid="studio-detail-copy-recipe"
                       >
                         Copy Recipe
@@ -367,6 +376,13 @@ export function MediaDetailSheet({
                     {NO_RECIPE_TOOLTIP_COPY}
                   </TooltipContent>
                 </Tooltip>
+                <span
+                  id={NO_RECIPE_REASON_ID}
+                  data-testid="studio-detail-copy-recipe-reason"
+                  className="sr-only"
+                >
+                  {NO_RECIPE_TOOLTIP_COPY}
+                </span>
               </TooltipProvider>
             )}
 
