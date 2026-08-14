@@ -65,6 +65,27 @@ existing media skills (D-11); a quarantine/needs-provenance lane (deferred).
   with the row carrying a relative path** — and that fallback must be decided from the probe
   result *before* any UI work, never discovered during it.
 
+  **AMENDMENT 2026-08-14 (plan 118-01, live measurement).** `BRANCH: convex-storage`. The
+  control-paired proof round in `118-D01-EVIDENCE.md` PASSED: a freshly minted storage ID
+  uploaded 4096 bytes and read back HTTP 200 with 4096 bytes received, while the known-null
+  control (`avatars.imageStorageId kg2589rnrbawjb3g2867yjn3c586zngt`) resolved `null` in the
+  same run — a discriminating pass, not a proxy signal. The `local-static-origin` fallback is
+  **not needed** and no fallback operational surface (second static server, third scheduled
+  task) is created by this phase.
+
+  **Schema field this branch selects:** `media.thumbStorageId: v.optional(v.id("_storage"))` is
+  the populated field on every row; `media.thumbRelPath: v.optional(v.string())` is declared in
+  the schema (so the row shape doesn't have to change if this branch is ever revisited) but is
+  always absent — exactly one of the two is populated per row.
+
+  **Origin the watcher must use:** the URL Convex returns **verbatim** from both
+  `generateUploadUrl` (for the raw upload POST) and `getImageUrl` (for reading it back) — no
+  origin rewrite is needed. On this backend that resolves to the tailnet hostname
+  `https://lmofficenew.tail5bb6b3.ts.net`, and it was directly reachable from the host running
+  the watcher. `hooks/studioWatch.mjs` may keep a defensive fallback to
+  `http://127.0.0.1:3211` (matching `scripts/probe-convex-storage.mjs`'s A2 handling) as cheap
+  insurance, but the live measurement shows it will not fire in practice.
+
 - **D-02: Hard ≤200 KB webp cap, and the browser never loads the original.** A full-size upload is
   a bug, not a tuning issue. Originals never enter Convex (design doc §4.3 + §6). The detail panel
   shows the thumb, the full recipe and a **copy-path** button; opening the original is a local

@@ -72,6 +72,31 @@ backend (4096/4096 bytes, HTTP 200 throughout), discriminated from the known-nul
 same run. D-01's blocking proof is satisfied on the `convex-storage` primary branch; the
 `local-static-origin` fallback is not needed. See "## Resolved transport branch" below (Task 3).
 
+## Resolved transport branch
+
+**BRANCH: convex-storage** (the probe PASSed; the `local-static-origin` fallback is not needed).
+
+**Schema field this branch selects:** `media.thumbStorageId: v.optional(v.id("_storage"))` is the
+populated field on every row; `media.thumbRelPath: v.optional(v.string())` is declared in the
+schema — so the row shape does not have to change if this branch is ever revisited — but is
+always absent. In both branches exactly one of `thumbStorageId` / `thumbRelPath` is populated per
+row; this run selects `thumbStorageId`.
+
+**Origin the watcher must use:** the URL Convex returns **verbatim** from both
+`generateUploadUrl` (upload) and `getImageUrl` (read-back) — no origin rewrite needed. On this
+backend that is the tailnet hostname `https://lmofficenew.tail5bb6b3.ts.net`, directly reachable
+from the host running the watcher (see "## Origin finding" above). A defensive fallback to
+`http://127.0.0.1:3211` is cheap insurance to keep in `hooks/studioWatch.mjs` but is not expected
+to fire.
+
+Because this branch is `convex-storage`, not `local-static-origin`, no `### Fallback cost`
+subsection applies — no second static file server, no third scheduled task, and
+`convex-selfhost/docker-compose.yml` was not touched (and does not need to be).
+
+This branch decision is recorded identically in `118-CONTEXT.md`'s D-01 `AMENDMENT 2026-08-14`
+block, which downstream plans (118-03 schema, 118-07 watcher) should read instead of
+re-discovering this measurement.
+
 ## Discovered but out of scope
 
 While acquiring the control, `avatars:list` returned **4,233 rows**, of which only **11** carry a
