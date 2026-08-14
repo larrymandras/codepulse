@@ -149,6 +149,29 @@ describe("WorkspaceCoverageStrip", () => {
   });
 
   // ---------------------------------------------------------------------
+  // Empty state — CR-01 regression guard (Phase 114 code review).
+  //
+  // null (no snapshot has ever been produced) is a DIFFERENT state from
+  // undefined (query still loading). The page previously passed
+  // `data={payload ?? undefined}`, collapsing the two, so on a first run
+  // the strip rendered its loading skeleton forever beside a canvas that
+  // correctly said "No workspace snapshot yet."
+  //
+  // The pair of assertions below is what makes this discriminating: it is
+  // not enough to assert the honest copy appears, because a component that
+  // ALSO rendered the skeleton would still pass that. Asserting zero
+  // skeletons is the half that fails if null ever collapses back into the
+  // loading branch.
+  // ---------------------------------------------------------------------
+  it("data=null: renders the honest no-snapshot chip and NO skeleton — never the loading state", () => {
+    render(<WorkspaceCoverageStrip data={null} now={FIXED_NOW} />);
+
+    expect(screen.getByText(/no workspace snapshot yet/i)).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
+    expect(queryAlertTriangle()).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------
   // Chip-4 never escalates, regardless of unclassified count (D-14).
   // ---------------------------------------------------------------------
   it("unclassifiedRootIds non-empty: chip 4 renders plain text, never warn styling", () => {

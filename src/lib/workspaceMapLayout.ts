@@ -95,8 +95,6 @@ export function buildTree(dirs: WorkspaceDirRow[]): DirTree {
     if (row.dirPath === "") roots.push(row);
   }
 
-  const rootKeys = new Set(roots.map((r) => nodeKey(r.rootId, r.dirPath)));
-
   let orphanCount = 0;
 
   for (const row of dirs) {
@@ -110,8 +108,12 @@ export function buildTree(dirs: WorkspaceDirRow[]): DirTree {
     // payload (either the root itself, at depth 1, or another directory row
     // at deeper depths). Otherwise it is an orphan: attach it to its root so
     // it stays visible, and count it so a malformed snapshot is provable.
-    const parentPresent =
-      byKey.has(candidateParentKey) || rootKeys.has(candidateParentKey);
+    // `byKey` alone is sufficient: the loop above inserts EVERY row, roots
+    // included, so a separate root-key set could never match a key `byKey`
+    // misses. An earlier `|| rootKeys.has(...)` disjunct here was dead code
+    // (IN-01, Phase 114 code review) and implied roots were tracked
+    // separately, which they are not.
+    const parentPresent = byKey.has(candidateParentKey);
 
     const parentKey = parentPresent ? candidateParentKey : rootKey;
     if (!parentPresent) orphanCount += 1;

@@ -101,14 +101,36 @@ function StripChip({ text, warn = false }: StripChipProps) {
 // ---------------------------------------------------------------------------
 
 export interface WorkspaceCoverageStripProps {
-  /** The getWorkspaceMap payload, or undefined while the query is loading. */
-  data: WorkspaceMapData | undefined;
+  /**
+   * The getWorkspaceMap payload. THREE states, per `useWorkspaceMap`'s contract:
+   *   undefined → query still loading  → skeleton
+   *   null      → no snapshot exists   → honest "no snapshot yet" chip
+   *   object    → live data            → the real chips
+   *
+   * Do NOT let a caller collapse `null` into `undefined` with `?? undefined`. That
+   * was CR-01 from the Phase 114 code review: the strip rendered its loading
+   * skeleton FOREVER on a first run, directly beside a canvas that correctly said
+   * "No workspace snapshot yet." A coverage strip that looks like it is still
+   * loading when the scan has simply never run is exactly the dishonest-surface
+   * failure D-14/D-16 exist to prevent.
+   */
+  data: WorkspaceMapData | undefined | null;
   /** Injectable clock for tests; defaults to the real Date.now(). */
   now?: number;
 }
 
 export function WorkspaceCoverageStrip({ data, now }: WorkspaceCoverageStripProps) {
   const nowMs = now ?? Date.now();
+
+  // null = the scan has genuinely never produced a snapshot. Distinct from
+  // undefined (loading) — see the prop doc above.
+  if (data === null) {
+    return (
+      <Card className="flex flex-row flex-wrap items-center gap-2 px-6 py-4">
+        <StripChip text="No workspace snapshot yet — scan has never run" warn />
+      </Card>
+    );
+  }
 
   if (data === undefined) {
     return (

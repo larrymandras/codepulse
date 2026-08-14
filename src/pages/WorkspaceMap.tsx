@@ -87,7 +87,11 @@ export default function WorkspaceMap() {
       {lens === "workspace" ? (
         <div className="flex flex-col gap-8">
           <SectionErrorBoundary name="Workspace Coverage Strip">
-            <WorkspaceCoverageStrip data={payload ?? undefined} />
+            {/* No `?? undefined` here. Collapsing null (no snapshot) into
+                undefined (loading) made the strip show a loading skeleton
+                forever on a first run — CR-01, Phase 114 code review. The
+                strip branches on all three states itself. */}
+            <WorkspaceCoverageStrip data={payload} />
           </SectionErrorBoundary>
           <SectionErrorBoundary name="Workspace Map Canvas">
             <WorkspaceMapCanvas payload={payload} onNodeSelect={handleNodeSelect} />
