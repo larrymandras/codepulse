@@ -261,8 +261,11 @@ $trigger   = New-ScheduledTaskTrigger -Daily -At $TriggerTime
 $principal = New-ScheduledTaskPrincipal -UserId 'mandr' -LogonType S4U -RunLevel Limited
 $settings  = New-MediaVaultBackupSettings
 
+# The description is what an operator reads in taskschd.msc, so it names the actual command and
+# the actual exclusions rather than pointing at a file they would have to go open.
 $desc = 'Nightly media-vault mirror to Google Drive (Phase 118, D-14) - robocopy /MIR /R:2 /W:5, ' +
-        'host-local operational files excluded. Log: ' + $LogPath
+        'excluding backup.log, studio-watch.log and .studio-watch-state.json (host-local ' +
+        'operational files, not media). Log: ' + $LogPath
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
   -Principal $principal -Settings $settings -Force -Description $desc | Out-Null
 
