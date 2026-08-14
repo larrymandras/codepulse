@@ -32,6 +32,7 @@ import { gagLedgerIngest } from "./gagLedgerIngest";
 import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
 import { galdrPromptGet, galdrListGet, galdrPromptPost, galdrUsagePost } from "./galdrHttp";
 import { loomEventPost } from "./loomHttp";
+import { studioIngestPost, studioUploadUrlPost } from "./studioHttp";
 import { workspaceIngestPost } from "./workspaceHttp";
 
 const http = httpRouter();
@@ -137,6 +138,14 @@ http.route({ path: "/galdr/usage",  method: "POST", handler: galdrUsagePost });
 // Phase 119 Loom (D-02/D-04). One emit route, agent/CLI only — no OPTIONS
 // partner and no CORS headers, same boundary as the /galdr routes above.
 http.route({ path: "/loom/event", method: "POST", handler: loomEventPost });
+
+// Phase 118 Studio (D-15). Agent/CLI-only ingest surface for
+// hooks/studioWatch.mjs — no preflight partner and no CORS headers, same
+// boundary as /galdr and /loom/event above. /studio/upload-url is
+// registered because the live D-01 branch is convex-storage
+// (118-D01-EVIDENCE.md); the browser never calls either route.
+http.route({ path: "/studio/ingest", method: "POST", handler: studioIngestPost });
+http.route({ path: "/studio/upload-url", method: "POST", handler: studioUploadUrlPost });
 
 // Phase 115 workspace scanner (D-04/D-10). One ingest route, host-script only:
 // the producer is hooks/workspaceScan.mjs, which sends no Origin and issues no
