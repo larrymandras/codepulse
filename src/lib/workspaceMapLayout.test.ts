@@ -347,3 +347,174 @@ describe("layoutNodes — one level per click (D-03)", () => {
     expect(expandedLeaf.length).toBe(baseline.length);
   });
 });
+
+describe("layoutNodes — determinism (D-08)", () => {
+  const { dirs } = makeScaledFixture();
+
+  it("produces byte-identical output across two calls on identical inputs", () => {
+    const tree = buildTree(dirs);
+    const rollups = computeRollups(tree);
+    const expandedSet = new Set([nodeKey("root-00", "dir-0")]);
+
+    const first = layoutNodes(tree, rollups, expandedSet);
+    const second = layoutNodes(tree, rollups, expandedSet);
+
+    expect(second).toEqual(first);
+  });
+
+  // A same-reference-twice test (above) proves nothing about THIS property —
+  // it would pass just as happily against an implementation whose angles
+  // depend on iteration order, and iteration order is exactly what a Convex
+  // payload does not guarantee. This is the form that can actually fail, so
+  // it is required in addition to the repeat-call test, not instead of it.
+  it("is order-independent: a reversed `dirs` array produces the same layout per node, after sorting both node arrays by id", () => {
+    const forwardTree = buildTree(dirs);
+    const forwardRollups = computeRollups(forwardTree);
+    const forwardResult = layoutNodes(forwardTree, forwardRollups, new Set());
+
+    const reversedDirs = dirs.slice().reverse();
+    const reversedTree = buildTree(reversedDirs);
+    const reversedRollups = computeRollups(reversedTree);
+    const reversedResult = layoutNodes(reversedTree, reversedRollups, new Set());
+
+    const sortNodesById = (arr: typeof forwardResult.nodes) =>
+      arr.slice().sort((a, b) => a.id.localeCompare(b.id));
+    expect(sortNodesById(reversedResult.nodes)).toEqual(sortNodesById(forwardResult.nodes));
+
+    // Links carry no id of their own — sort by a stable composite key.
+    const sortLinks = (arr: typeof forwardResult.links) =>
+      arr.slice().sort((a, b) => `${a.source}>${a.target}`.localeCompare(`${b.source}>${b.target}`));
+    expect(sortLinks(reversedResult.links)).toEqual(sortLinks(forwardResult.links));
+  });
+
+  it("every node satisfies x === fx and y === fy — the mirror pass, verified on the output", () => {
+    // The Task 1 source grep proves the mirror LINE exists; it cannot prove
+    // the pass covered every node. This asserts the actual output instead.
+    const tree = buildTree(dirs);
+    const rollups = computeRollups(tree);
+    const { nodes } = layoutNodes(tree, rollups, new Set());
+
+    expect(nodes.length).toBeGreaterThan(0);
+    for (const n of nodes) {
+      expect(n.x).toBe(n.fx);
+      expect(n.y).toBe(n.fy);
+    }
+  });
+
+  it("no node has fx, fy, x or y equal to undefined or NaN, at multiple expansion depths", () => {
+    const tree = buildTree(dirs);
+    const rollups = computeRollups(tree);
+    const expandedSet = new Set([nodeKey("root-00", "dir-0"), nodeKey("root-00", "dir-0/sub-a")]);
+    const { nodes } = layoutNodes(tree, rollups, expandedSet);
+
+    expect(nodes.length).toBeGreaterThan(0);
+    for (const n of nodes) {
+      for (const coord of [n.fx, n.fy, n.x, n.y]) {
+        expect(coord).not.toBeUndefined();
+        expect(Number.isNaN(coord)).toBe(false);
+      }
+    }
+  });
+});
+
+describe("layoutNodes — sizing (D-07 / D-05)", () => {
+  const { dirs } = makeScaledFixture();
+  const tree = buildTree(dirs);
+  const rollups = computeRollups(tree);
+
+  it("center val is 14 (fixed) and every department val is 10 (fixed)", () => {
+    const { nodes } = layoutNodes(tree, rollups, new Set());
+    const center = nodes.find((n) => n.kind === "center")!;
+    expect(center.val).toBe(14);
+
+    const departmentNodes = nodes.filter((n) => n.kind === "department");
+    expect(departmentNodes.length).toBe(4);
+    for (const dept of departmentNodes) {
+      expect(dept.val).toBe(10);
+    }
+  });
+
+  it("root vals fall within [5, 10] and directory vals within [2, 6]", () => {
+    const { nodes } = layoutNodes(tree, rollups, new Set());
+    const roots = nodes.filter((n) => n.kind === "root");
+    const dirNodes = nodes.filter((n) => n.kind === "dir");
+    expect(roots.length).toBeGreaterThan(0);
+    expect(dirNodes.length).toBeGreaterThan(0);
+
+    for (const root of roots) {
+      expect(root.val).toBeGreaterThanOrEqual(5);
+      expect(root.val).toBeLessThanOrEqual(10);
+    }
+    for (const dir of dirNodes) {
+      expect(dir.val).toBeGreaterThanOrEqual(2);
+      expect(dir.val).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it("the root with the largest rolled-up file count has the largest root val, and the smallest has the smallest", () => {
+    // The ordering property is what D-07 actually asserts ("node size
+    // encodes rolled-up file count") — a range check alone would pass for a
+    // constant val on every root.
+    const { nodes } = layoutNodes(tree, rollups, new Set());
+    const roots = nodes.filter((n) => n.kind === "root");
+    const sortedByFiles = roots.slice().sort((a, b) => a.rolled.fileCount - b.rolled.fileCount);
+    const smallest = sortedByFiles[0];
+    const largest = sortedByFiles[sortedByFiles.length - 1];
+
+    // Confirms the fixture actually has a spread, so the assertion below is
+    // not vacuously true.
+    expect(largest.rolled.fileCount).toBeGreaterThan(smallest.rolled.fileCount);
+
+    for (const root of roots) {
+      expect(root.val).toBeGreaterThanOrEqual(smallest.val);
+      expect(root.val).toBeLessThanOrEqual(largest.val);
+    }
+  });
+
+  it("radii are correct per ring, with tolerance for the collision stagger's +65 secondary radius", () => {
+    const { nodes } = layoutNodes(tree, rollups, new Set());
+    const radiusOf = (n: (typeof nodes)[number]) => Math.hypot(n.x!, n.y!);
+
+    const center = nodes.find((n) => n.kind === "center")!;
+    expect(radiusOf(center)).toBeCloseTo(0, 5);
+
+    const departmentNodes = nodes.filter((n) => n.kind === "department");
+    expect(departmentNodes.length).toBe(4);
+    for (const dept of departmentNodes) {
+      expect([140, 205]).toContain(Math.round(radiusOf(dept)));
+    }
+
+    const roots = nodes.filter((n) => n.kind === "root");
+    expect(roots.length).toBeGreaterThan(0);
+    for (const root of roots) {
+      expect([300, 365]).toContain(Math.round(radiusOf(root)));
+    }
+
+    const depth1Dirs = nodes.filter((n) => n.kind === "dir" && n.depth === 1);
+    expect(depth1Dirs.length).toBeGreaterThan(0);
+    for (const dir of depth1Dirs) {
+      expect([460, 525]).toContain(Math.round(radiusOf(dir)));
+    }
+  });
+
+  it("a degenerate input where every rolled-up file count is 0 yields floor vals and no NaN", () => {
+    const zeroDirs: WorkspaceDirRow[] = dirs.map((d) => ({ ...d, fileCount: 0 }));
+    const zeroTree = buildTree(zeroDirs);
+    const zeroRollups = computeRollups(zeroTree);
+    const { nodes } = layoutNodes(zeroTree, zeroRollups, new Set());
+
+    const roots = nodes.filter((n) => n.kind === "root");
+    const dirNodes = nodes.filter((n) => n.kind === "dir");
+    expect(roots.length).toBeGreaterThan(0);
+    expect(dirNodes.length).toBeGreaterThan(0);
+
+    for (const root of roots) {
+      expect(root.val).toBe(5);
+      expect(Number.isNaN(root.val)).toBe(false);
+    }
+    for (const dir of dirNodes) {
+      expect(dir.val).toBe(2);
+      expect(Number.isNaN(dir.val)).toBe(false);
+    }
+  });
+});
