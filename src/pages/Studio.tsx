@@ -19,7 +19,7 @@
  * tolerates `undefined` during loading via the repo's `?? []` convention.
  */
 import { Component, useState, type ReactNode } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Images } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -27,6 +27,8 @@ import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MasonryGrid } from "@/components/studio/MasonryGrid";
+import { MediaCard, type MediaRow } from "@/components/studio/MediaCard";
 
 const ERROR_COPY =
   "Couldn't load media — check your connection and try again.";
@@ -69,7 +71,7 @@ function GallerySkeleton() {
   return (
     <div
       data-testid="studio-loading-skeleton"
-      className="columns-2 gap-4 sm:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6"
+      className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-4"
     >
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <div key={i} className="mb-4 break-inside-avoid">
@@ -88,7 +90,9 @@ function GalleryTab() {
   // table (the exact Phase 114 defect this plan's dispatch calls out).
   const data = useQuery(api.media.list);
   const isLoading = data === undefined;
-  const rows = data?.rows ?? [];
+  const rows = (data?.rows ?? []) as MediaRow[];
+
+  const toggleStar = useMutation(api.media.toggleStar);
 
   if (isLoading) return <GallerySkeleton />;
 
@@ -109,13 +113,24 @@ function GalleryTab() {
     );
   }
 
-  // Task 2 replaces this placeholder with <MasonryGrid> + <MediaCard>, and
-  // Task 3 wires <StudioFilterBar> above it plus the filters-active zero-
-  // match "[ NO MEDIA MATCHES ]" state.
+  // Task 3 wires <StudioFilterBar> above this and the filters-active
+  // zero-match "[ NO MEDIA MATCHES ]" state — all rows render unfiltered
+  // until then.
   return (
-    <div data-testid="studio-gallery-placeholder" className="text-muted-foreground text-sm">
-      {rows.length} media row(s) loaded.
-    </div>
+    <MasonryGrid
+      rows={rows}
+      renderCard={(row) => (
+        <MediaCard
+          key={row._id}
+          row={row}
+          // The detail Sheet (plan 118-11) is not built yet; opening a card
+          // is a documented no-op until then, per D-02 there is still no
+          // lightbox to fall back to.
+          onOpen={() => {}}
+          onToggleStar={() => void toggleStar({ id: row._id as never })}
+        />
+      )}
+    />
   );
 }
 
