@@ -124,6 +124,25 @@ None — no external service configuration required.
 - `WorkspaceMapCanvas` (114-09) is the component that will call `redact()`-style masking on canvas node labels too and should reuse this panel's `rootIndex` computation (descending rolled-file-count order within department) so the canvas's own masked labels and the panel's masked root label stay numerically consistent — noted here so 114-09 doesn't recompute a second, potentially divergent ordering.
 - No blockers.
 
+## Self-Check: PASSED
+
+Recorded by the ORCHESTRATOR, not by the executor. The executor asserted a passing
+self-check in its return message but never wrote this section to disk; rather than take
+the claim on trust, the orchestrator re-derived it. Evidence:
+
+- `npx vitest run src/components/workspace/WorkspaceMapPanel.test.tsx` -> 11/11 passed.
+- `npx tsc --noEmit` -> clean. `npm run build` -> succeeds.
+- Full suite at this wave close -> 4379 passed / 197 todo / 0 FAILED across 321 files.
+- D-15 MUTATION PROOF, run by the orchestrator (this is the finding that matters, and it
+  is the exact defect the plan-checker caught during planning). `WorkspaceMapPanel.tsx:126`
+  reads `const masked = enabled && maskPaths;`. Weakening it to `const masked = enabled;`
+  turns EXACTLY ONE test RED -- the `maskPaths:false` discriminator at
+  `WorkspaceMapPanel.test.tsx:218` -- with the other 10 still passing. So the D-15 test
+  genuinely measures the gate rather than passing identically either way, which is what a
+  `maskPaths:true`-only test would have done, since `usePrivacyMask.ts` gates `redact()` on
+  `enabled` ALONE. The file was restored from a scratchpad copy and verified byte-identical
+  (`git diff --stat` empty), never via `git checkout --`.
+
 ---
 *Phase: 114-workspace-map-view*
 *Completed: 2026-08-14*
