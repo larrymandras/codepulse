@@ -21,10 +21,12 @@
  * same technique convex/workspaceHttp.test.ts and convex/loom.ts's own
  * tests use).
  *
- * The 30-day janitor's permanent-delete is NOT in this file — it lands in
- * plan 118-06.
+ * D-08's 30-day janitor (permanent delete of trashed rows + their thumb
+ * blobs) lives in this file too, added by plan 118-06 — see the
+ * `pruneTrashBatch` section near the end.
  */
 import { mutation, internalMutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 
 // ============================================================
@@ -543,4 +545,198 @@ export const generateThumbUploadUrl = internalMutation({
   handler: async (ctx) => {
     return await ctx.storage.generateUploadUrl();
   },
+});
+
+// ============================================================
+// D-08's 30-day trash janitor — internalMutation (Task 1, plan 118-06)
+// ============================================================
+
+/** Ctx shape the janitor needs on top of `MediaCtx`: `storage.delete` (blob
+ * removal) and `scheduler.runAfter` (self-rescheduling). Narrowed the same
+ * way `StorageReader`/`MediaCtx` are above, so a fake ctx implementing only
+ * these three surfaces is enough to unit-test the handler. */
+type JanitorCtx = MediaCtx & {
+  storage: MediaCtx["storage"] & { delete: (id: any) => Promise<void> };
+  scheduler: { runAfter: (delayMs: number, fnRef: any, args: any) => Promise<any> };
+};
+
+/**
+ * D-08's batch size — matching `retention.ts`'s `BATCH_SIZE` by name and
+ * value. Arithmetic against T-118-08's actual ceiling (spelled out because
+ * this repo has already lost two sessions to a cap justified against the
+ * WRONG number): a `.take(TRASH_PRUNE_BATCH_SIZE)` read costs up to 200
+ * reads, and every `ctx.db.delete()` in the loop below ALSO counts as a
+ * read against Convex's ~4,096-read-per-mutation ceiling — not the
+ * 16,000-document WRITE ceiling the Convex limits page (and this repo's
+ * own older comments) name. 200 (read) + 200 (delete-as-read) = ~400
+ * reads/invocation, comfortably under 4,096 with >10x headroom. Do not
+ * raise this constant without re-deriving that arithmetic — Phase 115 hit
+ * the read ceiling at caps of 4000, 2000, 1000 AND 500, all failing
+ * identically, because every one of those was still bisecting against the
+ * wrong ceiling (118-RESEARCH.md § "Pitfall 2").
+ */
+export const TRASH_PRUNE_BATCH_SIZE = 200;
+
+/**
+ * Per-invocation-chain ceiling, mirroring `retention.ts`'s
+ * `MAX_BATCHES_PER_NIGHT` (T-118-19). At 200 rows/batch this bounds a
+ * single scheduled chain to 100 * 200 = 20,000 permanent deletes before it
+ * stops rescheduling itself and simply waits for the next cron firing —
+ * the same "a capped run defers its remainder rather than looping
+ * forever" shape `retention.ts` uses, so a pathological trash backlog
+ * cannot turn this janitor into an unbounded self-rescheduling loop.
+ */
+export const TRASH_PRUNE_MAX_BATCHES = 100;
+
+/**
+ * Inter-batch delay, matching `retention.ts`'s `RESCHEDULE_DELAY_MS` — a
+ * moment between batches so a long trash-day doesn't starve ingest/browser
+ * reads on this single-node SQLite instance with one long back-to-back
+ * delete chain.
+ */
+const TRASH_PRUNE_RESCHEDULE_MS = 3000;
+
+/**
+ * `pruneTrashBatch` — D-08's permanent-delete half. Modelled structurally
+ * on `retention.ts`'s `pruneBatchV3` (the POSITIVE donor: cursor-seeked
+ * `withIndex` range read, one bounded `.take()`, self-rescheduling via
+ * `ctx.scheduler.runAfter` carrying the cursor forward, a per-chain batch
+ * ceiling) — deliberately NOT on `forge.ts:1828-1877`'s
+ * `sweepForgeFileRecords` (the NEGATIVE donor: an unbounded whole-table
+ * `collect` read that is a live, already-shipped instance of the exact
+ * T-118-08 defect class). The one thing `forge.ts` DOES get right, and
+ * which this function keeps, is deleting the blob before the row (`forge.ts`'s own D-05
+ * comment: "CRITICAL: storage.delete(storageId) BEFORE db.delete to
+ * prevent blob leak").
+ *
+ * `TRASH_GRACE_MS` (declared above, shared with `listTrashHandler`'s
+ * `daysUntilPurge`) is the single source of the 30-day grace period — the
+ * Trash view's countdown and this janitor's cutoff can never drift apart
+ * because they read the same constant.
+ *
+ * Ordering matters and is deliberate (T-118-20/T-118-21):
+ * 1. Delete the thumbnail blob FIRST, when `thumbStorageId` is populated
+ *    (the live D-01 branch — `convex-storage`, `118-D01-EVIDENCE.md`; the
+ *    `local-static-origin` fallback branch was never live on this
+ *    deployment, so there is no `thumbRelPath`-keyed blob to delete here —
+ *    see the host-side orphan-file rule below, which is that branch's
+ *    reclamation path instead). Wrapped in try/catch: a row whose blob is
+ *    already gone must still have its row deleted, or the janitor wedges
+ *    forever on one bad row and stops bounding the only retention-exempt
+ *    table in this schema (T-118-21).
+ * 2. Delete the row. If step 1 threw, the row is STILL deleted here — a
+ *    missing blob is not a reason to leave an unreachable trash row
+ *    around forever.
+ *
+ * If step 1 succeeds but the mutation aborts before step 2 for some other
+ * reason, the row survives to be retried on the next batch (this is why
+ * blob-before-row is the safe ordering: an orphaned blob with no row
+ * pointing at it is unreclaimable, but a surviving row with an
+ * already-deleted blob just retries a no-op storage.delete next time).
+ *
+ * Host-side orphan reconciliation (the other half of D-08, owned by plan
+ * 118-08's watcher — NOT duplicated here as a second 30-day constant,
+ * which could drift from this one): once this janitor deletes a `media`
+ * row, the corresponding file sitting in `media-vault\trash\` on disk has
+ * nothing left pointing at it. `hooks/studioWatch.mjs` reconciles that on
+ * its own next cycle by deleting any `trash\` file whose `contentHash`
+ * matches no `media` row — self-reconciling by construction, so plan
+ * 118-08 needs no second grace-period constant to stay in sync with this
+ * one.
+ */
+export async function pruneTrashBatchHandler(
+  ctx: JanitorCtx,
+  args: { cursorMs?: number; batchesDone?: number },
+  nowMs: number
+): Promise<{ deletedCount: number; nextCursorMs: number; rescheduled: boolean }> {
+  const cursorMs = args.cursorMs ?? 0;
+  const batchesDone = args.batchesDone ?? 0;
+
+  // T-118-19 entry guard: refuse to do ANY work — not even read a batch —
+  // once this chain has already used its per-invocation-chain ceiling.
+  // Mirrors retention.ts's pruneBatchV3 entry check (`args.batchesUsed >=
+  // MAX_BATCHES_PER_NIGHT`). The remainder waits for the next cron firing
+  // rather than looping.
+  if (batchesDone >= TRASH_PRUNE_MAX_BATCHES) {
+    console.log(
+      `studio: trash-prune per-chain batch cap (${TRASH_PRUNE_MAX_BATCHES}) already reached; remainder deferred to the next scheduled run`
+    );
+    return { deletedCount: 0, nextCursorMs: cursorMs, rescheduled: false };
+  }
+
+  const cutoffMs = nowMs - TRASH_GRACE_MS;
+
+  // Cursor-seeked, cutoff-bounded range read via by_deletedAt. NEVER an
+  // unbounded whole-table read (T-118-08) — the
+  // `.take(TRASH_PRUNE_BATCH_SIZE)` bound comes from the index range
+  // itself, not from a post-filter over an unbounded
+  // read. `.gte(cursorMs)` naturally excludes rows with `deletedAt`
+  // absent — Convex's index value ordering is `undefined < null < all
+  // other values` (documented at controlVerbSwaps.ts:105-109), so an
+  // absent `deletedAt` sorts below any real cursor and is never matched.
+  const batch = await ctx.db
+    .query("media")
+    .withIndex("by_deletedAt", (q: any) =>
+      q.gte("deletedAt", cursorMs).lt("deletedAt", cutoffMs)
+    )
+    .order("asc")
+    .take(TRASH_PRUNE_BATCH_SIZE);
+
+  let deletedCount = 0;
+  let lastDeletedAt = cursorMs;
+
+  for (const row of batch) {
+    // 1. Blob before row (T-118-20/T-118-21) — see the docstring above.
+    if (row.thumbStorageId) {
+      try {
+        await ctx.storage.delete(row.thumbStorageId);
+      } catch (err) {
+        console.log(
+          `studio: trash-prune blob delete failed for media ${row._id} (thumbStorageId ${row.thumbStorageId}); deleting the row anyway so the janitor does not wedge: ${err}`
+        );
+      }
+    }
+    // 2. The row.
+    await ctx.db.delete(row._id);
+    deletedCount++;
+    if (typeof row.deletedAt === "number") lastDeletedAt = row.deletedAt;
+  }
+
+  const batchesUsedAfter = batchesDone + 1;
+  const batchWasFull = batch.length >= TRASH_PRUNE_BATCH_SIZE;
+  // A short batch means the index range is drained (it is already bounded
+  // by cutoffMs, so every row past it was eligible) — the sweep is done
+  // and there is nothing left to reschedule for. A full batch may have
+  // more eligible rows past what this batch covered, UNLESS this
+  // invocation just hit the per-chain ceiling itself (T-118-19).
+  const rescheduled = batchWasFull && batchesUsedAfter < TRASH_PRUNE_MAX_BATCHES;
+
+  if (rescheduled) {
+    await ctx.scheduler.runAfter(TRASH_PRUNE_RESCHEDULE_MS, internal.media.pruneTrashBatch, {
+      cursorMs: lastDeletedAt,
+      batchesDone: batchesUsedAfter,
+    });
+  }
+
+  if (deletedCount > 0) {
+    console.log(
+      `studio: trash-prune deleted ${deletedCount} row(s), cursor now ${lastDeletedAt}${rescheduled ? ", rescheduled" : ""}`
+    );
+  }
+
+  return { deletedCount, nextCursorMs: lastDeletedAt, rescheduled };
+}
+
+/**
+ * `internalMutation`, same rationale as `ingestMedia`/`generateThumbUploadUrl`
+ * above (T-118-02) — this is an irreversible permanent delete with no UI
+ * control anywhere in this phase; only the nightly cron (`convex/crons.ts`)
+ * may reach it.
+ */
+export const pruneTrashBatch = internalMutation({
+  args: {
+    cursorMs: v.optional(v.number()),
+    batchesDone: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => pruneTrashBatchHandler(ctx as JanitorCtx, args, Date.now()),
 });
