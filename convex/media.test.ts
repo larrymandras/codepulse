@@ -34,11 +34,13 @@ import {
   restoreHandler,
   ingestMediaHandler,
   pruneTrashBatchHandler,
+  getMediaHashIndexHandler,
   MEDIA_TYPES,
   MEDIA_KINDS,
   THUMB_MAX_BYTES,
   TRASH_PRUNE_BATCH_SIZE,
   TRASH_PRUNE_MAX_BATCHES,
+  MEDIA_HASH_INDEX_CAP,
 } from "./media";
 
 // ---------------------------------------------------------------------------
@@ -736,5 +738,116 @@ describe("D-08 janitor: source-level — never .collect(), always bounded by .ta
   it("zero .collect() occurrences, paired with a .take( control that IS found (a zero from a broken pattern would be indistinguishable from a real zero without this)", () => {
     expect(mediaSource.match(/\.collect\(\)/g)).toBeNull();
     expect(mediaSource.match(/\.take\(/g)?.length ?? 0).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. D-08 host-side reconciliation support (plan 118-08) — getMediaHashIndexHandler
+// ---------------------------------------------------------------------------
+
+/**
+ * Threads real `q.eq(field, value)` / `q.gt(field, value)` predicates
+ * through a fake query builder over a supplied `rows` array, same
+ * discipline as `makeJanitorMockCtx` above (a mock that just hands back a
+ * fixed array could never distinguish the active-side read from the
+ * trashed-side read, which is exactly the property the truncation test
+ * below needs to exercise).
+ */
+function makeHashIndexMockCtx(rows: any[]) {
+  const takeCalls: number[] = [];
+  const db = {
+    query: (_table: string) => ({
+      withIndex: (_indexName: string, cb: (q: any) => any) => {
+        const predicate: { kind?: "eq" | "gt"; value?: any } = {};
+        const q = {
+          eq: (_field: string, value: any) => {
+            predicate.kind = "eq";
+            predicate.value = value;
+            return q;
+          },
+          gt: (_field: string, value: any) => {
+            predicate.kind = "gt";
+            predicate.value = value;
+            return q;
+          },
+        };
+        cb(q);
+        return {
+          take: async (n: number) => {
+            takeCalls.push(n);
+            if (predicate.kind === "eq") {
+              // eq("deletedAt", undefined) -> active rows only.
+              return rows.filter((r) => r.deletedAt === undefined).slice(0, n);
+            }
+            // gt("deletedAt", undefined) -> trashed rows only.
+            return rows.filter((r) => r.deletedAt !== undefined).slice(0, n);
+          },
+        };
+      },
+    }),
+  };
+  return { ctx: { db } as any, takeCalls };
+}
+
+describe("D-08 host-side reconciliation (118-08): getMediaHashIndexHandler", () => {
+  it("returns ONLY contentHash/deletedAt/kind per row, covering both active and trashed rows", async () => {
+    const { ctx } = makeHashIndexMockCtx([
+      {
+        _id: "m1",
+        contentHash: "hash-active",
+        deletedAt: undefined,
+        kind: "gen",
+        filename: "should-not-leak.png",
+        prompt: "should not leak either",
+      },
+      { _id: "m2", contentHash: "hash-trashed", deletedAt: 12345, kind: "ref" },
+    ]);
+
+    const result = await getMediaHashIndexHandler(ctx);
+
+    expect(result.truncated).toBe(false);
+    expect(result.rows).toHaveLength(2);
+    const byHash = Object.fromEntries(result.rows.map((r: any) => [r.contentHash, r]));
+    expect(byHash["hash-active"]).toEqual({
+      contentHash: "hash-active",
+      deletedAt: undefined,
+      kind: "gen",
+    });
+    expect(byHash["hash-trashed"]).toEqual({
+      contentHash: "hash-trashed",
+      deletedAt: 12345,
+      kind: "ref",
+    });
+    // No row's full shape (filename, prompt, ...) survives the projection —
+    // a leak here would widen the bearer-gated route's exposure well
+    // beyond the three fields the watcher actually needs.
+    for (const row of result.rows) {
+      expect(Object.keys(row).sort()).toEqual(["contentHash", "deletedAt", "kind"]);
+    }
+  });
+
+  it("truncated is false under the cap (control), true when the active side hits MEDIA_HASH_INDEX_CAP exactly", async () => {
+    const underCap = Array.from({ length: 3 }, (_, i) => ({
+      _id: `active-${i}`,
+      contentHash: `hash-${i}`,
+      deletedAt: undefined,
+      kind: "gen",
+    }));
+    const { ctx: underCapCtx } = makeHashIndexMockCtx(underCap);
+    const underCapResult = await getMediaHashIndexHandler(underCapCtx);
+    expect(underCapResult.truncated).toBe(false);
+
+    const atCap = Array.from({ length: MEDIA_HASH_INDEX_CAP }, (_, i) => ({
+      _id: `active-${i}`,
+      contentHash: `hash-${i}`,
+      deletedAt: undefined,
+      kind: "gen",
+    }));
+    const { ctx: atCapCtx } = makeHashIndexMockCtx(atCap);
+    const atCapResult = await getMediaHashIndexHandler(atCapCtx);
+    // A caller (hooks/studioWatch.mjs's reconcileTrash) MUST treat this the
+    // same as a failed read — a truncated active-row list could make a
+    // real, still-live file look like an orphan.
+    expect(atCapResult.truncated).toBe(true);
   });
 });

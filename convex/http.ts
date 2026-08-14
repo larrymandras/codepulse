@@ -32,7 +32,7 @@ import { gagLedgerIngest } from "./gagLedgerIngest";
 import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
 import { galdrPromptGet, galdrListGet, galdrPromptPost, galdrUsagePost } from "./galdrHttp";
 import { loomEventPost } from "./loomHttp";
-import { studioIngestPost, studioUploadUrlPost } from "./studioHttp";
+import { studioIngestPost, studioUploadUrlPost, studioMediaHashesGet } from "./studioHttp";
 import { workspaceIngestPost } from "./workspaceHttp";
 
 const http = httpRouter();
@@ -146,6 +146,9 @@ http.route({ path: "/loom/event", method: "POST", handler: loomEventPost });
 // (118-D01-EVIDENCE.md); the browser never calls either route.
 http.route({ path: "/studio/ingest", method: "POST", handler: studioIngestPost });
 http.route({ path: "/studio/upload-url", method: "POST", handler: studioUploadUrlPost });
+// plan 118-08's watcher-side trash reconciliation read — same boundary,
+// GET carries no body so there is nothing to validate beyond the header.
+http.route({ path: "/studio/media-hashes", method: "GET", handler: studioMediaHashesGet });
 
 // Phase 115 workspace scanner (D-04/D-10). One ingest route, host-script only:
 // the producer is hooks/workspaceScan.mjs, which sends no Origin and issues no

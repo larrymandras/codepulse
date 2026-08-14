@@ -25,7 +25,7 @@
  * blobs) lives in this file too, added by plan 118-06 — see the
  * `pruneTrashBatch` section near the end.
  */
-import { mutation, internalMutation, query } from "./_generated/server";
+import { mutation, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 
@@ -545,6 +545,66 @@ export const generateThumbUploadUrl = internalMutation({
   handler: async (ctx) => {
     return await ctx.storage.generateUploadUrl();
   },
+});
+
+/**
+ * D-08 host-side reconciliation support (plan 118-08). `hooks/studioWatch.mjs`
+ * needs to know, for every row, whether it is currently soft-deleted and
+ * which top-level directory it belongs in — that is the entire input its
+ * `reconcileTrash` needs to move files `gen\`<->`trash\` and to reclaim an
+ * orphaned `trash\` file the janitor has already deleted server-side. This
+ * returns a BOUNDED projection of exactly those three fields
+ * (`contentHash`/`deletedAt`/`kind`) — never `absPath`, `prompt`, or any
+ * other provenance field, so the watcher's in-memory hash index does not
+ * become a second copy of the gallery's full data.
+ *
+ * `internalQuery`, not `query` — reached only via the bearer-gated
+ * `GET /studio/media-hashes` route in `studioHttp.ts`, same rationale as
+ * `ingestMedia`/`generateThumbUploadUrl` above: a plain `query` would land
+ * in the client-callable `api.` namespace.
+ *
+ * Two bounded `by_deletedAt` reads (active + trashed) together cover the
+ * WHOLE table, matching `listHandler`/`listTrashHandler`'s own split of the
+ * same index. Bounded at `MEDIA_HASH_INDEX_CAP` per side, well under the
+ * ~4,096-read ceiling this repo has already hit twice (T-118-08) — a plain
+ * query has no writes to also count as reads the way `pruneTrashBatch`'s
+ * mutation does, so there is no delete-as-read arithmetic here, only the
+ * two `.take()` bounds themselves.
+ *
+ * `truncated: true` when EITHER side hits its cap — the caller (the
+ * watcher's `reconcileTrash`) MUST treat a truncated result as
+ * untrustworthy, not merely incomplete: a truncated active-row list could
+ * make a real, still-live file look like an orphan and get deleted. This
+ * extends T-118-27's "a failed read must never read as 'no rows exist'"
+ * rule to "a partial read must never read as 'these are all the rows'."
+ */
+export const MEDIA_HASH_INDEX_CAP = 1500;
+
+export async function getMediaHashIndexHandler(ctx: MediaCtx) {
+  const active = await ctx.db
+    .query("media")
+    .withIndex("by_deletedAt", (q: any) => q.eq("deletedAt", undefined))
+    .take(MEDIA_HASH_INDEX_CAP);
+  const trashed = await ctx.db
+    .query("media")
+    .withIndex("by_deletedAt", (q: any) => q.gt("deletedAt", undefined))
+    .take(MEDIA_HASH_INDEX_CAP);
+
+  const truncated =
+    active.length >= MEDIA_HASH_INDEX_CAP || trashed.length >= MEDIA_HASH_INDEX_CAP;
+
+  const rows = [...active, ...trashed].map((row: any) => ({
+    contentHash: row.contentHash as string,
+    deletedAt: row.deletedAt as number | undefined,
+    kind: row.kind as string,
+  }));
+
+  return { rows, truncated };
+}
+
+export const getMediaHashIndex = internalQuery({
+  args: {},
+  handler: async (ctx) => getMediaHashIndexHandler(ctx as MediaCtx),
 });
 
 // ============================================================

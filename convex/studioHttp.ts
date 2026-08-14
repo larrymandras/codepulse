@@ -136,3 +136,20 @@ export const studioUploadUrlPostHandler = async (ctx: any, request: Request) => 
 };
 
 export const studioUploadUrlPost = httpAction(studioUploadUrlPostHandler);
+
+/**
+ * GET /studio/media-hashes — wraps `internal.media.getMediaHashIndex`
+ * (plan 118-08, D-08 host-side reconciliation). `hooks/studioWatch.mjs`'s
+ * `reconcileTrash` is the only caller; it needs the whole table's
+ * `{contentHash, deletedAt, kind}` to decide which files to move `gen\`->
+ * `trash\`, move back, or reclaim as orphans. Same auth-first structure as
+ * the two handlers above; no body is read (GET carries no body).
+ */
+export const studioMediaHashesGetHandler = async (ctx: any, request: Request) => {
+  if (!validateStudioAuth(request)) return unauthorizedResponse();
+
+  const result = await ctx.runQuery(internal.media.getMediaHashIndex, {});
+  return jsonResponse({ ok: true, rows: result.rows, truncated: result.truncated }, 200);
+};
+
+export const studioMediaHashesGet = httpAction(studioMediaHashesGetHandler);

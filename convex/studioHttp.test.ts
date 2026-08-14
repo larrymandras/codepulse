@@ -25,6 +25,7 @@ import { resolve } from "node:path";
 import {
   studioIngestPostHandler,
   studioUploadUrlPostHandler,
+  studioMediaHashesGetHandler,
 } from "./studioHttp";
 
 afterEach(() => {
@@ -311,5 +312,80 @@ describe("studioUploadUrlPostHandler — auth gate", () => {
     const parsed = await response.json();
     expect(parsed).toEqual({ ok: true, uploadUrl });
     expect(ctx.runMutation.mock.calls.length).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Extra — GET /studio/media-hashes (plan 118-08's watcher-side reconciliation
+// read). Same auth-first structure, but a `runQuery`, not `runMutation`.
+// ---------------------------------------------------------------------------
+
+function makeQueryMockCtx(opts: { queryResult?: any } = {}) {
+  const runQuery = vi.fn(async (_fnRef: any, _args?: any) => {
+    return opts.queryResult ?? { rows: [], truncated: false };
+  });
+  return { runQuery };
+}
+
+describe("studioMediaHashesGetHandler — auth gate (control pair)", () => {
+  it("no Authorization header -> 401, query never called", async () => {
+    stubAuthKey();
+    const ctx = makeQueryMockCtx();
+    const response = await studioMediaHashesGetHandler(
+      ctx,
+      new Request("http://localhost/studio/media-hashes", { method: "GET" })
+    );
+    expect(response.status).toBe(401);
+    expect(ctx.runQuery.mock.calls.length).toBe(0);
+  });
+
+  it("CONTROL: correct bearer -> 200, query reached exactly once, rows/truncated passed through", async () => {
+    stubAuthKey();
+    const queryResult = {
+      rows: [{ contentHash: "a".repeat(64), deletedAt: undefined, kind: "gen" }],
+      truncated: false,
+    };
+    const ctx = makeQueryMockCtx({ queryResult });
+    const response = await studioMediaHashesGetHandler(
+      ctx,
+      new Request("http://localhost/studio/media-hashes", { method: "GET", headers: AUTHED })
+    );
+    expect(response.status).toBe(200);
+    const parsed = await response.json();
+    expect(parsed).toEqual({ ok: true, rows: queryResult.rows, truncated: false });
+    expect(ctx.runQuery.mock.calls.length).toBe(1);
+  });
+
+  it("wrong bearer value -> 401, query never called", async () => {
+    stubAuthKey();
+    const ctx = makeQueryMockCtx();
+    const response = await studioMediaHashesGetHandler(
+      ctx,
+      new Request("http://localhost/studio/media-hashes", {
+        method: "GET",
+        headers: { Authorization: "Bearer wrong-key" },
+      })
+    );
+    expect(response.status).toBe(401);
+    expect(ctx.runQuery.mock.calls.length).toBe(0);
+  });
+});
+
+describe("Route registration — GET /studio/media-hashes (source-level, no runtime)", () => {
+  const httpSource = readFileSync(resolve(process.cwd(), "convex/http.ts"), "utf-8");
+
+  it("exactly one http.route line mentions /studio/media-hashes, with method GET, and no OPTIONS partner", () => {
+    const lines = httpSource
+      .split("\n")
+      .filter((l) => l.includes("http.route") && l.includes("/studio/media-hashes"));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('"GET"');
+    const optionsLines = httpSource
+      .split("\n")
+      .filter(
+        (l) =>
+          l.includes("http.route") && l.includes("/studio/media-hashes") && l.includes('"OPTIONS"')
+      );
+    expect(optionsLines).toHaveLength(0);
   });
 });
