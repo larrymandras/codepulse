@@ -66,11 +66,20 @@ interface MediaCardProps {
   trashVariant?: boolean;
 }
 
-function ThumbnailFallback({ testId }: { testId: string }) {
+function ThumbnailFallback({
+  testId,
+  dimmed = false,
+}: {
+  testId: string;
+  dimmed?: boolean;
+}) {
   return (
     <div
       data-testid={testId}
-      className="aspect-video flex flex-col items-center justify-center gap-1 border border-dashed border-border bg-muted/30 text-muted-foreground"
+      className={cn(
+        "aspect-video flex flex-col items-center justify-center gap-1 border border-dashed border-border bg-muted/30 text-muted-foreground",
+        dimmed && "opacity-60"
+      )}
     >
       <ImageOff className="h-6 w-6" />
       <span className="text-xs">Thumbnail unavailable</span>
@@ -81,16 +90,21 @@ function ThumbnailFallback({ testId }: { testId: string }) {
 function AudioPlaceholder({
   filename,
   testId,
+  dimmed = false,
 }: {
   filename: string;
   testId: string;
+  dimmed?: boolean;
 }) {
   // Same box shape as ThumbnailFallback but border-SOLID, not dashed — this
   // is an expected state, not a failure, and must not read as an error.
   return (
     <div
       data-testid={testId}
-      className="aspect-video flex flex-col items-center justify-center gap-1 border border-solid border-border bg-muted/30 text-muted-foreground"
+      className={cn(
+        "aspect-video flex flex-col items-center justify-center gap-1 border border-solid border-border bg-muted/30 text-muted-foreground",
+        dimmed && "opacity-60"
+      )}
     >
       <AudioLines className="h-6 w-6" />
       <span className="truncate px-2 text-xs">{filename}</span>
@@ -122,13 +136,21 @@ export function MediaCard({
       className="mb-4 gap-0 overflow-hidden break-inside-avoid py-0"
     >
       <div className="relative cursor-pointer" onClick={onOpen}>
+        {/* The trash dimming applies to whichever of the three thumbnail
+            states renders, not only to the `<img>` — a trashed row with a
+            broken thumbnail must read as trashed too. It stays OFF the star
+            overlay, which remains a live control on a trashed row. */}
         {isAudio ? (
           <AudioPlaceholder
             filename={row.filename}
             testId={`studio-media-audio-${row._id}`}
+            dimmed={trashVariant}
           />
         ) : broken || !row.thumbnailUrl ? (
-          <ThumbnailFallback testId={`studio-media-fallback-${row._id}`} />
+          <ThumbnailFallback
+            testId={`studio-media-fallback-${row._id}`}
+            dimmed={trashVariant}
+          />
         ) : (
           <div style={aspectStyle}>
             {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}

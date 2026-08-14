@@ -24,7 +24,7 @@
  * Restore path and a visible countdown is the safety net, and a confirm
  * dialog on an already-reversible action is theatre. The irreversible step
  * belongs to the janitor (`convex/media.ts`'s `pruneTrashBatch`) and this
- * phase ships no manual "delete forever" control at all.
+ * phase ships no manual permanent-deletion control anywhere.
  */
 import { Copy, ImageOff, RotateCcw, Star, Trash2 } from "lucide-react";
 import { useMutation } from "convex/react";
