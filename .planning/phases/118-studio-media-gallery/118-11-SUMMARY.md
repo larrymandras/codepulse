@@ -338,6 +338,13 @@ None — no external service configuration, no deploy performed. The Studio back
   before this plan started and passed in isolation and in the post-plan full run. Worth watching
   if it recurs; nothing in Phase 118 touches it.
 
+## Self-Check: PASSED
+
+All seven files this summary claims exist on disk
+(`MediaDetailSheet.tsx`, `StylesPanel.tsx`, `ModelsPanel.tsx`, `Studio.tsx`, `Studio.test.tsx`,
+`MediaCard.tsx`, `118-11-SUMMARY.md`) and all four commits it cites resolve in
+`git log --oneline --all` (`8d1dcd04`, `f4c3d53a`, `1354a987`, `6c216b88`). Working tree clean.
+
 ---
 *Phase: 118-studio-media-gallery*
 *Completed: 2026-08-14*
