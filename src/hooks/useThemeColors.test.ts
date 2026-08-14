@@ -13,6 +13,10 @@ const CYAN_TOKENS: Record<string, string> = {
   "--status-warn": "#f59e0b",
   "--status-error": "#ef4444",
   "--status-info": "#3b82f6",
+  "--muted-foreground": "#94a3b8",
+  "--dept-personal": "#ec4899",
+  "--dept-consulting": "#22c55e",
+  "--dept-work": "#f97316",
 };
 
 // Token values for "readable" theme
@@ -26,6 +30,10 @@ const READABLE_TOKENS: Record<string, string> = {
   "--status-warn": "#fbbf24",
   "--status-error": "#f87171",
   "--status-info": "#60a5fa",
+  "--muted-foreground": "#8892a4",
+  "--dept-personal": "#d946ef",
+  "--dept-consulting": "#818cf8",
+  "--dept-work": "#fb923c",
 };
 
 function makeComputedStyleStub(tokens: Record<string, string>) {
@@ -118,6 +126,37 @@ describe("useThemeColors", () => {
       expect(result.current.statusOk).toBe("#34d399");
     });
 
+    it("resolves mutedForeground and the three department fields on first render, and re-resolves them after a data-theme switch", async () => {
+      const { result } = renderHook(() => useThemeColors());
+
+      // Initial state: cyan — exact string equality (not a loose/truthy check),
+      // since a field added to the interface but omitted from the returned
+      // object would resolve to undefined and pass a loose matcher.
+      expect(result.current.mutedForeground).toBe("#94a3b8");
+      expect(result.current.deptPersonal).toBe("#ec4899");
+      expect(result.current.deptConsulting).toBe("#22c55e");
+      expect(result.current.deptWork).toBe("#f97316");
+
+      // Switch mock to readable tokens and mutate the attribute.
+      currentTokens = READABLE_TOKENS;
+      getComputedStyleSpy.mockImplementation(
+        () => makeComputedStyleStub(currentTokens)
+      );
+
+      act(() => {
+        document.documentElement.setAttribute("data-theme", "readable");
+      });
+
+      // The load-bearing assertion: values must re-resolve AFTER the switch,
+      // not just hold their first-render value.
+      await waitFor(() => {
+        expect(result.current.mutedForeground).toBe("#8892a4");
+      });
+      expect(result.current.deptPersonal).toBe("#d946ef");
+      expect(result.current.deptConsulting).toBe("#818cf8");
+      expect(result.current.deptWork).toBe("#fb923c");
+    });
+
     it("disconnects MutationObserver on unmount (no leak)", () => {
       const disconnectSpy = vi.spyOn(MutationObserver.prototype, "disconnect");
       const { unmount } = renderHook(() => useThemeColors());
@@ -142,6 +181,10 @@ describe("useThemeColors", () => {
       expect(colors.statusWarn).not.toBeUndefined();
       expect(colors.statusError).not.toBeUndefined();
       expect(colors.statusInfo).not.toBeUndefined();
+      expect(colors.mutedForeground).toBeTruthy();
+      expect(colors.deptPersonal).toBeTruthy();
+      expect(colors.deptConsulting).toBeTruthy();
+      expect(colors.deptWork).toBeTruthy();
     });
   });
 });

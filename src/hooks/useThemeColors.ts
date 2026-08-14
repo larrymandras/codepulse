@@ -24,6 +24,10 @@ export interface ThemeColors {
   statusWarn: string;        // var(--status-warn)
   statusError: string;       // var(--status-error)
   statusInfo: string;        // var(--status-info)
+  mutedForeground: string;   // var(--muted-foreground) — Unclassified department fill
+  deptPersonal: string;      // var(--dept-personal)
+  deptConsulting: string;    // var(--dept-consulting)
+  deptWork: string;          // var(--dept-work)
 }
 
 /**
@@ -71,6 +75,10 @@ export function resolveThemeColors(): ThemeColors {
     statusWarn: get("--status-warn"),
     statusError: get("--status-error"),
     statusInfo: get("--status-info"),
+    mutedForeground: get("--muted-foreground"),
+    deptPersonal: get("--dept-personal"),
+    deptConsulting: get("--dept-consulting"),
+    deptWork: get("--dept-work"),
   };
 }
 
