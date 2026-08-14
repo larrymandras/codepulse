@@ -8,9 +8,15 @@
       "command": "plan-phase",
       "ready": true,
       "missing": []
+    },
+    {
+      "timestamp": "2026-08-14T14:48:00.406Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
     }
   ],
-  "lastCheck": "2026-08-13T23:35:22.430Z",
+  "lastCheck": "2026-08-14T14:48:00.406Z",
   "isFrontend": true,
   "artifacts": {
     "CONTEXT.md": {
@@ -32,6 +38,54 @@
       "count": 1,
       "files": [
         "114-UI-SPEC.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "114-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 11,
+      "files": [
+        "114-01-PLAN.md",
+        "114-02-PLAN.md",
+        "114-03-PLAN.md",
+        "114-04-PLAN.md",
+        "114-05-PLAN.md",
+        "114-06-PLAN.md",
+        "114-07-PLAN.md",
+        "114-08-PLAN.md",
+        "114-09-PLAN.md",
+        "114-10-PLAN.md",
+        "114-11-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 11,
+      "files": [
+        "114-01-SUMMARY.md",
+        "114-02-SUMMARY.md",
+        "114-03-SUMMARY.md",
+        "114-04-SUMMARY.md",
+        "114-05-SUMMARY.md",
+        "114-06-SUMMARY.md",
+        "114-07-SUMMARY.md",
+        "114-08-SUMMARY.md",
+        "114-09-SUMMARY.md",
+        "114-10-SUMMARY.md",
+        "114-11-SUMMARY.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "114-VALIDATION.md"
       ]
     }
   }
