@@ -119,7 +119,7 @@ The production backend is SELF-HOSTED (single node, SQLite) at `C:\Users\mandr\c
 
 ## Testing
 
-Vitest with jsdom. Setup file at `src/test/setup.ts` (139 lines) installs jsdom polyfills for
+Vitest with jsdom. Setup file at `src/test/setup.ts` (138 lines) installs jsdom polyfills for
 `SpeechRecognition`/`Audio`/`Worker`/`AudioWorkletNode` plus one `vi.mock` for `livekit-client` —
 it does **not** globally mock Clerk, Recharts, Three.js, Globe, React Flow, or Tone.js (a prior
 version of this line claimed it did; verified false by a full read of the file, Phase 114
