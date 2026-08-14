@@ -1063,8 +1063,8 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion — nothing starts until `118-D01-EVIDENCE.md` carries a `BRANCH:` line)*
 
 - [x] 118-02-PLAN.md — D-09 amendment: time-boxed OpenArt MCP post-auth tool enumeration; selects the third generator leg (wave 2) — COMPLETE 2026-08-14, `THIRD_LEG: openart-mcp` (generation tools appeared post-auth; wave 9 blocked on an OpenArt credit top-up, 7 held vs 10 cheapest)
-- [ ] 118-03-PLAN.md — `media`/`mediaStyles`/`mediaModels` schema + D-03 retention exemption + deploy (wave 2)
-- [ ] 118-07-PLAN.md — media-vault creation (D-13) + watcher scan/SHA-256 identity/sidecar pairing (D-05/D-06/D-07) (wave 2)
+- [x] 118-03-PLAN.md — `media`/`mediaStyles`/`mediaModels` schema + D-03 retention exemption + deploy (wave 2) — COMPLETE 2026-08-14, deployed to the self-hosted backend (`Added table indexes`, no `Deleted`); all three tables independently confirmed live in a control-paired 164-table listing
+- [x] 118-07-PLAN.md — media-vault creation (D-13) + watcher scan/SHA-256 identity/sidecar pairing (D-05/D-06/D-07) (wave 2) — COMPLETE 2026-08-14, vault live on disk (no `.thumbs`, per the convex-storage branch), 15 control-paired tests; content-only identity independently mutation-proved (clock value injected → 4 tests RED, reverted byte-identical)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
