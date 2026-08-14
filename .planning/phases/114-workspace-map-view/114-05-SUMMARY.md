@@ -114,3 +114,11 @@ None - no external service configuration required.
 ---
 *Phase: 114-workspace-map-view*
 *Completed: 2026-08-14*
+
+## Self-Check: PASSED
+
+- `FOUND: src/lib/workspaceMapLayout.ts`
+- `FOUND: src/lib/workspaceMapLayout.test.ts`
+- `FOUND: dd1ea1c5` (Task 1 commit)
+- `FOUND: f72f92b9` (Task 2 commit)
+- `FOUND: b321ae80` (this SUMMARY.md commit)
