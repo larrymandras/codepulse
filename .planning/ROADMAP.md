@@ -923,7 +923,7 @@ Plans:
 **Goal:** Larry can open `/workspace-map` and read the live workspace snapshot as a deterministic radial map — center, four department hubs, 53 roots, then directories — where node fill encodes department, a halo marks what Ástríðr can reach, node size encodes rolled-up file count, an always-visible coverage strip states scan freshness and every honesty flag, a side panel names the files withheld from each directory rather than silently omitting them, and a lens switcher offers Ástríðr's world with an honest, live-probed empty state.
 **Requirements**: none mapped — design-doc-driven phase (`Mandras/02-projects/agentic-os-second-brain.md` § "CodePulse" bullet C1). The acceptance-bearing units are the 18 locked decisions D-01..D-18 in `114-CONTEXT.md`; plans are traced to those instead of REQ-IDs, following Phase 116's precedent and Phase 115's application of it.
 **Depends on:** Phase 115. *(Corrected 2026-08-13: this line previously read "Phase 113", a sequential default emitted by `gsd-phase add` rather than a real constraint. The approved design's own dependency graph — `Mandras/02-projects/agentic-os-second-brain.md:48` — states "C2 → enables C1's workspace lens", where C2 is Phase 115 (the scanner, which produces the data) and C1 is this phase (the map, which renders it). Both 113 and 115 are complete, so nothing was blocked; the line was simply wrong, and is corrected here the same way 115's inverted line was on 2026-08-12.)*
-**Plans:** 6/11 plans executed
+**Plans:** 8/11 plans executed
 
 Plans:
 
@@ -941,8 +941,8 @@ Plans:
 
 **Wave 3**
 
-- [ ] 114-07-PLAN.md - `layoutNodes`: fixed ring radii, sqrt-weighted angular sectors, index-based collision stagger, `fx`/`fy` plus the `x`/`y` mirror, and the D-01 391-node / D-03 one-level / D-08 order-independence proofs (wave 3, depends on 114-05)
-- [ ] 114-08-PLAN.md - `WorkspaceMapPanel`: direct vs rolled-up counts explicitly labelled, the withheld-files notice proven conditional in both directions (D-09), label-only masking under an `enabled && maskPaths` gate (D-15) (wave 3, depends on 114-03 + 114-05)
+- [x] 114-07-PLAN.md - `layoutNodes`: fixed ring radii, sqrt-weighted angular sectors, index-based collision stagger, `fx`/`fy` plus the `x`/`y` mirror, and the D-01 391-node / D-03 one-level / D-08 order-independence proofs (wave 3, depends on 114-05)
+- [x] 114-08-PLAN.md - `WorkspaceMapPanel`: direct vs rolled-up counts explicitly labelled, the withheld-files notice proven conditional in both directions (D-09), label-only masking under an `enabled && maskPaths` gate (D-15) (wave 3, depends on 114-03 + 114-05)
 
 **Wave 4**
 
