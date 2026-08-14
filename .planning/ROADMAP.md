@@ -1076,9 +1076,9 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 118-06-PLAN.md — D-08 30-day janitor: batch-capped, cursor-seeked, blob-before-row, nightly cron (wave 5)
-- [ ] 118-08-PLAN.md — bounded ffmpeg webp encoder (D-02), thumbnail upload, ingest POST, trash reconciliation (D-08) (wave 5)
-- [ ] 118-10-PLAN.md — `/studio` nav entry (D-16), page shell, CSS-columns masonry grid, media card, filter bar (wave 5)
+- [x] 118-06-PLAN.md — D-08 30-day janitor: batch-capped, cursor-seeked, blob-before-row, nightly cron (wave 5) — COMPLETE 2026-08-14, batch cap 200 cursor-seeked on `by_deletedAt`, read arithmetic justified against 4,096 (not the 16,000 write ceiling) with >10x headroom, blob-before-row with a logged non-wedging catch; deployed, "No indexes are deleted by this push"
+- [x] 118-08-PLAN.md — bounded ffmpeg webp encoder (D-02), thumbnail upload, ingest POST, trash reconciliation (D-08) (wave 5) — COMPLETE 2026-08-14, bounded encode/upload/ingest + D-08 host-side trash reconciliation; added a bearer-gated `GET /studio/media-hashes` (internalQuery, capped, `truncated` flag) — the watcher treats a truncated index as a FAILED read and skips the pass with zero unlinks, mutation-proved
+- [x] 118-10-PLAN.md — `/studio` nav entry (D-16), page shell, CSS-columns masonry grid, media card, filter bar (wave 5) — COMPLETE 2026-08-14, `/studio` nav+route+shell+grid+card+filter bar; zero hardcoded hex (control: 56 other src files have it), three honest states distinguished (loading / table-empty / filter-zero-match), Phase-114 skeleton bug mutation-proved
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
