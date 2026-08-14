@@ -1,0 +1,38 @@
+{
+  "phase": 114,
+  "phaseName": "workspace-map-view",
+  "created": "2026-08-13T23:35:22.429Z",
+  "history": [
+    {
+      "timestamp": "2026-08-13T23:35:22.430Z",
+      "command": "plan-phase",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-13T23:35:22.430Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "114-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "114-DISCUSSION-LOG.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "114-UI-SPEC.md"
+      ]
+    }
+  }
+}
