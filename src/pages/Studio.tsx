@@ -8,17 +8,14 @@
  * reason `Galdr.tsx`'s `PromptsErrorBoundary` exists), and the UI-SPEC's
  * verbatim empty-state copy.
  *
- * This task (Task 1) builds the shell only: nav entry, route, header, sync
- * caption, Gallery/Trash Tabs, error boundary, loading skeletons and all four
- * empty states. The masonry grid and media card (Task 2) and the filter bar
- * (Task 3) replace the placeholder row list below.
- *
  * D-02 (no lightbox, no original-file fetch) and D-07 (provenance-absent
- * rows render "No provenance recorded") are realized on the card itself in
- * Task 2 — this file only wires the two bounded `api.media` queries and
- * tolerates `undefined` during loading via the repo's `?? []` convention.
+ * rows render "No provenance recorded") are realized on the card itself
+ * (`MediaCard.tsx`). The Gallery tab filters client-side over the single
+ * `api.media.list` subscription via `applyStudioFilters` — no filter is ever
+ * pushed into the Convex query. The Trash tab is deliberately flatter: only
+ * Search, no chips/Selects, per the UI-SPEC's Filter Contract.
  */
-import { Component, useState, type ReactNode } from "react";
+import { Component, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Images } from "lucide-react";
 import { api } from "../../convex/_generated/api";
@@ -29,6 +26,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MasonryGrid } from "@/components/studio/MasonryGrid";
 import { MediaCard, type MediaRow } from "@/components/studio/MediaCard";
+import {
+  StudioFilterBar,
+  applyStudioFilters,
+  matchesStudioSearch,
+  DEFAULT_STUDIO_FILTERS,
+  type StudioFilterState,
+} from "@/components/studio/StudioFilterBar";
 
 const ERROR_COPY =
   "Couldn't load media — check your connection and try again.";
@@ -82,7 +86,21 @@ function GallerySkeleton() {
   );
 }
 
-function GalleryTab() {
+/** Distinct from `No media yet` (the table itself is empty): filters/search
+ * are active and simply match nothing. Confusing the two would tell the
+ * operator the vault is empty when it is merely filtered. */
+function ZeroMatchState() {
+  return (
+    <div
+      data-testid="studio-zero-match"
+      className="text-muted-foreground border-primary/20 bg-primary/5 rounded border border-dashed py-8 text-center font-mono text-sm tracking-widest"
+    >
+      [ NO MEDIA MATCHES ]
+    </div>
+  );
+}
+
+function GalleryTab({ search }: { search: string }) {
   // Repo convention: tolerate `undefined` during loading, but keep the
   // loading signal itself (`data === undefined`) so "still loading" and
   // "loaded but genuinely empty" render differently — collapsing them with a
@@ -92,10 +110,19 @@ function GalleryTab() {
   const isLoading = data === undefined;
   const rows = (data?.rows ?? []) as MediaRow[];
 
+  const [filters, setFilters] = useState<StudioFilterState>(DEFAULT_STUDIO_FILTERS);
   const toggleStar = useMutation(api.media.toggleStar);
+
+  const visible = useMemo(
+    () => applyStudioFilters(rows, filters, search),
+    [rows, filters, search]
+  );
 
   if (isLoading) return <GallerySkeleton />;
 
+  // Table-empty state (D-13 greenfield — this is the default state on day
+  // one, not an edge case): the gate on `rows.length`, never `visible.length`,
+  // is what keeps this distinct from the filters-active zero-match state.
   if (rows.length === 0) {
     return (
       <div
@@ -113,31 +140,53 @@ function GalleryTab() {
     );
   }
 
-  // Task 3 wires <StudioFilterBar> above this and the filters-active
-  // zero-match "[ NO MEDIA MATCHES ]" state — all rows render unfiltered
-  // until then.
   return (
-    <MasonryGrid
-      rows={rows}
-      renderCard={(row) => (
-        <MediaCard
-          key={row._id}
-          row={row}
-          // The detail Sheet (plan 118-11) is not built yet; opening a card
-          // is a documented no-op until then, per D-02 there is still no
-          // lightbox to fall back to.
-          onOpen={() => {}}
-          onToggleStar={() => void toggleStar({ id: row._id as never })}
+    <div className="space-y-4">
+      <StudioFilterBar
+        rows={rows}
+        search={search}
+        filters={filters}
+        onFiltersChange={setFilters}
+      />
+
+      {visible.length === 0 ? (
+        <ZeroMatchState />
+      ) : (
+        <MasonryGrid
+          rows={visible}
+          renderCard={(row) => (
+            <MediaCard
+              key={row._id}
+              row={row}
+              // The detail Sheet (plan 118-11) is not built yet; opening a
+              // card is a documented no-op until then — D-02 means there is
+              // still no lightbox to fall back to either.
+              onOpen={() => {}}
+              onToggleStar={() => void toggleStar({ id: row._id as never })}
+            />
+          )}
         />
       )}
-    />
+    </div>
   );
 }
 
-function TrashTab() {
+function TrashTab({ search }: { search: string }) {
   const data = useQuery(api.media.listTrash);
   const isLoading = data === undefined;
-  const rows = data?.rows ?? [];
+  const rows = (data?.rows ?? []) as MediaRow[];
+  // Restore itself is a Sheet-footer action (plan 118-11's detail panel);
+  // the star toggle is the one write this tab's card grid performs.
+  const toggleStar = useMutation(api.media.toggleStar);
+
+  // Trash tab is deliberately flatter than Gallery: Search alone, no chips,
+  // no Selects, no Styles/Models panels — it is a structurally different
+  // list (UI-SPEC's Trash View Contract), not a filtered view of the same
+  // rows.
+  const visible = useMemo(
+    () => rows.filter((r) => matchesStudioSearch(r, search)),
+    [rows, search]
+  );
 
   if (isLoading) return <GallerySkeleton />;
 
@@ -155,10 +204,25 @@ function TrashTab() {
     );
   }
 
+  if (visible.length === 0) return <ZeroMatchState />;
+
   return (
-    <div data-testid="studio-trash-placeholder" className="text-muted-foreground text-sm">
-      {rows.length} trashed row(s) loaded.
-    </div>
+    <MasonryGrid
+      rows={visible}
+      renderCard={(row) => (
+        <MediaCard
+          key={row._id}
+          row={row}
+          trashVariant
+          // Card click still opens the detail Sheet in the UI-SPEC's Trash
+          // View Contract; the Sheet (plan 118-11) is not built yet, so this
+          // stays a documented no-op, same as the Gallery tab above. Restore
+          // itself is a Sheet-footer action (118-11), not a card control.
+          onOpen={() => {}}
+          onToggleStar={() => void toggleStar({ id: row._id as never })}
+        />
+      )}
+    />
   );
 }
 
@@ -197,10 +261,10 @@ export default function Studio() {
         <SectionErrorBoundary name="Media">
           <MediaErrorBoundary>
             <TabsContent value="gallery">
-              <GalleryTab />
+              <GalleryTab search={search} />
             </TabsContent>
             <TabsContent value="trash">
-              <TrashTab />
+              <TrashTab search={search} />
             </TabsContent>
           </MediaErrorBoundary>
         </SectionErrorBoundary>
