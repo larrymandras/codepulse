@@ -27,6 +27,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MasonryGrid } from "@/components/studio/MasonryGrid";
 import { MediaCard, type MediaRow } from "@/components/studio/MediaCard";
 import {
+  MediaDetailSheet,
+  type MediaDetailRow,
+} from "@/components/studio/MediaDetailSheet";
+import {
   StudioFilterBar,
   applyStudioFilters,
   matchesStudioSearch,
@@ -100,6 +104,28 @@ function ZeroMatchState() {
   );
 }
 
+/**
+ * `media.styleId` is an id reference and no read path resolves it to a name,
+ * so the detail Sheet's `Style` row is resolved here against the same
+ * `api.media.listStyles` subscription the Styles panel renders from — one
+ * subscription, one source of truth. A `styleId` pointing at a row that is
+ * gone resolves to `undefined`, which the Sheet renders as the D-07 sentinel
+ * like any other absent field (never a dangling id shown as if it were a
+ * style name).
+ */
+function useStyleNames(): Map<string, string> {
+  const styles = useQuery(api.media.listStyles);
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    if (Array.isArray(styles)) {
+      for (const style of styles as Array<{ _id: string; name: string }>) {
+        if (style?._id && style?.name) map.set(style._id, style.name);
+      }
+    }
+    return map;
+  }, [styles]);
+}
+
 function GalleryTab({ search }: { search: string }) {
   // Repo convention: tolerate `undefined` during loading, but keep the
   // loading signal itself (`data === undefined`) so "still loading" and
@@ -111,7 +137,9 @@ function GalleryTab({ search }: { search: string }) {
   const rows = (data?.rows ?? []) as MediaRow[];
 
   const [filters, setFilters] = useState<StudioFilterState>(DEFAULT_STUDIO_FILTERS);
+  const [selected, setSelected] = useState<MediaDetailRow | null>(null);
   const toggleStar = useMutation(api.media.toggleStar);
+  const styleNames = useStyleNames();
 
   const visible = useMemo(
     () => applyStudioFilters(rows, filters, search),
@@ -158,15 +186,23 @@ function GalleryTab({ search }: { search: string }) {
             <MediaCard
               key={row._id}
               row={row}
-              // The detail Sheet (plan 118-11) is not built yet; opening a
-              // card is a documented no-op until then — D-02 means there is
-              // still no lightbox to fall back to either.
-              onOpen={() => {}}
+              onOpen={() => setSelected(row as MediaDetailRow)}
               onToggleStar={() => void toggleStar({ id: row._id as never })}
             />
           )}
         />
       )}
+
+      <MediaDetailSheet
+        row={selected}
+        open={selected !== null}
+        onOpenChange={(next) => {
+          if (!next) setSelected(null);
+        }}
+        styleName={
+          selected?.styleId ? styleNames.get(selected.styleId) : undefined
+        }
+      />
     </div>
   );
 }
@@ -175,9 +211,12 @@ function TrashTab({ search }: { search: string }) {
   const data = useQuery(api.media.listTrash);
   const isLoading = data === undefined;
   const rows = (data?.rows ?? []) as MediaRow[];
-  // Restore itself is a Sheet-footer action (plan 118-11's detail panel);
-  // the star toggle is the one write this tab's card grid performs.
+  // Restore itself is a Sheet-footer action (the detail panel below), never a
+  // card control — the UI-SPEC's Trash View Contract places it there. The
+  // star toggle is the one write this tab's card grid performs.
   const toggleStar = useMutation(api.media.toggleStar);
+  const [selected, setSelected] = useState<MediaDetailRow | null>(null);
+  const styleNames = useStyleNames();
 
   // Trash tab is deliberately flatter than Gallery: Search alone, no chips,
   // no Selects, no Styles/Models panels — it is a structurally different
@@ -207,22 +246,35 @@ function TrashTab({ search }: { search: string }) {
   if (visible.length === 0) return <ZeroMatchState />;
 
   return (
-    <MasonryGrid
-      rows={visible}
-      renderCard={(row) => (
-        <MediaCard
-          key={row._id}
-          row={row}
-          trashVariant
-          // Card click still opens the detail Sheet in the UI-SPEC's Trash
-          // View Contract; the Sheet (plan 118-11) is not built yet, so this
-          // stays a documented no-op, same as the Gallery tab above. Restore
-          // itself is a Sheet-footer action (118-11), not a card control.
-          onOpen={() => {}}
-          onToggleStar={() => void toggleStar({ id: row._id as never })}
-        />
-      )}
-    />
+    <>
+      <MasonryGrid
+        rows={visible}
+        renderCard={(row) => (
+          <MediaCard
+            key={row._id}
+            row={row}
+            trashVariant
+            // Card click still opens the detail Sheet (read-only recipe
+            // view); the Sheet's action row swaps Move to Trash for Restore
+            // via `trashVariant` below.
+            onOpen={() => setSelected(row as MediaDetailRow)}
+            onToggleStar={() => void toggleStar({ id: row._id as never })}
+          />
+        )}
+      />
+
+      <MediaDetailSheet
+        row={selected}
+        open={selected !== null}
+        trashVariant
+        onOpenChange={(next) => {
+          if (!next) setSelected(null);
+        }}
+        styleName={
+          selected?.styleId ? styleNames.get(selected.styleId) : undefined
+        }
+      />
+    </>
   );
 }
 
