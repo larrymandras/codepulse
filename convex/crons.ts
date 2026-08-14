@@ -183,4 +183,21 @@ crons.daily(
   internal.retention.startNightlyPrune
 );
 
+// Phase 118 D-08: Studio's 30-day trash janitor. `media` (and its curated
+// siblings `mediaStyles`/`mediaModels`) is deliberately EXEMPT from
+// RETENTION_DAYS above (D-03) — this cron is the ONLY thing bounding that
+// table's growth. Offset to 07:00 UTC — genuinely unused by any entry in
+// this file, active OR commented-out (02:00 is claimed by the disabled
+// archive-stale-events entry above; picking it anyway would collide the
+// moment that entry is ever re-enabled). Same deliberate-offset discipline
+// every other entry in this file follows to avoid scheduler contention.
+// Batch-capped and cursor-seeked (convex/media.ts's pruneTrashBatch) —
+// never an unbounded read, per this file's other batch-capped entries.
+crons.daily(
+  "studio-trash-prune",
+  { hourUTC: 7, minuteUTC: 0 },
+  internal.media.pruneTrashBatch,
+  {}
+);
+
 export default crons;

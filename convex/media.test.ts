@@ -33,9 +33,12 @@ import {
   softDeleteHandler,
   restoreHandler,
   ingestMediaHandler,
+  pruneTrashBatchHandler,
   MEDIA_TYPES,
   MEDIA_KINDS,
   THUMB_MAX_BYTES,
+  TRASH_PRUNE_BATCH_SIZE,
+  TRASH_PRUNE_MAX_BATCHES,
 } from "./media";
 
 // ---------------------------------------------------------------------------
@@ -485,5 +488,253 @@ describe("ingestMediaHandler — D-07 provenance absence, never inferred from fi
     expect(result.ok).toBe(true);
     const [, doc] = insert.mock.calls[0];
     expect(doc.styleId).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. D-08 janitor (plan 118-06) — pruneTrashBatchHandler
+// ---------------------------------------------------------------------------
+
+/**
+ * A mock ctx.db that ACTUALLY APPLIES the `q.gte(...).lt(...)` bounds
+ * `pruneTrashBatchHandler` passes into `withIndex`, filtering a supplied
+ * "table" (`rows`) the same way the real by_deletedAt index would. This is
+ * deliberately more faithful than a mock that just hands back a
+ * pre-decided array: if it did, the mutation proof mandated by the plan
+ * (shorten TRASH_GRACE_MS, confirm the grace-period test goes RED) could
+ * never actually turn red — the mock would ignore the cutoff either way.
+ * By threading the real bounds through a real filter, the grace-period
+ * test is actually exercising the constant, not just asserting a fixture.
+ */
+function makeJanitorMockCtx(rows: any[], opts: { storageDeleteImpl?: (id: any) => Promise<void> } = {}) {
+  const calls: string[] = [];
+  let takeCalledWith: number | undefined;
+
+  const storageDelete = vi.fn(async (id: any) => {
+    calls.push(`storage.delete:${id}`);
+    if (opts.storageDeleteImpl) await opts.storageDeleteImpl(id);
+  });
+  const dbDelete = vi.fn(async (id: any) => {
+    calls.push(`db.delete:${id}`);
+  });
+  const runAfter = vi.fn(async (_delayMs: number, _fnRef: any, _args: any) => "scheduled-id");
+
+  const db = {
+    query: (_table: string) => ({
+      withIndex: (_indexName: string, cb: (q: any) => any) => {
+        const bounds: { gte?: number; lt?: number } = {};
+        const q = {
+          gte: (_field: string, value: number) => {
+            bounds.gte = value;
+            return q;
+          },
+          lt: (_field: string, value: number) => {
+            bounds.lt = value;
+            return q;
+          },
+        };
+        cb(q);
+        return {
+          order: (_dir: string) => ({
+            take: async (n: number) => {
+              takeCalledWith = n;
+              return rows
+                .filter(
+                  (r) =>
+                    r.deletedAt !== undefined &&
+                    (bounds.gte === undefined || r.deletedAt >= bounds.gte) &&
+                    (bounds.lt === undefined || r.deletedAt < bounds.lt)
+                )
+                .sort((a, b) => a.deletedAt - b.deletedAt)
+                .slice(0, n);
+            },
+          }),
+        };
+      },
+    }),
+    delete: dbDelete,
+  };
+
+  return {
+    ctx: { db, storage: { delete: storageDelete }, scheduler: { runAfter } } as any,
+    dbDelete,
+    storageDelete,
+    runAfter,
+    calls,
+    getTakeCalledWith: () => takeCalledWith,
+  };
+}
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000; // hardcoded independently of TRASH_GRACE_MS,
+// so this test suite is a real check on the grace period value rather than
+// a restatement of whatever the constant currently says.
+const ONE_DAY_MS_TEST = 24 * 60 * 60 * 1000;
+
+describe("D-08 janitor: pruneTrashBatchHandler — blob-before-row ordering", () => {
+  it("deletes the thumbnail blob BEFORE the row (control pair: relative call order, not merely that both happened)", async () => {
+    const nowMs = 1_800_000_000_000;
+    const { ctx, calls } = makeJanitorMockCtx([
+      { _id: "m1", deletedAt: nowMs - THIRTY_DAYS_MS - ONE_DAY_MS_TEST, thumbStorageId: "s1" },
+    ]);
+    await pruneTrashBatchHandler(ctx, {}, nowMs);
+
+    // Asserting only that both were called would pass against the reversed,
+    // wrong order — the relative-index assertion is the point.
+    const storageIdx = calls.indexOf("storage.delete:s1");
+    const dbIdx = calls.indexOf("db.delete:m1");
+    expect(storageIdx).toBeGreaterThanOrEqual(0);
+    expect(dbIdx).toBeGreaterThanOrEqual(0);
+    expect(storageIdx).toBeLessThan(dbIdx);
+  });
+});
+
+describe("D-08 janitor: pruneTrashBatchHandler — 30-day grace period", () => {
+  it("an old row (31 days) is deleted; a recent row (5 days) survives in the SAME run (control pair)", async () => {
+    // "new" is deliberately 5 days old, not 1 — it must survive the REAL
+    // 30-day grace (5 << 30) while still being old enough that a wrongly
+    // SHORTENED grace (e.g. 1 day, the Task 2 mutation proof) would sweep
+    // it. A "new" row at exactly 1 day would sit on the boundary of a
+    // 1-day-grace mutation (deletedAt === cutoffMs, excluded by `.lt`
+    // either way) and could not discriminate a shortened-grace bug from a
+    // correct one — this value is chosen so the mutation proof actually
+    // flips this assertion, not just the "old" row's.
+    const nowMs = 1_800_000_000_000;
+    const { ctx, dbDelete } = makeJanitorMockCtx([
+      { _id: "old", deletedAt: nowMs - 31 * ONE_DAY_MS_TEST, thumbStorageId: undefined },
+      { _id: "new", deletedAt: nowMs - 5 * ONE_DAY_MS_TEST, thumbStorageId: undefined },
+    ]);
+    const result = await pruneTrashBatchHandler(ctx, {}, nowMs);
+
+    expect(result.deletedCount).toBe(1);
+    expect(dbDelete).toHaveBeenCalledTimes(1);
+    expect(dbDelete).toHaveBeenCalledWith("old");
+    // A test with only the old row would pass against a janitor that
+    // deletes everything — assert the survivor's id NEVER appears.
+    const deletedIds = dbDelete.mock.calls.map((c) => c[0]);
+    expect(deletedIds).not.toContain("new");
+  });
+});
+
+describe("D-08 janitor: soft-delete never touches the blob (Restore stays whole)", () => {
+  it("softDeleteHandler never calls storage.delete", async () => {
+    const storageDelete = vi.fn(async (_id: any) => {});
+    const patch = vi.fn(async (_id: any, _args: any) => {});
+    const get = vi.fn(async (_id: any) => ({ _id: "m1", deletedAt: undefined }));
+    const ctx = { db: { get, patch }, storage: { delete: storageDelete } } as any;
+
+    await softDeleteHandler(ctx, { id: "m1" });
+
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(storageDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("D-08 janitor: pruneTrashBatchHandler — batch bound and reschedule", () => {
+  it("a FULL batch reads .take(TRASH_PRUNE_BATCH_SIZE) and reschedules with a strictly-advanced cursor", async () => {
+    const nowMs = 1_800_000_000_000;
+    const oldBase = nowMs - 31 * ONE_DAY_MS_TEST;
+    const rows = Array.from({ length: TRASH_PRUNE_BATCH_SIZE }, (_, i) => ({
+      _id: `m${i}`,
+      deletedAt: oldBase + i, // strictly increasing, all well past the 30-day cutoff
+      thumbStorageId: undefined,
+    }));
+    const { ctx, runAfter, getTakeCalledWith } = makeJanitorMockCtx(rows);
+
+    const result = await pruneTrashBatchHandler(ctx, { cursorMs: 0, batchesDone: 0 }, nowMs);
+
+    expect(getTakeCalledWith()).toBe(TRASH_PRUNE_BATCH_SIZE);
+    expect(result.rescheduled).toBe(true);
+    expect(runAfter).toHaveBeenCalledTimes(1);
+    const [, , scheduledArgs] = runAfter.mock.calls[0];
+    expect(scheduledArgs.cursorMs).toBeGreaterThan(0);
+    expect(scheduledArgs.batchesDone).toBe(1);
+  });
+
+  it("control: a SHORT batch does NOT reschedule", async () => {
+    const nowMs = 1_800_000_000_000;
+    const { ctx, runAfter } = makeJanitorMockCtx([
+      { _id: "only-one", deletedAt: nowMs - 31 * ONE_DAY_MS_TEST, thumbStorageId: undefined },
+    ]);
+
+    const result = await pruneTrashBatchHandler(ctx, {}, nowMs);
+
+    expect(result.rescheduled).toBe(false);
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+});
+
+describe("D-08 janitor: pruneTrashBatchHandler — per-chain batch ceiling (T-118-19)", () => {
+  it("batchesDone already AT the ceiling: zero work, no reschedule", async () => {
+    const nowMs = 1_800_000_000_000;
+    const rows = Array.from({ length: TRASH_PRUNE_BATCH_SIZE }, (_, i) => ({
+      _id: `m${i}`,
+      deletedAt: nowMs - 31 * ONE_DAY_MS_TEST + i,
+      thumbStorageId: undefined,
+    }));
+    const { ctx, runAfter, dbDelete } = makeJanitorMockCtx(rows);
+
+    const result = await pruneTrashBatchHandler(
+      ctx,
+      { cursorMs: 0, batchesDone: TRASH_PRUNE_MAX_BATCHES },
+      nowMs
+    );
+
+    expect(result.rescheduled).toBe(false);
+    expect(runAfter).not.toHaveBeenCalled();
+    expect(dbDelete).not.toHaveBeenCalled();
+    expect(result.deletedCount).toBe(0);
+  });
+
+  it("a FULL batch that reaches the ceiling on THIS invocation still deletes rows but does not reschedule further", async () => {
+    const nowMs = 1_800_000_000_000;
+    const rows = Array.from({ length: TRASH_PRUNE_BATCH_SIZE }, (_, i) => ({
+      _id: `m${i}`,
+      deletedAt: nowMs - 31 * ONE_DAY_MS_TEST + i,
+      thumbStorageId: undefined,
+    }));
+    const { ctx, runAfter, dbDelete } = makeJanitorMockCtx(rows);
+
+    const result = await pruneTrashBatchHandler(
+      ctx,
+      { cursorMs: 0, batchesDone: TRASH_PRUNE_MAX_BATCHES - 1 },
+      nowMs
+    );
+
+    // The work for this batch still happens — an unbounded self-reschedule
+    // is the DoS risk, not doing the batch that's already in flight.
+    expect(dbDelete).toHaveBeenCalledTimes(TRASH_PRUNE_BATCH_SIZE);
+    expect(result.rescheduled).toBe(false);
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+});
+
+describe("D-08 janitor: pruneTrashBatchHandler — resilience to a missing blob (T-118-21)", () => {
+  it("storage.delete throwing for one row does not stop the row's own delete or the rest of the batch", async () => {
+    const nowMs = 1_800_000_000_000;
+    const rows = [
+      { _id: "bad", deletedAt: nowMs - 31 * ONE_DAY_MS_TEST, thumbStorageId: "bad-blob" },
+      { _id: "good", deletedAt: nowMs - 30 * ONE_DAY_MS_TEST - 1, thumbStorageId: "good-blob" },
+    ];
+    const { ctx, dbDelete } = makeJanitorMockCtx(rows, {
+      storageDeleteImpl: async (id: any) => {
+        if (id === "bad-blob") throw new Error("blob already gone");
+      },
+    });
+
+    const result = await pruneTrashBatchHandler(ctx, {}, nowMs);
+
+    expect(result.deletedCount).toBe(2);
+    const deletedIds = dbDelete.mock.calls.map((c) => c[0]);
+    expect(deletedIds).toContain("bad");
+    expect(deletedIds).toContain("good");
+  });
+});
+
+describe("D-08 janitor: source-level — never .collect(), always bounded by .take( (control pair)", () => {
+  const mediaSource = readFileSync(resolve(process.cwd(), "convex/media.ts"), "utf-8");
+
+  it("zero .collect() occurrences, paired with a .take( control that IS found (a zero from a broken pattern would be indistinguishable from a real zero without this)", () => {
+    expect(mediaSource.match(/\.collect\(\)/g)).toBeNull();
+    expect(mediaSource.match(/\.take\(/g)?.length ?? 0).toBeGreaterThan(0);
   });
 });
