@@ -4,6 +4,9 @@ source: 111-03-PLAN.md Task 3 (operator checkpoint, step 5)
 phase_origin: 111
 priority: low
 type: unexamined-observation
+status: closed
+closed: 2026-08-14
+closed_by: 114-11 operator checkpoint (D-18)
 ---
 
 # Devtools "1 Issue" badge on both Phase 111 surfaces — never opened
@@ -45,3 +48,34 @@ finding to its source, not a label applied on sight to something unread.
 Cheap to do — under a minute — and it converts an unknown into either a real finding or a
 documented non-issue. It was left open only because Phase 111's checkpoint was scoped to the
 console stream and closing it was not a blocker for that phase's goal.
+
+
+---
+
+## CLOSED 2026-08-14 — by the Phase 114 operator checkpoint (114-11, D-18)
+
+The Issues panel was opened. All four "How to close it" steps were performed on
+`localhost:5173/workspace-map`, and the entry is recorded verbatim in
+`.planning/phases/114-workspace-map-view/114-OPERATOR-CHECKPOINT.md` § 4:
+
+> **Chrome may soon delete state for intermediate websites in a recent navigation chain**
+> ... AFFECTED RESOURCES: 1 potentially tracking website — `accounts.dev`
+> *Learn more: Bounce tracking mitigations*
+
+**The answer is Clerk-related — but it is now earned rather than assumed, which is the exact
+distinction this file was written to preserve.** `accounts.dev` is Clerk's dev-instance
+domain. This file deliberately refused to label the unread badge "Clerk-related" on sight;
+that refusal was correct discipline even though the guess turned out right, because the
+alternative was a conclusion nobody had checked.
+
+One thing this file could not have known, and which changes the count: the Phase 114 run
+measured the page in a **control** — an incognito window with extensions disabled — and found
+`3 Issues` in the normal profile collapse to `1`, with 3 console errors collapsing to
+`No errors`. So the badge count seen at Phase 111 was partly extension noise. A single
+"N Issues" badge is not one finding; it is a mixture, and only the extensions-off control
+separates them.
+
+**Disposition:** not a defect in Phase 111's or Phase 114's code. Filed against the owning
+integration as `.planning/todos/pending/114-clerk-bounce-tracking-and-dev-keys.md`, which also
+records what was deliberately NOT investigated (whether the notice has any practical effect on
+auth, and whether it survives a move off `accounts.dev`).
