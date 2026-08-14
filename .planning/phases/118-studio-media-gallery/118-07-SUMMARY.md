@@ -259,6 +259,16 @@ control pair) and was never read, printed, or guessed.
   files passed, 17 skipped; 197 todo). The delta (+15 tests, +1 file) is exactly this plan's new
   test file; zero regressions elsewhere.
 
+## Self-Check: PASSED
+
+- FOUND: `hooks/studioWatch.mjs`
+- FOUND: `hooks/__tests__/studioWatch.test.mjs`
+- FOUND: `.planning/phases/118-studio-media-gallery/118-07-SUMMARY.md`
+- FOUND: `C:\Users\mandr\media-vault\gen` (and sibling `refs`/`styles`/`trash`)
+- FOUND commit `535f4966` (Task 2)
+- FOUND commit `1d48017f` (Task 3)
+- FOUND commit `cde7aa6e` (this summary)
+
 ---
 *Phase: 118-studio-media-gallery*
 *Completed: 2026-08-14*
