@@ -1,11 +1,13 @@
 /**
- * media.ts — the Studio gallery's read surface and D-08's browser write
- * surface (Phase 118, plan 118-04).
+ * media.ts — the Studio gallery's read surface, D-08's browser write
+ * surface, and (as of plan 118-05) the agent-only ingest write surface.
  *
  * Implements D-01 (thumbnail-transport neutrality — the browser never
  * knows which branch produced `thumbnailUrl`), D-02 (no query ever returns
  * the original file's bytes or a fetchable URL for them — `absPath` is a
- * copy-to-clipboard string only), D-07 (provenance absence is a derived
+ * copy-to-clipboard string only, and `ingestMedia` refuses an oversized
+ * thumbnail as a server-side backstop), D-06 (a duplicate `contentHash` is
+ * a zero-write idempotent no-op), D-07 (provenance absence is a derived
  * boolean the RENDERING layer turns into "No provenance recorded"; it is
  * never inferred from the filename and never stored as data) and D-08's
  * browser half (`toggleStar`/`softDelete`/`restore` as deliberately PUBLIC
@@ -13,17 +15,16 @@
  *
  * Mirrors convex/loom.ts's handler/export split: every query and mutation
  * is a plain exported async function wrapped by `query({...})` /
- * `mutation({...})` only for the generated API, so each is directly
- * unit-testable without booting the Convex runtime (convex/media.test.ts
- * drives the plain exports with a mock ctx, same technique
- * convex/workspaceHttp.test.ts and convex/loom.ts's own tests use).
+ * `mutation({...})` / `internalMutation({...})` only for the generated
+ * API, so each is directly unit-testable without booting the Convex
+ * runtime (convex/media.test.ts drives the plain exports with a mock ctx,
+ * same technique convex/workspaceHttp.test.ts and convex/loom.ts's own
+ * tests use).
  *
- * `ingestMedia`, the thumbnail `generateUploadUrl` wrapper, and the 30-day
- * janitor's permanent-delete are NOT in this file — they land in plan
- * 118-05 as `internalMutation`s, and 118-05 is also the plan that deploys
- * this module. This plan does not deploy.
+ * The 30-day janitor's permanent-delete is NOT in this file — it lands in
+ * plan 118-06.
  */
-import { mutation, query } from "./_generated/server";
+import { mutation, internalMutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 
 // ============================================================
@@ -349,4 +350,197 @@ export async function restoreHandler(ctx: MediaCtx, args: { id: any }) {
 export const restore = mutation({
   args: { id: v.id("media") },
   handler: async (ctx, args) => restoreHandler(ctx as MediaCtx, args),
+});
+
+// ============================================================
+// Agent-only ingest write surface — internalMutation (Task 1, plan 118-05)
+// ============================================================
+
+/** D-02: `mediaType` and `kind` are closed enums — an unknown value is a
+ * refusal, never a written-but-unvalidated string. */
+export const MEDIA_TYPES = ["image", "video", "audio"] as const;
+export const MEDIA_KINDS = ["gen", "ref", "style"] as const;
+
+/**
+ * D-02 server-side backstop: 200 KB, matching `hooks/studioWatch.mjs`'s
+ * (plan 118-08) own `THUMB_MAX_BYTES` client-side encoder cap by name and
+ * value. Two independent checks exist because "a full-size upload is a bug,
+ * not a tuning issue" (D-02) and a single client-side guard is one bug away
+ * from a 7.1 GB database growing without bound.
+ */
+export const THUMB_MAX_BYTES = 200 * 1024;
+
+export interface IngestMediaArgs {
+  contentHash: string;
+  filename: string;
+  absPath: string;
+  mediaType: string;
+  kind: string;
+  sizeBytes: number;
+  thumbBytes?: number;
+  thumbStorageId?: any;
+  thumbRelPath?: string;
+  width?: number;
+  height?: number;
+  durationSec?: number;
+  sidecar?: {
+    prompt?: string;
+    model?: string;
+    provider?: string;
+    style?: string;
+    project?: string;
+    params?: string;
+    tags?: string[];
+  };
+}
+
+/**
+ * D-05/D-06/D-07 ingest handler. Order is load-bearing — see the plan's
+ * numbered rationale, restated at each step below:
+ *
+ * 1. Dedup lookup FIRST, before any write or validation. A rescan of an
+ *    unchanged vault must produce zero writes; running enum/size checks
+ *    ahead of the dedup lookup would make a duplicate hash's re-ingest
+ *    behaviour depend on whether its (already-accepted) fields still pass
+ *    today's validation, which is not what "idempotent no-op" means.
+ * 2. Enum validation — refuse rather than write an unknown value.
+ * 3. D-02 blob-discipline backstop — refuse an oversized thumbnail
+ *    independent of the watcher's own cap.
+ * 4. D-07 — provenance fields are copied from `sidecar` verbatim when
+ *    present; when `sidecar` is absent (or every field on it is absent),
+ *    every provenance field is simply omitted (`undefined`) on the
+ *    inserted row. Nothing here ever derives a value from `filename` —
+ *    that is the specific failure this rule exists to prevent (a
+ *    filename-derived prompt would be indistinguishable from a real one).
+ * 5. Insert and return `{ ok: true, mediaId, created: true }`.
+ */
+export async function ingestMediaHandler(
+  ctx: MediaCtx,
+  args: IngestMediaArgs,
+  now: number
+) {
+  // 1. D-06 dedup FIRST — zero writes on a known hash.
+  const existing = await ctx.db
+    .query("media")
+    .withIndex("by_contentHash", (q: any) => q.eq("contentHash", args.contentHash))
+    .first();
+  if (existing) {
+    return { ok: true as const, mediaId: existing._id, created: false as const };
+  }
+
+  // 2. Enum validation.
+  if (!(MEDIA_TYPES as readonly string[]).includes(args.mediaType)) {
+    return { ok: false as const, error: "INVALID_ENUM" as const, field: "mediaType" };
+  }
+  if (!(MEDIA_KINDS as readonly string[]).includes(args.kind)) {
+    return { ok: false as const, error: "INVALID_ENUM" as const, field: "kind" };
+  }
+
+  // 3. D-02 blob-discipline backstop — bounds the THUMBNAIL's byte count,
+  // never the original's `sizeBytes`.
+  if (args.thumbBytes !== undefined && args.thumbBytes > THUMB_MAX_BYTES) {
+    return { ok: false as const, error: "THUMB_TOO_LARGE" as const };
+  }
+
+  // 4. D-07 provenance — verbatim from `sidecar` when present, every field
+  // omitted (not blanked, not derived from `filename`) when absent.
+  const sidecar = args.sidecar;
+  // `sidecar.style` is a curated-style SLUG on the wire (matching every
+  // other slug-keyed lookup in this repo, e.g. mediaModels.slug); it
+  // resolves to the schema's `styleId` reference via `mediaStyles`'
+  // `by_slug` index. An unrecognised slug resolves to `styleId` absent
+  // (same "absence is safe, never an error that skips the file" shape as
+  // D-07 itself) rather than refusing the whole ingest over a style label.
+  let styleId: any = undefined;
+  if (sidecar?.style) {
+    const styleRow = await ctx.db
+      .query("mediaStyles")
+      .withIndex("by_slug", (q: any) => q.eq("slug", sidecar.style))
+      .first();
+    if (styleRow) styleId = styleRow._id;
+  }
+
+  // 5. Insert.
+  const mediaId = await ctx.db.insert("media", {
+    filename: args.filename,
+    absPath: args.absPath,
+    mediaType: args.mediaType,
+    kind: args.kind,
+    contentHash: args.contentHash,
+    sizeBytes: args.sizeBytes,
+    starred: false,
+    createdAt: now,
+    model: sidecar?.model,
+    provider: sidecar?.provider,
+    prompt: sidecar?.prompt,
+    project: sidecar?.project,
+    styleId,
+    params: sidecar?.params,
+    tags: sidecar?.tags,
+    width: args.width,
+    height: args.height,
+    durationSec: args.durationSec,
+    thumbStorageId: args.thumbStorageId,
+    thumbRelPath: args.thumbRelPath,
+  });
+
+  return { ok: true as const, mediaId, created: true as const };
+}
+
+/**
+ * `internalMutation`, not `mutation` (same rule as `convex/loom.ts:140-148`'s
+ * `upsertPipeline`, restated here) — a plain `mutation` lands in the
+ * client-callable `api.` namespace, so any holder of the shipped
+ * `VITE_CONVEX_URL` could create a provenance-bearing row straight from
+ * devtools, bypassing `validateStudioAuth` in `studioHttp.ts` entirely. The
+ * UI never calls this; `hooks/studioWatch.mjs` (plan 118-08) reaches it only
+ * through the bearer-gated `POST /studio/ingest` route.
+ */
+export const ingestMedia = internalMutation({
+  args: {
+    contentHash: v.string(),
+    filename: v.string(),
+    absPath: v.string(),
+    mediaType: v.string(),
+    kind: v.string(),
+    sizeBytes: v.number(),
+    thumbBytes: v.optional(v.number()),
+    thumbStorageId: v.optional(v.id("_storage")),
+    thumbRelPath: v.optional(v.string()),
+    width: v.optional(v.number()),
+    height: v.optional(v.number()),
+    durationSec: v.optional(v.number()),
+    sidecar: v.optional(
+      v.object({
+        prompt: v.optional(v.string()),
+        model: v.optional(v.string()),
+        provider: v.optional(v.string()),
+        style: v.optional(v.string()),
+        project: v.optional(v.string()),
+        params: v.optional(v.string()),
+        tags: v.optional(v.array(v.string())),
+      })
+    ),
+  },
+  handler: async (ctx, args) => ingestMediaHandler(ctx as MediaCtx, args, Date.now()),
+});
+
+/**
+ * `internalMutation`, same rationale as `ingestMedia` immediately above —
+ * this mints a write-capable upload token, so only the bearer-gated route
+ * may reach it. Copies `convex/avatars.ts:63-68`'s `ctx.storage.*` call
+ * shape verbatim; the only change is the `mutation` -> `internalMutation`
+ * wrapper, because avatars are edited from the UI and Studio's thumbnails
+ * are not (D-01 note, `118-PATTERNS.md`).
+ *
+ * Included because the live D-01 branch is `convex-storage`
+ * (`118-D01-EVIDENCE.md`) — on the `local-static-origin` branch this
+ * function would be omitted entirely, since that fallback uploads nothing
+ * to Convex.
+ */
+export const generateThumbUploadUrl = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
 });

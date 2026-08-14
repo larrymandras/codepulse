@@ -32,6 +32,10 @@ import {
   toggleStarHandler,
   softDeleteHandler,
   restoreHandler,
+  ingestMediaHandler,
+  MEDIA_TYPES,
+  MEDIA_KINDS,
+  THUMB_MAX_BYTES,
 } from "./media";
 
 // ---------------------------------------------------------------------------
@@ -214,11 +218,272 @@ describe("Pitfall 4: toggleStar/softDelete/restore stay on the public side of th
   // The assertion above is meaningful only once this file ALSO contains at
   // least one internalMutation( export — otherwise "toggleStar isn't
   // internal" is true of a file with no internal/public split concept at
-  // all. Plan 118-05 adds ingestMedia / the upload-URL generator / the
-  // janitor's permanent-delete as internalMutation(...) exports here and
-  // converts this into a real assertion. Left as a named it.todo rather
-  // than a silently-skipped or vacuously-passing test.
-  it.todo(
-    "118-05: convex/media.ts contains at least one internalMutation( export — the control that makes the public/internal split assertion above meaningful"
-  );
+  // all. Plan 118-05 (this plan) adds ingestMedia / generateThumbUploadUrl
+  // as internalMutation(...) exports, which is what turns the assertion
+  // above from vacuous into real.
+  it("convex/media.ts contains at least one internalMutation( export, and ingestMedia specifically is internalMutation( — not mutation(", () => {
+    expect(mediaSource).toMatch(/internalMutation\(/);
+    expect(mediaSource).toMatch(/export const ingestMedia = internalMutation\(\{/);
+    expect(mediaSource).not.toMatch(/export const ingestMedia = mutation\(\{/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Task 1 (plan 118-05) — ingestMediaHandler: D-05/D-06/D-07/D-02 behaviour
+// ---------------------------------------------------------------------------
+
+/** Minimal mock ctx.db supporting exactly the query shapes ingestMediaHandler
+ * issues: a `by_contentHash` lookup, a `by_slug` lookup on mediaStyles, and
+ * `insert`. `first()` returns whatever the test wired for that table. */
+function makeIngestMockCtx(opts: {
+  existingByHash?: any;
+  styleRowBySlug?: Record<string, any>;
+} = {}) {
+  const insert = vi.fn(async (_table: string, _doc: any) => "new-media-id");
+  const db = {
+    query: (table: string) => ({
+      withIndex: (indexName: string, cb: (q: any) => any) => {
+        // Capture the eq() call's value via a tiny fake query builder.
+        let captured: { field: string; value: any } | undefined;
+        const q = {
+          eq: (field: string, value: any) => {
+            captured = { field, value };
+            return q;
+          },
+        };
+        cb(q);
+        return {
+          first: async () => {
+            if (table === "media" && indexName === "by_contentHash") {
+              return opts.existingByHash ?? null;
+            }
+            if (table === "mediaStyles" && indexName === "by_slug") {
+              return opts.styleRowBySlug?.[captured?.value] ?? null;
+            }
+            return null;
+          },
+        };
+      },
+    }),
+    insert,
+  };
+  return { ctx: { db } as any, insert };
+}
+
+describe("ingestMediaHandler — D-06 dedup is checked before anything else", () => {
+  it("existing contentHash -> zero writes, created:false, existing mediaId returned", async () => {
+    const { ctx, insert } = makeIngestMockCtx({ existingByHash: { _id: "existing-id" } });
+    const result = await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "abc123",
+        filename: "x.webp",
+        absPath: "C:\\media-vault\\gen\\x.webp",
+        mediaType: "not-even-a-valid-type", // deliberately invalid — must never be checked
+        kind: "also-invalid",
+        sizeBytes: 1000,
+      },
+      Date.now()
+    );
+    expect(result).toEqual({ ok: true, mediaId: "existing-id", created: false });
+    expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("ingestMediaHandler — enum validation", () => {
+  it("invalid mediaType -> INVALID_ENUM naming mediaType, zero writes", async () => {
+    const { ctx, insert } = makeIngestMockCtx();
+    const result = await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h1",
+        filename: "x.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "hologram",
+        kind: "gen",
+        sizeBytes: 1000,
+      },
+      Date.now()
+    );
+    expect(result).toEqual({ ok: false, error: "INVALID_ENUM", field: "mediaType" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("invalid kind -> INVALID_ENUM naming kind, zero writes", async () => {
+    const { ctx, insert } = makeIngestMockCtx();
+    const result = await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h2",
+        filename: "x.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "image",
+        kind: "bogus",
+        sizeBytes: 1000,
+      },
+      Date.now()
+    );
+    expect(result).toEqual({ ok: false, error: "INVALID_ENUM", field: "kind" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("control: every declared MEDIA_TYPES/MEDIA_KINDS value is accepted (reaches insert)", async () => {
+    for (const mediaType of MEDIA_TYPES) {
+      for (const kind of MEDIA_KINDS) {
+        const { ctx, insert } = makeIngestMockCtx();
+        const result = await ingestMediaHandler(
+          ctx,
+          {
+            contentHash: `h-${mediaType}-${kind}`,
+            filename: "x.webp",
+            absPath: "C:\\x.webp",
+            mediaType,
+            kind,
+            sizeBytes: 1000,
+          },
+          Date.now()
+        );
+        expect(result.ok).toBe(true);
+        expect(insert).toHaveBeenCalledTimes(1);
+      }
+    }
+  });
+});
+
+describe("ingestMediaHandler — D-02 THUMB_TOO_LARGE server-side backstop", () => {
+  it("thumbBytes over THUMB_MAX_BYTES -> THUMB_TOO_LARGE, zero writes", async () => {
+    const { ctx, insert } = makeIngestMockCtx();
+    const result = await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h3",
+        filename: "x.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "image",
+        kind: "gen",
+        sizeBytes: 1000,
+        thumbBytes: THUMB_MAX_BYTES + 1,
+      },
+      Date.now()
+    );
+    expect(result).toEqual({ ok: false, error: "THUMB_TOO_LARGE" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("control: thumbBytes at exactly THUMB_MAX_BYTES is accepted (reaches insert)", async () => {
+    const { ctx, insert } = makeIngestMockCtx();
+    const result = await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h4",
+        filename: "x.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "image",
+        kind: "gen",
+        sizeBytes: 1000,
+        thumbBytes: THUMB_MAX_BYTES,
+      },
+      Date.now()
+    );
+    expect(result.ok).toBe(true);
+    expect(insert).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ingestMediaHandler — D-07 provenance absence, never inferred from filename", () => {
+  it("no sidecar -> every provenance field omitted on the inserted row (adversarial filename)", async () => {
+    const { ctx, insert } = makeIngestMockCtx();
+    await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h5",
+        filename: "a-sunset-over-jagged-mountains-golden-hour.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "image",
+        kind: "gen",
+        sizeBytes: 1000,
+      },
+      Date.now()
+    );
+    expect(insert).toHaveBeenCalledTimes(1);
+    const [, doc] = insert.mock.calls[0];
+    expect(doc.prompt).toBeUndefined();
+    expect(doc.model).toBeUndefined();
+    expect(doc.provider).toBeUndefined();
+    expect(doc.project).toBeUndefined();
+    expect(doc.styleId).toBeUndefined();
+    expect(doc.prompt).not.toBe(doc.filename);
+  });
+
+  it("sidecar present -> provenance fields copied verbatim (control)", async () => {
+    const { ctx, insert } = makeIngestMockCtx();
+    await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h6",
+        filename: "media-a1b2c3.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "image",
+        kind: "gen",
+        sizeBytes: 1000,
+        sidecar: {
+          prompt: "a sunset over jagged mountains, golden hour",
+          model: "kling-3-omni",
+          provider: "higgsfield",
+          project: "seidr-demo",
+          params: JSON.stringify({ seed: 42 }),
+          tags: ["landscape", "golden-hour"],
+        },
+      },
+      Date.now()
+    );
+    expect(insert).toHaveBeenCalledTimes(1);
+    const [, doc] = insert.mock.calls[0];
+    expect(doc.prompt).toBe("a sunset over jagged mountains, golden hour");
+    expect(doc.model).toBe("kling-3-omni");
+    expect(doc.provider).toBe("higgsfield");
+    expect(doc.project).toBe("seidr-demo");
+    expect(doc.tags).toEqual(["landscape", "golden-hour"]);
+  });
+
+  it("sidecar.style resolves to styleId via the mediaStyles by_slug lookup when the slug matches", async () => {
+    const { ctx, insert } = makeIngestMockCtx({
+      styleRowBySlug: { "cinematic-noir": { _id: "style-123" } },
+    });
+    await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h7",
+        filename: "x.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "image",
+        kind: "gen",
+        sizeBytes: 1000,
+        sidecar: { style: "cinematic-noir" },
+      },
+      Date.now()
+    );
+    const [, doc] = insert.mock.calls[0];
+    expect(doc.styleId).toBe("style-123");
+  });
+
+  it("sidecar.style with an unrecognised slug resolves to styleId absent, never a refusal (control: unknown slug still inserts)", async () => {
+    const { ctx, insert } = makeIngestMockCtx({ styleRowBySlug: {} });
+    const result = await ingestMediaHandler(
+      ctx,
+      {
+        contentHash: "h8",
+        filename: "x.webp",
+        absPath: "C:\\x.webp",
+        mediaType: "image",
+        kind: "gen",
+        sizeBytes: 1000,
+        sidecar: { style: "does-not-exist" },
+      },
+      Date.now()
+    );
+    expect(result.ok).toBe(true);
+    const [, doc] = insert.mock.calls[0];
+    expect(doc.styleId).toBeUndefined();
+  });
 });

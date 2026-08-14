@@ -156,6 +156,27 @@ export function validateLoomAuth(request: Request): boolean {
 }
 
 /**
+ * Phase 118 (Studio) D-15. Fifth member of the same family, structurally
+ * identical to the four above — same fail-closed shape, same explicit
+ * ALLOW_ANON opt-in, same plain `===` comparison for the reason stated in
+ * validateGaldrAuth's doc-comment above.
+ *
+ * A separate key rather than reusing LOOM_API_KEY: this repo's established
+ * pattern is one key per producer, and a watcher that can mint
+ * provenance-bearing media rows is a different capability from a step
+ * emitter, even though both are driven by a host-side script rather than a
+ * browser.
+ */
+export function validateStudioAuth(request: Request): boolean {
+  const expectedKey = _env.STUDIO_API_KEY;
+  if (!expectedKey) {
+    return _env.STUDIO_ALLOW_ANON === "true";
+  }
+  const authHeader = request.headers.get("Authorization") ?? "";
+  return authHeader === `Bearer ${expectedKey}`;
+}
+
+/**
  * Return a 401 Unauthorized response.
  * Uses minimal fixed headers only — a 401 rejection does not negotiate CORS.
  */
