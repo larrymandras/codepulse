@@ -53,6 +53,7 @@ import {
   Link2,
   Waypoints,
   Radar,
+  Images,
 } from "lucide-react";
 
 export const iconComponents: Record<string, React.ElementType> = {
@@ -100,6 +101,7 @@ export const iconComponents: Record<string, React.ElementType> = {
   "link-2": Link2,   // Phase 117 — Bifröst page
   waypoints: Waypoints,   // Phase 119 — Loom page
   radar: Radar,   // Phase 114 — Workspace Map page
+  images: Images,   // Phase 118 — Studio page
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -135,6 +137,9 @@ export const navGroups: NavGroupConfig[] = [
       { to: "/galdr", label: "Galdr", icon: "sparkles", group: "COMMAND" },
       // Bifröst sits beside Galdr: both are Seiðr Suite curated-library surfaces.
       { to: "/bifrost", label: "Bifröst", icon: "link-2", group: "COMMAND" },
+      // Studio is the fourth Seiðr Suite surface (D-16): a curated media
+      // library alongside Galdr (prompts) and Bifröst (links).
+      { to: "/studio", label: "Studio", icon: "images", group: "COMMAND" },
       { to: "/reminders", label: "Reminders", icon: "clock", group: "COMMAND" },
       { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "COMMAND" },
       { to: "/forge", label: "Forge", icon: "flame", group: "COMMAND" },
