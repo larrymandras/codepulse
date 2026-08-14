@@ -52,6 +52,7 @@ import {
   Sparkles,
   Link2,
   Waypoints,
+  Radar,
 } from "lucide-react";
 
 export const iconComponents: Record<string, React.ElementType> = {
@@ -98,6 +99,7 @@ export const iconComponents: Record<string, React.ElementType> = {
   sparkles: Sparkles,   // Phase 116 — Galdr page
   "link-2": Link2,   // Phase 117 — Bifröst page
   waypoints: Waypoints,   // Phase 119 — Loom page
+  radar: Radar,   // Phase 114 — Workspace Map page
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -149,6 +151,7 @@ export const navGroups: NavGroupConfig[] = [
       { to: "/mcp-inventory", label: "MCP Inventory", icon: "server", group: "GRAPHS" },
       { to: "/knowledge-graph", label: "KG Explorer", icon: "share-2", group: "GRAPHS" },
       { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "GRAPHS" },
+      { to: "/workspace-map", label: "Workspace Map", icon: "radar", group: "GRAPHS" },
     ],
   },
   {
