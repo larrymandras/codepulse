@@ -1072,7 +1072,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 118-05-PLAN.md — D-15 bearer-gated `POST /studio/ingest`, the `internalMutation` write surface, and deploy (wave 4)
+- [x] 118-05-PLAN.md — D-15 bearer-gated `POST /studio/ingest`, the `internalMutation` write surface, and deploy (wave 4) — COMPLETE 2026-08-14, deployed ("No indexes are deleted by this push"); `ingestMedia`/`generateThumbUploadUrl` mutation-proved internal, no CORS/OPTIONS partner. **One live proof leg DEFERRED** (not failed): the authorized-request control needs `STUDIO_API_KEY` on the deployment, which is Larry's to set — 401-vs-404 discrimination proven live, the in-process suite proves the handler has a non-401 path
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
