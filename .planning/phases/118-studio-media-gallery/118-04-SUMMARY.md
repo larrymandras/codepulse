@@ -120,7 +120,9 @@ Each names exactly one field.
 - **Before** (118-03 baseline, quoted from `118-03-SUMMARY.md`): **4407 passed | 0 failed** (324 test files passed, 17 skipped; 197 todo)
 - **After** (this plan): **4435 passed | 0 failed** (326 test files passed, 17 skipped; 198 todo)
 
-The +28 tests / +2 files exceed this plan's own +13 tests / +1 file (`media.test.ts`) because the concurrent session active in this checkout today landed `118-07`'s `hooks/__tests__/studioWatch.test.mjs` in the same interval (visible in `git log --oneline -5` at session start: `535f4966 feat(118-07): add hooks/studioWatch.mjs scan core`, `1d48017f test(118-07): add control-paired scan tests for studioWatch.mjs`). Nothing this plan touched broke; 0 failed both before and after.
+The +28 tests / +2 files exceed this plan's own +13 tests / +1 file (`media.test.ts`) because `118-07`'s `hooks/__tests__/studioWatch.test.mjs` landed in the same interval (`535f4966`, `1d48017f`). Nothing this plan touched broke; 0 failed both before and after.
+
+**Attribution corrected by the orchestrator 2026-08-14.** This paragraph originally credited those `118-07` commits to "the concurrent session active in this checkout." That is **wrong**: `118-07` is a plan of THIS phase, executed by this phase's own wave-2 executor, and its commits are part of the Phase 118 record. The inference was reasonable from inside a fresh executor context — the commits genuinely did appear mid-session and were not this plan's — but it is a provenance error, and left standing it would tell a later reader (or the phase verifier) that another workstream built part of Phase 118. The concurrent session is real and *is* active in this checkout, but its only commit today is `0f29a778` (`src/components/EStopButton.tsx`), which is unrelated to this phase and swept nothing.
 
 ## Issues Encountered
 
