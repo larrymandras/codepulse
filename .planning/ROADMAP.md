@@ -1068,7 +1068,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 118-04-PLAN.md — `convex/media.ts` read surface + the three public browser-callable mutations (star/soft-delete/restore) (wave 3)
+- [x] 118-04-PLAN.md — `convex/media.ts` read surface + the three public browser-callable mutations (star/soft-delete/restore) (wave 3) — COMPLETE 2026-08-14, all reads `take()`-bounded (zero `.collect()` in code, control: 87 other convex files have it), mutations left PUBLIC per SEED-008
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
