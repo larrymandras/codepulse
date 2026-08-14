@@ -162,9 +162,19 @@ if ($SelfTest) {
     $failures++
   }
 
+  # The cadence is compared against the LITERAL 5, never against $RepeatMinutes. Deriving the
+  # expectation from the same variable that builds the trigger would make the check
+  # self-referential: raising $RepeatMinutes to 15 would move both sides and pass green while
+  # silently violating D-04, which locks the cadence rather than offering it as a knob.
   Write-Host ""
-  Write-Host ("(d) both trigger encodings must carry a {0}-minute repetition interval" -f $RepeatMinutes)
-  $expectedInterval = 'PT{0}M' -f $RepeatMinutes
+  Write-Host "(d) the cadence D-04 locks is 5 minutes, and both trigger encodings must carry it"
+  if ($RepeatMinutes -eq 5) {
+    Write-Host "    PASS RepeatMinutes = 5"
+  } else {
+    Write-Host ("    FAIL RepeatMinutes = {0}, but D-04 locks 5" -f $RepeatMinutes) -ForegroundColor Red
+    $failures++
+  }
+  $expectedInterval = 'PT5M'
   foreach ($blank in @($false, $true)) {
     $label = if ($blank) { 'blank-duration' } else { 'MaxValue-duration' }
     $trg = New-StudioWatchTrigger -BlankDuration:$blank
