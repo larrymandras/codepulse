@@ -183,6 +183,18 @@ describe("ForceGraphCanvas", () => {
     expect(typeof ref.current?.d3Force).toBe("function");
     expect(typeof ref.current?.d3ReheatSimulation).toBe("function");
   });
+
+  it("defaults cooldownTicks to 120 when no prop is supplied (backward-compatibility control)", () => {
+    render(<ForceGraphCanvas data={data} />);
+    expect(h.props!.cooldownTicks).toBe(120);
+  });
+
+  it("passes an explicit cooldownTicks={0} straight through (D-08 physics-off layout)", () => {
+    render(<ForceGraphCanvas data={data} cooldownTicks={0} />);
+    // Must be a strict toBe(0) check — a `??`/`||` default in the implementation
+    // would silently reinstate 120 since 0 is falsy.
+    expect(h.props!.cooldownTicks).toBe(0);
+  });
 });
 
 // ── Cluster force injection (SC#3 / SC#4) ────────────────────────────────────

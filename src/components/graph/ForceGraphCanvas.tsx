@@ -83,6 +83,10 @@ export interface ForceGraphCanvasProps {
    *  theme-resolved value (e.g. from useThemeColors().primaryAlpha18). Falls
    *  back to reading --primary@0.18 from the document if omitted. */
   defaultLinkColor?: string;
+  /** Simulation cooldown ticks before onEngineStop fires. Default 120 (existing
+   *  behavior, byte-identical for CodeVaultGraph/KG Explorer). Pass 0 for a
+   *  fully deterministic, physics-off layout (D-08). */
+  cooldownTicks?: number;
 }
 
 export const ForceGraphCanvas = forwardRef<
@@ -110,6 +114,7 @@ export const ForceGraphCanvas = forwardRef<
     communityColorFn,
     defaultNodeColor,
     defaultLinkColor,
+    cooldownTicks = 120,
   } = props;
 
   // Resolve the fallback node color: prefer parent-supplied defaultNodeColor (theme-aware),
@@ -323,7 +328,7 @@ export const ForceGraphCanvas = forwardRef<
         }}
         onBackgroundClick={() => onBackgroundClick?.()}
         onEngineStop={() => onEngineStop?.()}
-        cooldownTicks={120}
+        cooldownTicks={cooldownTicks}
         d3VelocityDecay={0.3}
         backgroundColor="transparent"
       />
