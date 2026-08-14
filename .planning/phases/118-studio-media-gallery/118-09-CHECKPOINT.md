@@ -1,3 +1,18 @@
+<!--
+  NOT A SUMMARY — plan 118-09 is INCOMPLETE (2 of 3 tasks).
+
+  Renamed from 118-09-SUMMARY.md by the orchestrator. A `*-*-SUMMARY.md` file is what
+  `gsd-sdk query phase-plan-index` uses to mark a plan done, and with it present 118-09
+  dropped out of the phase's `incomplete` list entirely — a resumed /gsd-execute-phase 118
+  would have SKIPPED it, leaving both scheduled tasks unregistered and D-04/D-14 unclosed
+  while the phase advanced to wave 7. Proven both ways: with the file named *-SUMMARY.md
+  the incomplete list read ["118-12","118-13","118-14","118-15"]; after the rename it reads
+  ["118-09","118-12",...], with 118-11 still has_summary=true as the control.
+
+  Task 3 (registering StudioWatch and MediaVaultBackup) requires an elevated PowerShell and
+  is Larry's to run. When it lands and the read-back assertions pass, rename this file back
+  to 118-09-SUMMARY.md and fill in requirements-completed with D-04 and D-14.
+-->
 ---
 phase: 118-studio-media-gallery
 plan: 09
