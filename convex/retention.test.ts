@@ -232,6 +232,41 @@ describe("RETENTION_DAYS", () => {
     });
   });
 
+  // Phase 118 D-03 — same control-pair shape as the "prompts and promptVersions
+  // are exempt by design" block above: an absence assertion alone would also
+  // pass vacuously if these tables were never created, or if RETENTION_DAYS
+  // failed to import. Asserting presence-in-schema FIRST is what makes the
+  // absence-from-RETENTION_DAYS assertion meaningful.
+  it("media, mediaStyles and mediaModels are exempt by design (Phase 118 D-03)", () => {
+    // Experimental: each of the three new Studio tables is a real schema
+    // table AND absent from RETENTION_DAYS.
+    for (const studioTable of ["media", "mediaStyles", "mediaModels"]) {
+      expect(schemaTables.has(studioTable), `${studioTable} must exist in schema.ts`).toBe(true);
+      expect(
+        Object.keys(RETENTION_DAYS),
+        `${studioTable} must NOT be a RETENTION_DAYS key`
+      ).not.toContain(studioTable);
+    }
+
+    // Control: a table that IS retention-bounded must be present in BOTH the
+    // schema set and RETENTION_DAYS. Read the control's name FROM
+    // RETENTION_DAYS itself (rather than hardcoding "runtime_events") so this
+    // control fails loudly if that key is ever renamed, instead of silently
+    // testing a key that no longer exists.
+    const controlTable = "runtime_events";
+    expect(
+      Object.keys(RETENTION_DAYS),
+      `harness liveness: ${controlTable} must still be a RETENTION_DAYS key for this control to mean anything`
+    ).toContain(controlTable);
+    expect(RETENTION_DAYS).toHaveProperty(controlTable);
+    expect(schemaTables.has(controlTable), `${controlTable} must exist in schema.ts`).toBe(true);
+
+    // The exemption must be documented in place, not merely absent — same
+    // "read retention.ts's own source" pattern the D-13 block above uses.
+    const retentionSource = readFileSync(resolve(process.cwd(), "convex/retention.ts"), "utf-8");
+    expect(retentionSource).toContain("Phase 118 D-03");
+  });
+
   it("every PRUNE_PREDICATES key is a real, pruned table (silent-no-op guard)", () => {
     // A predicate for a table that is never pruned (absent from RETENTION_DAYS)
     // or that doesn't exist in schema.ts is a silent no-op of the same class the

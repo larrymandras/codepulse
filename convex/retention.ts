@@ -139,6 +139,22 @@ export const RETENTION_DAYS: Record<string, number> = {
   // check, but is semantically wrong — pruneBatchV3 deletes by `_creationTime`
   // cutoff across the WHOLE table, so it would delete versions of
   // actively-edited prompts exactly as readily as abandoned ones.
+
+  // Phase 118 D-03: `media`, `mediaStyles` and `mediaModels` are deliberately
+  // EXEMPT from RETENTION_DAYS — do not add them as keys here. Same shape as
+  // the `prompts`/`promptVersions` exemption directly above: these are
+  // curated libraries, the opposite of a firehose, and pruneBatchV3 deletes
+  // by whole-table `_creationTime` cutoff — so a calendar rule would delete a
+  // starred image for the sole offence of being old.
+  // `media` — the table that actually grows — IS bounded, but by a different
+  // mechanism: the Phase 118 D-08 janitor's 30-day sweep over `deletedAt`,
+  // keyed by the operator's own delete action rather than by calendar age,
+  // the same "different mechanism, deliberately" structure the block above
+  // uses for `promptVersions`.
+  // Do NOT "fix" this by adding `media`, `mediaStyles` or `mediaModels` here:
+  // it would be syntactically valid and would pass retention.test.ts's
+  // table-existence check, but is semantically wrong — it would delete a
+  // starred, actively-curated image exactly as readily as an abandoned one.
 };
 
 // Phase 110 D-01/D-02/D-03: per-table predicate applied AFTER the batch query
