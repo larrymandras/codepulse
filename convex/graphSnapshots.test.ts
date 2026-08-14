@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
  * round-trip). Covers GH-01a..e from the validation architecture.
  */
 
-import { selectVersionDeletes, GRAPH_SNAPSHOT_KEEP_VERSIONS } from "./graphSnapshots";
+import { selectVersionDeletes, GRAPH_SNAPSHOT_KEEP_VERSIONS, projectSnapshotRow } from "./graphSnapshots";
 
 // ---------------------------------------------------------------------------
 // Mirror functions — replicate dispatch/receiver logic without a Convex runtime
@@ -265,6 +265,65 @@ describe("generatedAt float64 passthrough (GH-01e)", () => {
   it("integer epoch (no fractional seconds) also passes through", () => {
     const args = mapGraphSnapshotEvent({ generatedAt: 1750000000 }, 9999);
     expect(args.generatedAt).toBe(1750000000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 114 D-13: projectSnapshotRow — listSnapshots gains a `sources` field
+// ---------------------------------------------------------------------------
+
+describe("projectSnapshotRow (114 D-13)", () => {
+  const armsSource = {
+    source:           "arms-host",
+    kind:              "arms",
+    nodeCount:         12,
+    linkCount:         4,
+    emittedNodeCount:  12,
+    emittedLinkCount:  4,
+    truncated:         false,
+  };
+  const codeSource = {
+    source:           "graphify",
+    kind:              "code",
+    nodeCount:         3904,
+    linkCount:         5210,
+    emittedNodeCount:  3904,
+    emittedLinkCount:  5210,
+    truncated:         false,
+  };
+  const baseRow = {
+    snapshotId:  "astridr-project-graph",
+    nodeCount:   3904,
+    linkCount:   5210,
+    generatedAt: 1750312345.678901,
+    updatedAt:   1750312400.123456,
+    sources:     [armsSource, codeSource],
+  };
+
+  it("returns sources deep-equal to the input array — order and sub-fields preserved", () => {
+    const result = projectSnapshotRow(baseRow);
+    expect(result.sources).toEqual([armsSource, codeSource]);
+  });
+
+  it("returns the five pre-existing fields byte-identical (no-regression control)", () => {
+    const result = projectSnapshotRow(baseRow);
+    expect(result.snapshotId).toBe(baseRow.snapshotId);
+    expect(result.nodeCount).toBe(baseRow.nodeCount);
+    expect(result.linkCount).toBe(baseRow.linkCount);
+    expect(result.generatedAt).toBe(baseRow.generatedAt);
+    expect(result.updatedAt).toBe(baseRow.updatedAt);
+  });
+
+  it("returns exactly 6 keys — no stray extra or dropped field", () => {
+    const result = projectSnapshotRow(baseRow);
+    expect(Object.keys(result).sort()).toEqual(
+      ["generatedAt", "linkCount", "nodeCount", "snapshotId", "sources", "updatedAt"]
+    );
+  });
+
+  it("handles an empty sources array (row predates the arms probe)", () => {
+    const result = projectSnapshotRow({ ...baseRow, sources: [] });
+    expect(result.sources).toEqual([]);
   });
 });
 

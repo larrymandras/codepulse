@@ -311,6 +311,41 @@ export const getProjectGraph = query({
 });
 
 /**
+ * Pure projection of a stored graphSnapshots row to listSnapshots' public
+ * return shape. Exported (precedent: selectVersionDeletes above) so tests
+ * can assert against the real production function rather than a hand-copied
+ * mirror. Phase 114 D-13: adds `sources` so useArmsProbe (src/hooks) can
+ * derive arms-presence from `sources[].kind` without a new public query
+ * (CLAUDE.md § SEED-008 — every public Convex function here is callable
+ * with no credential, so a new public function is not free).
+ */
+export function projectSnapshotRow(r: {
+  snapshotId: string;
+  nodeCount: number;
+  linkCount: number;
+  generatedAt: number;
+  updatedAt: number;
+  sources: Array<{
+    source: string;
+    kind: string;
+    nodeCount: number;
+    linkCount: number;
+    emittedNodeCount: number;
+    emittedLinkCount: number;
+    truncated: boolean;
+  }>;
+}) {
+  return {
+    snapshotId:  r.snapshotId,
+    nodeCount:   r.nodeCount,
+    linkCount:   r.linkCount,
+    generatedAt: r.generatedAt,
+    updatedAt:   r.updatedAt,
+    sources:     r.sources,
+  };
+}
+
+/**
  * Lists all snapshot metadata rows (one per snapshotId).
  * Today at most one row; keyed for future multi-snapshotId support.
  */
@@ -318,12 +353,6 @@ export const listSnapshots = query({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("graphSnapshots").collect();
-    return rows.map((r) => ({
-      snapshotId:  r.snapshotId,
-      nodeCount:   r.nodeCount,
-      linkCount:   r.linkCount,
-      generatedAt: r.generatedAt,
-      updatedAt:   r.updatedAt,
-    }));
+    return rows.map(projectSnapshotRow);
   },
 });
