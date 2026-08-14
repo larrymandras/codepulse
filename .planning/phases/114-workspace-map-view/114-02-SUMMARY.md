@@ -111,3 +111,10 @@ None - no external service configuration required. This plan does not deploy (pe
 ---
 *Phase: 114-workspace-map-view*
 *Completed: 2026-08-14*
+
+## Self-Check: PASSED
+
+All created/modified files verified present on disk; all 3 commit hashes (93ef0396, 5de4c1d2, 035aa6db)
+verified present in `git log --oneline --all`; `.planning/STATE.md` and `.planning/ROADMAP.md` confirmed
+untouched by this plan's commits (`git diff --name-only f56d1b72 HEAD -- .planning/STATE.md .planning/ROADMAP.md`
+returned empty).
