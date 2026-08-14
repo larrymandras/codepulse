@@ -437,7 +437,7 @@ field), not a rename/refactor/migration phase.
 
 **If this table is empty:** N/A — two low-risk assumptions logged above; neither blocks planning.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `useThemeColors()` need a new `mutedForeground` field, or can Unclassified read
    `--muted-foreground` some other way?**
@@ -452,6 +452,9 @@ field), not a rename/refactor/migration phase.
    - Recommendation: extend `ThemeColors` as UI-SPEC specifies — consistent with the hook's own
      "Field names are STABLE... do not rename" comment (`:11-13`), which implies the intended pattern
      is to grow the interface, not read around it.
+   - **RESOLVED as recommended** — `114-01-PLAN.md` Task 3 extends `ThemeColors` with
+     `mutedForeground`; `114-09-PLAN.md` Task 2's department-fill test asserts Unclassified (and the
+     center hub) resolve to it rather than to a fifth peer hue.
 
 2. **Should `WorkspaceMapPanel` close automatically when its selected node is collapsed out of
    `expandedSet`?**
@@ -463,6 +466,10 @@ field), not a rename/refactor/migration phase.
    - Recommendation: close the panel (or fall back to a "this node is currently collapsed" state)
      when the selected node's key leaves `expandedSet`, matching the WR-02 precedent's spirit — flag
      for the plan as a small explicit task rather than an assumed default.
+   - **RESOLVED as recommended, split across two plans** — `114-09-PLAN.md` Task 1 clears the
+     selection when the selected node is collapsed out of the visible set (and Task 2 asserts the
+     selection callback fires with `null`), and `114-08-PLAN.md` Task 1 renders the
+     `Skeleton`/plain-text fallback for the resulting `null` rather than stale content.
 
 ## Environment Availability
 
