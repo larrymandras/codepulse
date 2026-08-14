@@ -23,7 +23,8 @@
  * 118-05 as `internalMutation`s, and 118-05 is also the plan that deploys
  * this module. This plan does not deploy.
  */
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { v, ConvexError } from "convex/values";
 
 // ============================================================
 // Shared bounds and helper types
@@ -251,4 +252,101 @@ export async function listModelsHandler(ctx: MediaCtx) {
 export const listModels = query({
   args: {},
   handler: async (ctx) => listModelsHandler(ctx as MediaCtx),
+});
+
+// ============================================================
+// D-08 browser write surface — deliberately PUBLIC mutations (Task 2)
+// ============================================================
+
+/**
+ * `toggleStar` / `softDelete` / `restore` are plain `mutation`s, not
+ * `internalMutation`s — the INVERSE of `convex/loom.ts`'s `upsertPipeline`
+ * rationale (`loom.ts:140-148`). There the concern was a plain mutation
+ * landing in the client-callable `api.` namespace and bypassing
+ * `validateLoomAuth` in `loomHttp.ts` entirely. Here there is no
+ * bearer-gated route to bypass in the first place: the UI-SPEC's card
+ * overlay and Sheet footer invoke these three directly from the browser
+ * via `useMutation`, and a single-click star toggle or move-to-trash
+ * cannot round-trip through a host-side agent — inventing a browser-side
+ * bearer flow for it is a shape that exists nowhere else in this repo
+ * (`118-RESEARCH.md` Pitfall 4).
+ *
+ * Trust argument, stated explicitly per CLAUDE.md's SEED-008 decision (the
+ * tailnet is the auth boundary; Clerk gates the UI, not the data — making
+ * one module's mutations auth-gated in isolation is precisely the shape
+ * SEED-008 rejected): this is a LOWER-trust surface than ingest. Ingest
+ * (118-05's `ingestMedia`) CREATES new provenance-bearing rows from
+ * watcher-scanned file bytes; these three PATCH exactly one boolean or
+ * timestamp field on an EXISTING row and can create nothing. Flipping a
+ * star or setting a reversible trash timestamp on a single-operator,
+ * tailnet-bounded instance is not a privilege this repo gates for its
+ * direct analogs either (`convex/galdr.ts`'s `toggleFavorite`,
+ * `Bifrost.tsx`'s archive button are both plain public mutations too).
+ *
+ * Functions that must NOT follow this pattern — they land in plan 118-05
+ * as `internalMutation`s, same rationale as `loom.ts`'s `upsertPipeline`:
+ * `ingestMedia` (creates rows from watcher-posted bytes), the thumbnail
+ * `generateUploadUrl` wrapper (mints a write-capable upload token), and
+ * the D-08 janitor's permanent-delete (irreversible, no UI control exists
+ * for it in this phase). This is the seam most likely to be got wrong
+ * later — said here at the seam, not only in the plan.
+ */
+export async function toggleStarHandler(ctx: MediaCtx, args: { id: any }) {
+  const existing = await ctx.db.get(args.id);
+  if (!existing) {
+    throw new ConvexError({ code: "NOT_FOUND", message: "media row not found" });
+  }
+  await ctx.db.patch(args.id, { starred: !existing.starred });
+  return { ok: true as const };
+}
+
+export const toggleStar = mutation({
+  args: { id: v.id("media") },
+  handler: async (ctx, args) => toggleStarHandler(ctx as MediaCtx, args),
+});
+
+/**
+ * Idempotent: an already-deleted row is a no-op that still returns
+ * success, never a second timestamp overwriting the original `deletedAt`
+ * — that would silently extend the 30-day grace period past what the
+ * first delete established (T-118-15).
+ *
+ * This mutation does NOT delete the thumbnail blob. D-08 requires the
+ * blob to survive until the janitor (118-05/118-06), precisely so Restore
+ * stays whole — the file moves to `trash\` on the watcher's next cycle,
+ * but nothing this mutation touches removes any bytes.
+ */
+export async function softDeleteHandler(ctx: MediaCtx, args: { id: any }) {
+  const existing = await ctx.db.get(args.id);
+  if (!existing) {
+    throw new ConvexError({ code: "NOT_FOUND", message: "media row not found" });
+  }
+  if (existing.deletedAt !== undefined) {
+    return { ok: true as const, alreadyDeleted: true };
+  }
+  await ctx.db.patch(args.id, { deletedAt: Date.now() });
+  return { ok: true as const, alreadyDeleted: false };
+}
+
+export const softDelete = mutation({
+  args: { id: v.id("media") },
+  handler: async (ctx, args) => softDeleteHandler(ctx as MediaCtx, args),
+});
+
+/** Idempotent on a row that is not currently deleted. */
+export async function restoreHandler(ctx: MediaCtx, args: { id: any }) {
+  const existing = await ctx.db.get(args.id);
+  if (!existing) {
+    throw new ConvexError({ code: "NOT_FOUND", message: "media row not found" });
+  }
+  if (existing.deletedAt === undefined) {
+    return { ok: true as const, alreadyRestored: true };
+  }
+  await ctx.db.patch(args.id, { deletedAt: undefined });
+  return { ok: true as const, alreadyRestored: false };
+}
+
+export const restore = mutation({
+  args: { id: v.id("media") },
+  handler: async (ctx, args) => restoreHandler(ctx as MediaCtx, args),
 });
