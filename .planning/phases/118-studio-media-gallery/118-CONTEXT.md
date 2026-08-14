@@ -163,6 +163,40 @@ existing media skills (D-11); a quarantine/needs-provenance lane (deferred).
      pre-flight row: the code itself throws, so this is an implementation task, not a port.
      Requires `FAL_KEY`, which stays in `.env`/1Password per D-12.
 
+  **AMENDMENT 2026-08-14 (plan 118-02, live measurement, confirmed with Larry).**
+  **THIRD_LEG: openart-mcp.** The probe called for by item 1 above has run and resolved. D-09's
+  requirement of **three genuinely different code shapes proven end-to-end is UNCHANGED and still
+  binding**; this amendment resolves only *which mechanism* the third leg uses.
+
+  - **Real generation tools appeared post-auth, and they are named:**
+    `mcp__openart__openart_generate_image` and `mcp__openart__openart_generate_video`. The pre-auth
+    surface was the expected two auth tools; post-auth it is 16 tools and the two auth tools are
+    **gone**, i.e. replaced rather than supplemented. Control (`github`, 8 tools) was stable across
+    both enumerations, so the difference is in OpenArt, not in the method. Capability was proven
+    beyond mere registration by one read-only authenticated call (`openart_account_get`) returning
+    a real payload. Full measurement: `118-OPENART-EVIDENCE.md`.
+  - **Environment variable NAME required: `MEDIA_VAULT_ROOT`** (where `/studio-generate` writes the
+    asset and its sidecar). This leg requires **no provider credential env var at all** — OpenArt
+    auth is an OAuth session held by the MCP client. Per D-12 the `recipeMd` for an OpenArt model
+    documents the MCP tool invocation (tool name + argument shape) and names no key, because none
+    exists. No key value is stored in Convex, in `.env`, or anywhere else for this leg.
+  - **Plan `118-13` must build** the fal.ai direct-API leg exactly as item 2 above locks it — this
+    amendment does not change 118-13's scope; the OpenArt leg it enables belongs to `118-14`, which
+    must invoke the two named MCP tools in-session and write the standard sidecar.
+  - **BLOCKING PREREQUISITE for wave 9, discovered at wave 1.** The account is plan **Free** with
+    **7 credits**, and `openart_model_cost` puts the cheapest generation of any kind at **10
+    credits** (`kling-3-omni` `text2image`, 1k/4:3); no configuration is affordable at 7. The leg is
+    therefore **capable but not currently executable** — which is why `second-direct-api` (defined
+    as "no usable OpenArt generation surface") is the wrong branch. Larry chose to top up the
+    balance rather than swap providers. `118-14` must re-read the balance via `openart_account_get`
+    and refuse honestly if it is below the quoted cost, never attempt a generation it cannot pay for.
+  - **Constraint on implementation:** MCP tools are invokable only inside an MCP-capable session.
+    `/studio-generate` is a Claude Code skill and satisfies this; `hooks/studioWatch.mjs` **cannot**
+    invoke MCP tools and must not be asked to — there is no headless path. The watcher's role is
+    unchanged: it ingests what lands in the vault, it does not generate. Model ids and per-mode
+    field schemas must be read from `openart_model_list` / `openart_model_form_get` and never
+    hand-constructed.
+
 - **D-10: Ástríðr as a generator is DEFERRED to `SEED-028` / astridr v29 — stated so the absence
   reads as a decision.** This phase writes the **sidecar contract document** she will implement
   against, so the deferral is a handoff rather than a gap. Making her blocking would put Studio's
