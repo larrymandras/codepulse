@@ -929,7 +929,7 @@ Plans:
 
 **Wave 1** *(no dependencies — four fully parallel plans, zero `files_modified` overlap)*
 
-- [ ] 114-01-PLAN.md - Shared substrate: additive `cooldownTicks` prop on `ForceGraphCanvas` (D-08), three `--dept-*` CSS tokens across `:root` + four themes, four new `ThemeColors` fields (D-06) (wave 1)
+- [x] 114-01-PLAN.md - Shared substrate: additive `cooldownTicks` prop on `ForceGraphCanvas` (D-08), three `--dept-*` CSS tokens across `:root` + four themes, four new `ThemeColors` fields (D-06) (wave 1) — complete 2026-08-14, additive-only edits verified non-breaking (CodeVaultGraph control test unchanged, index.css diff additions-only, build + tsc clean), see `114-01-SUMMARY.md`
 - [ ] 114-02-PLAN.md - The phase's only backend change — `listSnapshots` gains `sources` (D-13) — plus `useWorkspaceMap` (D-02) and the live `useArmsProbe` (D-11) (wave 1)
 - [ ] 114-03-PLAN.md - Wave 0 fixture: `workspaceMapFixture.ts` with an all-green default, four single-flag degraded presets and query-discriminating mock helpers, synthetic names only (D-16) (wave 1)
 - [ ] 114-04-PLAN.md - `AstridrLensEmptyState`, prop-driven across all three probe states so D-11's "live, not hardcoded" property is measured (D-10) (wave 1)
