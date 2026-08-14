@@ -22,7 +22,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { WorkspaceCoverageStrip } from "./WorkspaceCoverageStrip";
+import { WorkspaceCoverageStrip, isScanStale } from "./WorkspaceCoverageStrip";
 import {
   makeWorkspaceMapFixture,
   makeScannedRootsIncompleteFixture,
@@ -161,6 +161,77 @@ describe("WorkspaceCoverageStrip", () => {
     expect(screen.getByText("4 roots unclassified")).toBeInTheDocument();
     // No warn treatment anywhere — the only degraded input here would be
     // unclassifiedRootIds, and it must never trigger AlertTriangle.
+    expect(queryAlertTriangle()).not.toBeInTheDocument();
+  });
+});
+
+// -----------------------------------------------------------------------
+// D-17: the 36-hour staleness boundary, in epoch seconds.
+//
+// `isScanStale` takes an injected `now` (ms) — no system-clock mocking is
+// involved anywhere in this suite.
+// -----------------------------------------------------------------------
+describe("staleness boundary (D-17)", () => {
+  // A fixed reference "now", independent of the render-tests' FIXED_NOW
+  // above — 2026-08-14T12:00:00Z.
+  const NOW_MS = Date.UTC(2026, 7, 14, 12, 0, 0);
+  const NOW_SECONDS = NOW_MS / 1000;
+  const ONE_HOUR_SECONDS = 60 * 60;
+  const THIRTY_SIX_HOURS_SECONDS = 36 * ONE_HOUR_SECONDS;
+
+  it("generatedAt exactly 36h before now: NOT stale (exclusive boundary)", () => {
+    const generatedAtSeconds = NOW_SECONDS - THIRTY_SIX_HOURS_SECONDS;
+    expect(isScanStale(generatedAtSeconds, NOW_MS)).toBe(false);
+  });
+
+  it("generatedAt 36h + 1s before now: stale", () => {
+    const generatedAtSeconds = NOW_SECONDS - (THIRTY_SIX_HOURS_SECONDS + 1);
+    expect(isScanStale(generatedAtSeconds, NOW_MS)).toBe(true);
+  });
+
+  it("generatedAt 35h 59m 59s before now: NOT stale", () => {
+    const generatedAtSeconds = NOW_SECONDS - (THIRTY_SIX_HOURS_SECONDS - 1);
+    expect(isScanStale(generatedAtSeconds, NOW_MS)).toBe(false);
+  });
+
+  it("generatedAt 1 minute before now: NOT stale (healthy control)", () => {
+    const generatedAtSeconds = NOW_SECONDS - 60;
+    expect(isScanStale(generatedAtSeconds, NOW_MS)).toBe(false);
+  });
+
+  it("unit-sanity: the 36h-boundary generatedAt reads as the current year in UTC, not 1970", () => {
+    // The discriminator between a correct epoch-seconds interpretation and
+    // one that silently passed vacuously by reading the value as
+    // milliseconds (which would land the date in 1970). Compared against
+    // the injected NOW_MS's own year rather than the real wall clock, so
+    // this stays correct regardless of when the suite actually runs.
+    const generatedAtSeconds = NOW_SECONDS - THIRTY_SIX_HOURS_SECONDS;
+    const expectedYear = new Date(NOW_MS).getUTCFullYear();
+    expect(new Date(generatedAtSeconds * 1000).getUTCFullYear()).toBe(expectedYear);
+  });
+
+  // ---------------------------------------------------------------------
+  // Render-level: the strip's own "overdue" treatment, driven through the
+  // fixture's staleGeneratedAt knob.
+  // ---------------------------------------------------------------------
+
+  it("render: a 40h-old snapshot renders the overdue copy with warn treatment", () => {
+    const data = makeWorkspaceMapFixture({
+      staleGeneratedAt: NOW_SECONDS - 40 * ONE_HOUR_SECONDS,
+    });
+    render(<WorkspaceCoverageStrip data={data} now={NOW_MS} />);
+
+    expect(screen.getByText(DEGRADED_SNIPPETS.overdue)).toBeInTheDocument();
+    expect(queryAlertTriangle()).toBeInTheDocument();
+  });
+
+  it("render: a 2h-old snapshot does NOT render the overdue copy", () => {
+    const data = makeWorkspaceMapFixture({
+      staleGeneratedAt: NOW_SECONDS - 2 * ONE_HOUR_SECONDS,
+    });
+    render(<WorkspaceCoverageStrip data={data} now={NOW_MS} />);
+
+    expect(screen.queryByText(DEGRADED_SNIPPETS.overdue)).not.toBeInTheDocument();
     expect(queryAlertTriangle()).not.toBeInTheDocument();
   });
 });
