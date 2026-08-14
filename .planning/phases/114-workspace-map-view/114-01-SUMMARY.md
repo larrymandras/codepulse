@@ -111,3 +111,6 @@ None - no external service configuration required.
 ---
 *Phase: 114-workspace-map-view*
 *Completed: 2026-08-14*
+
+## Self-Check: PASSED
+All 5 modified source files and the SUMMARY.md itself found on disk; all 4 commits (1429c528, 10647005, 08135341, 127d007f) found in git log.
