@@ -297,15 +297,36 @@ describe("resolveConfig — STUDIO_API_KEY has no default (D-15)", () => {
   });
 });
 
+/**
+ * Isolates a spawned watcher from REAL HOST STATE.
+ *
+ * `resolveConfig`'s tier 2 reads `<homedir>/.claude/skills/studio/.env`, and
+ * `os.homedir()` honours `USERPROFILE` (verified directly: an overridden
+ * `USERPROFILE` changes `os.homedir()`'s return, an unset one does not). Both
+ * subprocess tests below previously inherited the operator's real home, so the
+ * exit-2 test only passed while that `.env` happened not to exist —
+ * `118-07-SUMMARY.md` recorded that dependency explicitly ("confirmed absent on
+ * this machine today"). The file was created on 2026-08-15 and the test went red
+ * without a line of watcher code changing.
+ *
+ * Pointing HOME/USERPROFILE at an empty temp directory makes tier 2 a guaranteed
+ * miss, so these two tests measure `main()`'s enforcement point and nothing else.
+ */
+function isolatedHomeEnv(extra) {
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "studio-watch-home-"));
+  fixtureRoots.push(fakeHome);
+  return { ...process.env, HOME: fakeHome, USERPROFILE: fakeHome, ...extra };
+}
+
 describe("main() — missing STUDIO_API_KEY is a configuration error, exit code 2 (D-15)", () => {
-  it("exits 2 when STUDIO_API_KEY is unset", () => {
+  it("exits 2 when STUDIO_API_KEY is unset (and no skill-local .env can supply one)", () => {
     const root = makeFixture();
     const result = spawnSync(
       process.execPath,
       [path.resolve("hooks/studioWatch.mjs")],
       {
         cwd: path.resolve("."),
-        env: { ...process.env, MEDIA_VAULT_ROOT: root, STUDIO_API_KEY: "" },
+        env: isolatedHomeEnv({ MEDIA_VAULT_ROOT: root, STUDIO_API_KEY: "" }),
         encoding: "utf-8",
       }
     );
@@ -320,7 +341,10 @@ describe("main() — missing STUDIO_API_KEY is a configuration error, exit code 
       [path.resolve("hooks/studioWatch.mjs")],
       {
         cwd: path.resolve("."),
-        env: { ...process.env, MEDIA_VAULT_ROOT: root, STUDIO_API_KEY: "dummy-value-not-real" },
+        // Same isolated home as the case above, so the ONLY difference between
+        // the two runs is the env var — otherwise this control could pass off a
+        // host `.env` as proof that the env-var path works.
+        env: isolatedHomeEnv({ MEDIA_VAULT_ROOT: root, STUDIO_API_KEY: "dummy-value-not-real" }),
         encoding: "utf-8",
       }
     );
