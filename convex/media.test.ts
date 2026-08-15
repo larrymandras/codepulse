@@ -35,6 +35,8 @@ import {
   ingestMediaHandler,
   pruneTrashBatchHandler,
   getMediaHashIndexHandler,
+  upsertModelCardHandler,
+  detectCredentialValue,
   MEDIA_TYPES,
   MEDIA_KINDS,
   THUMB_MAX_BYTES,
@@ -849,5 +851,191 @@ describe("D-08 host-side reconciliation (118-08): getMediaHashIndexHandler", () 
     // same as a failed read — a truncated active-row list could make a
     // real, still-live file look like an orphan.
     expect(atCapResult.truncated).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. D-12 recipe cards (118-12): upsertModelCard's internal-only declaration,
+//     slug-keyed upsert, and the secrets backstop's refuse/ACCEPT pair
+// ---------------------------------------------------------------------------
+
+/** Mock ctx.db supporting exactly the shapes upsertModelCardHandler issues:
+ * a `mediaModels` `by_slug` lookup, plus `insert` and `patch`. */
+function makeModelCardMockCtx(existingBySlug: Record<string, any> = {}) {
+  const insert = vi.fn(async (_table: string, _doc: any) => "new-model-id");
+  const patch = vi.fn(async (_id: any, _fields: any) => undefined);
+  const db = {
+    query: (table: string) => ({
+      withIndex: (indexName: string, cb: (q: any) => any) => {
+        let captured: { field: string; value: any } | undefined;
+        const q = {
+          eq: (field: string, value: any) => {
+            captured = { field, value };
+            return q;
+          },
+        };
+        cb(q);
+        return {
+          first: async () => {
+            if (table === "mediaModels" && indexName === "by_slug") {
+              return existingBySlug[captured?.value] ?? null;
+            }
+            return null;
+          },
+        };
+      },
+    }),
+    insert,
+    patch,
+  };
+  return { ctx: { db } as any, insert, patch };
+}
+
+const BASE_CARD = {
+  slug: "gpt_image_2",
+  name: "GPT Image 2",
+  type: "image",
+  provider: "higgsfield",
+  recipeMd: "Run `higgsfield generate create gpt_image_2 --prompt \"...\" --wait`.",
+  enabled: true,
+};
+
+describe("D-12 (118-12): upsertModelCard is declared internalMutation, never mutation", () => {
+  const mediaSource = readFileSync(resolve(process.cwd(), "convex/media.ts"), "utf-8");
+
+  it("harness liveness check: the source file was actually read and is non-trivial", () => {
+    // Without this, every assertion below would pass vacuously on an empty read.
+    expect(mediaSource.length).toBeGreaterThan(1000);
+    expect(mediaSource).toContain("export const list = query(");
+  });
+
+  it("upsertModelCard is internalMutation( — a public card writer would let anything routing to the host author an authoritative recipe (T-118-02)", () => {
+    expect(mediaSource).toMatch(/export const upsertModelCard = internalMutation\(\{/);
+    expect(mediaSource).not.toMatch(/export const upsertModelCard = mutation\(\{/);
+    // Control: this file DOES declare public mutations, so "not public" is a
+    // real distinction here rather than a property of a file with no split.
+    expect(mediaSource).toMatch(/export const toggleStar = mutation\(\{/);
+  });
+
+  it("the internalMutation's comment names the attended npx convex run invocation and forbids --push/--prod", () => {
+    expect(mediaSource).toContain("npx convex run internal.media.upsertModelCard");
+    expect(mediaSource).toContain("--env-file");
+    expect(mediaSource).toMatch(/Never add `--push` or `--prod`/);
+  });
+});
+
+describe("D-12: upsertModelCardHandler patches an existing slug and inserts a new one", () => {
+  it("an EXISTING slug patches in place — one row per slug, never a second", async () => {
+    const { ctx, insert, patch } = makeModelCardMockCtx({
+      gpt_image_2: { _id: "existing-model-id", slug: "gpt_image_2" },
+    });
+
+    const result = await upsertModelCardHandler(ctx, {
+      ...BASE_CARD,
+      name: "GPT Image 2 (revised)",
+    });
+
+    expect(result).toEqual({ ok: true, modelId: "existing-model-id", created: false });
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(patch.mock.calls[0][0]).toBe("existing-model-id");
+    expect(patch.mock.calls[0][1]).toMatchObject({ name: "GPT Image 2 (revised)" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("CONTROL — a NEW slug inserts, proving the patch branch above is a real branch and not the only path", async () => {
+    const { ctx, insert, patch } = makeModelCardMockCtx({
+      // A different slug exists, so the table is non-empty; the lookup must
+      // still miss for gpt_image_2.
+      some_other_model: { _id: "unrelated-id", slug: "some_other_model" },
+    });
+
+    const result = await upsertModelCardHandler(ctx, BASE_CARD);
+
+    expect(result).toEqual({ ok: true, modelId: "new-model-id", created: true });
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0]).toBe("mediaModels");
+    expect(insert.mock.calls[0][1]).toMatchObject({ slug: "gpt_image_2", enabled: true });
+    expect(patch).not.toHaveBeenCalled();
+  });
+});
+
+describe("D-12/T-118-04: the recipeMd secrets backstop REFUSES values and ACCEPTS names", () => {
+  it("REFUSES a credential NAME assigned a credential-shaped literal, and writes nothing", async () => {
+    const { ctx, insert, patch } = makeModelCardMockCtx();
+    // Synthetic, never a real key: letters+digits, key alphabet, >=16 chars.
+    const valueShaped = {
+      ...BASE_CARD,
+      recipeMd: "Export HIGGSFIELD_API_KEY=hf3x9q2v8m1p0zt4c7b before running the CLI.",
+    };
+
+    await expect(upsertModelCardHandler(ctx, valueShaped)).rejects.toThrow();
+    expect(insert).not.toHaveBeenCalled();
+    expect(patch).not.toHaveBeenCalled();
+  });
+
+  it("REFUSES a well-known provider key prefix and a JWT", () => {
+    expect(detectCredentialValue("use sk-abcd1234EFGH5678ijkl9012")).toBe("PROVIDER_KEY_PREFIX");
+    expect(detectCredentialValue("Authorization: Bearer ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5")).toBe(
+      "PROVIDER_KEY_PREFIX"
+    );
+  });
+
+  it("REFUSES a standalone high-entropy token of >=40 chars with no recognisable prefix, and ACCEPTS a 39-char one — the boundary control showing the length bound is real and deliberate", () => {
+    const token40 = "Xq7Lm2Pv9Rt4Yb6Nc1Zd8Ke3Wf5Hg0Js2Ma4Qu6Bv";
+    expect(token40.length).toBe(41);
+    expect(detectCredentialValue(`paste this: ${token40} and run`)).toBe("HIGH_ENTROPY_TOKEN");
+
+    // Documented non-catch (see detectCredentialValue's own comment): this is
+    // a BACKSTOP, not a boundary. A shorter token is not matched, and the
+    // guard says so rather than pretending to be exhaustive.
+    const token39 = token40.slice(0, 39);
+    expect(detectCredentialValue(`paste this: ${token39} and run`)).toBeNull();
+  });
+
+  it("ACCEPTS a card that NAMES FAL_KEY and HIGGSFIELD_API_KEY without any value — the control proving the guard discriminates rather than refusing everything", async () => {
+    const { ctx, insert } = makeModelCardMockCtx();
+    const namesOnly = {
+      ...BASE_CARD,
+      recipeMd: [
+        "## Credentials",
+        "",
+        "| Env var | Used by |",
+        "| --- | --- |",
+        "| `HIGGSFIELD_API_KEY` | the `higgsfield` CLI |",
+        "| `FAL_KEY` | the fal.ai direct-API leg |",
+        "",
+        "Both are read from the environment; this card stores no value.",
+        "Shell: `HIGGSFIELD_API_KEY=$HIGGSFIELD_API_KEY higgsfield generate create gpt_image_2 --wait`",
+        "Header: `Authorization: Key ${FAL_KEY}`",
+        "Placeholder form: `FAL_KEY=<your-key-here>`",
+        "Resolution order: read-from-process-environment-then-dotenv-file",
+      ].join("\n"),
+    };
+
+    // detectCredentialValue must return null — the discriminating assertion.
+    expect(detectCredentialValue(namesOnly.recipeMd)).toBeNull();
+
+    const result = await upsertModelCardHandler(ctx, namesOnly);
+    expect(result.ok).toBe(true);
+    expect(result.created).toBe(true);
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][1].recipeMd).toContain("HIGGSFIELD_API_KEY");
+    expect(insert.mock.calls[0][1].recipeMd).toContain("FAL_KEY");
+  });
+
+  it("the refusal names the RULE, never the matched text — echoing the match would disclose the credential it exists to protect", async () => {
+    const { ctx } = makeModelCardMockCtx();
+    const secretish = "hf3x9q2v8m1p0zt4c7b";
+    try {
+      await upsertModelCardHandler(ctx, {
+        ...BASE_CARD,
+        recipeMd: `HIGGSFIELD_API_KEY=${secretish}`,
+      });
+      throw new Error("expected upsertModelCardHandler to refuse");
+    } catch (err: any) {
+      const serialised = JSON.stringify(err?.data ?? err?.message ?? String(err));
+      expect(serialised).toContain("CREDENTIAL_IN_RECIPE");
+      expect(serialised).not.toContain(secretish);
+    }
   });
 });

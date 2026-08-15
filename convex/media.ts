@@ -800,3 +800,201 @@ export const pruneTrashBatch = internalMutation({
   },
   handler: async (ctx, args) => pruneTrashBatchHandler(ctx as JanitorCtx, args, Date.now()),
 });
+
+// ============================================================
+// D-12 recipe cards — the mediaModels write path (plan 118-12)
+// ============================================================
+
+/**
+ * D-12's secrets rule, enforced in code as a BACKSTOP — not as the control.
+ * The control is authoring discipline: `recipeMd` references environment
+ * variable NAMES only, and Convex stores no key material at all. This
+ * function exists because a card is an authoritative-looking instruction set
+ * that someone will later copy-paste from, and a pasted key inside one would
+ * be replicated by every reader.
+ *
+ * WHAT IT CATCHES (deliberately narrow — only shapes that are unambiguously a
+ * VALUE, never a name):
+ *   A. a credential-shaped NAME assigned a credential-shaped LITERAL, e.g.
+ *      `HIGGSFIELD_API_KEY=hf3x9q2v8m1p0zt4` — the assignment plus a value
+ *      that is >=16 chars of key alphabet AND mixes letters with digits;
+ *   B. a well-known provider key PREFIX with a long tail (`sk-`, `sk_live_`,
+ *      `sb_secret_`, `sbp_`, `ghp_`, `github_pat_`, `xox[bp]-`, `AKIA`,
+ *      `AIza`), or a three-segment JWT;
+ *   C. a standalone high-entropy token of >=40 chars mixing lower, upper and
+ *      digit — the generic backstop for a key with no recognisable prefix.
+ *
+ * WHAT IT DOES NOT CATCH, stated so nobody mistakes it for a boundary:
+ *   - a short secret, an all-lowercase secret, an all-digit PIN;
+ *   - a secret broken across lines, or embedded inside prose;
+ *   - anything in `name`/`slug`/`docsUrl`/any field other than `recipeMd`;
+ *   - a secret that simply does not look like one.
+ *
+ * WHAT IT MUST NEVER REFUSE, because naming the variable is exactly what D-12
+ * REQUIRES: a card that says "reads `FAL_KEY` from the environment", a table
+ * row listing `HIGGSFIELD_API_KEY`, a placeholder (`$FAL_KEY`,
+ * `${HIGGSFIELD_API_KEY}`, `<your-key>`), or a shell line that passes the
+ * variable by reference. `convex/media.test.ts`'s acceptance case is the
+ * control that proves this guard discriminates rather than refusing
+ * everything.
+ */
+const CREDENTIAL_NAME_ASSIGNMENT =
+  /\b[A-Za-z0-9_]*(?:API[_-]?KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL)[A-Za-z0-9_]*\s*[:=]\s*["'`]?([A-Za-z0-9_\-+/.=]{16,})/i;
+
+const CREDENTIAL_PREFIXES =
+  /\b(?:sk-[A-Za-z0-9_-]{16,}|sk_(?:live|test)_[A-Za-z0-9]{16,}|sb_secret_[A-Za-z0-9_-]{16,}|sbp_[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpsa]-[A-Za-z0-9-]{16,}|AKIA[A-Z0-9]{12,}|AIza[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})/;
+
+const HIGH_ENTROPY_TOKEN = /(?:^|[\s"'`(=:,])([A-Za-z0-9_-]{40,})(?:$|[\s"'`),.;])/;
+
+/** A captured "value" that is plainly a reference or a placeholder, not key
+ * material. Checked before the mixed-class test so `$FAL_KEY`-style
+ * indirection is accepted by name rather than by luck. */
+function looksLikePlaceholder(value: string): boolean {
+  if (/^[$<{*.]/.test(value)) return true;
+  if (/^[*.\-_x]+$/i.test(value)) return true;
+  return /^(?:your|my|the|some|example|sample|placeholder|redacted|changeme|null|undefined|none|xxx)/i.test(
+    value
+  );
+}
+
+/** Key material mixes letter classes with digits; prose separated by `-`
+ * (`read-from-environment`) does not. Requiring a digit AND a letter is what
+ * keeps this from firing on English. */
+function looksLikeKeyMaterial(value: string): boolean {
+  return /[A-Za-z]/.test(value) && /[0-9]/.test(value);
+}
+
+/** Returns the matched rule's name when `recipeMd` appears to contain a
+ * credential VALUE, or null when it does not. Exported for direct testing. */
+export function detectCredentialValue(recipeMd: string): string | null {
+  const prefixed = CREDENTIAL_PREFIXES.exec(recipeMd);
+  if (prefixed) return "PROVIDER_KEY_PREFIX";
+
+  const assigned = CREDENTIAL_NAME_ASSIGNMENT.exec(recipeMd);
+  if (assigned) {
+    const value = assigned[1];
+    if (!looksLikePlaceholder(value) && looksLikeKeyMaterial(value)) {
+      return "CREDENTIAL_NAME_ASSIGNED_A_VALUE";
+    }
+  }
+
+  const entropic = HIGH_ENTROPY_TOKEN.exec(recipeMd);
+  if (entropic) {
+    const token = entropic[1];
+    if (/[a-z]/.test(token) && /[A-Z]/.test(token) && /[0-9]/.test(token)) {
+      return "HIGH_ENTROPY_TOKEN";
+    }
+  }
+
+  return null;
+}
+
+export interface UpsertModelCardArgs {
+  slug: string;
+  name: string;
+  type: string;
+  provider: string;
+  recipeMd: string;
+  docsUrl?: string;
+  aspect?: string;
+  resolution?: string;
+  duration?: number;
+  enabled: boolean;
+}
+
+/**
+ * Keyed on `slug` (the `by_slug` index): an existing slug is PATCHED, a new
+ * slug is INSERTED. Never two rows for one slug — a card is a curated
+ * singleton, and a second row for the same model would make "which recipe is
+ * authoritative" unanswerable.
+ *
+ * D-12: a card exists only for a model that has actually been run end to end.
+ * Seeding from a provider's model list was rejected as transcription rather
+ * than verification, and `enabled` is not a substitute for having run the
+ * thing.
+ */
+export async function upsertModelCardHandler(ctx: MediaCtx, args: UpsertModelCardArgs) {
+  const offendingRule = detectCredentialValue(args.recipeMd);
+  if (offendingRule) {
+    // The error names the RULE, never the matched text — echoing the match
+    // back would put the credential into the caller's terminal and this
+    // repo's session transcript, which is the exact disclosure the guard
+    // exists to prevent (T-118-04).
+    throw new ConvexError({
+      code: "CREDENTIAL_IN_RECIPE",
+      rule: offendingRule,
+      message:
+        "recipeMd appears to contain a credential VALUE. D-12: reference environment-variable NAMES only; Convex stores no keys.",
+    });
+  }
+
+  const existing = await ctx.db
+    .query("mediaModels")
+    .withIndex("by_slug", (q: any) => q.eq("slug", args.slug))
+    .first();
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      name: args.name,
+      type: args.type,
+      provider: args.provider,
+      recipeMd: args.recipeMd,
+      docsUrl: args.docsUrl,
+      aspect: args.aspect,
+      resolution: args.resolution,
+      duration: args.duration,
+      enabled: args.enabled,
+    });
+    return { ok: true as const, modelId: existing._id, created: false as const };
+  }
+
+  const modelId = await ctx.db.insert("mediaModels", {
+    slug: args.slug,
+    name: args.name,
+    type: args.type,
+    provider: args.provider,
+    recipeMd: args.recipeMd,
+    docsUrl: args.docsUrl,
+    aspect: args.aspect,
+    resolution: args.resolution,
+    duration: args.duration,
+    enabled: args.enabled,
+  });
+  return { ok: true as const, modelId, created: true as const };
+}
+
+/**
+ * `internalMutation`, not `mutation` — the same rule as `ingestMedia` above,
+ * and for a sharper reason. A recipe card is an INSTRUCTION SET that
+ * `/studio-generate` executes next time: a public card writer would let
+ * anything that can route to this host author an authoritative-looking recipe
+ * (CLAUDE.md's self-hosted-Convex rule — every public Convex function is
+ * callable with no credential by anything that can reach the backend). The UI
+ * renders `mediaModels` read-only and calls nothing here.
+ *
+ * INVOKED ATTENDED, never automatically. Card authoring is a rare operator
+ * action performed once per model that has been proven end to end, via:
+ *
+ *   npx convex run internal.media.upsertModelCard '<json>' \
+ *     --env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile
+ *
+ * Never add `--push` or `--prod` to that command: `convex run` is read-only,
+ * but `--push` DEPLOYS the working tree first, which in a shared checkout
+ * ships another session's uncommitted work (the 2026-08-11 unauthorised
+ * production deploy).
+ */
+export const upsertModelCard = internalMutation({
+  args: {
+    slug: v.string(),
+    name: v.string(),
+    type: v.string(),
+    provider: v.string(),
+    recipeMd: v.string(),
+    docsUrl: v.optional(v.string()),
+    aspect: v.optional(v.string()),
+    resolution: v.optional(v.string()),
+    duration: v.optional(v.number()),
+    enabled: v.boolean(),
+  },
+  handler: async (ctx, args) => upsertModelCardHandler(ctx as MediaCtx, args),
+});
