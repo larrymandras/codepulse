@@ -7,7 +7,7 @@ plan that proved it. A leg with no section here is **unproven**, not "probably f
 | Leg | Shape | Plan | Status |
 |---|---|---|---|
 | higgsfield | CLI wrapper | `118-12` | **PROVEN** — see below |
-| fal.ai | direct API | `118-13` | not yet run |
+| fal.ai | direct API | `118-13` | **PROVEN** — see below |
 | openart | MCP tools in-session | `118-14` | not yet run (capable; balance-gated, see `118-OPENART-EVIDENCE.md`) |
 
 ---
@@ -236,3 +236,204 @@ renders — removing it would leave a gallery where the "No provenance recorded"
 example. The generated asset is likewise left in place: it is the evidence.
 
 Nothing was moved to `trash\`; `trashMoved=0 trashRestored=0 trashReclaimed=0` on the proving cycle.
+
+---
+
+## LEG: fal
+
+**Proven 2026-08-15 by plan `118-13`, attended.** Real money spent on Larry's fal.ai account with
+his explicit prior approval of the model id and the quoted cost.
+
+### The invocation
+
+```
+node hooks/studioFal.mjs \
+  --model fal-ai/flux/schnell \
+  --prompt "a lone cyan lighthouse on a black basalt shore, long exposure, cold northern light" \
+  --params '{"image_size":"square_hd","num_images":1,"output_format":"png"}' \
+  --out "C:\Users\mandr\media-vault\gen\studio_falflux_a1_20260815T175919.png"
+```
+
+- **Model id `fal-ai/flux/schnell`** (display name `FLUX.1 [schnell]`, `category: text-to-image`,
+  `status: active`, `license_type: commercial`) — **read off fal.ai's own listing endpoint**
+  (`GET https://api.fal.ai/v1/models`), never hand-constructed. All **15 pages / 1,450 model
+  endpoints** were walked and matched client-side.
+- **Control:** `fal-ai/definitely-not-a-real-model-9x7q2` came back **NOT FOUND** across the same
+  1,450 endpoints, so a "PRESENT" verdict carries information.
+- **Why the walk instead of the API's own find mode:** passing `model_id=<id>` was measured to be
+  **silently ignored** — a two-id request returned all 100 items of page one ("returned 100 of 2
+  requested"). An unknown query parameter that is dropped rather than rejected turns a find into an
+  unfiltered list, and every id you ask about then appears to exist. This is the same class of
+  false positive as a mis-spelled grep returning zero; it just fails in the opposite direction.
+- **Input schema transcribed from fal's own OpenAPI expansion** (`expand=openapi-3.0`,
+  schema `FluxSchnellInput`), not guessed: `prompt` (string, the only required field),
+  `image_size` (default `landscape_4_3`; the enum includes `square_hd`), `num_images` (1),
+  `output_format` (`jpeg`/`png`, default `jpeg`), `num_inference_steps` (4), `guidance_scale` (3.5),
+  `acceleration` (`none`), `enable_safety_checker` (true), `seed` (nullable).
+
+### Cost
+
+**$0.003** — $0.003 per megapixel, billed rounded **up** to the nearest megapixel, per fal's pricing
+documentation. `square_hd` is 1024x1024 = exactly 1 MP.
+
+Stated as a **published rate, not a per-call quote.** fal's models API carries **no pricing field at
+all** — every metadata key was enumerated and checked (`price-ish fields: NONE`). There is no
+equivalent of Higgsfield's `generate cost`, so unlike the higgsfield leg this figure could not be
+confirmed against the provider before spending, and that limitation is recorded rather than papered
+over.
+
+### The API contract, verified against fal's own documentation
+
+Source: <https://fal.ai/docs/documentation/model-apis/inference/queue> (fetched 2026-08-15).
+Context7 MCP was **not available in this session** — its tools are not in the loaded MCP surface —
+so a documentation fetch was used, and that substitution is stated rather than left implicit.
+
+- Submit: `POST https://queue.fal.run/{model_id}`.
+- **Auth header is `Authorization: Key <token>`, NOT `Bearer`.** Every other authenticated call in
+  this repo uses Bearer, so the house habit is the wrong answer here and would have produced a 401
+  indistinguishable from a bad key. Confirmed live: the models endpoint returned **HTTP 200** to
+  `Key <token>`.
+- Submit returns `request_id`, `response_url`, `status_url`, `cancel_url`, `queue_position`. The
+  client **polls and fetches using the URLs the API hands back**, falling back to the documented
+  template only when a field is absent.
+- Status values: `IN_QUEUE`, `IN_PROGRESS`, `COMPLETED`. Anything else is treated as terminal rather
+  than in-flight, so a state fal adds later cannot make the loop poll a dead job to the budget.
+
+### The file, and the sidecar
+
+`C:\Users\mandr\media-vault\gen\studio_falflux_a1_20260815T175919.png` — **998,230 bytes**,
+1024x1024 PNG.
+
+Sidecar written to the contract's **primary** form (media path + `.json`), 431 bytes, carrying
+`prompt`, `model` (`fal-ai/flux/schnell`), `provider` (`fal`), `project` (`studio`), `params` as a
+JSON **string**, and `tags` (`lighthouse`, `phase-118`, `fal-leg`).
+
+No credential value appears in it, and none can: the client returns only the model id, the prompt,
+the provider and the params actually sent.
+
+The basename is **33 characters**, deliberately under the 40-character threshold at which
+`detectCredentialValue`'s rule C fires — the documented false positive that the plan-12 control
+file's 47-character name trips.
+
+### Ingest
+
+| fact | value |
+|---|---|
+| `media:list` read **before** the sync | **2 rows** at 17:59:55 UTC — the fal asset absent |
+| generation completed | ~17:59:19 UTC (the `--out` timestamp) |
+| `/studio-sync` cycle | 18:00:03 UTC |
+| watcher line | `scanned=3 rehashed=1 ingested=1 duplicates=2 refused=0 thumbnailRefused=0 trashMoved=0 trashRestored=0 trashReclaimed=0`, exit 0 |
+| elapsed generation to row | **~44 seconds**, inside one 5-minute cycle |
+
+The pre-sync read is what **dates** the ingest to this cycle rather than to an earlier unattended
+`StudioWatch` fire; without it, a row that had been there all along would look identical.
+
+**Thumbnail measured, not read from a field:** the stored blob was fetched over HTTP and its bytes
+counted — **16,196 bytes**, `image/webp`, HTTP 200, comfortably under the 204,800-byte D-02 cap. The
+998,230-byte original never entered Convex.
+
+### The control pair, in one grid view
+
+Rendered at `/studio` on the auth-disabled dev server (`VITE_CLERK_PUBLISHABLE_KEY=` set from Git
+Bash — PowerShell's empty-string assignment *deletes* the variable and falls back to `.env.local` —
+port 5181, `--host 127.0.0.1`), stopped afterwards: `:5181` now returns **000** while `:5173` still
+returns **200**.
+
+| | fal.ai | higgsfield | sidecar-less control |
+|---|---|---|---|
+| `hasProvenance` | **true** | **true** | **false** |
+| `provider` / `model` | `fal` / `fal-ai/flux/schnell` | `higgsfield` / `z_image` | `<absent>` / `<absent>` |
+| `project` | `studio` | `studio` | `<absent>` |
+| `prompt` / `params` / `tags` | all populated | all populated | all `<absent>` |
+| `sizeBytes` and dims | 998,230 · 1024x1024 | 6,316,863 · 1024x1024 | 812 · 256x256 |
+
+**3 cards, exactly 1 `No provenance recorded` badge.** That ratio is the discriminating result: a
+broken sidecar reader would render three badges, and a reader that inferred provenance from the
+filename would render zero. "The image appeared" distinguishes neither. The page's own chips agree —
+`All 3`, `Image 3`, `Video 0`, `Audio 0`, `Starred 0`, `Missing Provenance 1`, `STYLES (0)`,
+`MODELS (2)` — and the two model chips read `fal-ai/flux/schnell` and `z_image`. **0 console
+errors.**
+
+### THE SHAPE DIFFERENCE — this leg's actual purpose
+
+D-09 is not "three backends work". It is **three genuinely different code shapes**, because a
+contract that only works for one shape is a contract shaped like that one caller. Concretely, this
+leg differs from the higgsfield leg at every layer:
+
+| | higgsfield leg | fal.ai leg |
+|---|---|---|
+| transport | spawn a CLI subprocess | HTTP `fetch` |
+| waiting | `--wait` — **the CLI blocks and does its own polling** | **this client owns the poll loop**: submit returns immediately with a request id |
+| completion signal | process exit plus a terminal `status` in JSON stdout | HTTP status parsing across N `status_url` GETs until `COMPLETED` |
+| failure handling | whatever the CLI's exit code says | explicit bounded retry with a transient/non-transient split; a 401 is never retried |
+| result bytes | a `result_url` handed back, downloaded by the shared step 3 | `response_url` then `images[0].url`, **streamed to disk by the client**, absorbing step 3 |
+| auth | OAuth 2.0 PKCE session in a local credentials file, **no env var at all** | `FAL_KEY` env var, `Authorization: Key <token>` |
+| params | flags on a command line | a JSON request body |
+
+**Did the sidecar contract need to change to accommodate it? NO — zero edits.** That is the finding,
+and it is the answer D-09 was asked to produce. Every field this leg emits (`prompt`, `model`,
+`provider`, `params`) already existed with the right wire type; section 9 already named fal.ai and
+`FAL_KEY` as the one leg needing a provider variable; and the params-must-be-a-JSON-string rule
+turned out to be **backend-independent** rather than an artifact of parsing CLI output. The contract
+is not CLI-shaped.
+
+The one adjustment landed in `~/.claude/skills/studio-generate/SKILL.md`, not in the contract: this
+leg **absorbs shared step 3**, because the result URL is only known after the poll completes and the
+client already has to stream those bytes — a second `curl` would be a redundant round trip over the
+same CDN object. The "Backend legs" preamble, which had asserted that steps 1/3/4/5 are shared by
+every leg, was corrected in the same pass; it went stale the moment this leg landed.
+
+### D-12: the second recipe card
+
+```
+npx convex run internal.media.upsertModelCard '<json>' --env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile
+```
+
+`FLAGS USED: ["--env-file"]` · `--push present? false` · `--prod present? false` — printed at
+invocation, so the claim is checkable rather than asserted.
+
+Verified deployed **before** use, control-paired: `internal.media.upsertModelCard '{}'` reaches
+`ArgumentValidationError: Object is missing the required field 'enabled'` and echoes the exact
+validator shape, while `internal.media.definitelyNotDeployed9x7q2` is not found.
+
+```
+1st run -> { "created": true,  "modelId": "pd7rdwwgcg9pj1hbhp2et17g1h8cgcky", "ok": true }
+2nd run -> { "created": false, "modelId": "pd7rdwwgcg9pj1hbhp2et17g1h8cgcky", "ok": true }
+```
+
+The second run is the **live** idempotency control: same `modelId`, `created:false` — patched, not a
+second row.
+
+**Every `mediaModels` row, cross-checked. TOTAL 2:**
+
+| slug | name | type | provider | enabled | aspect | resolution | docsUrl | recipeMd |
+|---|---|---|---|---|---|---|---|---|
+| `z_image` | Z Image | image | higgsfield | true | 1:1 | 1024x1024 | `<absent>` | 2,208 chars |
+| `fal-ai/flux/schnell` | FLUX.1 [schnell] (fal.ai) | image | fal | true | 1:1 | 1024x1024 | `<absent>` | 3,328 chars |
+
+**Zero cards for models nobody has run** (T-118-38). `docsUrl` is deliberately absent on both rather
+than a guessed URL.
+
+The card was **not pre-screened** against a local re-implementation of `detectCredentialValue`: the
+deployed guard accepting it IS the acceptance verdict, since a local copy of the regexes could
+diverge and green a card the real guard would refuse. Both stored cards were then pulled back **out
+of Convex** and scanned — **CLEAN**, with three known-positive controls tripping first. `FAL_KEY`
+appears in the card as a bare NAME only.
+
+### A shell trap worth recording
+
+`npx convex run <fn> "$(cat card.json)"` silently truncated a **pretty-printed** JSON file to a
+single `{`, producing `SyntaxError: JSON5: invalid end of input at 1:2`. The `npx` `.cmd` shim
+mangles a multi-line argument on Windows. **Minifying the JSON to a single line fixed it** — the
+same file, JSON-stringified with no newlines, was accepted verbatim.
+
+Separately control-verified before using command substitution at all, because the card's `recipeMd`
+contains backticks and dollar-parens: a file containing those literals arrived at `argv`
+**unexecuted**, so bash does not re-evaluate the result of a command substitution.
+
+### Cleanup
+
+The generated asset and its sidecar are **left in place** — they are the evidence. Nothing was moved
+to `trash\`; `trashMoved=0 trashRestored=0 trashReclaimed=0` on the proving cycle. The vault now
+holds three media files plus two sidecars, and any future test that assumes an empty vault or
+`scanned=0` is wrong.
