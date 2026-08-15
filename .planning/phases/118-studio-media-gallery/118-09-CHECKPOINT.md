@@ -166,6 +166,51 @@ return zero lines here and was not used.
 `git show --stat HEAD` was checked after each; every commit contained only the files named above.
 No concurrent-session files were swept in.
 
+## Task 3 — live registration and D-04 closure (orchestrator, 2026-08-15)
+
+Larry ran both installers from an elevated PowerShell. Both registered; read-backs off the
+REGISTERED objects (not the constructed ones) returned `State=Ready`, `DisallowStartIfOnBatteries`
+`False` on both, `LogonType=S4U`, action `wscript.exe` -> `run-hidden.vbs`, and
+`Triggers[0].Repetition.Interval` = `PT5M` for StudioWatch / empty for MediaVaultBackup (correct —
+it is daily; control: `ConvexNightlyRestart`, also daily, likewise reads empty).
+
+**The `[TimeSpan]::MaxValue` unknown resolved against the machine, not by argument.** It was
+REJECTED at Register time — `The task XML contains a value which is incorrectly formatted or out of
+range. (10,42):Duration:P99999999DT23H59M59S`. The blank-duration fallback registered and read back
+`PT5M`. The installer's try-both-then-verify design is what made this a logged fact instead of a
+silent misconfiguration.
+
+**D-04 IS CLOSED — proven by two unattended fires with an unintended before/after control:**
+
+```
+09:50:39-04:00  START  ->  EXIT=2  configuration error (STUDIO_API_KEY missing)
+09:55:39-04:00  START  ->  EXIT=0  success (cycle complete)
+                            scanned=0 ingested=0 duplicates=0 refused=0 trashMoved=0
+```
+
+Both `START` lines are 5m00s apart and neither was triggered by hand (`LastRunTime` had been the
+`11/30/1999` never-ran sentinel with `LastTaskResult=267011` = `SCHED_S_TASK_HAS_NOT_RUN`, and the
+first fire matched the predicted `NextRunTime` exactly). This is strictly better evidence than two
+clean fires would have been: the ONLY variable that changed between them was Larry writing
+`<homedir>/.claude/skills/studio/.env`, so the pair proves the 5-minute cadence, the file-tier key
+resolution, AND that the failure mode is honest rather than a silent unauthenticated POST.
+
+`scanned=0` is correct — the vault is empty until 118-12 generates the first asset.
+
+**A defective orchestrator probe was caught here, and it is the same class as this phase's other
+ten.** The first poll's exit condition counted LOG LINES and tripped at three — but those three
+lines were ONE fire (`START`, `EXIT`, detail). It would have reported the 5-minute repetition proven
+after a single failed fire. Caught by reading the log content rather than the poll's verdict;
+rewritten to count `START RepoRoot=` occurrences, which is the property rather than a proxy.
+
+**D-14 REMAINS OPEN and is the only thing keeping this plan incomplete.** MediaVaultBackup is
+registered and Ready, but has never fired. Larry's explicit call was to wait for the real 06:30
+scheduled fire rather than accept D-04's fire as proof of mechanism for a different task — a manual
+Run would prove the robocopy action, not the scheduler. Check `C:\Users\mandr\media-vault\backup.log`
+after 06:30 on 2026-08-16 for a line nobody triggered, and confirm `G:\My Drive\media-vault` holds
+mirrored content with `backup.log` ABSENT from it (its presence there would mean the exclusion
+silently stopped working).
+
 ## Verification
 
 | Check | Result |
