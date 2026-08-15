@@ -959,6 +959,17 @@ describe("D-12: upsertModelCardHandler patches an existing slug and inserts a ne
   });
 });
 
+/**
+ * SYNTHETIC CREDENTIAL FIXTURES — read this before filing a secret-scanner alert.
+ *
+ * Every key-shaped string in the block below is keyboard-mashed and was never a
+ * real credential: not copied from any `.env`, any provider account, or any live
+ * system. They exist because a detector cannot be tested without value-shaped
+ * INPUT — a guard proven only against clean text is a guard proven against
+ * nothing. This repo's own disclosure scan flags exactly these five lines plus
+ * one doc-comment example in `convex/media.ts`, and that is the expected,
+ * documented result rather than a leak.
+ */
 describe("D-12/T-118-04: the recipeMd secrets backstop REFUSES values and ACCEPTS names", () => {
   it("REFUSES a credential NAME assigned a credential-shaped literal, and writes nothing", async () => {
     const { ctx, insert, patch } = makeModelCardMockCtx();

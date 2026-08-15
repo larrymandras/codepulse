@@ -245,7 +245,22 @@ eight.
 
 **Credentials are never part of this contract.** A sidecar carries no key, and the `recipeMd` cards
 reference environment-variable **names** only — no key value is stored in Convex, in a sidecar, or
-in any card.
+in any card. `convex/media.ts`'s `upsertModelCard` carries a `detectCredentialValue` backstop that
+refuses a card whose `recipeMd` looks like it contains a credential *value*; it is a backstop, not
+a boundary, and its own comment enumerates what it does and does not catch.
+
+Some backends name **no** credential variable at all, and a card for one must say so rather than
+inventing a plausible name. Two of the three legs are like this:
+
+- **Higgsfield (CLI)** authenticates by OAuth 2.0 PKCE into a local credentials file
+  (`higgsfield auth login`); measured against the installed binary on 2026-08-15, it reads no
+  `HIGGSFIELD_API_KEY` and no `*_API_KEY` variable of any kind — only `HIGGSFIELD_CREDENTIALS_PATH`
+  to relocate that file. Naming `HIGGSFIELD_API_KEY` in its card would be a stale claim on the day
+  it was written.
+- **OpenArt (MCP)** holds its OAuth session in the MCP client and needs no provider variable either.
+- **fal.ai (direct API)** does need one: `FAL_KEY`, by name.
+
+The one variable every leg needs is `MEDIA_VAULT_ROOT`.
 
 ---
 
