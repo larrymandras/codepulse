@@ -824,6 +824,16 @@ export const pruneTrashBatch = internalMutation({
  *   C. a standalone high-entropy token of >=40 chars mixing lower, upper and
  *      digit — the generic backstop for a key with no recognisable prefix.
  *
+ * KNOWN FALSE POSITIVE, so a confusing refusal is diagnosable: rule C fires on
+ * any >=40-char run of key-alphabet characters mixing case and digits, and a
+ * long timestamped FILENAME qualifies — e.g.
+ * `studio_control-no-sidecar_a1_20260815T144553.png` (47 chars; the `T`
+ * separator supplies the uppercase). If a legitimate card is refused with
+ * `HIGH_ENTROPY_TOKEN`, look for a long filename before assuming a leak; break
+ * it across lines or shorten it. The threshold is deliberately NOT relaxed to
+ * accommodate this — a shorter bound would start missing real keys, and a
+ * false refusal is recoverable while a published key is not.
+ *
  * WHAT IT DOES NOT CATCH, stated so nobody mistakes it for a boundary:
  *   - a short secret, an all-lowercase secret, an all-digit PIN;
  *   - a secret broken across lines, or embedded inside prose;

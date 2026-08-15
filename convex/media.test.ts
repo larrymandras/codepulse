@@ -1003,6 +1003,19 @@ describe("D-12/T-118-04: the recipeMd secrets backstop REFUSES values and ACCEPT
     expect(detectCredentialValue(`paste this: ${token39} and run`)).toBeNull();
   });
 
+  it("documents the KNOWN false positive: a long timestamped filename trips rule C, so a confusing refusal is diagnosable rather than mysterious", () => {
+    // Found by this plan's own disclosure scan on 118-D09-EVIDENCE.md. Pinned
+    // as a test so the behaviour is a recorded property, not a surprise. The
+    // threshold is deliberately not relaxed: a false refusal is recoverable,
+    // a published key is not.
+    const filename = "studio_control-no-sidecar_a1_20260815T144553.png";
+    expect(filename.replace(/\.png$/, "").length).toBeGreaterThanOrEqual(40);
+    expect(detectCredentialValue(`see ${filename} in the vault`)).toBe("HIGH_ENTROPY_TOKEN");
+    // Control: a SHORTER filename of the same shape is accepted, so this is a
+    // length threshold rather than a blanket refusal of anything file-like.
+    expect(detectCredentialValue("see studio_ctl_a1_20260815T144553.png in the vault")).toBeNull();
+  });
+
   it("ACCEPTS a card that NAMES FAL_KEY and HIGGSFIELD_API_KEY without any value — the control proving the guard discriminates rather than refusing everything", async () => {
     const { ctx, insert } = makeModelCardMockCtx();
     const namesOnly = {
