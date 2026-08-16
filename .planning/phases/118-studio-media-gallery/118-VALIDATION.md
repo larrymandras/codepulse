@@ -1,10 +1,11 @@
 ---
 phase: 118
 slug: studio-media-gallery
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-08-13
+completed: 2026-08-16
 ---
 
 # Phase 118 — Validation Strategy
@@ -47,16 +48,16 @@ extended with `{plan}-{task}` IDs during execution.
 
 | Decision | Plan | Wave | Behavior | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |----------|------|------|----------|------------|-----------------|-----------|-------------------|-------------|--------|
-| D-01 | TBD | 1 | Upload round-trip returns HTTP 200 + non-zero body, **paired with the known-null control** (an orphaned `avatars` storage ID must still resolve `null` in the same run) | — | N/A | integration (live-stack proof, not unit-mockable) | scripted probe against the running backend, captured as `118-D01-EVIDENCE.md` | ❌ W0 | ⬜ pending |
-| D-02 | TBD | — | Every thumbnail in a produced `media` row is ≤200 KB; the browser never requests the original | T-118-03 | Refuse rather than upload oversized — cap enforced **before** any upload is attempted | unit (encoder-loop logic) + live assertion during D-09 proof rounds | `npx vitest run hooks/__tests__/studioWatch.test.mjs` | ❌ W0 | ⬜ pending |
-| D-03 | TBD | — | The three new tables are **absent** from `RETENTION_DAYS` and carry the exemption comment | — | N/A | unit | `npx vitest run convex/media.test.ts` | ❌ W0 | ⬜ pending |
-| D-05, D-06 | TBD | — | Content-hash dedup: rescanning an unchanged vault produces **zero writes**; a renamed/moved file with unchanged bytes still dedups | — | N/A | unit | `npx vitest run hooks/__tests__/studioWatch.test.mjs` | ❌ W0 | ⬜ pending |
-| D-07 | TBD | — | A file with no sidecar renders **"No provenance recorded"** — never blank, never inferred from filename | T-118-05 | Malformed/absent sidecar is a *defined state*, never a thrown error that skips the file | unit (query logic) + component test | `npx vitest run convex/media.test.ts` + `npx vitest run src/pages/Studio.test.tsx` | ❌ W0 | ⬜ pending |
-| D-08 | TBD | — | Soft-delete sets `deletedAt` and hides the row immediately; watcher moves `gen\`→`trash\`; Restore reverses both; 30-day janitor deletes blob + row + file **together** | — | N/A | unit (mutation + janitor batch logic) + integration (file-move, real fixture dir) | `npx vitest run convex/media.test.ts` + `npx vitest run hooks/__tests__/studioWatch.test.mjs` | ❌ W0 | ⬜ pending |
-| D-09 | TBD | — | One asset from **each** proven backend appears in the gallery with complete provenance within one watcher cycle | — | N/A | integration (live-stack, per-generator proof rounds) | scripted, captured as plan evidence | ❌ W0 | ⬜ pending |
-| D-15 | TBD | — | Unauthenticated POST to the ingest route **401s before touching the db**; no OPTIONS/CORS partner | T-118-01 | Fail-closed bearer check as the first statement in the handler | unit | `npx vitest run convex/studioHttp.test.ts` | ❌ W0 | ⬜ pending |
-| D-16 | TBD | — | `/studio` reachable from the COMMAND nav group via a **real click-through**, not a route-exists assertion | — | N/A | E2E | `npx playwright test e2e/studio.spec.ts` | ❌ W0 | ⬜ pending |
-| Pitfall 4 | TBD | — | Ingest / janitor / storage-URL functions are `internalMutation`; only star / soft-delete / restore are public `mutation` | T-118-02 | The declaration-level split **is** the access-control boundary | unit | `npx vitest run convex/media.test.ts` | ❌ W0 | ⬜ pending |
+| D-01 | 118-01 | 1 | Upload round-trip returns HTTP 200 + non-zero body, **paired with the known-null control** (an orphaned `avatars` storage ID must still resolve `null` in the same run) | — | N/A | integration (live-stack proof, not unit-mockable) | scripted probe against the running backend, captured as `118-D01-EVIDENCE.md` | ✅ exists | ✅ green |
+| D-02 | 118-08 | 5 | Every thumbnail in a produced `media` row is ≤200 KB; the browser never requests the original | T-118-03 | Refuse rather than upload oversized — cap enforced **before** any upload is attempted | unit (encoder-loop logic) + live assertion during D-09 proof rounds | `npx vitest run hooks/__tests__/studioWatch.test.mjs` | ✅ exists | ✅ green |
+| D-03 | 118-03 | 2 | The three new tables are **absent** from `RETENTION_DAYS` and carry the exemption comment | — | N/A | unit | `npx vitest run convex/media.test.ts` | ✅ exists | ✅ green |
+| D-05, D-06 | 118-07, 118-08 | 2, 5 | Content-hash dedup: rescanning an unchanged vault produces **zero writes**; a renamed/moved file with unchanged bytes still dedups | — | N/A | unit | `npx vitest run hooks/__tests__/studioWatch.test.mjs` | ✅ exists | ✅ green |
+| D-07 | 118-04, 118-10, 118-11 | 3, 5, 6 | A file with no sidecar renders **"No provenance recorded"** — never blank, never inferred from filename | T-118-05 | Malformed/absent sidecar is a *defined state*, never a thrown error that skips the file | unit (query logic) + component test | `npx vitest run convex/media.test.ts` + `npx vitest run src/pages/Studio.test.tsx` | ✅ exists | ✅ green |
+| D-08 | 118-06, 118-11 | 5, 6 | Soft-delete sets `deletedAt` and hides the row immediately; watcher moves `gen\`→`trash\`; Restore reverses both; 30-day janitor deletes blob + row + file **together** | — | N/A | unit (mutation + janitor batch logic) + integration (file-move, real fixture dir) | `npx vitest run convex/media.test.ts` + `npx vitest run hooks/__tests__/studioWatch.test.mjs` | ✅ exists | ✅ green |
+| D-09 | 118-12, 118-13, 118-14 | 7, 8, 9 | One asset from **each** proven backend appears in the gallery with complete provenance within one watcher cycle | — | N/A | integration (live-stack, per-generator proof rounds) | scripted, captured as plan evidence | ✅ exists | ✅ green |
+| D-15 | 118-05 | 4 | Unauthenticated POST to the ingest route **401s before touching the db**; no OPTIONS/CORS partner | T-118-01 | Fail-closed bearer check as the first statement in the handler | unit | `npx vitest run convex/studioHttp.test.ts` | ✅ exists | ✅ green |
+| D-16 | 118-10 | 5 | `/studio` reachable from the COMMAND nav group via a **real click-through**, not a route-exists assertion | — | N/A | E2E | `npx playwright test e2e/studio.spec.ts` | ✅ exists | ✅ green |
+| Pitfall 4 | 118-04, 118-05 | 3, 4 | Ingest / janitor / storage-URL functions are `internalMutation`; only star / soft-delete / restore are public `mutation` | T-118-02 | The declaration-level split **is** the access-control boundary | unit | `npx vitest run convex/media.test.ts` | ✅ exists | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -79,19 +80,19 @@ Concretely, these three pairs are mandatory and a plan may not substitute a sing
 
 ## Wave 0 Requirements
 
-- [ ] `hooks/__tests__/studioWatch.test.mjs` — D-05/D-06 (hashing/dedup), D-07 (sidecar pairing +
+- [x] `hooks/__tests__/studioWatch.test.mjs` — D-05/D-06 (hashing/dedup), D-07 (sidecar pairing +
       absence), D-02 (encoder-loop cap logic), D-08 (file-move halves)
-- [ ] `convex/media.test.ts` — D-03 (no `RETENTION_DAYS` key + exemption comment present), D-07
+- [x] `convex/media.test.ts` — D-03 (no `RETENTION_DAYS` key + exemption comment present), D-07
       (query-side provenance), D-08 (mutation halves + janitor batch shape), Pitfall 4
       (`internalMutation` vs `mutation` split)
-- [ ] `convex/studioHttp.test.ts` — D-15 (fail-closed auth, no CORS/OPTIONS). **Donor resolved
+- [x] `convex/studioHttp.test.ts` — D-15 (fail-closed auth, no CORS/OPTIONS). **Donor resolved
       2026-08-13: `convex/workspaceHttp.test.ts`, NOT `loomHttp.ts`** — `convex/loomHttp.ts` exists
       but ships no test file (control: `convex/workspaceHttp.test.ts` exists, so the check
       discriminates). `workspaceHttp.test.ts` demonstrates the control-first auth-gate pattern,
       field validation, and the plain-handler / `httpAction`-wrapped split that makes a Convex http
       route testable under Vitest at all.
-- [ ] `e2e/studio.spec.ts` — D-16 nav reachability + the control-paired D-07 and D-08 assertions above
-- [ ] Framework install: **none needed** — Vitest and Playwright are both already configured
+- [x] `e2e/studio.spec.ts` — D-16 nav reachability + the control-paired D-07 and D-08 assertions above
+- [x] Framework install: **none needed** — Vitest and Playwright are both already configured
 
 ---
 
@@ -108,12 +109,35 @@ Concretely, these three pairs are mandatory and a plan may not substitute a sing
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without an automated verify
-- [ ] Wave 0 covers all ❌ MISSING references above
-- [ ] No watch-mode flags in any command
-- [ ] Feedback latency < 90s
-- [ ] All three mandatory control pairs present in the plans
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without an automated verify
+- [x] Wave 0 covers all ❌ MISSING references above
+- [x] No watch-mode flags in any command
+- [x] Feedback latency < 90s
+- [x] All three mandatory control pairs present in the plans
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** SIGNED OFF 2026-08-16 at plan `118-15` Task 3, after `118-14` closed D-09.
+
+**Measured, not assumed.** Each box above was checked against something:
+
+- *All tasks have an automated verify* — **45 of 45** tasks across all 15 plans carry an
+  `<automated>` block. Controls: a `<nonexistent_tag>` probe returns 0/45, so the parser
+  discriminates rather than matching everything; and phase 113 returns 24/24, so 45/45 is this
+  project's planning standard rather than an artifact of this phase.
+- *No 3 consecutive tasks without an automated verify* — the longest consecutive run without one
+  is **0**.
+- *Wave 0 covers all ❌ MISSING references* — all four files exist:
+  `hooks/__tests__/studioWatch.test.mjs`, `convex/media.test.ts`, `convex/studioHttp.test.ts`,
+  `e2e/studio.spec.ts`.
+- *All three mandatory control pairs* — individually asserted and pointed at in
+  `118-GATE-EVIDENCE.md` § Mandatory control pairs, and machine-checked by
+  `scripts/check-118-15-task3.mjs` (which fails if any one of D-01 / D-07 / D-08 is not
+  individually claimed).
+
+**One honest caveat, recorded rather than smoothed over.** "Has an `<automated>` block" is a
+statement about PRESENCE, not about the check being meaningful. This phase found **nine** checks
+that passed while blind to the very thing they existed to assert — including two of its own
+`<automated>` verifies, and one module that exited 0 having done nothing. So 45/45 is the Nyquist
+rule satisfied as written, and it is not a claim that all 45 checks are individually sound. What
+supports the roll-up's PROVEN verdicts is the mutation evidence attached to each, not this count.
