@@ -135,6 +135,19 @@ export const upsertGraphSnapshot = internalMutation({
     }
 
     // 7. LAST: patch-or-insert meta doc with new activeVersion pointer.
+    //
+    // storedVersions is appended here, at the ONLY place a version's rows are
+    // created, so the list cannot drift from the rows it describes. Appending
+    // LAST — after every node and link insert above — matters: a crash midway
+    // leaves rows with no list entry, which the sweep ignores (it deletes only
+    // what the list names), whereas the reverse order would leave the list
+    // naming a version whose rows were never written and invite a delete pass
+    // against nothing.
+    //
+    // `?? []` is safe here and NOT the "absent means empty" trap the sweep
+    // refuses on: this path is writing a version it just created, so the list is
+    // correct from this point forward whether or not the doc predates the field.
+    const storedVersionsAfter = [...(existing?.storedVersions ?? []), newVersion];
     const metaDoc = {
       snapshotId:      args.snapshotId,
       activeVersion:   newVersion,
@@ -145,6 +158,7 @@ export const upsertGraphSnapshot = internalMutation({
       storedLinkCount: filteredLinks.length,
       generatedAt:     args.generatedAt,
       updatedAt:       args.receivedAt,
+      storedVersions:  storedVersionsAfter,
     };
     if (existing) {
       await ctx.db.patch(existing._id, metaDoc);
@@ -156,14 +170,32 @@ export const upsertGraphSnapshot = internalMutation({
 
 /**
  * Retention sweep — keeps the last GRAPH_SNAPSHOT_KEEP_VERSIONS versions per
- * snapshotId and deletes at most one stale version's rows per invocation.
+ * snapshotId and deletes at most MAX_DELETES_PER_INVOCATION rows of ONE stale
+ * version per invocation.
  *
- * One old version ≈ 13,500 rows — within the 16,000-doc write limit.
- * Two old versions ≈ 27,000 rows — over the limit (Pitfall 5 / Anti-pattern).
- * Rely on subsequent nightly runs to clear any remaining backlog (Research A2).
+ * THE BINDING LIMIT IS READS (4,096 per function execution), NOT WRITES.
+ * Everything above this line used to be reasoned about against the 16,000-doc
+ * WRITE ceiling — "one old version ≈ 13,500 rows, within the limit" — and that
+ * framing is what hid the real defect for a month. `ctx.db.delete()` counts as a
+ * read, and so does every row a query returns, so a pass that reads 13,500 rows
+ * to delete them blows the read ceiling long before the write one. Convex's own
+ * published limits table lists the write number and says nothing about this,
+ * which is why the empirical error message beat both the docs and this file's
+ * own comments.
  *
- * Scope index collects to identified candidate versions (never full-table
- * collect) to stay under the 32,000-doc query scan limit (Pitfall 5).
+ * Per invocation: 1 meta-table collect (few rows) + (CAP+1) node take + up to
+ * CAP deletes + (remaining+1) link take + deletes ≈ 3*CAP+2 = 3,002. Bounded by
+ * construction, independent of how many rows a version actually holds.
+ *
+ * Candidate versions come from `meta.storedVersions` — ONE field on a row
+ * already in hand. The previous implementation derived them by collecting every
+ * node row across every stored version (~70,000 reads), which is precisely why
+ * `crons.ts` disabled this from 2026-07-14. Same fix, same shape, as Phase 115
+ * applied to convex/workspace.ts.
+ *
+ * A meta doc with NO storedVersions is SKIPPED WITH A WARNING, never treated as
+ * an empty list — see the note at the skip. Run
+ * `internal.graphSnapshots.backfillGraphStoredVersions` once after deploying.
  */
 export const sweepGraphSnapshotVersions = internalMutation({
   args: {},
@@ -172,34 +204,34 @@ export const sweepGraphSnapshotVersions = internalMutation({
     const allMeta = await ctx.db.query("graphSnapshots").collect();
 
     for (const meta of allMeta) {
-      // THIS READ IS THE REASON THE CRON IS DISABLED (crons.ts). It collects
-      // EVERY node row across EVERY stored version for this snapshotId purely
-      // to derive the distinct version set — with GRAPH_SNAPSHOT_KEEP_VERSIONS
-      // at 7 that is up to seven full versions of nodes in one query. The
-      // comment above this function calling it "scope index collects to
-      // identified candidate versions (never full-table collect)" is true only
-      // in the sense that it is scoped to one snapshotId; it is NOT scoped to a
-      // version, which is what would make it bounded.
+      // CANDIDATE SELECTION IS NOW ONE FIELD READ ON A ROW WE ALREADY HAVE.
       //
-      // Phase 115 solved this shape in convex/workspace.ts by storing
-      // `storedVersions` on the meta doc, so candidate selection reads the meta
-      // row alone and never scans entity rows (see that file's header note).
-      // Applying the same fix here means a schema field plus a backfill, which
-      // is a Phase-87 change and out of Phase 115's scope — so the cron stays
-      // disabled and this comment records precisely why, rather than leaving a
-      // future session to re-enable it on the strength of a vague "times out".
-      const nodeRows = await ctx.db
-        .query("graphSnapshotNodes")
-        .withIndex("by_snapshot_version", (q) =>
-          q.eq("snapshotId", meta.snapshotId)
-        )
-        .collect();
+      // This used to .collect() EVERY graphSnapshotNodes row across EVERY stored
+      // version purely to derive the distinct version set — ~10,000 rows per
+      // version, up to 7 kept, so ~70,000 reads against a 4,096-read ceiling.
+      // That is the mechanism behind "times out on self-hosted Convex", and it
+      // is why this cron sat disabled from 2026-07-14. Fixed the way Phase 115
+      // fixed the identical shape in convex/workspace.ts.
+      //
+      // ABSENT IS NOT EMPTY. A meta doc written before `storedVersions` existed
+      // has no list, and treating that as [] would make selectVersionDeletes
+      // return nothing — a sweep that deletes forever-nothing while reporting
+      // success, which is strictly worse than the timeout it replaced because it
+      // is silent. Skip and say so; `backfillGraphStoredVersions` fills it in.
+      if (meta.storedVersions === undefined) {
+        console.warn(
+          `[sweepGraphSnapshotVersions] skipping "${meta.snapshotId}": storedVersions is absent ` +
+            `(meta doc predates the field). Run internal.graphSnapshots.backfillGraphStoredVersions ` +
+            `first — treating absent as an empty list would silently prune nothing forever.`
+        );
+        continue;
+      }
 
-      const versionSet = new Set<number>(nodeRows.map((r) => r.version));
-      const allVersions = Array.from(versionSet);
-
-      const toDelete = selectVersionDeletes(allVersions, GRAPH_SNAPSHOT_KEEP_VERSIONS);
-      if (toDelete.length === 0) continue;
+      const toDelete = selectVersionDeletes(meta.storedVersions, GRAPH_SNAPSHOT_KEEP_VERSIONS);
+      if (toDelete.length === 0) {
+        if (meta.pruneIncomplete) await ctx.db.patch(meta._id, { pruneIncomplete: false });
+        continue;
+      }
 
       // Process AT MOST ONE stale version per invocation (mutation write limit).
       const versionToDelete = toDelete[0];
@@ -226,6 +258,9 @@ export const sweepGraphSnapshotVersions = internalMutation({
         )
         .take(MAX_DELETES_PER_INVOCATION + 1);
 
+      // The extra row is the signal, not a row to delete: more nodes remain.
+      let moreRemain = staleNodes.length > MAX_DELETES_PER_INVOCATION;
+
       for (const node of staleNodes) {
         if (deleteCount >= MAX_DELETES_PER_INVOCATION) break;
         await ctx.db.delete(node._id);
@@ -234,21 +269,137 @@ export const sweepGraphSnapshotVersions = internalMutation({
 
       // Links share the SAME per-invocation budget, so only take what is left.
       const linkBudget = MAX_DELETES_PER_INVOCATION - deleteCount;
-      if (linkBudget <= 0) continue;
+      if (linkBudget > 0) {
+        const staleLinks = await ctx.db
+          .query("graphSnapshotLinks")
+          .withIndex("by_snapshot_version", (q) =>
+            q.eq("snapshotId", meta.snapshotId).eq("version", versionToDelete)
+          )
+          .take(linkBudget + 1);
 
-      const staleLinks = await ctx.db
-        .query("graphSnapshotLinks")
-        .withIndex("by_snapshot_version", (q) =>
-          q.eq("snapshotId", meta.snapshotId).eq("version", versionToDelete)
-        )
-        .take(linkBudget + 1);
+        if (staleLinks.length > linkBudget) moreRemain = true;
 
-      for (const link of staleLinks) {
-        if (deleteCount >= MAX_DELETES_PER_INVOCATION) break;
-        await ctx.db.delete(link._id);
-        deleteCount++;
+        for (const link of staleLinks) {
+          if (deleteCount >= MAX_DELETES_PER_INVOCATION) break;
+          await ctx.db.delete(link._id);
+          deleteCount++;
+        }
+      } else {
+        // The node deletes consumed the whole budget, so this version's links
+        // were not even LOOKED at. That is unambiguously "more remains" — and
+        // getting this wrong is how a version gets dropped from storedVersions
+        // while its link rows survive forever as unreachable orphans that no
+        // later pass will ever select, because selection is by version.
+        moreRemain = true;
       }
+
+      if (moreRemain) {
+        // Cap hit — leave versionToDelete IN storedVersions so the next call
+        // re-selects it and finishes. NEVER raise the cap to "finish it this
+        // time": that is the mass delete CLAUDE.md forbids on this self-hosted
+        // instance, and it is what put the dashboard down for days in
+        // 2026-07-21/22.
+        if (!meta.pruneIncomplete) await ctx.db.patch(meta._id, { pruneIncomplete: true });
+        continue;
+      }
+
+      // Fully removed — and ONLY now does the version leave the list. Ordering
+      // is the crash-safety property: a crash between the deletes above and this
+      // patch leaves a stale entry naming an already-emptied version, which the
+      // next call re-selects, finds nothing for, and completes. The reverse
+      // order would drop the entry first and strand any surviving rows.
+      await ctx.db.patch(meta._id, {
+        storedVersions: meta.storedVersions.filter((ver) => ver !== versionToDelete),
+        pruneIncomplete: false,
+      });
     }
+  },
+});
+
+/**
+ * One-shot backfill for `graphSnapshots.storedVersions` (added 2026-08-16).
+ *
+ * WHY IT CANNOT JUST DERIVE THE LIST THE OLD WAY: the whole point of the field
+ * is that scanning entity rows to find versions is what blew the read ceiling.
+ * A backfill that did that would fail for exactly the same reason, on exactly
+ * the data it exists to repair.
+ *
+ * So it PROBES instead: for each candidate version in a bounded window ending at
+ * `activeVersion`, take ONE row. Present ⇒ that version has rows. That is at
+ * most `windowSize + 1` reads per snapshot regardless of how many rows a version
+ * holds — 10,000 rows or 10, the probe costs the same.
+ *
+ * The window does NOT early-stop on a miss. Versions can be non-contiguous (an
+ * earlier partial sweep leaves gaps), and stopping at the first gap would
+ * silently truncate the list, which reads as "those versions are already gone"
+ * and makes them permanently unreachable by the sweep.
+ *
+ * TRUNCATION IS REPORTED, NEVER SILENT. If the OLDEST probed version still has
+ * rows, versions older than the window may exist and the result says so with
+ * `windowTruncated: true`. Re-run with a larger `window` to reach them.
+ *
+ * Idempotent: re-running recomputes and re-patches the same list. Deletes
+ * nothing, ever — it is a pure read-and-patch-one-field.
+ */
+export const backfillGraphStoredVersions = internalMutation({
+  args: {
+    window: v.optional(v.number()),
+    /** Recompute even where storedVersions is already populated. Default false:
+     * the maintained field is authoritative once it exists, and clobbering it
+     * from a probe would discard a correct in-flight `pruneIncomplete` state. */
+    force: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const window = Math.max(1, Math.min(args.window ?? 60, 500));
+    const force = args.force ?? false;
+    const allMeta = await ctx.db.query("graphSnapshots").collect();
+
+    const results: Array<{
+      snapshotId: string;
+      activeVersion: number;
+      found: number[];
+      windowTruncated: boolean;
+      skipped: boolean;
+    }> = [];
+
+    for (const meta of allMeta) {
+      if (meta.storedVersions !== undefined && !force) {
+        results.push({
+          snapshotId: meta.snapshotId,
+          activeVersion: meta.activeVersion,
+          found: meta.storedVersions,
+          windowTruncated: false,
+          skipped: true,
+        });
+        continue;
+      }
+
+      const oldest = Math.max(1, meta.activeVersion - window + 1);
+      const found: number[] = [];
+      for (let ver = oldest; ver <= meta.activeVersion; ver++) {
+        const probe = await ctx.db
+          .query("graphSnapshotNodes")
+          .withIndex("by_snapshot_version", (q) =>
+            q.eq("snapshotId", meta.snapshotId).eq("version", ver)
+          )
+          .take(1);
+        if (probe.length > 0) found.push(ver);
+      }
+
+      // If the oldest version in the window still has rows, older ones may too.
+      const windowTruncated = found.length > 0 && found[0] === oldest && oldest > 1;
+
+      await ctx.db.patch(meta._id, { storedVersions: found });
+      results.push({
+        snapshotId: meta.snapshotId,
+        activeVersion: meta.activeVersion,
+        found,
+        windowTruncated,
+        skipped: false,
+      });
+    }
+
+    return { window, snapshots: results };
   },
 });
 

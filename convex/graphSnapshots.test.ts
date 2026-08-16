@@ -6,7 +6,13 @@ import { describe, it, expect } from "vitest";
  * round-trip). Covers GH-01a..e from the validation architecture.
  */
 
-import { selectVersionDeletes, GRAPH_SNAPSHOT_KEEP_VERSIONS, projectSnapshotRow } from "./graphSnapshots";
+import {
+  selectVersionDeletes,
+  GRAPH_SNAPSHOT_KEEP_VERSIONS,
+  projectSnapshotRow,
+  sweepGraphSnapshotVersions,
+  backfillGraphStoredVersions,
+} from "./graphSnapshots";
 
 // ---------------------------------------------------------------------------
 // Mirror functions — replicate dispatch/receiver logic without a Convex runtime
@@ -336,3 +342,364 @@ it.todo("upsertGraphSnapshot re-POST same snapshotId → activeVersion increment
 it.todo("getProjectGraph returns null before any ingest (DB round-trip)");
 it.todo("getProjectGraph returns active version nodes/links after ingest (DB round-trip)");
 it.todo("sweepGraphSnapshotVersions deletes stale versions, keeps last 7 (DB round-trip)");
+
+// ---------------------------------------------------------------------------
+// storedVersions on the meta doc (2026-08-16) — the fix that let crons.ts
+// re-enable this sweep after it sat disabled from 2026-07-14.
+//
+// The defect was NOT the delete cap (already corrected 2026-08-13). It was
+// candidate SELECTION: deriving the version set by collecting every
+// graphSnapshotNodes row across every stored version, ~10,000 rows per version
+// and up to 7 kept, against a 4,096-READ ceiling. Every test below exercises the
+// handler through the same `._handler(ctx)` seam aggregates.test.ts uses, with a
+// fake ctx modelled on convex/workspace.test.ts's — the phase that fixed the
+// identical shape first.
+// ---------------------------------------------------------------------------
+
+/**
+ * Fake ctx for the sweep. Models two entity tables keyed by version, plus the
+ * meta table, and RECORDS every read so a test can assert the read count rather
+ * than trusting that a bounded-looking query was bounded.
+ */
+function makeGraphSweepCtx(opts: {
+  metas: any[];
+  nodesByVersion?: Record<number, number>;
+  linksByVersion?: Record<number, number>;
+}) {
+  const patches: any[] = [];
+  const deleted: string[] = [];
+  const warnings: string[] = [];
+  let rowsRead = 0;
+
+  const metas = opts.metas.map((m, i) => ({ ...m, _id: `meta${i}` }));
+  const mk = (prefix: string, byVersion: Record<number, number> = {}) => {
+    const out: Record<number, { _id: string }[]> = {};
+    for (const [ver, n] of Object.entries(byVersion)) {
+      out[Number(ver)] = Array.from({ length: n }, (_, i) => ({ _id: `${prefix}-v${ver}-${i}` }));
+    }
+    return out;
+  };
+  const nodes = mk("n", opts.nodesByVersion);
+  const links = mk("l", opts.linksByVersion);
+  const tableOf = (t: string) => (t === "graphSnapshotNodes" ? nodes : links);
+
+  const ctx: any = {
+    db: {
+      query: (table: string) => ({
+        collect: async () => {
+          if (table !== "graphSnapshots") throw new Error(`unexpected .collect() on ${table}`);
+          rowsRead += metas.length;
+          return metas;
+        },
+        withIndex: (_name: string, fn: any) => {
+          const captured: any = {};
+          fn({
+            eq: (field: string, value: any) => {
+              captured[field] = value;
+              const chain: any = {
+                eq: (f2: string, v2: any) => {
+                  captured[f2] = v2;
+                  return chain;
+                },
+              };
+              return chain;
+            },
+          });
+          return {
+            take: async (n: number) => {
+              const rows = (tableOf(table)[captured.version] ?? []).slice(0, n);
+              rowsRead += rows.length;
+              return rows;
+            },
+            collect: async () => {
+              // The sweep must never reach this on an entity table — that is the
+              // defect. Throwing makes a regression loud instead of slow.
+              throw new Error(`REGRESSION: unbounded .collect() on ${table}`);
+            },
+          };
+        },
+      }),
+      patch: async (id: string, fields: any) => {
+        patches.push({ id, fields });
+        const m = metas.find((x) => x._id === id);
+        if (m) Object.assign(m, fields);
+      },
+      delete: async (id: string) => {
+        deleted.push(id);
+        rowsRead += 1; // a delete costs a read too — the whole point of the fix
+        for (const tbl of [nodes, links]) {
+          for (const v of Object.keys(tbl)) {
+            tbl[Number(v)] = tbl[Number(v)].filter((r) => r._id !== id);
+          }
+        }
+      },
+    },
+  };
+
+  const origWarn = console.warn;
+  console.warn = (...a: any[]) => warnings.push(a.join(" "));
+  const restore = () => {
+    console.warn = origWarn;
+  };
+
+  return { ctx, patches, deleted, warnings, metas, restore, readCount: () => rowsRead };
+}
+
+const baseMeta = (over: any = {}) => ({
+  snapshotId: "astridr-project-graph",
+  activeVersion: 10,
+  sources: [],
+  nodeCount: 0,
+  linkCount: 0,
+  storedNodeCount: 0,
+  storedLinkCount: 0,
+  generatedAt: 0,
+  updatedAt: 0,
+  ...over,
+});
+
+describe("sweepGraphSnapshotVersions — candidate selection reads ONE field, not every row", () => {
+  it("selects delete candidates from meta.storedVersions and never collects an entity table", async () => {
+    // 10 stored versions, keep 7 -> versions 1,2,3 are stale; one per invocation.
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ storedVersions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })],
+      nodesByVersion: { 1: 3 },
+      linksByVersion: { 1: 2 },
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+
+    // Version 1 fully removed, and ONLY version 1.
+    expect(h.deleted.sort()).toEqual(["l-v1-0", "l-v1-1", "n-v1-0", "n-v1-1", "n-v1-2"]);
+    expect(h.metas[0].storedVersions).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(h.metas[0].pruneIncomplete).toBe(false);
+
+    // THE PROPERTY THE FIX EXISTS FOR: total rows read is a handful, not the
+    // ~70,000 the old candidate-selection collect would have cost. The fake
+    // throws outright on an entity-table .collect(), so a regression cannot
+    // merely be slow here — it fails.
+    expect(h.readCount()).toBeLessThan(30);
+  });
+
+  it("REFUSES to treat an absent storedVersions as an empty list, and says why", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({})], // no storedVersions — a doc predating the field
+      nodesByVersion: { 1: 5 },
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+
+    // Nothing deleted, and the reason is stated rather than silent. "Absent" and
+    // "empty" are the same to selectVersionDeletes, and the difference between
+    // them is "prune nothing forever" versus "nothing to prune".
+    expect(h.deleted).toEqual([]);
+    expect(h.warnings.join(" ")).toMatch(/storedVersions is absent/);
+    expect(h.warnings.join(" ")).toMatch(/backfillGraphStoredVersions/);
+  });
+
+  it("CONTROL: the same meta WITH storedVersions does sweep — so the refusal above is a decision, not an inability", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ storedVersions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })],
+      nodesByVersion: { 1: 5 },
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+    expect(h.deleted.length).toBe(5);
+    expect(h.warnings.join(" ")).not.toMatch(/storedVersions is absent/);
+  });
+
+  it("does nothing when the stored list is within the keep limit", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 3, storedVersions: [1, 2, 3] })],
+      nodesByVersion: { 1: 99 },
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+    expect(h.deleted).toEqual([]);
+    expect(h.metas[0].storedVersions).toEqual([1, 2, 3]);
+  });
+});
+
+describe("sweepGraphSnapshotVersions — the cap leaves the version selectable, never stranded", () => {
+  it("on a cap hit it flags pruneIncomplete and KEEPS the version in storedVersions", async () => {
+    // 1,500 nodes in the stale version against a 1,000 cap.
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ storedVersions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })],
+      nodesByVersion: { 1: 1500 },
+      linksByVersion: { 1: 400 },
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+
+    expect(h.deleted.length).toBe(1000); // exactly the cap, never more
+    expect(h.metas[0].pruneIncomplete).toBe(true);
+    // The load-bearing half: version 1 is STILL listed, so the next run
+    // re-selects and finishes it. Dropping it here is how rows get stranded.
+    expect(h.metas[0].storedVersions).toContain(1);
+  });
+
+  it("when node deletes consume the WHOLE budget, links are not even looked at — and that still counts as more-remains", async () => {
+    // Exactly the cap in nodes, so linkBudget is 0 and the link query never runs.
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ storedVersions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] })],
+      nodesByVersion: { 1: 1000 },
+      linksByVersion: { 1: 250 },
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+
+    expect(h.deleted.length).toBe(1000);
+    // If this returned "done", version 1 would leave storedVersions while 250
+    // link rows survived — permanently unreachable, because selection is BY
+    // VERSION and no later pass would ever name it again.
+    expect(h.metas[0].pruneIncomplete).toBe(true);
+    expect(h.metas[0].storedVersions).toContain(1);
+  });
+
+  it("clears a stale pruneIncomplete once nothing is over the keep limit", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 3, storedVersions: [1, 2, 3], pruneIncomplete: true })],
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+    expect(h.metas[0].pruneIncomplete).toBe(false);
+  });
+
+  it("SELF-HEALS the crash case: a listed version whose rows are already gone completes cleanly", async () => {
+    // The post-crash state, constructed directly rather than induced: the entry
+    // survives in storedVersions but the rows do not.
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ storedVersions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], pruneIncomplete: true })],
+      nodesByVersion: {},
+      linksByVersion: {},
+    });
+    try {
+      await (sweepGraphSnapshotVersions as any)._handler(h.ctx);
+    } finally {
+      h.restore();
+    }
+    expect(h.deleted).toEqual([]);
+    expect(h.metas[0].storedVersions).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(h.metas[0].pruneIncomplete).toBe(false);
+  });
+});
+
+describe("backfillGraphStoredVersions — probes, never scans", () => {
+  it("probes one row per candidate version and reports what it found", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 5 })],
+      nodesByVersion: { 2: 9000, 4: 9000, 5: 9000 }, // 1 and 3 already swept away
+    });
+    let res: any;
+    try {
+      res = await (backfillGraphStoredVersions as any)._handler(h.ctx, { window: 10 });
+    } finally {
+      h.restore();
+    }
+
+    expect(res.snapshots[0].found).toEqual([2, 4, 5]);
+    expect(h.metas[0].storedVersions).toEqual([2, 4, 5]);
+
+    // THE POINT: 27,000 rows exist across those versions and the probe read a
+    // handful. Cost is per VERSION, not per ROW.
+    expect(h.readCount()).toBeLessThan(20);
+  });
+
+  it("does NOT early-stop at a gap — a non-contiguous list is found in full", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 6 })],
+      nodesByVersion: { 1: 1, 5: 1, 6: 1 }, // gap at 2,3,4
+    });
+    try {
+      await (backfillGraphStoredVersions as any)._handler(h.ctx, { window: 10 });
+    } finally {
+      h.restore();
+    }
+    // Stopping at the first miss would have yielded [1] and silently orphaned 5
+    // and 6 — they would read as "already gone" and never be swept.
+    expect(h.metas[0].storedVersions).toEqual([1, 5, 6]);
+  });
+
+  it("REPORTS a truncated window instead of silently returning a short list", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 10 })],
+      nodesByVersion: { 8: 1, 9: 1, 10: 1 },
+    });
+    let res: any;
+    try {
+      res = await (backfillGraphStoredVersions as any)._handler(h.ctx, { window: 3 });
+    } finally {
+      h.restore();
+    }
+    // Window covers 8..10, the oldest probed version HAS rows, so older ones may
+    // exist beyond the window.
+    expect(res.snapshots[0].found).toEqual([8, 9, 10]);
+    expect(res.snapshots[0].windowTruncated).toBe(true);
+  });
+
+  it("CONTROL: a window with room to spare reports NO truncation", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 10 })],
+      nodesByVersion: { 8: 1, 9: 1, 10: 1 },
+    });
+    let res: any;
+    try {
+      res = await (backfillGraphStoredVersions as any)._handler(h.ctx, { window: 10 });
+    } finally {
+      h.restore();
+    }
+    expect(res.snapshots[0].windowTruncated).toBe(false);
+  });
+
+  it("skips a doc that already has storedVersions, and force overrides", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 3, storedVersions: [3] })],
+      nodesByVersion: { 1: 1, 2: 1, 3: 1 },
+    });
+    let skipped: any, forced: any;
+    try {
+      skipped = await (backfillGraphStoredVersions as any)._handler(h.ctx, {});
+      forced = await (backfillGraphStoredVersions as any)._handler(h.ctx, { force: true });
+    } finally {
+      h.restore();
+    }
+    expect(skipped.snapshots[0].skipped).toBe(true);
+    expect(skipped.snapshots[0].found).toEqual([3]); // untouched
+    expect(forced.snapshots[0].skipped).toBe(false);
+    expect(forced.snapshots[0].found).toEqual([1, 2, 3]); // recomputed
+  });
+
+  it("deletes nothing, ever", async () => {
+    const h = makeGraphSweepCtx({
+      metas: [baseMeta({ activeVersion: 4 })],
+      nodesByVersion: { 1: 5, 2: 5, 3: 5, 4: 5 },
+    });
+    try {
+      await (backfillGraphStoredVersions as any)._handler(h.ctx, { window: 10 });
+    } finally {
+      h.restore();
+    }
+    expect(h.deleted).toEqual([]);
+  });
+});

@@ -1907,6 +1907,29 @@ export default defineSchema({
     storedLinkCount:  v.float64(),     // receiver-side: after dangling-link drop
     generatedAt:      v.float64(),     // epoch seconds — producer's time.time() float (Pitfall 6)
     updatedAt:        v.float64(),     // epoch seconds — when CodePulse stored this version
+    // The version list, kept on the META doc so the retention sweep can pick its
+    // delete candidates by reading ONE row instead of scanning entity rows.
+    //
+    // This is the exact shape workspaceSnapshots.storedVersions has (see the note
+    // at :2381) and it exists for the exact same reason. Before it, the sweep
+    // derived the version set by .collect()ing EVERY graphSnapshotNodes row across
+    // EVERY stored version — at ~10,000 rows per version and up to 7 kept, ~70,000
+    // reads against a 4,096-read ceiling. That is the mechanism behind the
+    // "times out on self-hosted Convex" note that kept the cron disabled from
+    // 2026-07-14 until this field landed.
+    //
+    // OPTIONAL, unlike the workspaceSnapshots field, purely because this table
+    // already had rows when the field was added: a required field would have made
+    // every pre-existing meta doc invalid on deploy. `backfillGraphStoredVersions`
+    // populates it; the sweep REFUSES to run against a doc where it is still
+    // absent rather than treating absent as an empty list, because "no versions
+    // stored" and "not yet backfilled" would otherwise be indistinguishable and
+    // the second one silently means "delete nothing, forever".
+    storedVersions:   v.optional(v.array(v.number())),
+    // Set when a delete pass hit its per-invocation cap and a version is only
+    // PARTIALLY removed. Mirrors workspaceSnapshots. The stale entry stays in
+    // storedVersions so the next call re-selects and finishes it.
+    pruneIncomplete:  v.optional(v.boolean()),
   }).index("by_snapshotId", ["snapshotId"]),
 
   // Entity rows for graph nodes, keyed by (snapshotId, version).
