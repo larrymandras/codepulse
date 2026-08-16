@@ -1335,6 +1335,24 @@ describe("aggregates", () => {
         expect(dailyRows[0].value).toBe(500);
       });
 
+      // WHY THIS DOES NOT ASSERT `toHaveLength(1)` (it used to, and that was a
+      // latent DATE BOMB — it went red on 2026-08-16 and would have again on
+      // 2026-08-30 and 2026-09-14):
+      //
+      // The zero-arg path is the CRON path, and the cron path deliberately runs
+      // the repair sweep after rolling up yesterday. `repairDayTargets` picks
+      // `DAILY_REPAIR_DAYS_PER_RUN` days by `((dayIndex * n + i) % span) + 1`,
+      // which ROTATES with the real calendar date. At the fixture's
+      // retentionDays=30 that yields offsets [9, 10] on dayIndex 20681 — and
+      // this fixture's older row sits at exactly offset 9, so the sweep
+      // correctly produces a SECOND daily row on those dates and none on the
+      // rest.
+      //
+      // A row count was therefore never the property under test. It conflated
+      // "the default path rolls up yesterday" (true, and what this control
+      // exists for) with "and touches nothing else" (false by design, and the
+      // whole point of COST-01's repair sweep). The assertions below name the
+      // property directly, so they hold on every calendar date.
       test("CONTROL: no dayStart arg still rolls up yesterday", async () => {
         const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
         const tenDaysAgo = yesterday - 9 * 86400;
@@ -1348,9 +1366,28 @@ describe("aggregates", () => {
         await (rollupDaily as any)._handler(ctx, {});
 
         const dailyRows = tables.aggregates.filter((r) => r.period === "daily");
-        expect(dailyRows).toHaveLength(1);
-        expect(dailyRows[0].bucket_start).toBe(yesterday);
-        expect(dailyRows[0].value).toBe(42);
+
+        // THE PROPERTY: yesterday was rolled up, with yesterday's value.
+        const yesterdayRow = dailyRows.find((r) => r.bucket_start === yesterday);
+        expect(
+          yesterdayRow,
+          "no daily row for yesterday — the zero-arg (cron) path did not roll up the default day"
+        ).toBeDefined();
+        expect(yesterdayRow?.value).toBe(42);
+
+        // NON-VACUITY, and the thing the old length check was really groping
+        // at: the two days must not be MERGED. 542 would mean the older hourly
+        // row was folded into yesterday's bucket, which is the actual defect a
+        // reader fears here — and it is invisible to a row count.
+        expect(dailyRows.every((r) => r.value !== 542)).toBe(true);
+
+        // Any additional row is the repair sweep, and it may only ever target a
+        // day STRICTLY OLDER than yesterday. This is what keeps the relaxation
+        // honest: it tolerates the sweep without tolerating a spurious row for
+        // today, for the future, or for a duplicate of yesterday.
+        const extras = dailyRows.filter((r) => r.bucket_start !== yesterday);
+        expect(extras.every((r) => r.bucket_start < yesterday)).toBe(true);
+        expect(dailyRows.filter((r) => r.bucket_start === yesterday)).toHaveLength(1);
       });
     });
 
