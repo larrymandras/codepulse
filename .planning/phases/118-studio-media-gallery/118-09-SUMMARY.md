@@ -1,17 +1,17 @@
 <!--
-  NOT A SUMMARY — plan 118-09 is INCOMPLETE (2 of 3 tasks).
+  COMPLETE as of 2026-08-16. 3 of 3 tasks; D-04 and D-14 both closed.
 
-  Renamed from 118-09-SUMMARY.md by the orchestrator. A `*-*-SUMMARY.md` file is what
-  `gsd-sdk query phase-plan-index` uses to mark a plan done, and with it present 118-09
-  dropped out of the phase's `incomplete` list entirely — a resumed /gsd-execute-phase 118
-  would have SKIPPED it, leaving both scheduled tasks unregistered and D-04/D-14 unclosed
-  while the phase advanced to wave 7. Proven both ways: with the file named *-SUMMARY.md
-  the incomplete list read ["118-12","118-13","118-14","118-15"]; after the rename it reads
-  ["118-09","118-12",...], with 118-11 still has_summary=true as the control.
+  HISTORY, kept because the mechanism is worth knowing and will recur: this file spent
+  2026-08-15 named 118-09-CHECKPOINT.md rather than 118-09-SUMMARY.md, deliberately.
+  A `*-*-SUMMARY.md` file is what `gsd-sdk query phase-plan-index` uses to mark a plan
+  done, and with it present 118-09 dropped out of the phase's `incomplete` list entirely —
+  a resumed /gsd-execute-phase 118 would have SKIPPED it, leaving D-14 unclosed while the
+  phase advanced. Proven both ways at the time: named *-SUMMARY.md the incomplete list read
+  ["118-12","118-13","118-14","118-15"]; renamed, it read ["118-09","118-12",...], with
+  118-11 still has_summary=true as the control.
 
-  Task 3 (registering StudioWatch and MediaVaultBackup) requires an elevated PowerShell and
-  is Larry's to run. When it lands and the read-back assertions pass, rename this file back
-  to 118-09-SUMMARY.md and fill in requirements-completed with D-04 and D-14.
+  So: never name a plan's artifact *-SUMMARY.md until the plan is actually complete. The
+  file name is load-bearing state, not a label.
 -->
 ---
 phase: 118-studio-media-gallery
@@ -60,7 +60,7 @@ key-decisions:
   - "ExecutionTimeLimit differs from the donor's 30 minutes in BOTH scripts, for opposite reasons: StudioWatch gets 10 minutes because a 5-minute cadence with -MultipleInstances IgnoreNew means a hung instance suppresses every later cycle until the limit expires; MediaVaultBackup gets 4 hours because the first run seeds an entire vault across Google Drive File Stream."
   - "The D-01 fallback static thumbnail server was NOT built. 118-D01-EVIDENCE.md records BRANCH: convex-storage (the probe PASSed), so plan Task 2's conditional does not apply. convex-selfhost/docker-compose.yml was not touched."
 
-requirements-completed: []
+requirements-completed: [D-04, D-14]
 
 # Metrics
 duration: ~75min
@@ -203,13 +203,66 @@ lines were ONE fire (`START`, `EXIT`, detail). It would have reported the 5-minu
 after a single failed fire. Caught by reading the log content rather than the poll's verdict;
 rewritten to count `START RepoRoot=` occurrences, which is the property rather than a proxy.
 
-**D-14 REMAINS OPEN and is the only thing keeping this plan incomplete.** MediaVaultBackup is
-registered and Ready, but has never fired. Larry's explicit call was to wait for the real 06:30
-scheduled fire rather than accept D-04's fire as proof of mechanism for a different task — a manual
-Run would prove the robocopy action, not the scheduler. Check `C:\Users\mandr\media-vault\backup.log`
-after 06:30 on 2026-08-16 for a line nobody triggered, and confirm `G:\My Drive\media-vault` holds
-mirrored content with `backup.log` ABSENT from it (its presence there would mean the exclusion
-silently stopped working).
+## Task 3, part 2 — D-14 CLOSED by the real scheduled fire (2026-08-16)
+
+D-14 was the only thing keeping this plan incomplete. Larry's explicit call was to wait for the
+genuine 06:30 fire rather than accept D-04's fire as proof of mechanism for a different task — a
+manual `Start-ScheduledTask` would prove the robocopy ACTION, not the SCHEDULER. **That call was
+right and it cost nothing: the task fired on its own.**
+
+A one-time trigger was authored as a same-day fallback
+(`C:\Users\mandr\scripts\d14-mediavaultbackup-once-trigger.ps1`, requires elevation because the task
+runs under an S4U principal). **It was never run**, and the task still carries exactly ONE trigger —
+so what fired is the registered daily encoding itself, which is a strictly stronger proof than a
+temporary trigger would have been. The script is left in place, unused, and can be deleted.
+
+**The scheduler fired it, unattended:**
+
+```
+LastRunTime:    08/16/2026 06:30:01
+LastTaskResult: 0
+NextRunTime:    08/17/2026 06:30:00
+Triggers:       1  (MSFT_TaskDailyTrigger, StartBoundary 2026-08-15T06:30:00-04:00)
+```
+
+Control: `StudioWatch` was independently observed firing the same morning (`LastRunTime 10:55:39`,
+`LastTaskResult 0`), so a zero here is a real result rather than a stalled Task Scheduler or a
+broken probe.
+
+**`C:\Users\mandr\media-vault\backup.log`, written by the run itself — nobody triggered it:**
+
+```
+2026-08-16T06:30:02-04:00 START C:\Users\mandr\media-vault -> G:\My Drive\media-vault (6 mirrorable file(s) at source)
+2026-08-16T06:30:02-04:00 ROBOCOPY=1 success: files copied
+    Dirs  :  5 total, 5 copied, 0 skipped, 0 mismatch, 0 FAILED, 0 extras
+    Files :  9 total, 6 copied, 3 skipped, 0 mismatch, 0 FAILED, 0 extras
+    Bytes :  7.06 m total, 6.98 m copied, 83.2 k skipped
+2026-08-16T06:30:02-04:00 EXIT=0 (robocopy 1 is a success code)
+```
+
+The `(6 mirrorable file(s) at source)` clause is the wrapper's own non-empty-source precondition
+reporting that it ran — the guard that refuses to `/MIR` an empty source over the only copy of the
+originals.
+
+**The OUTCOME verified independently of what the log claims** (a log line is the action's own report
+of itself, not the state of the disk):
+
+| check | result |
+|---|---|
+| `G:\My Drive\media-vault` exists | **yes** |
+| files mirrored | **6** — `README.md` plus 3 media files and 2 sidecars |
+| every mirrored file SHA-256 vs its source | **byte-identical, 6 of 6** — compared by hash, not by size |
+| `backup.log` in the mirror | **ABSENT** (present locally at 1,067 bytes) |
+| `studio-watch.log` in the mirror | **ABSENT** (present locally at 102,653 bytes) |
+| `.studio-watch-state.json` in the mirror | **ABSENT** (present locally at 682 bytes) |
+
+The three exclusions being absent is the discriminating result — their presence would mean the
+exclusion list had silently stopped working. Robocopy's own tally corroborates it from the other
+direction: **9 files seen, 6 copied, 3 skipped**, which is exactly the three excluded names and no
+more. Two independent measurements of the same fact, agreeing.
+
+**D-14 is CLOSED.** With D-04 closed by the two unattended StudioWatch fires above, this plan is
+complete and this file was renamed back from `118-09-CHECKPOINT.md` to `118-09-SUMMARY.md`.
 
 ## Verification
 
@@ -406,8 +459,13 @@ either way.
 
 ## Next Phase Readiness
 
-- D-04 and D-14 are **authored, not closed**. `requirements-completed` is deliberately empty: both
-  decisions require a registered task proven to have executed, which is the Task 3 checkpoint.
+- **D-04 and D-14 are both CLOSED** — see "Task 3, part 2" above. Each required not just a
+  registered task but one proven to have EXECUTED unattended, which is why `requirements-completed`
+  stayed empty until 2026-08-16. D-04 closed on two StudioWatch fires 5m00s apart whose only changed
+  variable was the local credential file; D-14 closed on the 06:30 daily fire, verified by hashing
+  the mirror rather than by reading the log's own success line.
+- **`C:\Users\mandr\scripts\d14-mediavaultbackup-once-trigger.ps1` is now dead weight.** It was
+  written as a same-day fallback and never run; the real trigger fired first. Safe to delete.
 - `/studio-sync` is available now and needs no registration, so any later gate can force a sync
   without waiting 5 minutes or for the elevated run.
 - `STUDIO_API_KEY` must be set for the watcher to do anything but exit 2 — the scheduled task will
