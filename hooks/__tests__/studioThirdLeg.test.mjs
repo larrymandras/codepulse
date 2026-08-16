@@ -391,6 +391,20 @@ describe("source hygiene: no stub markers, with a control proving the pattern fi
     expect(/status_url|queue\.fal\.run|pollJob/.test(code)).toBe(false);
   });
 
+  it("HAS a CLI entry point guarded to this filename — a module with a main() and no entry point exits 0 having done nothing", () => {
+    // This is a regression test for a real defect, not a hypothetical. The first
+    // real placement run returned exit 0, printed nothing and wrote no file,
+    // because main() was exported but never invoked. At the shell that is
+    // indistinguishable from success, so the exit code could not catch it.
+    const code = codeOnly(SRC);
+    expect(/process\.argv\[1\]/.test(code)).toBe(true);
+    expect(/endsWith\("studioThirdLeg\.mjs"\)/.test(code)).toBe(true);
+    expect(/\bmain\(\)/.test(code)).toBe(true);
+    // The guard must name THIS file: a copy-pasted guard naming another module
+    // would never fire, reproducing the same silent no-op.
+    expect(/endsWith\("studioFal\.mjs"\)/.test(code)).toBe(false);
+  });
+
   it("contains no credential value: no long high-entropy token-shaped literal", () => {
     const literals = [...codeOnly(SRC).matchAll(/["'`]([A-Za-z0-9_\-]{32,})["'`]/g)].map((m) => m[1]);
     expect(literals).toEqual([]);

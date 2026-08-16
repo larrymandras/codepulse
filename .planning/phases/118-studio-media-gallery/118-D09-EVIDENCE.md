@@ -517,3 +517,192 @@ refuses honestly rather than attempting a generation it cannot pay for.
 ### 6. No implementation file was created in this task
 
 Verified by `git status --porcelain` at task close: the only path touched is this evidence file.
+
+## LEG: third — the proof
+
+Run 2026-08-16, attended, plan `118-14` Task 3. Branch `openart-mcp` exactly as fixed in Task 1.
+
+### Auth — and the control that makes the pre-state meaningful
+
+The OpenArt MCP was installed but **not authenticated** at session start: the registry exposed only
+`mcp__openart__authenticate` and `complete_authentication`. That is not an inference from a failed
+call — a direct name lookup for all five real tools returned nothing while a name-scoped query still
+returned the two bootstrap tools, so the registry probe demonstrably worked and the absence was real.
+After Larry completed the browser OAuth, the sixteen real tools appeared **and the two bootstrap
+tools disappeared** — a two-sided transition, which is stronger evidence than either half alone.
+
+One flow was lost in between (`complete_authentication` reported no flow in progress despite a
+matching `state`); a fresh `authenticate` succeeded. Recorded because the flow evidently does not
+survive long, which matters for anyone repeating this.
+
+### Balance, priced BEFORE spending
+
+| | |
+|---|---|
+| plan / balance before | **Pro**, `24000` credits |
+| cheapest config on the account | `kling-3-omni` `text2image`, 1k / 4:3 -> **10 credits** |
+| balance after | `23990` |
+| **delta** | **exactly 10**, matching the quote |
+
+The wave-1 measurement recorded Free / 7 credits against a 10-credit floor, i.e. capable but not
+executable. Commit `8e4f76ea` claimed a top-up to "~24K"; that was a commit message, so it was
+re-read with `openart_account_get` at the moment of use rather than trusted. It held.
+
+### The generation
+
+Model id read from `openart_model_list` and param schema from `openart_model_form_get` — **neither
+hand-constructed**. Mode `text2image`.
+
+```
+imageCount 1 · resolution 1k · resultType single · seriesAmount 4 · aspectRatio 4:3
+autoEnhancePrompt FALSE
+```
+
+`autoEnhancePrompt` is false deliberately. Left true, OpenArt may rewrite the prompt server-side and
+the sidecar would then record a prompt that does not reproduce the image — the exact copyable-recipe
+failure contract section 5 exists to prevent. This is now stated in the recipe card so it cannot be
+"tidied" back to the default.
+
+`openart_generate_image` -> `historyId thCUxHPUKji4OY1RywRr`, status `PENDING`.
+`openart_creation_wait` -> `COMPLETED`, one image resource, 1168x880 png.
+
+### A DEFECT FOUND BY READING THE OUTPUT RATHER THAN THE EXIT CODE
+
+The first placement run **exited 0, printed nothing, and wrote nothing.**
+`hooks/studioThirdLeg.mjs` exported `main()` but had no entry-point block, so
+`node hooks/studioThirdLeg.mjs --url ...` merely defined its exports and ended. At the shell that
+is **indistinguishable from success** — exit 0, no stderr.
+
+It was caught because `main()` prints a JSON result on success and no JSON appeared. Confirmed
+before fixing: `0` files matching `oa_*` in the vault, with the five pre-existing vault files
+listed as the control proving the probe could see files at all.
+
+Fixed with the house-convention guard (`process.argv[1]` ... `endsWith("studioThirdLeg.mjs")`,
+matching `studioFal.mjs:573`), and a regression test now asserts the guard exists **and names this
+file** — a copy-pasted guard naming another module would never fire and would reproduce the same
+silent no-op. Mutation-proven: deleting the block -> RED; pointing it at `studioFal.mjs` -> RED.
+
+This is the ninth defective-check-or-silent-pass found in this phase, and the first where the
+misleading signal was an **exit code** rather than a grep.
+
+### Placement
+
+```
+C:\Users\mandr\media-vault\gen\oa_kling-3-omni_20260816T200405.png       1,407,791 bytes
+C:\Users\mandr\media-vault\gen\oa_kling-3-omni_20260816T200405.png.json        619 bytes
+```
+
+First eight bytes `89 50 4E 47 0D 0A 1A 0A` — a real PNG, not an error page saved under a .png name.
+
+The sidecar as written, with `params` a JSON **string** per contract section 3, `prompt` and the
+nested params prompt elided here only for width:
+
+```json
+{
+  "prompt": "a brass and glass observatory instrument panel, dozens of small illuminated dials in cyan and amber, shallow depth of field, dust motes in a single shaft of light, photoreal, 4:3",
+  "model": "kling-3-omni",
+  "provider": "openart",
+  "project": "studio",
+  "params": "{ ...the submitted params object, serialised... }"
+}
+```
+
+### Ingest
+
+`node hooks/studioWatch.mjs` (the identical path `/studio-sync` and the scheduled task run):
+
+```
+studioWatch: 4 candidate(s) found in C:\Users\mandr\media-vault
+studioWatch: scanned=4 rehashed=1 ingested=1 duplicates=3 refused=0 thumbnailRefused=0 ...
+```
+
+`ingested=1` with `duplicates=3` is the discriminating result: the three pre-existing assets were
+correctly recognised as already-ingested, so the 1 is this run's file and not a re-ingest.
+
+### The row, read back OUT of Convex — not off the disk I wrote
+
+`api.media.list` -> 4 rows (cap 500):
+
+| field | value |
+|---|---|
+| `filename` | `oa_kling-3-omni_20260816T200405.png` |
+| `mediaType` / `kind` | `image` / `gen` |
+| `provider` / `model` | `openart` / `kling-3-omni` |
+| `project` | `studio` |
+| `prompt` | the full submitted prompt, verbatim |
+| `params` | present, and **`typeof === "string"`** |
+| `contentHash` | `f24eb8bf7c8a6013bc7fed8ad69fb1ea9d5c9b87363665431fa844484e86ae46` |
+| `sizeBytes` | `1407791` — byte-identical to the file on disk |
+| `thumbStorageId` | present |
+| `starred` / `deletedAt` | `false` / absent |
+
+### THE D-07 CONTROL PAIR, in the same list, in the same call
+
+`studio_control-no-sidecar_a1_20260815T144553.png` sits in the same `api.media.list` response with
+`prompt` **absent** and `provider` **absent** — it renders `No provenance recorded`. A complete
+recipe and an empty one, side by side. Without that pair, "the image appeared with a prompt" looks
+identical to a sidecar reader that is silently returning nothing for everyone.
+
+### D-12: the third recipe card
+
+`internal.media.upsertModelCard` (an `internalMutation`, invoked attended via `npx convex run` with
+the deployment's admin credentials) -> `{"created": true, "modelId": "pd7jd71w0f0dmw11mrkmtk2fes8cjwj1"}`.
+Three cards now stored: `z_image`, `fal-ai/flux/schnell`, `openart-kling-3-omni`.
+
+**The card was NOT pre-screened against a local re-implementation of `detectCredentialValue`** — the
+deployed guard accepting it IS the acceptance verdict, since a local copy of the regexes could
+diverge and green a card the real guard would refuse. It was then pulled back **out of Convex**
+(1941 chars) and scanned as a secondary check: rules A, B and C all clean.
+
+The card names **no credential variable**, because this leg has none — it documents the tool
+invocation instead. `MEDIA_VAULT_ROOT` appears as a path; `FAL_KEY` does not appear at all.
+
+### A REAL GAP IN `detectCredentialValue`, found by getting a control wrong
+
+The first scan run used `FAL_KEY=abc123def456ghi789` as rule A's known-positive control and it
+**did not trip**. The card was fine; the control was wrong — and chasing why exposed a genuine
+narrowness in the shipped guard.
+
+Rule A's name pattern is `API[_-]?KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL`. Measured:
+
+| literal | rule A |
+|---|---|
+| `HIGGSFIELD_API_KEY=hf3x9q2v8m1p0zt4` (the docstring's own example) | caught |
+| `OPENART_TOKEN=...` / `MY_SECRET: ...` / `STUDIO_API_KEY=...` | caught |
+| **`FAL_KEY=abc123def456ghi789`** | **NOT caught** |
+| **`ANTHROPIC_KEY=abc123def456ghi789`** | **NOT caught** |
+
+`_KEY` alone is not in the alternation. Rule C does not save it either: its bound is exactly 40
+unbroken `[A-Za-z0-9_-]` characters (39 -> false, 40 -> true), and a realistic fal.ai key shape
+`<uuid>:<32-hex>` is 69 chars whose **longest unbroken run is 36**, because the colon and hyphens
+break it. So a pasted real `FAL_KEY` value would pass the guard entirely.
+
+This is **not** a contradiction of the guard's docstring, which already says it is a backstop and
+lists "a secret that simply does not look like one" as out of scope. It is worth recording because
+`FAL_KEY` is this repo's own primary provider credential, so the single most likely paste is the one
+the name pattern misses. **Deliberately not fixed here:** the guard belongs to closed plan `118-12`,
+and widening a security predicate mid-plan without its own control pairs is how a guard that refuses
+legitimate cards gets shipped. Surfaced to Larry as a finding.
+
+### THE SHAPE DIFFERENCE, now measured rather than argued
+
+Task 1 predicted the difference; the run confirms it. Leg 3's module contains **no** queue submit,
+**no** poll loop, **no** retry policy and **no** `Authorization` header — asserted by test with
+`studioFal.mjs` as the known-positive control proving those patterns do match where they exist.
+Generation happened as an MCP tool call in a conversation; the module only placed bytes and wrote
+JSON.
+
+**And the sidecar contract needed ZERO edits — for the third time and on the hardest case.** Legs 1
+and 2 both had a *program* turning a machine-readable generator response into a sidecar. Here the
+provenance arrived as a tool result in a session, and the contract still absorbed it unchanged. The
+test asserts this against leg 2's **real** output — by running `studioFal`'s own `generate` with a
+mocked fetch — rather than against a hand-written expectation, which would only have proven the
+module matches my belief about the contract.
+
+**D-09 CLOSES: three backends, three genuinely different shapes, each proven end to end.**
+
+| leg | shape | credential | proven |
+|---|---|---|---|
+| higgsfield | CLI subprocess, `--wait` blocks | none (OAuth file) | yes |
+| fal.ai | our own HTTP queue/poll client | `FAL_KEY` | yes |
+| openart | in-session MCP tool call | none (OAuth in MCP client) | yes, 2026-08-16 |

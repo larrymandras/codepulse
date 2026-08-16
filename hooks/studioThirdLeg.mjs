@@ -342,3 +342,19 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
     return 4;
   }
 }
+
+// Only run as a CLI when invoked directly, never on import from a test.
+//
+// WITHOUT THIS BLOCK the module still EXITS 0 when run — it simply defines its
+// exports and ends, having done nothing. That is exactly what happened on the
+// first real placement attempt: `node hooks/studioThirdLeg.mjs --url ...` returned
+// exit 0, printed nothing, and wrote no file. Exit 0 from a script that never ran
+// its own main is indistinguishable from success at the shell, which is why the
+// test below asserts this guard exists rather than trusting an exit code.
+//
+// The path is normalised because process.argv[1] arrives with Windows backslashes.
+if (process.argv[1] && process.argv[1].replace(/\\/g, "/").endsWith("studioThirdLeg.mjs")) {
+  main().then((code) => {
+    process.exitCode = code;
+  });
+}
