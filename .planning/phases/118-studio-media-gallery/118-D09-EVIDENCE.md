@@ -437,3 +437,83 @@ The generated asset and its sidecar are **left in place** — they are the evide
 to `trash\`; `trashMoved=0 trashRestored=0 trashReclaimed=0` on the proving cycle. The vault now
 holds three media files plus two sidecars, and any future test that assumes an empty vault or
 `scanned=0` is wrong.
+
+## LEG: third — selected shape
+
+**Written before any implementation code, which is this task's entire purpose.** The branch was a
+read, not a discovery: it was measured and fixed in wave 1 by plan `118-02` precisely so wave 9
+would not have to find it out by trying.
+
+### 1. The branch, read verbatim
+
+`118-OPENART-EVIDENCE.md` § "Third leg selection" records, as a whole token:
+
+**THIRD_LEG: openart-mcp**
+
+Read as the complete token after the `THIRD_LEG:` label, not as a substring match — the two
+authorised OpenArt branches (`openart-mcp` and `openart-mcp-interactive`) are prefix-related, so a
+substring test cannot tell them apart. The selected branch is the FORMER: a live in-session MCP
+tool invocation. The `-interactive` variant, in which nothing automated writes the sidecar at all,
+was NOT selected.
+
+### 2. What that selects
+
+The `openart-mcp` shape: generation happens through MCP tool calls made inside this session, and
+`hooks/studioThirdLeg.mjs` implements only the back half — placing the returned asset into
+`media-vault\gen\` and writing its sidecar per `docs/studio-sidecar-contract.md`. There is no
+HTTP client and no polling loop of our own in the module, because the tools
+`mcp__openart__openart_generate_image` / `openart_generate_video` return a `historyId` and the
+documented completion path on a text-only host is `mcp__openart__openart_creation_wait(historyId)`.
+Model ids are read from `mcp__openart__openart_model_list` and per-mode fields from
+`openart_model_form_get`; **no model id is hand-constructed** (the 2026-08-07 rule — a
+hand-constructed identifier for an external service cannot distinguish "not entitled" from "no such
+name").
+
+### 3. Shape difference, measured against BOTH existing legs
+
+This is the D-09 question that matters, and the answer is not a near-duplicate of either.
+
+| | leg 1 — higgsfield | leg 2 — fal.ai | **leg 3 — openart-mcp** |
+|---|---|---|---|
+| transport | spawn a CLI subprocess | HTTP `fetch` from our own client | **MCP tool call over the session's connector** |
+| who owns the wait | the CLI blocks on `--wait` | **our client owns the poll loop** | **the MCP server owns it**; we call `openart_creation_wait` and re-call on `STILL_RUNNING` |
+| completion signal | process exit + terminal `status` in stdout JSON | HTTP status parsed across N `status_url` GETs | a tool RESULT payload with status `COMPLETED` and resource URLs |
+| failure handling | the CLI's exit code | explicit bounded retry, transient/non-transient split, 401 never retried | MCP transport errors surface as tool errors — **we write no retry policy at all** |
+| auth | OAuth 2.0 PKCE session in a local credentials file | `FAL_KEY` env var, `Authorization: Key <token>` | **OAuth session held by the MCP client** — no credential ever enters our process |
+| params | flags on a command line | a JSON request body we construct | tool arguments validated against a server-published form schema |
+| what our code does | wrapper + download | submit, poll, stream, sidecar | **placement + sidecar only** |
+
+**Is this a near-duplicate of leg 2?** No, and the distinguishing fact is structural rather than
+cosmetic: leg 2's module contains a queue-submit call, a bounded poll loop, a retry policy and an
+`Authorization` header, and leg 3's module contains **none of those four**. The module's entire
+surface is "given bytes or a URL plus the provenance the tool reported, place the file and write the
+sidecar." If a future edit gives `studioThirdLeg.mjs` its own HTTP client and poll loop, that edit
+has collapsed leg 3 into leg 2 and defeated D-09's intent — stated here so the collapse is
+detectable later rather than arguable.
+
+This is also the strongest available test of the contract's generator-independence: legs 1 and 2
+both had a *program* producing the sidecar from a machine-readable generator response. Leg 3's
+provenance arrives as an MCP tool result in a conversation, and the sidecar it produces must still
+be byte-identical in structure. That is the assertion Task 2's tests carry.
+
+### 4. Environment variable NAMES required
+
+- `MEDIA_VAULT_ROOT` — where the asset and sidecar are written. Already required by the other legs.
+- **No provider credential variable exists for this leg.** OpenArt auth is an OAuth session held by
+  the MCP client; it is never an env var, never stored in Convex, and never read by our code. This
+  is itself a D-12-relevant fact: the third recipe card documents a TOOL INVOCATION — tool name and
+  argument shape — and names no key, because there is none to name.
+
+No value for any variable appears anywhere in this section.
+
+### 5. Precondition re-check required before Task 3
+
+`118-OPENART-EVIDENCE.md` recorded plan **Free / 7 credits** against a cheapest-generation floor of
+**10** (`kling-3-omni` `text2image`), i.e. capable but not executable. Larry subsequently topped up
+(commit `8e4f76ea`, "~24K credits"). **That figure is a commit message, which is a claim, not
+evidence** — Task 3 re-reads the balance with `openart_account_get` at the moment of use and
+refuses honestly rather than attempting a generation it cannot pay for.
+
+### 6. No implementation file was created in this task
+
+Verified by `git status --porcelain` at task close: the only path touched is this evidence file.
