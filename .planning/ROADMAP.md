@@ -908,15 +908,50 @@ Plans:
 
 ## Progress
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 10/10 | Complete    | 2026-08-10 |
-| 110. Convex Durability | 6/6 | Complete   | 2026-08-11 |
-| 111. Mission Board | 3/3 | Complete    | 2026-08-11 |
-| 112. Telemetry Coverage Closure | 8/8 | Complete | 2026-08-13 |
-| 113. Debt Sweep | 8/8 | Complete (DEBT-06 GUARDED) | 2026-08-12 |
-| 115. Workspace Scanner | 10/10 | Complete - verified passed-with-concerns (D-17 blocker remediated: redacted + unpushed history rewritten; residual public Phase 93 mentions accepted by Larry); D-05 unattended firing OPEN until 2026-08-14 | 2026-08-13 |
+<!--
+  TABLE CONTRACT — read before editing a row. `scripts/gsd-state-coherence.ps1`
+  PARSES this table to derive milestone-scoped ground truth, so its shape is
+  load-bearing, not cosmetic.
+
+    Get-MilestoneScope regex:
+      ^\|\s*(\d+(?:\.\d+)?)\.\s*[^|]*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|
+      group 1 = phase number, group 2 = MILESTONE, group 3 = plans, group 4 = status
+
+  Two rules follow from that, and violating either silently disables the guard
+  rather than failing it:
+
+  1. The MILESTONE column must exist and must match STATE.md's `milestone:`
+     EXACTLY. It was absent until 2026-08-16, so group 2 captured the plan count
+     ("7/7"), no row ever matched "v14.0", and the counter checks self-skipped on
+     every run while still printing "OK". A gate that can skip itself must be
+     proven to have evaluated something before its green is believed.
+
+  2. The STATUS column is compared with `-eq 'Complete'` — an EXACT match. A
+     decorated status like "Complete (DEBT-06 GUARDED)" does NOT count, which
+     would have made completed_phases read 9 against STATE.md's 11 and produced a
+     FALSE finding. Caveats therefore live in the Notes column; Status stays a
+     bare keyword. Nothing was deleted in the 2026-08-16 rewrite — the previous
+     decorations moved into Notes verbatim in substance.
+
+  Verified after the rewrite: the guard's own counting (its looser `*-PLAN.md`
+  filter, and summaries only counted when a mate PLAN exists) totals 86 plans and
+  84 completed across these twelve phases, matching STATE.md exactly.
+-->
+
+| Phase | Milestone | Plans Complete | Status | Completed | Notes |
+|-------|-----------|----------------|--------|-----------|-------|
+| 108. Per-Profile Engine Telemetry (astridr backend) | v14.0 | 7/7 | Complete | 2026-08-07 | |
+| 109. Per-Agent Engine UI | v14.0 | 10/10 | Complete | 2026-08-10 | |
+| 110. Convex Durability | v14.0 | 6/6 | Complete | 2026-08-11 | |
+| 111. Mission Board | v14.0 | 3/3 | Complete | 2026-08-11 | |
+| 112. Telemetry Coverage Closure | v14.0 | 8/8 | Complete | 2026-08-13 | |
+| 113. Debt Sweep | v14.0 | 8/8 | Complete | 2026-08-12 | DEBT-06 GUARDED |
+| 114. Workspace Map view | v14.0 | 11/11 | Complete | 2026-08-14 | |
+| 115. Workspace Scanner | v14.0 | 10/10 | Complete | 2026-08-13 | Verified passed-with-concerns. D-17 blocker remediated: redacted, and the unpushed history rewritten; residual public Phase 93 mentions accepted by Larry. D-05 unattended firing was OPEN until 2026-08-14 and has since closed. |
+| 116. Galdr Prompt Library | v14.0 | 8/8 | Complete | 2026-08-10 | |
+| 117. Bifröst Link Hub | v14.0 | 0/0 | Complete | 2026-08-10 | Shipped with a PHASE-level `117-SUMMARY.md` and no per-plan PLAN files, so 0/0 is correct and must not be "fixed". This is the pair (with 119) that makes a naive `*SUMMARY.md` count overshoot the plan-level one. |
+| 118. Studio Media Gallery | v14.0 | 13/15 | In progress | - | 118-14 (D-09's third leg, OpenArt MCP) and 118-15 Task 3 remain. 118-14 is blocked on a session restart so the newly-registered OpenArt MCP connects. |
+| 119. Loom Curated Pipelines | v14.0 | 0/0 | Complete | 2026-08-11 | PHASE-level `119-SUMMARY.md`, no per-plan PLAN files — same shape as 117. |
 
 ### Phase 114: Workspace Map view
 
