@@ -153,4 +153,17 @@ describe('EStopButton', () => {
 
     expect(screen.getByLabelText('Admin key')).toHaveAttribute('type', 'password');
   });
+
+  // POLISH-02 (120-07) — regression guard on the CONTRACT, not a proof of geometry. jsdom does
+  // not lay out text, so it cannot reproduce the hyphen line-break this asserts against; the
+  // actual observable (the label's text node fragmenting into 2 client rects under compression)
+  // lives in e2e/polish-geometry.spec.ts. This test exists only so a future edit that strips
+  // `shrink-0` / `whitespace-nowrap` off the trigger button fails loudly here, immediately.
+  it('trigger button carries the no-shrink / no-wrap geometry contract (see e2e/polish-geometry.spec.ts for the actual proof)', () => {
+    render(<EStopButton />);
+    const trigger = screen.getByRole('button', { name: 'Emergency Stop' });
+    expect(trigger.className).toMatch(/shrink-0/);
+    const label = trigger.querySelector('span');
+    expect(label?.className).toMatch(/whitespace-nowrap/);
+  });
 });

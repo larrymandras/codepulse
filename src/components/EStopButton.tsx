@@ -78,16 +78,27 @@ export function EStopButton() {
 
   return (
     <>
-      {/* Trigger button */}
+      {/*
+        Trigger button — POLISH-02 (120-07). Measured live at 360/640/900/1440px: the header's
+        icon cluster squeezes this button below its content width, and the label "E-Stop" (a
+        single hyphenated word) breaks at the hyphen into "E-" / "Stop" on two lines, doubling
+        the button's height (28px -> 48px). Confirmed via a Range over the label's TEXT NODE, not
+        the <span> itself — the span is a flex item of this button and gets CSS-blockified to
+        display:block, so span.getClientRects() always reports 1 rect even while wrapped; only
+        the text node fragments per visual line. `shrink-0` stops the compression, `whitespace-
+        nowrap` stops the hyphen break becoming a line break once compression is removed
+        elsewhere in the row (120-07 Task 3 bounds the row itself so this button is never asked
+        to compress below its content width in the first place).
+      */}
       <button
         onClick={() => setOpen(true)}
         disabled={!isConnected}
         title={isConnected ? "Emergency Stop — halt all agents" : "Not connected to Ástríðr"}
         aria-label="Emergency Stop"
-        className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
       >
-        <OctagonX className="h-4 w-4" />
-        <span>E-Stop</span>
+        <OctagonX className="h-4 w-4 shrink-0" />
+        <span className="whitespace-nowrap">E-Stop</span>
       </button>
 
       {/* Confirmation dialog */}

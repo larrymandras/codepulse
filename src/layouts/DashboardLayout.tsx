@@ -561,8 +561,29 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="h-14 flex-shrink-0 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+        {/*
+          Header — POLISH-06 (120-07). Measured live at 900px on /settings: none of the three
+          row groups below (left cluster / search box / icon cluster) has a shrink guard, and
+          none of them has `overflow` set, so each keeps its own content-driven minimum width
+          (the flexbox automatic-minimum-size rule). Their combined min-content width (981px at
+          900px viewport) exceeds the header's own available width (660px, correctly bounded
+          because its flex-column PARENT already has `overflow-hidden`, which zeroes ITS
+          automatic minimum size per the same rule). Because the header itself has no
+          `overflow-hidden`, the excess previously rendered PAST the header's own box and was
+          then invisibly clipped by a distant ancestor (line 517's `overflow-hidden`) — the icon
+          cluster (E-Stop, brain badge, notification bell, etc.) was silently cut off rather than
+          reachable at all, confirmed by walking every element under <body> (not just <main>; the
+          plan's <main>-scoped walk alone found nothing, because this overflow originates in the
+          shared header, present on every route, not in Settings' own content).
+          `flex-wrap` lets the row drop to a second line instead of overflowing sideways when
+          squeezed — every control stays fully rendered and within the viewport, at the cost of a
+          taller header only when space is genuinely insufficient. `min-h-14` (was the fixed
+          `h-14`) preserves today's exact 56px height whenever one row is enough; `gap-y-1` only
+          adds space BETWEEN wrapped lines and is a no-op in the single-line case. No sidebar
+          width, breakpoint literal, or Settings markup was touched — see 120-GEOMETRY-EVIDENCE.md
+          for the revert-and-refail control proving this is load-bearing.
+        */}
+        <header className="min-h-14 flex-shrink-0 flex-wrap gap-y-1 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center gap-4">
             {/* Hamburger button - mobile only */}
             <button
