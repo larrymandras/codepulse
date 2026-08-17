@@ -6,7 +6,7 @@ planted_during: Phase 110 (Convex Durability) — surfaced when llm:subscription
 trigger_when: Next time /analytics throws a "too many system operations" error, or the next Analytics-touching phase — whichever comes first. Not urgent on its own; see "What this is NOT" below.
 scope: Medium (one phase — per-query semantic verification against the rollups, not a mechanical sweep)
 source: Phase 104 gap plan CR-01 (pre-existing, re-confirmed live 2026-08-11); convex/llm.ts:251-271 STOPGAP note
-resolves_phase: null
+resolves_phase: 121
 last_reviewed: 2026-08-17
 ---
 
