@@ -44,6 +44,53 @@ discussion and are **wrong as written**. Plan against the corrected version, not
    **off**. The CRT toggle itself must **survive** this phase: SHELL-01 (Phase 124) explicitly
    places CRT in the new header's overflow menu. Verify-and-record, do not remove the feature.
 
+---
+
+## Corrections added during planning (2026-08-17)
+
+The five items below were found by the planner and **independently re-verified against live code by the
+orchestrator** before being written here. Where they contradict the decisions or code context above,
+**these are correct and the text above is wrong.** Confirmed at plan time; re-check before relying on
+any line number, since this is a shared checkout.
+
+3. **D-04 over-reaches, and 120-02 deliberately departs from it. The departure is endorsed.** D-04 says
+   to delete "the Phase-89 `readable`/`aubergine` suppression rules (~646-655)". That range spans **two
+   different rules**: `index.css:647-650` suppresses `.matrix-bg`, and `index.css:652-655` suppresses
+   `.crt-scanline-bar`. Only the first is dead after this phase. **`.crt-scanline-bar` has NO base CSS
+   definition** — its only occurrences in `index.css` are those two suppression selectors, and it is
+   styled inline at `DashboardLayout.tsx:514`. Since the CRT overlay survives 120 (the toggle must, for
+   Phase 124), lines 652-655 are the ONLY thing keeping it out of the `readable` theme, whose
+   no-effects guarantee is an explicit milestone requirement (`REQUIREMENTS.md:45`, TOKEN-03).
+   Executing D-04 verbatim would regress the accessibility theme. **Delete the `.matrix-bg` half only
+   (647-650); keep 652-655.** This is the phase's one knowing departure from a locked decision, and
+   120-02 is required to state it in the open rather than silently.
+
+4. **POLISH-02 is a ONE-component problem.** The "Claude's Discretion" note above claims E-Stop also
+   renders via `CompactControlStrip.tsx`, `ControlCenterPanel.tsx`, `DashboardLayout.tsx` and
+   `CommandPalette.tsx`. **Wrong.** `EStopButton` is imported at exactly one place
+   (`DashboardLayout.tsx:23`) and rendered at exactly one place (`DashboardLayout.tsx:612`). The other
+   three files contain no E-Stop reference at all — they match a naive "stop" grep only via unrelated
+   symbols such as `onScreenShareStop`.
+
+5. **The sidebar is `w-60` (240px), not 232px.** `DashboardLayout.tsx:518` (desktop) and `:539`
+   (mobile drawer) both use `w-60`. **232px is SHELL-02's target width, not today's value** — Phase 120
+   must not change the sidebar width at all. Reproduce the 900px collision against 240px.
+
+6. **`animate-pulse` is 102 occurrences across 61 non-test files, not "129 across 60".** Measured:
+   **131** occurrences across all of `src/` including tests; **102** in non-test files; **61** non-test
+   files. The 129 figure was a count of matching *lines* (not occurrences) and included test files.
+   More importantly, D-09 enumerates only **19** sites while the non-skeleton population is **47** — so
+   **28 sites are unclassified** and are covered only by D-09's "and siblings found by the same shape".
+   120-06 enumerates all 47 and classifies them by D-09's rule, labelling its own classification a
+   draft to be corrected at execution.
+
+7. **`HeroStatsBar`'s Integrations block ends at `:170`, not `:168`.**
+
+**Also stale, and NOT this phase's work:** `ROADMAP.md`'s Phase 120 summary line lists "`--status-ok`
+identical to `--primary`" as one of Phase 120's three verified defects. `REQUIREMENTS.md:44` (TOKEN-02)
+assigns that decoupling to **Phase 122**, and Phase 120's own five success criteria never mention it.
+Corrected in ROADMAP.md in the same commit as these plans.
+
 </premise_corrections>
 
 <decisions>

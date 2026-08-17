@@ -678,7 +678,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 120 — Polish & Verified Defects** — remove the unanimous 3-model kill list and fix three code-verified defects (fabricated Integrations row, destructive confirm living in a toast, `--status-ok` identical to `--primary`); the cheapest work, done first so it clears the decoration that would otherwise confound later visual-regression and contrast measurement
+- [ ] **Phase 120 — Polish & Verified Defects** — remove the unanimous 3-model kill list and fix the code-verified defects (fabricated Integrations row, destructive confirms living in a toast and a `window.confirm`, E-Stop reflow, the 900px sidebar/Settings collision); the cheapest work, done first so it clears the decoration that would otherwise confound later visual-regression and contrast measurement. *(Corrected 2026-08-17: this line previously listed "`--status-ok` identical to `--primary`" as a Phase 120 defect. `REQUIREMENTS.md:44` assigns that decoupling to TOKEN-02 / Phase 122, and Phase 120's own success criteria below never mention it.)*
 - [ ] **Phase 121 — Analytics Query Resilience** — `/analytics` survives any single failing query, and its LLM cost/latency queries (`costByModel`, `latencyOverTime`, `providerBreakdown`) move onto the `aggregates` rollups (DEBT-08) — a hard prerequisite for the six-state tile contract, not a passenger
 - [ ] **Phase 122 — Tokens, Primitives & Contrast Measurement** — layered surface tokens across all 5 themes, the three-hue-owner law, motion tokens, the six-state metric-tile primitive, shared `PageHeader`/`EmptyState` — plus A11Y-01, sizing the true scope of the contrast problem before any remediation is planned
 - [ ] **Phase 123 — Accessibility Remediation** — fix every violation A11Y-01 measured, and prove the contrast suite cannot report green against a page it never rendered
@@ -707,12 +707,23 @@ Plans:
 
   1. A repo-wide search for the kill-list patterns (`hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, `nav-active-shadow`/`nav-hover-shadow`, decorative pulse dots, cyan scrollbar glow, violet search pill) returns zero live hits.
   2. The E-Stop control holds fixed geometry and never wraps or reflows at any viewport width, from mobile to ultrawide.
-  3. Deleting a task (or any other destructive action) requires confirming in a dialog — the toast-based confirm at `Tasks.tsx:144-145` no longer exists anywhere in the app.
-  4. `HeroStatsBar`'s Integrations row either shows a real, emitter-backed figure or is gone — no surface renders a number with no live source behind it.
-  5. Status badges follow the quiet law (only Failed renders filled) under one unified vocabulary (Running/Succeeded/Failed/Cancelled), and the sidebar and Settings no longer collide at 900px.
+  3. Deleting a task (or any other destructive action) requires confirming in a dialog — the toast-based confirm at `Tasks.tsx:144-145` no longer exists anywhere in the app. *(Corrected 2026-08-17: there is no delete at that location. `Tasks.tsx:143-160` is a **move-to-action-column** confirm on a 5-second auto-dismissing toast — genuinely the target defect, but not a delete. A second site of the same class, `WarRoom.tsx:86`'s `window.confirm` on a real delete, is also in scope. See `120-CONTEXT.md` §premise_corrections.)*
+  4. `HeroStatsBar`'s Integrations row either shows a real, emitter-backed figure or is gone — no surface renders a number with no live source behind it. *(Scope note: `HeroStatsBar.tsx:141`'s synthetic "System Load" figure is the same defect class but is assigned to SIGNAL-02 / Phase 125 by `REQUIREMENTS.md:59`. Phase 120 records it rather than fixing it, so POLISH-04 is not fully closed here — verification must not read it as clean without that caveat.)*
+  5. Status badges follow the quiet law (only Failed renders filled) under one unified vocabulary (Running/Succeeded/Failed/Cancelled), and the sidebar and Settings no longer collide at 900px. *(Vocabulary is confined to those four spine words; states with no honest mapping — `auth_failed`, `queued`, `pending`, `stopping_pending` — keep distinct labels per D-15, and `auth_failed` must stay visually distinct from `failed`.)*
 
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 7 — planned 2026-08-17
+  - `120-01` — `hover:scale-[1.01]` + paired-transition sweep (36 files) · POLISH-01 · D-01, D-02
+  - `120-02` — `index.css` dead-rule deletions, scrollbar, and all `DashboardLayout` kill targets · POLISH-01 · D-03, D-04, D-05, D-06
+  - `120-03` — both destructive confirms → `AlertDialog` · POLISH-01, POLISH-03 · D-12, D-13, D-14
+  - `120-04` — quiet-badge fill law + spine vocabulary + D-17 inventory · POLISH-05 · D-15, D-16, D-17
+  - `120-05` — Integrations row deletion + fabrication-class sweep · POLISH-01, POLISH-04 · D-07, D-08
+  - `120-06` — pulse-dot triage (47 sites) + reduced-motion gating · POLISH-01 · D-09, D-10, D-11
+  - `120-07` — E-Stop geometry + 900px collision + criterion-1 aggregate close-out · POLISH-02, POLISH-06 · (discretion items, no D-NN)
+
+  Waves: 1 = `120-01`..`120-05` (zero file overlap, genuinely parallel) · 2 = `120-06` (depends on `120-01`) · 3 = `120-07` (depends on `120-02`, `120-06`; `autonomous: false` — carries a human checkpoint).
+  All 17 decisions D-01..D-17 covered; POLISH-01..06 all mapped.
+
+**UI hint**: yes — but **no UI-SPEC.md was written for this phase, deliberately** (Larry, 2026-08-17). This phase builds no new surface: the design law is already locked in `Skill("sketch-findings-codepulse")` and D-01..D-17, and `REQUIREMENTS.md:16-18` declares those inputs closed to re-litigation. Matches v14.0 precedent, where sweep phases (113-debt-sweep, 110, 115, 117, 119) had no UI-SPEC while new-surface phases did. Phases 122/124/125 DO build new surface and still need their own.
 
 ---
 

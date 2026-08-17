@@ -1,0 +1,33 @@
+{
+  "phase": 120,
+  "phaseName": "polish-verified-defects",
+  "created": "2026-08-17T15:35:29.583Z",
+  "history": [
+    {
+      "timestamp": "2026-08-17T15:35:29.583Z",
+      "command": "plan-phase",
+      "ready": false,
+      "missing": [
+        "UI-SPEC.md"
+      ]
+    }
+  ],
+  "lastCheck": "2026-08-17T15:35:29.583Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "120-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "120-DISCUSSION-LOG.md"
+      ]
+    }
+  }
+}
