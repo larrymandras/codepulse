@@ -86,7 +86,7 @@ function NavGroup({
     <div className="mb-2">
       {!collapsed && (
         <div className="px-3 pt-4 pb-2 flex items-center gap-2">
-          <span className="w-1 h-1 rounded-full bg-primary/50 animate-pulse" />
+          <span className="w-1 h-1 rounded-full bg-primary/50" />
           <p className="text-xs uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]">
             {label}
           </p>
@@ -143,8 +143,8 @@ function NavGroup({
               className={({ isActive }) =>
                 `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                   isActive
-                    ? "is-active text-primary bg-primary/10 nav-active-shadow"
-                    : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 nav-hover-shadow"
+                    ? "is-active text-primary bg-primary/10"
+                    : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5"
                 }`
               }
             >
@@ -240,10 +240,17 @@ function SidebarContent({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h1 className="text-base font-bold text-foreground font-mono tracking-wider shadow-primary drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.5)] glitch-text" data-text="CodePulse">CodePulse</h1>
+                    {/* D-03 (Phase 120): the glitch-effect class and its drop-shadow glow were
+                        removed as a deliberate named exception to D-01 (POLISH-01's kill list).
+                        font-mono tracking-wider is KEPT — the Geist sentence-case type treatment
+                        is Phase 122/124's to change, not this plan's. shadow-primary is a
+                        Tailwind shadow-color utility with no companion shadow-size class, so it
+                        already renders nothing; left as-is and recorded in
+                        120-SHELL-EVIDENCE.md for Phase 124. */}
+                    <h1 className="text-base font-bold text-foreground font-mono tracking-wider shadow-primary">CodePulse</h1>
                   </div>
                   <div className="text-[11px] text-primary/80 uppercase font-mono tracking-wider mt-0.5 flex items-start gap-1.5 leading-tight">
-                    <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[var(--glow-md)] mt-0.5" />
+                    <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary shadow-[var(--glow-md)] mt-0.5" />
                     <span className="break-words">Operator: Larry Mandras</span>
                   </div>
                 </div>
@@ -275,8 +282,8 @@ function SidebarContent({
                 className={({ isActive }) =>
                   `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                     isActive
-                      ? "is-active text-primary bg-primary/10 nav-active-shadow"
-                      : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 nav-hover-shadow"
+                      ? "is-active text-primary bg-primary/10"
+                      : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5"
                   }`
                 }
               >
@@ -508,7 +515,6 @@ export default function DashboardLayout() {
     // outlive route changes, not the whole app lifetime.
     <GlobalSwapProvider>
     <div className="flex h-screen overflow-hidden bg-background relative">
-      <div className="matrix-bg" />
       {/* CRT Scanline Overlay */}
       <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden mix-blend-overlay">
         <div className="crt-scanline-bar w-full h-[5px] bg-primary/40 shadow-[var(--glow-md)]" />
@@ -569,7 +575,7 @@ export default function DashboardLayout() {
             
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-primary/10 border border-primary/20 shadow-[var(--glow-xs)]">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-md)]" />
+                <span className="w-2 h-2 rounded-full bg-primary shadow-[var(--glow-md)]" />
                 <span className="text-xs font-mono tracking-widest text-primary uppercase">
                   Astridr Runtime Telemetry
                 </span>
@@ -597,7 +603,7 @@ export default function DashboardLayout() {
           <div className="flex-1 max-w-sm mx-4 hidden md:flex">
             <button
               onClick={() => setPaletteOpen(true)}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground bg-accent/50 hover:bg-accent hover:text-foreground rounded-md border border-border/50 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground bg-muted/40 hover:bg-muted/60 hover:text-foreground rounded-md border border-border/50 transition-colors"
             >
               <Search className="w-4 h-4" />
               <span className="flex-1 text-left">Search / Command...</span>
