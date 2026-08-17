@@ -1,33 +1,125 @@
 # Requirements
 
-**No active milestone.** v14.0 shipped 2026-08-17; the next milestone's requirements will be written here by `/gsd-new-milestone`.
+**Active milestone: v15.0 — "Borealis Console" Premium UI Overhaul** (Phases 120+, started 2026-08-17 via `/gsd-new-milestone`, consuming the `MILESTONE-CONTEXT.md` prepared 2026-08-07).
 
 Prior milestones (requirements archived in full, extract-don't-delete):
 
-- **v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board** shipped 2026-08-17 → [milestones/v14.0-REQUIREMENTS.md](milestones/v14.0-REQUIREMENTS.md). Phases 108–119, 86 plans, **15/17 satisfied**. Two exceptions, both deliberate: **MISSION-01 ⚠ PARTIAL** (duration + orphan recovery deferred to SEED-007) and **MISSION-02 ↗ REASSIGNED** to SEED-007 (blocked on astridr — no job↔tool join key exists). Phases 114–119 were design-doc-driven and carry `D-NN` decisions rather than REQ-IDs.
-- **v13.0 — Brain-Swap Control, Cost Intelligence & Consolidation** shipped 2026-08-06 → [milestones/v13.0-REQUIREMENTS.md](milestones/v13.0-REQUIREMENTS.md). Phases 103–107, 53 plans, **14/15 satisfied**. Its one exception, **BSC-01 ⚠ PARTIAL** (per-agent axis deferred), was picked up and closed by v14.0's ENGINE category.
+- **v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board** shipped 2026-08-17 → [milestones/v14.0-REQUIREMENTS.md](milestones/v14.0-REQUIREMENTS.md). Phases 108–119, 86 plans, **15/17 satisfied** (MISSION-01 PARTIAL, MISSION-02 reassigned to SEED-007).
+- **v13.0 — Brain-Swap Control, Cost Intelligence & Consolidation** shipped 2026-08-06 → [milestones/v13.0-REQUIREMENTS.md](milestones/v13.0-REQUIREMENTS.md) (14/15).
 - **v11.0 — Skills Command Center** shipped 2026-07-25 → [milestones/v11.0-REQUIREMENTS.md](milestones/v11.0-REQUIREMENTS.md) (22/22).
 - **v12.0 — Reminders & Calendar** shipped 2026-07-23 → [milestones/v12.0-REQUIREMENTS.md](milestones/v12.0-REQUIREMENTS.md) (9/9).
 
 ---
 
-## Carried forward from v14.0 (non-blocking, not yet scoped)
+## Design inputs (read these during phase planning — carried from MILESTONE-CONTEXT.md, now consumed)
 
-Retained at the v14.0 close so nothing is silently dropped. None of these blocked the milestone;
-each is recorded with why it is open rather than merely listed. Full evidence in
-[milestones/v14.0-MILESTONE-AUDIT.md](milestones/v14.0-MILESTONE-AUDIT.md).
+The design law for this milestone is **already decided and validated**; these are inputs, not open questions. Re-litigating them is out of scope.
 
-1. **MISSION-01 — duration + orphan recovery** → SEED-007. Deferred by decision D-04 and blocked on **data shape, not effort**: `submittedAt` is a synthetic copy of `finishedAt` in 7 of 7 rows so no duration is derivable, and `runtimeIngest.ts:594-596` routes terminal-state events only, so no `running` row can arrive and the orphan clause is vacuous rather than unbuilt. **Do not tick MISSION-01's checkbox** — it has been auto-re-ticked by tooling twice and reverted twice; the traceability row is authoritative.
-2. **MISSION-02 — humanized tool activity per mission** → SEED-007. Blocked on astridr (D-03): `toolExecutions` carries no `jobId`, `subagentJobs` carries no `sessionId`/`traceId`, 0 of 7 rows carry either, and `toolExecutions` is on 14-day retention so a retroactive key could not recover history. Needs an astridr-side emitter change before it is buildable at all.
-3. **`message_routed` routed but unsurfaced.** `convex/telemetryDispositions.ts:111-117` — disposition is `routed` to `messageRoutes`, deliberately without a UI surface pending its own design pass (D-13). Disclosed in the disposition record itself, not a silent gap.
-4. **`links` has no recorded retention decision.** `convex/bifrost.ts:53` does an unbounded `ctx.db.query("links").collect()` on the public `list` query, and `retention.ts` — which documents explicit exemptions for `prompts`/`promptVersions` (116 D-13) and `media`/`mediaStyles`/`mediaModels` (118 D-03) — names `links` nowhere. Low practical risk (operator-curated, so growth is bounded by human curation rate rather than telemetry volume). Note `galdr.ts` also contains 5 `.collect()` calls, so this is a missing *decision*, not a unique unbounded read.
-5. **`llm-analytics-rollup` CR-01** — move the Analytics LLM queries (`costByModel`, `latencyOverTime`, `providerBreakdown`) off raw `llmMetrics` and onto the `aggregates` rollups. **SCOPED INTO v15.0 on 2026-08-17** as target feature 5 in `MILESTONE-CONTEXT.md`; still open in `todos/pending/` until executed. Its own `trigger_when` ("the next Analytics-touching phase") is satisfied by v15.0, and it is a **dependency** of that milestone's six-state tile contract rather than a passenger: a single `useQuery` throw currently unmounts the React tree and blanks `/analytics` entirely, so a tile cannot render an honest `unavailable` state until this lands.
-6. **`detectCredentialValue` rule C** still treats a colon or hyphen as breaking a run, so a `<uuid>:<32-hex>` key measures 36 unbroken chars against its bound of 40. Rule A now catches that shape **by name**, so the realistic paste is covered; relaxing C has its own false-positive surface and was deliberately not done.
-7. **Nyquist coverage is partial.** Compliant: 108, 110, 111, 115, 116, 118. Partial (`nyquist_compliant: false`): 109, 112, 113, 114. No VALIDATION.md: 117, 119 — both shipped with a phase-level summary and no per-plan PLAN files, consistent with their 0/0 plan counts.
-8. **DEBT-06 remains latent.** The intermittent `Chat.test.tsx` brain-pill failure was **closed guarded**, not root-caused — 80 clean full-suite soak iterations produced no reproduction, so no captured failure ever existed to diagnose. Instrumentation was shipped so the next occurrence self-diagnoses.
-9. **Phase 115's D-05 is partial by design**, and its VERIFICATION is `passed-with-concerns` (15/17 decisions, 1 partial, 1 failed-then-remediated) — recorded rather than rounded away.
+1. **`Skill("sketch-findings-codepulse")`** — the validated design law: 12 locked decisions, CSS patterns, motion tokens, the kill list, plus the winning interactive mockup in `sources/`. Auto-loads on UI work.
+2. **`.planning/sketches/001-dashboard-quiet-control-room/index.html`** — the working reference implementation of the whole direction. **Open it**; it answers more than prose can.
+3. **`html-out/ui-premium-redesign-comparison.html`** — the 3-model proposals (Claude Fable 5 / GPT-5.6 Sol / Kimi K3) plus the approved verdict tab. The convergence map is the quick-win list.
+4. **`html-out/redesign-before-after.html`** — before/after visual reference.
+5. **`.planning/sketches/MANIFEST.md`** and `WRAP-UP-SUMMARY.md` — direction and wrap-up.
 
-### Still open from the v13.0 close
+**Decided 2026-08-07 by Larry:** variant B "Borealis blend" is the winner; ALL work including quick-wins was held for v15.0.
 
-10. **Astridr event-kind coverage** — partly absorbed by TELE-01..03. Any kind TELE-03 disposed as "generic-table-by-design" is closed rather than carried.
-11. **Cross-repo, astridr:** `feature/brain-swap` → `main` divergence (a release decision, not a bug); `web.py` on `feature/brain-swap` still carries the decommissioned-host CORS default that was removed on `main`. Production runs `feature/brain-swap`, so this stays a live consideration for any ENGINE-adjacent work.
+---
+
+## Polish & Verified Defects (POLISH)
+
+The unanimous 3-model kill list plus three defects verified in live code. These are the cheapest wins and should land first — they also unblock honest measurement for the token work.
+
+- [ ] **POLISH-01** — Operator sees no instance of the banned decoration anywhere in the app: `hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, per-item nav glow (`nav-active-shadow`/`nav-hover-shadow`), decorative pulse dots, cyan scrollbar glow, violet search pill. *(Unanimous across all three model proposals — the strongest signal in the comparison.)*
+- [ ] **POLISH-02** — The E-Stop control holds fixed geometry and never wraps or reflows at any viewport width.
+- [ ] **POLISH-03** — A destructive action is confirmed in a **dialog**, never a toast. *(`Tasks.tsx:144-145` puts a destructive confirm in a toast today — a toast can be missed or auto-dismissed, so it cannot carry a decision.)*
+- [ ] **POLISH-04** — No surface asserts a figure that has no emitter behind it. *(`HeroStatsBar.tsx:161-168` renders a fabricated Integrations row and carries a literal "simulation" comment. Same honesty rule that governed v14.0's MISSION-03.)*
+- [ ] **POLISH-05** — Status badges follow the quiet law: only **Failed** renders filled; everything else is quiet. Status vocabulary is unified to Running / Succeeded / Failed / Cancelled.
+- [ ] **POLISH-06** — The sidebar and Settings no longer collide at 900px.
+
+## Tokens & Primitives (TOKEN)
+
+Where the milestone's leverage is: 200+ components inherit from shared primitives, so upgrading these beats per-page rewrites.
+
+- [ ] **TOKEN-01** — All 5 themes define the layered surface tokens (`--surface-0/1/2/3`, `--hairline`), and every surface reads them rather than hardcoded values.
+- [ ] **TOKEN-02** — The three-hue-owner law holds app-wide: cyan = machine, violet = Ástríðr **only**, `--status-*` = state. This includes decoupling `--status-ok` from `--primary` (`index.css:139/165` — identical cyan today, so "OK" and "brand" are visually indistinguishable).
+- [ ] **TOKEN-03** — Motion is token-driven (120/200/320ms, `cubic-bezier(0.22,1,0.36,1)`), every animation is gated on `prefers-reduced-motion`, and `readable` keeps its no-effects guarantee.
+- [ ] **TOKEN-04** — A shared metric tile primitive renders **six explicit states** — loading, ready, empty ("no signal yet"), stale, unavailable, error — and no surface shows a bare "Loading…" or renders "—" as a confident metric value. Skeletons are shaped like the content they replace.
+- [ ] **TOKEN-05** — Every route uses the shared `PageHeader` contract, and `EmptyState` is a shared primitive rather than per-page prose.
+
+## Shell & Information Architecture (SHELL)
+
+- [ ] **SHELL-01** — A 48px 3-zone header (breadcrumb / command bar / system-chip + E-STOP + overflow menu holding theme, privacy, CRT, audio and help) replaces today's header on every route.
+- [ ] **SHELL-02** — The 232px sidebar is regrouped into 4 collapsible domains (Command / Observe / Agents / System) with count badges and a 2px active rail, delivered as a **pure `navRegistry.ts` regroup with no route changes**. *(Every route keeps its URL; this is presentation only.)*
+
+## Signature Layers (SIGNAL)
+
+The two moments that make the console feel like itself. Deliberately last — they sit on top of the token and shell work.
+
+- [ ] **SIGNAL-01** — The aurora-textured Signal Horizon renders as a 2px shell line carrying event packets, turns crimson on **every page** when E-Stop arms, and eases back through amber over ~2.6s on disarm. Static or hidden under reduced-motion and in `readable`.
+- [ ] **SIGNAL-02** — A Pulse ECG canvas hero replaces the synthetic "SYSTEM LOAD" bar, driven by real events over a 60s window, reading its colours from tokens via `getComputedStyle`. One component, no Recharts — the entry-chunk budget holds.
+- [ ] **SIGNAL-03** — Ástríðr's serif voice is trialled on **exactly one** surface (Briefings or Insights) and evaluated before any app-wide commit. *(Explicitly not a global font change in this milestone.)*
+
+## Accessibility (A11Y) — SEED-006
+
+Pulled in because this milestone rewrites the palette. Fixing contrast separately would mean touching all 5 themes twice, or worse, choosing new tokens without contrast data and re-baking the violations.
+
+- [ ] **A11Y-01** — The true scale of the contrast problem is **measured** across the full 4 themes × 5 pages matrix against the keyless server, and recorded. *(This is sizing, and it is task 1. The known figure — 234 violations on `[cyan] Dashboard` — is ONE CELL of that matrix. The total is unmeasured. **Do not plan against 234.**)*
+- [ ] **A11Y-02** — `e2e/theme-contrast.spec.ts` passes against `dev:noauth` with no `wcag2a`/`wcag2aa` violations, across every theme × page cell measured in A11Y-01.
+- [ ] **A11Y-03** — The contrast suite cannot report green against a page it never rendered. *(Half of this shipped as `fee96b5d`, which made the spec skip rather than assert when the Clerk gate is up. This requirement is to **verify that guard still holds** after the token rewrite — a suite that passes vacuously is worse than no suite, and this one did exactly that for months.)*
+
+## Analytics Data Path (DEBT)
+
+Numbering continues from v14.0's DEBT-05..07.
+
+- [ ] **DEBT-08** — `/analytics` survives a failing query: no single `useQuery` throw can blank the page, and its LLM queries (`costByModel` `llm.ts:231`, `latencyOverTime` `:308`, `providerBreakdown` `:275`) read the `aggregates` rollups rather than raw `llmMetrics`. **This is a prerequisite for TOKEN-04 on `/analytics`** — a tile cannot render an honest `unavailable` state if the throw unmounts the React tree first. Full brief: `todos/pending/llm-analytics-rollup-migration-cr01.md`.
+
+---
+
+## Milestone-level acceptance (carried from MILESTONE-CONTEXT.md before it was consumed)
+
+These sit **above** the per-requirement checkboxes — they are how the milestone as a whole is judged, and they name the verification method, not just the outcome.
+
+1. **Dashboard at 1600×900 matches the Borealis mockup's structure and law** — spot-diff against `sketch-variant-b.png`, not judged by eye alone.
+2. **Arming E-Stop turns the Signal Horizon crimson on every page**; disarm eases back through amber (~2.6s); the confirm is a dialog, not a toast.
+3. **Zero instances remain** of: `hover:scale-[1.01]`, glitch-text, matrix-bg, `nav-active-shadow`/`nav-hover-shadow`, the fabricated Integrations row, `--status-ok` == `--primary`, bare "Loading…" text, and "—" rendered as a confident metric value.
+4. **All 5 themes render the new tokens**; `readable` keeps its no-effects guarantee; `prefers-reduced-motion` verified.
+5. **Every route uses the shared PageHeader**; Executions uses the quiet-badge table pattern.
+
+**Adopted verification contracts** (from GPT-5.6 Sol's proposal, accepted 2026-08-07): six-state metric tiles, freshness labels, unified status vocabulary (Running/Succeeded/Failed/Cancelled), an event-coalescing budget of ≤1 animation per region per second, and **visual regression across all 5 themes at 1600×900 plus reduced-motion**.
+
+---
+
+## Out of Scope (this milestone)
+
+- **Re-litigating the design direction.** Variant B was chosen 2026-08-07 against three model proposals. The 12 locked decisions are inputs.
+- **Replacing the theming architecture.** Enhance the `data-theme` + token system; do not swap it. No new UI frameworks — shadcn/Radix/Tailwind-4/Lucide only.
+- **Per-page rewrites.** Upgrade shared primitives instead; 200+ components inherit.
+- **App-wide serif adoption.** SIGNAL-03 is a one-surface trial, deliberately.
+- **Regressing `/chat`.** It is the in-repo north star and its easing is the house easing.
+- **SEED-004 Project Lifecycle Cockpit.** Its own trigger defers it past v15.0 and gates it on Forge v4.0 Interactive Sessions (Phases 21–26), which have not shipped.
+- **SEED-002 / SEED-007 mission work.** Both gated on the astridr emitter resuming — no join key exists today.
+
+---
+
+## Traceability
+
+Filled by the roadmapper.
+
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+
+---
+
+## Carried forward from v14.0 (still open, not scoped into v15.0)
+
+Items 5 (CR-01) and the accessibility half have been **absorbed** into this milestone as DEBT-08 and A11Y-01..03 respectively; the rest stay open.
+
+1. **MISSION-01 duration + orphan recovery** → SEED-007. Blocked on data shape, not effort: no `running` row can arrive. **Do not tick MISSION-01's checkbox** — auto-re-ticked by tooling twice, reverted twice.
+2. **MISSION-02 humanized tool activity** → SEED-007. No job↔tool join key exists in astridr.
+3. **`message_routed` routed but unsurfaced** — needs its own UI design pass (D-13). *Candidate to fold into SHELL/TOKEN work if capacity allows, but not scoped.*
+4. **`links` has no recorded retention decision** — `bifrost.ts:53` does an unbounded `.collect()` on the public `list` query. Low practical risk (operator-curated).
+5. ~~`llm-analytics-rollup` CR-01~~ → **absorbed as DEBT-08**.
+6. **`detectCredentialValue` rule C** still cannot see a colon-joined token as one run; rule A covers the realistic shape by name, so this is deliberate.
+7. **Nyquist coverage partial** — 109/112/113/114 partial, 117/119 have no VALIDATION.md.
+8. **DEBT-06 remains latent** — the intermittent `Chat.test.tsx` failure was closed *guarded*, never root-caused; instrumentation ships the next occurrence's diagnosis.
+9. **Cross-repo, astridr:** `feature/brain-swap` → `main` divergence; `web.py` on the deployed branch still carries a decommissioned-host CORS default removed on `main`.
