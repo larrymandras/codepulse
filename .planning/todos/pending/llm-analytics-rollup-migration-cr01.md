@@ -10,14 +10,26 @@ resolves_phase: null
 last_reviewed: 2026-08-17
 ---
 
-> **Reviewed 2026-08-17 — deliberately left PARKED, still `pending`.** Larry's call at the
-> Phase 118 close. Neither trigger in `trigger_when` has fired: `/analytics` has not thrown
-> again since the `0053c596` fix (which took `subscriptionUsage` to ~1s), and no
-> Analytics-touching phase has been planned. Recorded as a candidate for the next
-> milestone's roadmap rather than actioned now, because the frontmatter scopes this at
-> **one phase** — it is not a todo-sized job and doing it inline would skip planning.
+> **SCOPED INTO v15.0 on 2026-08-17, at Larry's request.** Still `pending` — this records
+> that it is *committed scope*, not that it is done. Recorded as target feature 5 in
+> `.planning/MILESTONE-CONTEXT.md`, which `/gsd-new-milestone` consumes; that entry carries
+> the sequencing constraint and the three traps below, so the scoping step does not
+> re-derive them.
 >
-> Nothing below was re-measured on this date; the 2026-08-11 figures stand as written,
+> **The `trigger_when` above has now fired** — by its own terms. It reads "the next
+> Analytics-touching phase, whichever comes first", and v15.0 is one: its criterion 5 puts
+> the shared PageHeader on every route and its feature 2 mandates six-state metric tiles.
+>
+> **It is a dependency of that milestone, not a passenger.** The 2026-08-11 incident was a
+> single `useQuery` throw **unmounting the React tree**, blanking all of `/analytics`
+> including charts whose data was intact. A tile cannot render an honest `unavailable`
+> state if the throw kills the tree before it renders — so v15.0's six-state tile contract
+> is not deliverable on `/analytics` until this lands. Sequence it **with or before** the
+> Analytics honest-states work rather than as tail-end cleanup.
+>
+> Earlier the same day this was reviewed and left parked (neither trigger had fired then;
+> `/analytics` has not thrown again since `0053c596` took `subscriptionUsage` to ~1s).
+> Nothing below was re-measured on either date — the 2026-08-11 figures stand as written,
 > including the correction that this is a **latency/load** problem and NOT runaway growth.
 
 # TODO: Move the Analytics LLM queries onto the `aggregates` rollups (Phase 104 CR-01)
