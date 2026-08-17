@@ -121,7 +121,7 @@ export default function HeroStatsBar() {
   return (
     <div className="flex flex-col gap-6">
       {/* Top Section: Progress Bar and Global Controls */}
-      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] hover:scale-[1.01] transition-transform duration-300">
+      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
         <div className="absolute top-4 right-4 flex items-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-mono">Status</span>
           <span className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${hc.bg} text-${hc.bg.replace('bg-', '')}`} />
@@ -130,7 +130,7 @@ export default function HeroStatsBar() {
         <div className="flex flex-col gap-4">
           <div className="flex items-baseline gap-4">
             <span className="text-sm text-primary uppercase tracking-widest font-mono flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
               System Load
             </span>
             <span className="text-xs text-muted-foreground font-mono tracking-widest">LIVE / 5H WINDOW</span>
@@ -156,17 +156,6 @@ export default function HeroStatsBar() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Quick Action Badges (Integrations row simulation) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-y border-border/50 py-3">
-        <span className="text-xs text-primary uppercase tracking-widest font-mono mr-2">Integrations</span>
-        {['GITHUB', 'LINEAR', 'SLACK', 'CONVEX', 'VERCEL'].map((integration) => (
-          <div key={integration} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-card/40 border border-border/50 hover:border-primary/50 cursor-pointer transition-colors">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80"></span>
-            <span className="text-xs text-muted-foreground font-mono tracking-widest uppercase">{integration}</span>
-          </div>
-        ))}
       </div>
 
       {/* KPI grid */}
