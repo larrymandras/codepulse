@@ -7,7 +7,13 @@ last_updated: "2026-08-17T14:35:30.054Z"
 last_activity: "2026-08-17 - Milestone v15.0 started"
 stopped_at: "v15.0 (Borealis Console Premium UI Overhaul) STARTED 2026-08-17 - defining requirements, no phase begun. Phase numbering continues from 119, so the first phase is 120. v14.0 shipped, archived and tagged the same day; its full record is in MILESTONES.md, RETROSPECTIVE.md and milestones/v14.0-*. Scope was taken from MILESTONE-CONTEXT.md (prepared 2026-08-07, variant B Borealis blend) plus SEED-006 WCAG-AA contrast remediation, pulled in because this milestone redefines the token palette across all 5 themes and fixing contrast separately would mean doing that work twice. CR-01 analytics rollup is in scope as a DEPENDENCY of the six-state tile contract, not a passenger."
 progress:
-  total_phases: 0
+  # total_phases set to 6 by hand 2026-08-17 after the v15.0 roadmap landed.
+  # gsd-roadmapper deliberately made no STATE.md write ("consistent with
+  # roadmapped but not started"), which left this at 0 while ROADMAP.md's
+  # Progress table defined 6 phases (120-125) — gsd-state-coherence.ps1 refused
+  # on exactly that disagreement. Plan counters correctly stay 0: no phase has
+  # been planned yet, so no NNN-NN-PLAN.md files exist. Re-derive, never increment.
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -49,9 +55,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
+Phase: Not started — roadmapped through 125; Phase 120 (Polish & Verified Defects) is next
+Plan: — (no phase planned yet, so no PLAN.md files exist)
+Status: Roadmapped, ready to plan Phase 120
 Last activity: 2026-08-17 - Milestone v15.0 started
 
 ## Deferred Items
