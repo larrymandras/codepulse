@@ -7,7 +7,18 @@ trigger_when: Next time /analytics throws a "too many system operations" error, 
 scope: Medium (one phase — per-query semantic verification against the rollups, not a mechanical sweep)
 source: Phase 104 gap plan CR-01 (pre-existing, re-confirmed live 2026-08-11); convex/llm.ts:251-271 STOPGAP note
 resolves_phase: null
+last_reviewed: 2026-08-17
 ---
+
+> **Reviewed 2026-08-17 — deliberately left PARKED, still `pending`.** Larry's call at the
+> Phase 118 close. Neither trigger in `trigger_when` has fired: `/analytics` has not thrown
+> again since the `0053c596` fix (which took `subscriptionUsage` to ~1s), and no
+> Analytics-touching phase has been planned. Recorded as a candidate for the next
+> milestone's roadmap rather than actioned now, because the frontmatter scopes this at
+> **one phase** — it is not a todo-sized job and doing it inline would skip planning.
+>
+> Nothing below was re-measured on this date; the 2026-08-11 figures stand as written,
+> including the correction that this is a **latency/load** problem and NOT runaway growth.
 
 # TODO: Move the Analytics LLM queries onto the `aggregates` rollups (Phase 104 CR-01)
 

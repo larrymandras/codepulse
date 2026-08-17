@@ -1,11 +1,29 @@
 ---
 created: 2026-08-14
+closed: 2026-08-17
+status: closed-accepted-by-design
 source: 114-11-PLAN.md Task 1 step 4 (operator checkpoint, D-18)
 phase_origin: 114
 owning_code: Clerk integration (src/main.tsx ClerkProvider), NOT the workspace map
 priority: low
 type: unexamined-observation
 ---
+
+> **CLOSED 2026-08-17 — accepted by design.** Larry's decision: CodePulse stays a
+> tailnet-local dev tool and will not run a production Clerk instance. Per step 1 of
+> "How to close it" below, that makes both entries expected behaviour rather than defects:
+> the `accounts.dev` bounce-tracking notice is Chrome commenting on Clerk's *dev-instance*
+> domain, and the dev-keys console warning is the expected notice for a development
+> instance. No code change. Closed with the reason recorded, exactly as this file specified.
+>
+> **This closure is scoped to that premise and does not survive it.** If CodePulse is ever
+> pointed at a production Clerk instance, step 2 below still applies in full: the
+> bounce-tracking finding must be **re-measured** against the custom domain rather than
+> assumed to carry over from `accounts.dev`. Neither direction was investigated here, and
+> assuming either would repeat the mistake the Phase 111 todo was written to prevent.
+>
+> Note this closes the todo, not the underlying question — nothing below was measured or
+> disproven. It is filed as accepted, not as resolved.
 
 # Chrome bounce-tracking notice for `accounts.dev`, plus the Clerk dev-keys warning
 
