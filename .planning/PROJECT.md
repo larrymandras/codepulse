@@ -8,11 +8,29 @@ Multi-provider operational command center for Ástríðr AI assistant. React 19 
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
-## No Current Milestone
+## Current Milestone: v15.0 "Borealis Console" Premium UI Overhaul
 
-**v14.0 shipped 2026-08-17.** The next milestone has not been scoped — run `/gsd-new-milestone` to start one. Phase numbering continues from 119 → **Phase 120+**.
+**Goal:** Make CodePulse look and feel genuinely premium — calm layered matte surfaces, colour spent only on state, two signature layers (aurora Signal Horizon + Pulse ECG hero), Ástríðr's serif voice — while raising usability through honest states, quiet badges, a 3-zone header and a 4-domain sidebar. Started 2026-08-17 via `/gsd-new-milestone`, consuming the `MILESTONE-CONTEXT.md` prepared 2026-08-07.
 
-Open items carried out of v14.0 (none blocking) are listed in [REQUIREMENTS.md](REQUIREMENTS.md#carried-forward-from-v140-non-blocking-not-yet-scoped) and evidenced in [milestones/v14.0-MILESTONE-AUDIT.md](milestones/v14.0-MILESTONE-AUDIT.md).
+**Target features:**
+
+- **Quick wins + verified defect fixes** — the unanimous 3-model kill list (`hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, per-item nav glow, decorative pulse dots, cyan scrollbar glow, violet search pill); fixed-geometry E-Stop; toast restyle; quiet badge law; the 900px sidebar/Settings collision; plus three code-verified defects — the fabricated Integrations row (`HeroStatsBar.tsx:161-168`, which carries a literal "simulation" comment), a destructive confirm living in a toast (`Tasks.tsx:144-145`), and `--status-ok` being identical to `--primary` (`index.css:139/165`).
+- **Tokens + primitives** — layered surface tokens (`--surface-0/1/2/3`, `--hairline`) across all 5 themes; the three-hue-owner law (cyan = machine, violet = Ástríðr only, `--status-*` = state); motion tokens; shared primitives with six explicit states (loading / ready / empty / stale / unavailable / error).
+- **Shell + IA** — 48px 3-zone header; 232px sidebar regrouped into 4 collapsible domains via a pure `navRegistry.ts` regroup with **no route changes**.
+- **Signature layers** — aurora-textured Signal Horizon, Pulse ECG canvas hero replacing the synthetic SYSTEM LOAD bar, and the Ástríðr serif voice trialled on **one** surface before any app-wide commit.
+- **WCAG-AA contrast remediation (SEED-006)** — pulled in because this milestone redefines the token palette across all 5 themes; fixing contrast separately would mean doing the token work twice, or re-baking known violations into the new palette. **Sizing is task 1** — 234 violations on the cyan Dashboard alone is *one cell of a 4×5 matrix*, and the true total is unmeasured. Do not plan against 234.
+- **CR-01 analytics rollup** — move `costByModel`/`latencyOverTime`/`providerBreakdown` onto the `aggregates` rollups. A **dependency** of the six-state tile contract, not a passenger: today a single `useQuery` throw unmounts the React tree and blanks all of `/analytics`, so a tile cannot render an honest `unavailable` state until this lands.
+
+**Key context / constraints:**
+
+- Variant B "Borealis blend" was chosen as the design winner on 2026-08-07, and **everything was held for v15.0** — nothing was pulled into v14.0. The validated design law (12 decisions, CSS patterns, motion tokens, kill list) lives in `Skill("sketch-findings-codepulse")`; the working reference implementation is `.planning/sketches/001-dashboard-quiet-control-room/index.html`.
+- **Enhance the token architecture, don't replace it.** 5 themes via `data-theme`; `readable` stays effect-free; everything gated on `prefers-reduced-motion`.
+- shadcn/Radix/Tailwind-4/Lucide only — no new UI frameworks. Entry-chunk discipline holds (the canvas hero is one component, no Recharts).
+- **Prefer upgrading shared primitives over per-page rewrites** — 200+ components inherit.
+- `/chat` is the in-repo north star and its easing is the house easing. Do not regress it.
+- Continues phase numbering from v14.0 (108–119) → **Phases 120+**.
+
+> **Prepared 2026-08-07, started 2026-08-17.** Requirements + roadmap in REQUIREMENTS.md + ROADMAP.md.
 
 ## Prior Milestone (shipped 2026-08-17, tagged `v14.0`): v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board
 
