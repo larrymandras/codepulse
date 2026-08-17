@@ -102,25 +102,29 @@ export default function WarRoom() {
   const handleConfirmDeleteRoom = useCallback(async () => {
     if (!pendingDeleteRoom) return;
     const room = pendingDeleteRoom;
-    try {
-      // Tear down the live LiveKit room + agents first (best-effort — a room
-      // seeded via ingest may have no live LiveKit room behind it).
-      if (room.status === "active") {
-        try {
-          await closeWarRoom(room.roomId);
-        } catch {
-          /* no live room to close — proceed to remove the record */
-        }
+    // NO top-level try/catch here, deliberately. DeleteWarRoomDialog closes only
+    // when this resolves, and on a rejection keeps itself open and toasts the
+    // error so the operator can retry. Swallowing the rejection here would make
+    // that documented branch unreachable and close the dialog on a FAILED
+    // delete — which is what it did until 120-REVIEW's WR-01 caught it. The
+    // sibling wiring, Tasks.tsx's handleConfirmMove, propagates for the same
+    // reason. The dialog's own test asserts the keep-open contract; this
+    // absence is what lets the production caller actually reach it.
+    //
+    // Tear down the live LiveKit room + agents first (best-effort — a room
+    // seeded via ingest may have no live LiveKit room behind it). This inner
+    // catch stays: a missing live room is expected, not a failure.
+    if (room.status === "active") {
+      try {
+        await closeWarRoom(room.roomId);
+      } catch {
+        /* no live room to close — proceed to remove the record */
       }
-      await deleteWarRoom({ roomId: room.roomId });
-      setSelectedRoomId((cur) => (cur === room.roomId ? null : cur));
-      toast.success(`Deleted "${room.name}"`);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to delete room",
-      );
     }
-  }, [deleteWarRoom, pendingDeleteRoom]);
+    await deleteWarRoom({ roomId: room.roomId });
+    setSelectedRoomId((cur) => (cur === room.roomId ? null : cur));
+    toast.success(`Deleted "${room.name}"`);
+  }, [closeWarRoom, deleteWarRoom, pendingDeleteRoom]);
 
   const allRooms = [...roomsData.active, ...roomsData.closed];
   const selectedRoom = allRooms.find((r) => r.roomId === selectedRoomId);

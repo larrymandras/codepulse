@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import React from "react";
 
 // ─── Module mocks ─────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ vi.mock("react-router", () => ({
 // Stub complex child components so the page renders in jsdom without issues.
 
 vi.mock("@/components/RoomListItem", () => ({
-  RoomListItem: ({ room, onSelect, isSelected }: any) => (
+  RoomListItem: ({ room, onSelect, isSelected, onDelete }: any) => (
     <div
       data-testid={`room-${room.roomId}`}
       data-selected={String(isSelected)}
@@ -66,6 +66,15 @@ vi.mock("@/components/RoomListItem", () => ({
       onClick={onSelect}
     >
       {room.name}
+      {/* Surfaces the real onDelete wiring so the WR-01 regression guard below
+          can open the genuine DeleteWarRoomDialog. */}
+      <button
+        aria-label={`delete-${room.roomId}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete?.();
+        }}
+      />
     </div>
   ),
 }));
@@ -98,7 +107,7 @@ vi.mock("@/components/hr/WarRoomLaunchDialog", () => ({
 // ─── Component import (after mocks) ──────────────────────────────────────────
 
 import WarRoom from "./WarRoom";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useParams } from "react-router";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -210,5 +219,62 @@ describe("WarRoom — ROOM-04 deep-link + closed-room (RED gate, Plan 06)", () =
     // RED: WarRoom.tsx does not have closed/missing room error handling.
     // When Plan 06 implements this, the banner should appear immediately on render.
     expect(screen.getByText("Room Ended")).toBeInTheDocument();
+  });
+});
+
+// ─── WR-01 regression guard (Phase 120 code review) ───────────────────────────
+//
+// DeleteWarRoomDialog is built to close ONLY when its onConfirm resolves, and to
+// stay open + toast on a rejection so the operator can retry. Its own test
+// asserts that contract at the component level and passes.
+//
+// The defect WR-01 caught was in the WIRING, not the component: WarRoom's
+// handleConfirmDeleteRoom carried a top-level try/catch over from the old
+// window.confirm implementation, which swallowed the mutation's rejection and
+// returned normally — so the dialog's keep-open branch was unreachable in
+// production and a FAILED delete closed the dialog anyway. A component test can
+// never catch that; only a test through the real caller can.
+//
+// This asserts the observable the operator actually experiences.
+describe("WarRoom — WR-01: a failed delete must not close the confirm dialog", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useQuery).mockImplementation((query: any, ..._args: any[]) => {
+      if (query === "warRoom:listRooms") return MOCK_ROOMS;
+      return [];
+    });
+    vi.mocked(useParams).mockReturnValue({});
+  });
+
+  async function openDeleteDialogAndConfirm(deleteImpl: () => Promise<unknown>) {
+    // useMutation is called several times by the page; the delete mutation is
+    // the one whose rejection we care about. Give every mutation the same impl
+    // so we do not depend on call order.
+    vi.mocked(useMutation).mockImplementation((() => deleteImpl) as any);
+
+    render(<WarRoom />);
+    fireEvent.click(screen.getByLabelText("delete-closed-room-1"));
+
+    // The genuine dialog is rendered (it is not mocked in this file).
+    const confirm = await screen.findByRole("button", { name: /delete/i });
+    await act(async () => {
+      fireEvent.click(confirm);
+    });
+    return confirm;
+  }
+
+  it("keeps the dialog open when the delete mutation rejects", async () => {
+    const confirm = await openDeleteDialogAndConfirm(() =>
+      Promise.reject(new Error("boom")),
+    );
+    // The confirm control is still mounted => the dialog did not close.
+    expect(confirm).toBeInTheDocument();
+  });
+
+  it("CONTROL: closes the dialog when the delete mutation resolves", async () => {
+    // Without this control the assertion above is vacuous — a dialog that never
+    // closed under ANY outcome would pass it just as happily.
+    const confirm = await openDeleteDialogAndConfirm(() => Promise.resolve());
+    await waitFor(() => expect(confirm).not.toBeInTheDocument());
   });
 });
