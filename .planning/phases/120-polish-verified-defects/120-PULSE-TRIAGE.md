@@ -135,8 +135,8 @@ Recorded here so a future sweep (Phase 122 or a follow-up) does not have to re-d
 
 | file:line | shape | likely classification |
 |---|---|---|
-| `SwarmTaskNode.tsx:122` | `` `${state === "running" ? "animate-pulse" : ""}` `` | **Already correctly gated on state** (own local ternary) — not a defect, just not D-11-gated for motion. Sibling of BlackboardPanel's `stateIcon`, comment says "mirrors SwarmTaskNode state icons". |
-| `WSStatusIndicator.tsx:23` | `reconnecting: { dotClass: "bg-(--status-warn) animate-pulse", ... }` | KEEP-shaped (Record, reconnecting state) — sibling of ConnectionPopover |
+| `SwarmTaskNode.tsx:122` | `` `${state === "running" && !reducedMotion ? "animate-pulse" : ""}` `` | **KEEP+GATE — RECLASSIFIED AT PHASE CLOSE.** Originally recorded here as "state-gated, not D-11-gated for motion, not a defect". That was wrong: D-11 requires every SURVIVING pulse to be motion-gated, not merely state-gated, so recording it out of scope contradicted the phase's own claim that all survivors are gated. Found by external review; now gated. |
+| `WSStatusIndicator.tsx:23` | `reconnecting: { dotClass: "bg-(--status-warn) animate-pulse", ... }` | **KEEP+GATE — RECLASSIFIED AT PHASE CLOSE.** Originally recorded as KEEP-shaped but left ungated. Same error as SwarmTaskNode above. Now gated at the consumption site (Record value left literal, matching BlackboardPanel/CostBreakdown). Found by external review. |
 | `reminders/ReminderList.tsx:305,427` | `isOverdue && !reduceMotion ? "animate-pulse" : ""` / `loud && count > 0 && !reduceMotion ? "animate-pulse" : ""` | **Already gated** — via a SIXTH pre-existing reduced-motion predicate this plan's `<interfaces>` did not know about. See §5. |
 
 ## §3 — Judgment calls
@@ -264,3 +264,28 @@ empty-state pulsing text (§3 item 4) all serve a loading/empty-state PURPOSE wi
 literal skeleton shape (neutral fill + block). TOKEN-04's skeleton/six-state-tile work should decide
 whether these belong in the same unified loading-state contract as the `bg-muted` skeletons, since they
 were resolved here by a case-by-case reading of D-09 rather than by a skeleton carve-out.
+
+
+## §6 — Correction issued at phase close (external review)
+
+An independent review of Phase 120 found the one substantive gap in this census, and it was a
+CONTRADICTION inside the phase's own record rather than a missed site: this document listed
+`SwarmTaskNode.tsx:122` and `WSStatusIndicator.tsx:23` as FOUND-NOT-IN-SCOPE, while D-11 and the
+plan's success criteria state that **every** pulse surviving this phase is gated on
+prefers-reduced-motion. Both survive, both were gated only on STATE, neither was gated on MOTION.
+
+Being state-gated is what D-09 asks for (the pulse is not decorative). It is not what D-11 asks
+for. Conflating the two is what produced the wrong classification.
+
+Both are now gated per-site and the rows above are corrected rather than left standing.
+
+**User impact was nil throughout, and saying so is not a defence of the record being wrong.**
+`src/index.css:508-513` carries a global `@media (prefers-reduced-motion: reduce)` rule forcing
+`animation-duration: 0ms !important` on every element, so a user with the OS preference set never
+saw either pulse animate. The defect was that the phase asserted a per-site contract it had not
+met — and Phase 122's TOKEN-03 audit asserts on the className, so it would have inherited two
+sites that failed an audit this phase promised they would pass.
+
+Lesson for the closure record: a census that classifies a site as out-of-scope must be checked
+against the decision text, not against the plan's prelisted file set. Both files were outside
+120-06's `files_modified`, which is what made "not in scope" feel correct.

@@ -21,6 +21,7 @@ import {
 import { modelBadgeClass } from "./AgentNode";
 import AgentAvatar from "./AgentAvatar";
 import type { AvatarData } from "../hooks/useRosterAgents";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 export interface SwarmTaskNodeData {
   subtaskId: string;
@@ -119,7 +120,13 @@ const stateLabel: Record<string, string> = {
 };
 
 function StateIcon({ state }: { state: string }) {
-  const cls = `h-3.5 w-3.5 ${stateIconColor[state] ?? "text-muted-foreground"} ${state === "running" ? "animate-pulse" : ""}`;
+  // D-11 (Phase 120): the `running` pulse is a genuine activity signal and
+  // SURVIVES, but every surviving pulse must be gated per-site on
+  // prefers-reduced-motion, not only on state. Added at phase close after an
+  // external review found this survivor state-gated but not motion-gated while
+  // the phase artifacts claimed all survivors were gated.
+  const reducedMotion = prefersReducedMotion();
+  const cls = `h-3.5 w-3.5 ${stateIconColor[state] ?? "text-muted-foreground"} ${state === "running" && !reducedMotion ? "animate-pulse" : ""}`;
   switch (state) {
     case "pending":
       return <Clock className={cls} />;
