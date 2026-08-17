@@ -663,7 +663,7 @@ Plans:
 - [x] **Phase 115 — Workspace scanner** — host-side classifier over workspace roots, versioned `kind:"workspace"` snapshot ingest — **COMPLETE 2026-08-13**, 10/10 plans. Live: 4,912 classified directories ingested to the self-hosted backend, `activeVersion` 10 with `storedVersions` held at 3 by the prune, nightly task registered 04:15. *(D-05's unattended firing is OPEN, due 2026-08-14 morning — a manual trigger proves the ACTION works, not that the SCHEDULER fires it. The phase is closed; that decision is not.)*
 - [x] **Phase 116 — Galdr prompt library** — `prompts` tables + `/galdr` live-fetch skills + send-to-Chat/clipboard (Seiðr Suite) (completed 2026-08-10; ticked 2026-08-11 at Phase 111 close — the box lagged the work. Evidence: `116-VERIFICATION.md` status=passed, 8 plans/8 summaries.)
 - [x] **Phase 117 — Bifrost link hub** — `links` table, command-palette jump, liveness dots (Seiðr Suite; /gsd-quick-shaped) (completed 2026-08-10; ticked 2026-08-13 — the box lagged the work. Evidence: `117-VERIFICATION.md` status=`passed`, 4/4 goal clauses, 0 overrides; shipped with a phase-level `117-SUMMARY.md` rather than per-plan PLAN/SUMMARY files, which is why plan-counting verbs under-report it.)
-- [ ] **Phase 118 — Studio media gallery** — media-vault + sidecar provenance, thumbs-only in Convex, watcher, styles/models, G-drive backup (Seiðr Suite)
+- [x] **Phase 118 — Studio media gallery** — media-vault + sidecar provenance, thumbs-only in Convex, watcher, styles/models, G-drive backup (Seiðr Suite) (completed 2026-08-17)
 - [x] **Phase 119 — Loom curated pipelines** — `pipelines`/`pipelineRuns` + React Flow view + step-event emits over Convex subscriptions (Seiðr Suite) (completed 2026-08-11; ticked 2026-08-13 — the box lagged the work. Evidence: `119-VERIFICATION.md` status=`passed`, 4/4 goal clauses, 0 overrides; shipped with a phase-level `119-SUMMARY.md` rather than per-plan PLAN/SUMMARY files.)
 
 **Execution order:** 108 → 109 (109 depends on 108's real telemetry + scoped swap.set — the D-14 boundary forbids a config-sourced current-engine column) · 110, 111, 113 are each independent of everything else in this milestone and can run in any order · 112 depends on 108 (reuses the per-kind routing precedent set by TELE-02/`control_verb_swap`). · **114-119 (appended 2026-08-08):** despite the auto-generated "Depends on: previous phase" lines in their detail stubs, 116-119 are independent of everything (order 116 → 117 → 118 → 119 is daily-value preference, not dependency); 114 pairs with 115 (115 feeds 114's workspace lens; 114 can start against fixtures) and 114's Ástríðr lens waits on astridr v29 A3 — sequencing, not a blocker.
@@ -950,7 +950,7 @@ Plans:
 | 115. Workspace Scanner | v14.0 | 10/10 | Complete | 2026-08-13 | Verified passed-with-concerns. D-17 blocker remediated: redacted, and the unpushed history rewritten; residual public Phase 93 mentions accepted by Larry. D-05 unattended firing was OPEN until 2026-08-14 and has since closed. |
 | 116. Galdr Prompt Library | v14.0 | 8/8 | Complete | 2026-08-10 | |
 | 117. Bifröst Link Hub | v14.0 | 0/0 | Complete | 2026-08-10 | Shipped with a PHASE-level `117-SUMMARY.md` and no per-plan PLAN files, so 0/0 is correct and must not be "fixed". This is the pair (with 119) that makes a naive `*SUMMARY.md` count overshoot the plan-level one. |
-| 118. Studio Media Gallery | v14.0 | 13/15 | In progress | - | 118-14 (D-09's third leg, OpenArt MCP) and 118-15 Task 3 remain. 118-14 is blocked on a session restart so the newly-registered OpenArt MCP connects. |
+| 118. Studio Media Gallery | v14.0 | 15/15 | Complete | 2026-08-17 | Verified passed, 16/16 D-01..D-16, no gaps (`118-VERIFICATION.md`). The verifier re-derived rather than trusting the phase's own roll-up: ran the unit suites fresh, ran `e2e/studio.spec.ts` itself 4/4, read the live self-hosted backend read-only, and found StudioWatch/MediaVaultBackup log fires from the morning of 08-17 — unattended production behaviour postdating all phase work. NOTE: `phase.complete` ticked the checkbox but left THIS ROW stale at 13/15 In progress; the coherence guard caught it. |
 | 119. Loom Curated Pipelines | v14.0 | 0/0 | Complete | 2026-08-11 | PHASE-level `119-SUMMARY.md`, no per-plan PLAN files — same shape as 117. |
 
 ### Phase 114: Workspace Map view
@@ -1087,7 +1087,7 @@ Plans:
 **Goal:** A `media-vault` directory on disk that generators write media plus sidecar JSON into, a host-side watcher that turns new files into content-hash-identified `media` rows with bounded (<=200KB) thumbnails, and a `/studio` gallery in CodePulse that browses, filters, stars, soft-deletes and exposes the full generation recipe for each item — with a file lacking a sidecar rendering "No provenance recorded" beside a complete-recipe item in the same grid view, and three genuinely different generator backends each proven end-to-end.
 **Requirements**: none mapped — design-doc-driven phase (`docs/proposals/2026-08-07-seidr-suite-design.md` §4.3). The acceptance-bearing units are the 16 locked decisions D-01..D-16 in `118-CONTEXT.md`, same convention as Phases 116 and 119.
 **Depends on:** Nothing. (The auto-generated "Phase 117" stub line was an artifact — §5 of the design doc states 116-119 are mutually independent, and 117 is COMPLETE regardless. §5 lists this phase's only dependency as "media-vault dir + backup task", both created in-phase.)
-**Plans:** 15 plans across 10 waves
+**Plans:** 15/15 plans complete
 
 Plans:
 
@@ -1117,24 +1117,24 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 118-09-PLAN.md — `StudioWatch` (D-04) and `MediaVaultBackup` (D-14) scheduled tasks + `/studio-sync` (wave 6)
-- [ ] 118-11-PLAN.md — detail Sheet with field-level provenance pairing, Trash view, Styles/Models panels (wave 6)
+- [x] 118-09-PLAN.md — `StudioWatch` (D-04) and `MediaVaultBackup` (D-14) scheduled tasks + `/studio-sync` (wave 6)
+- [x] 118-11-PLAN.md — detail Sheet with field-level provenance pairing, Trash view, Styles/Models panels (wave 6)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 118-12-PLAN.md — sidecar contract doc (D-10 handoff), `/studio-generate` wrapper skill (D-11), Higgsfield leg proven (wave 7)
+- [x] 118-12-PLAN.md — sidecar contract doc (D-10 handoff), `/studio-generate` wrapper skill (D-11), Higgsfield leg proven (wave 7)
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 118-13-PLAN.md — D-09 leg 2: from-scratch fal.ai direct-API queue/poll client, proven end-to-end (wave 8)
+- [x] 118-13-PLAN.md — D-09 leg 2: from-scratch fal.ai direct-API queue/poll client, proven end-to-end (wave 8)
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 118-14-PLAN.md — D-09 leg 3: the branch selected by 118-02, proven end-to-end; closes D-09 (wave 9)
+- [x] 118-14-PLAN.md — D-09 leg 3: the branch selected by 118-02, proven end-to-end; closes D-09 (wave 9)
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 118-15-PLAN.md — `e2e/studio.spec.ts` control pairs + full phase gate + D-01..D-16 coverage roll-up (wave 10)
+- [x] 118-15-PLAN.md — `e2e/studio.spec.ts` control pairs + full phase gate + D-01..D-16 coverage roll-up (wave 10)
 
 Cross-cutting constraints *(truths appearing in 2 or more plans)*:
 
