@@ -1,9 +1,15 @@
 /**
  * ForgeStatusBadge test — ported from forge StatusBadge.test.tsx.
  *
+ * POLISH-05 / D-16 (2026-08-17): only `failed` renders filled now; every
+ * other status is a quiet text/border chip. SC#4 (auth_failed distinct from
+ * failed) survives the quiet law but is now proven by TOKEN presence/absence
+ * rather than by a substring match on a fill colour word — see the "SC#4
+ * guard" describe block below.
+ *
  * SC#4: auth_failed MUST be visually distinct from failed:
- *   - auth_failed: amber bg/text + KeyRound icon + "Auth Failed" label
- *   - failed:      red bg/text + XCircle icon + "Failed" label
+ *   - auth_failed: --status-warn token (quiet) + KeyRound icon + "Auth Failed" label
+ *   - failed:      bg-red-900/60 fill + --status-error token + XCircle icon + "Failed" label
  *
  * ForgeClientConfig/window.__FORGE_CONFIG__ mock blocks are dropped
  * (forge-only; not applicable in CodePulse).
@@ -26,13 +32,32 @@ describe("ForgeStatusBadge", () => {
       expect(screen.queryByText("Failed")).not.toBeInTheDocument();
     });
 
-    it("renders with amber color token for auth_failed (distinct from red for failed)", () => {
-      const { container } = render(<ForgeStatusBadge status="auth_failed" />);
-      const badge = container.firstChild as HTMLElement;
-      expect(badge).not.toBeNull();
-      const badgeHtml = badge.outerHTML;
-      // auth_failed uses bg-amber-900/60 — must contain amber in the class string
-      expect(badgeHtml).toMatch(/amber/i);
+    // SC#4 GUARD (2026-08-17, POLISH-05/D-16): the quiet law removed the
+    // bg-amber-900/60 fill this test used to assert on, so a substring match
+    // on the word "amber" no longer proves anything — it was always only a
+    // proxy for "this is not the failed badge". A ONE-SIDED assertion here
+    // (checking only that auth_failed carries --status-warn) cannot
+    // distinguish "distinct from failed" from "both badges render the same
+    // token" — that is exactly the failure mode T-120-13 registers. So this
+    // is a PAIRED CONTROL across both renders: each status's class string
+    // must carry its own token and must NOT carry the other's.
+    it("SC#4 guard: auth_failed carries --status-warn (not --status-error) and failed carries --status-error (not --status-warn)", () => {
+      const { container: authFailedContainer } = render(
+        <ForgeStatusBadge status="auth_failed" />
+      );
+      const authFailedBadge = authFailedContainer.firstChild as HTMLElement;
+      const authFailedClass = authFailedBadge.className;
+
+      const { container: failedContainer } = render(
+        <ForgeStatusBadge status="failed" />
+      );
+      const failedBadge = failedContainer.firstChild as HTMLElement;
+      const failedClass = failedBadge.className;
+
+      expect(authFailedClass).toContain("--status-warn");
+      expect(authFailedClass).not.toContain("--status-error");
+      expect(failedClass).toContain("--status-error");
+      expect(failedClass).not.toContain("--status-warn");
     });
 
     it("renders a KeyRound icon (lock/key affordance — not XCircle)", () => {
@@ -67,13 +92,13 @@ describe("ForgeStatusBadge", () => {
     });
   });
 
-  describe("all 6 status labels (UI-SPEC Copywriting Contract)", () => {
+  describe("all 6 status labels (D-15 spine word update, 2026-08-17)", () => {
     const statusLabels: Array<{ status: JobStatus; label: string }> = [
       { status: "queued", label: "Queued" },
       { status: "running", label: "Running" },
-      { status: "completed", label: "Completed" },
+      { status: "completed", label: "Succeeded" },
       { status: "failed", label: "Failed" },
-      { status: "stopped", label: "Stopped" },
+      { status: "stopped", label: "Cancelled" },
       { status: "auth_failed", label: "Auth Failed" },
     ];
 
@@ -107,10 +132,17 @@ describe("ForgeStatusBadge", () => {
       expect(icon?.getAttribute("class")).toContain("animate-spin");
     });
 
-    it("stopping_pending uses amber and animates", () => {
+    // Corrected 2026-08-17 (POLISH-05/D-16): the quiet law dropped the
+    // bg-amber-900/40 fill this test used to match on with /amber/i — the
+    // class string no longer contains that word at all now that the colour
+    // is carried by the --status-warn token, not a fill. This is one of the
+    // plan's own predicted-safe assertions that in fact broke; the
+    // data-color-scheme attribute (a SEPARATE derived value, untouched by
+    // this phase) is what still legitimately reads "amber".
+    it("stopping_pending carries the --status-warn token and animates", () => {
       const { container } = render(<ForgeStatusBadge status="stopping_pending" />);
       const badge = container.firstChild as HTMLElement;
-      expect(badge.outerHTML).toMatch(/amber/i);
+      expect(badge.className).toContain("--status-warn");
       expect(badge.getAttribute("data-color-scheme")).toBe("amber");
       const icon = container.querySelector("svg");
       expect(icon?.getAttribute("class")).toContain("animate-spin");
@@ -173,6 +205,36 @@ describe("ForgeStatusBadge", () => {
       const { container } = render(<ForgeStatusBadge status="stopped" />);
       const icon = container.querySelector("svg");
       expect(icon?.getAttribute("class")).not.toContain("animate-spin");
+    });
+  });
+
+  describe("fill law (POLISH-05/D-16, 2026-08-17): only failed renders filled", () => {
+    it("failed's class string contains the one sanctioned fill", () => {
+      const { container } = render(<ForgeStatusBadge status="failed" />);
+      const badge = container.firstChild as HTMLElement;
+      expect(badge.className).toContain("bg-red-900/60");
+    });
+
+    // Iterates rather than spot-checks: a future ninth status added with a
+    // fill (or a regression reintroducing one on an existing status) fails
+    // this suite instead of passing silently.
+    const nonFailedStatuses: JobStatus[] = [
+      "queued",
+      "running",
+      "completed",
+      "stopped",
+      "auth_failed",
+      "pending",
+      "stopping_pending",
+      "expired",
+    ];
+
+    nonFailedStatuses.forEach((status) => {
+      it(`${status}'s class string contains no bg-* fill token`, () => {
+        const { container } = render(<ForgeStatusBadge status={status} />);
+        const badge = container.firstChild as HTMLElement;
+        expect(badge.className).not.toMatch(/bg-(red|green|blue|amber|zinc)-\d/);
+      });
     });
   });
 
