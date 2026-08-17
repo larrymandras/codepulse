@@ -817,7 +817,11 @@ export const pruneTrashBatch = internalMutation({
  * VALUE, never a name):
  *   A. a credential-shaped NAME assigned a credential-shaped LITERAL, e.g.
  *      `HIGGSFIELD_API_KEY=hf3x9q2v8m1p0zt4` — the assignment plus a value
- *      that is >=16 chars of key alphabet AND mixes letters with digits;
+ *      that is >=16 chars of key alphabet AND mixes letters with digits.
+ *      Names recognised: anything containing `API_KEY`/`APIKEY`, `SECRET`,
+ *      `TOKEN`, `PASSWORD`, `PASSWD`, `CREDENTIAL`, or ending in a
+ *      SEPARATOR-PREFIXED `_KEY`/`_PAT`/`_AUTH` (so `FAL_KEY`, `ANTHROPIC_KEY`
+ *      and `GITHUB_PAT` are covered, while `MONKEY` is not);
  *   B. a well-known provider key PREFIX with a long tail (`sk-`, `sk_live_`,
  *      `sb_secret_`, `sbp_`, `ghp_`, `github_pat_`, `xox[bp]-`, `AKIA`,
  *      `AIza`), or a three-segment JWT;
@@ -834,6 +838,14 @@ export const pruneTrashBatch = internalMutation({
  * accommodate this — a shorter bound would start missing real keys, and a
  * false refusal is recoverable while a published key is not.
  *
+ * STILL OPEN, deliberately: rule C treats a colon or hyphen as breaking a run,
+ * so a `<uuid>:<32-hex>` key measures 36 unbroken chars against the bound of
+ * 40 and rule C alone would miss it. Rule A now catches that shape by NAME, so
+ * the realistic paste is covered; teaching rule C to see a colon-joined token
+ * as one run is a separate decision with its own false-positive surface (every
+ * `key: value` line and timestamped path becomes a candidate) and was NOT made
+ * here. Rule C's bound is unchanged.
+ *
  * WHAT IT DOES NOT CATCH, stated so nobody mistakes it for a boundary:
  *   - a short secret, an all-lowercase secret, an all-digit PIN;
  *   - a secret broken across lines, or embedded inside prose;
@@ -848,8 +860,24 @@ export const pruneTrashBatch = internalMutation({
  * control that proves this guard discriminates rather than refusing
  * everything.
  */
+/**
+ * Rule A's name pattern. The `[_-](?:KEY|PAT|AUTH)` alternative was added
+ * 2026-08-17 to close a measured gap: `API[_-]?KEY` requires the literal
+ * `API`, so `FAL_KEY=<value>` and `ANTHROPIC_KEY=<value>` were NOT caught —
+ * and `FAL_KEY` is this repo's own primary provider credential, making the
+ * single most likely paste precisely the one the pattern missed. Rule C could
+ * not save it either: its bound is exactly 40 unbroken key-alphabet chars, and
+ * a realistic fal.ai key (`<uuid>:<32-hex>`) has a longest unbroken run of 36
+ * because the colon and the uuid's hyphens break it, so a pasted real key
+ * passed the guard entirely.
+ *
+ * The separator in `[_-](?:KEY|PAT|AUTH)` is REQUIRED, not decorative: a bare
+ * `KEY` alternative would make `MONKEY=abcdefghijklmnop123` and any other word
+ * ending in those letters a credential name. `MONKEY=` and `TURKEY_COUNT=` are
+ * both in the accept matrix in `media.test.ts` for exactly that reason.
+ */
 const CREDENTIAL_NAME_ASSIGNMENT =
-  /\b[A-Za-z0-9_]*(?:API[_-]?KEY|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL)[A-Za-z0-9_]*\s*[:=]\s*["'`]?([A-Za-z0-9_\-+/.=]{16,})/i;
+  /\b[A-Za-z0-9_]*(?:API[_-]?KEY|[_-](?:KEY|PAT|AUTH)|SECRET|TOKEN|PASSWORD|PASSWD|CREDENTIAL)[A-Za-z0-9_]*\s*[:=]\s*["'`]?([A-Za-z0-9_\-+/.=]{16,})/i;
 
 const CREDENTIAL_PREFIXES =
   /\b(?:sk-[A-Za-z0-9_-]{16,}|sk_(?:live|test)_[A-Za-z0-9]{16,}|sb_secret_[A-Za-z0-9_-]{16,}|sbp_[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[bpsa]-[A-Za-z0-9-]{16,}|AKIA[A-Z0-9]{12,}|AIza[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})/;

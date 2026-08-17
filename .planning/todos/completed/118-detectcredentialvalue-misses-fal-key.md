@@ -1,11 +1,48 @@
 ---
 created: 2026-08-16
+closed: 2026-08-17
+status: closed-fixed
 source: 118-14 Task 3 (D-12 card scan; found by getting a control WRONG)
 phase_origin: 118
 owning_code: convex/media.ts detectCredentialValue (shipped by plan 118-12)
 priority: medium
 type: security-backstop-gap
 ---
+
+> **CLOSED 2026-08-17 — FIXED.** Done after Phase 118's verification passed, deliberately
+> not before: editing the code while the verifier was grading it would have risked a false
+> finding, and the gap was excluded from the phase by Larry's own 2026-08-16 call.
+>
+> **What changed.** Rule A's name alternation gained `[_-](?:KEY|PAT|AUTH)`, so
+> `FAL_KEY=`, `ANTHROPIC_KEY=` and `GITHUB_PAT=` are now caught. The separator is
+> REQUIRED and is the whole design: a bare `KEY` alternative would make `MONKEY=…` a
+> credential name. Rule C's 40-char bound is **UNCHANGED** — step 4 below called that a
+> separate, riskier decision, and it was not made. Rule A now catches the realistic
+> `<uuid>:<32-hex>` shape by NAME instead, which is why relaxing C was unnecessary.
+>
+> **Reproduced first, with controls.** Before any edit: `HIGGSFIELD_API_KEY=` and
+> `OPENART_TOKEN=` both HIT while `FAL_KEY=` and `ANTHROPIC_KEY=` missed — the two hits are
+> what make the two misses evidence rather than a broken probe. A realistic fal.ai key's
+> longest unbroken run measured **36** against rule C's bound of 40.
+>
+> **Mutation-proven in BOTH directions**, each restored byte-identical (`cmp` clean):
+> reverting the widening turned the two catch-direction tests RED; dropping the separator
+> to a bare `KEY` turned the accept matrix RED on exactly `MONKEY=abcdefghijklmnop123`.
+> A green that was never shown able to go red would have proved nothing.
+>
+> **Step 2's acceptance control is green and expanded** to 10 cases — name-only prose, a
+> markdown table row, `$FAL_KEY`, `${FAL_KEY}`, `<your-key>`, shell-by-reference, plus
+> `MONKEY=`/`TURKEY_COUNT=`. That control is the point of the guard, not an afterthought.
+>
+> **Defect-class sweep** (not just this instance): `src/lib/privacy.ts`'s `API_KEY_RE`
+> shares the same narrow shape and also misses `FAL_KEY=`, but its sibling `ENV_VAR_RE`
+> (`\b[A-Z][A-Z0-9_]{3,}=[^\s]+`) catches it — measured, so there is no live gap there.
+> `hooks/workspaceClassifier.mjs` uses an allowlist (`isShareable`, deny-by-default) and is
+> structurally immune to "missed a name shape". No other credential-name matcher exists.
+>
+> Gates: `tsc` zero diagnostics; full suite 4654 passed / 0 failed (+3 new tests).
+> The docstring that DESCRIBES rule A was updated in the same commit — leaving it
+> describing the old predicate is how a stale claim gets shipped next to correct code.
 
 # `detectCredentialValue` does not catch `FAL_KEY=<value>`
 

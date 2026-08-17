@@ -1047,6 +1047,69 @@ describe("D-12/T-118-04: the recipeMd secrets backstop REFUSES values and ACCEPT
     expect(insert.mock.calls[0][1].recipeMd).toContain("FAL_KEY");
   });
 
+  it("REFUSES a bare FAL_KEY=/ANTHROPIC_KEY= paste — the gap closed 2026-08-17, where API[_-]?KEY required the literal 'API' and missed this repo's OWN primary provider credential", () => {
+    // Found in 118-14 by getting a CONTROL wrong: `FAL_KEY=abc123def456ghi789`
+    // was used as rule A's known-positive and did not trip. The card was clean;
+    // the control was wrong, and chasing why exposed a real narrowness.
+    // Rule C could not save it either — see the realistic-shape case below.
+    expect(detectCredentialValue("FAL_KEY=abc123def456ghi789")).toBe(
+      "CREDENTIAL_NAME_ASSIGNED_A_VALUE"
+    );
+    expect(detectCredentialValue("ANTHROPIC_KEY=abc123def456ghi789")).toBe(
+      "CREDENTIAL_NAME_ASSIGNED_A_VALUE"
+    );
+    // Separator and case variants of the same shape.
+    expect(detectCredentialValue("fal_key = abc123def456ghi789")).toBe(
+      "CREDENTIAL_NAME_ASSIGNED_A_VALUE"
+    );
+    expect(detectCredentialValue('FAL-KEY:"abc123def456ghi789"')).toBe(
+      "CREDENTIAL_NAME_ASSIGNED_A_VALUE"
+    );
+    // _PAT and _AUTH were added in the same pass.
+    expect(detectCredentialValue("GITHUB_PAT=abc123def456ghi789")).toBe(
+      "CREDENTIAL_NAME_ASSIGNED_A_VALUE"
+    );
+    expect(detectCredentialValue("SOME_AUTH=abc123def456ghi789")).toBe(
+      "CREDENTIAL_NAME_ASSIGNED_A_VALUE"
+    );
+  });
+
+  it("catches a REALISTIC fal.ai key shape by NAME, which rule C alone provably cannot — its longest unbroken run is 36 against a bound of 40", () => {
+    const realistic = "4f9c2b1a-7d3e-4a6b-9c8d-1e2f3a4b5c6d:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6";
+    // The arithmetic that makes rule C insufficient here, asserted rather than
+    // asserted-about: the colon and the uuid's hyphens break the run.
+    const longestRun = Math.max(...realistic.split(/[^A-Za-z0-9_-]/).map((r) => r.length));
+    expect(longestRun).toBe(36);
+    expect(longestRun).toBeLessThan(40);
+    // Bare (no name) it is NOT caught — rule C's bound is deliberately unchanged.
+    expect(detectCredentialValue(`paste this: ${realistic} and run`)).toBeNull();
+    // Named, it is caught by rule A. This is the whole point of widening A
+    // rather than relaxing C.
+    expect(detectCredentialValue(`FAL_KEY=${realistic}`)).toBe(
+      "CREDENTIAL_NAME_ASSIGNED_A_VALUE"
+    );
+  });
+
+  it("ACCEPTS every name-only / placeholder / non-credential form after the widening — the accept matrix is the control proving rule A still discriminates and did not become a blanket refusal", () => {
+    const mustAccept = [
+      "reads `FAL_KEY` from the environment",
+      "| HIGGSFIELD_API_KEY | read from env |",
+      "FAL_KEY=$FAL_KEY",
+      "FAL_KEY=${FAL_KEY}",
+      "FAL_KEY=<your-key>",
+      "FAL_KEY: read-from-the-environment",
+      "export FAL_KEY=$FAL_KEY",
+      "Set FAL_KEY in your shell before running",
+      // The separator in `[_-](?:KEY|PAT|AUTH)` is what keeps these out. A bare
+      // `KEY` alternative would make both of these read as credential names.
+      "MONKEY=abcdefghijklmnop123",
+      "TURKEY_COUNT=1234567890123456",
+    ];
+    for (const line of mustAccept) {
+      expect(detectCredentialValue(line), `must ACCEPT: ${line}`).toBeNull();
+    }
+  });
+
   it("the refusal names the RULE, never the matched text — echoing the match would disclose the credential it exists to protect", async () => {
     const { ctx } = makeModelCardMockCtx();
     const secretish = "hf3x9q2v8m1p0zt4c7b";
