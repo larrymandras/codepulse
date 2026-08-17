@@ -1,5 +1,30 @@
 # Milestones
 
+## v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board (Shipped: 2026-08-17)
+
+**Phases completed:** 12 phases (108–119), 86 plans / 86 summaries, cross-repo (codepulse + astridr-repo)
+**Timeline:** 2026-08-06 → 2026-08-17 | 602 commits since the `v13.0` tag | suite 4654 passing / 0 failing
+**Requirements:** **15/17** (ENGINE-01..05, DUR-01..03, MISSION-01..03, TELE-01..03, DEBT-05..07) — two exceptions, both deliberate: **MISSION-01 ⚠ PARTIAL** and **MISSION-02 ↗ REASSIGNED** to SEED-007
+**Verification:** 12/12 phases carry a VERIFICATION.md — counted on disk, not read off STATE.md. Two are honestly qualified rather than plain "passed": 113 `passed-with-amended-criterion`, 115 `passed-with-concerns`. Closed BY HAND per the standing rule (no `gsd-sdk milestone.complete`), every figure re-derived from disk and git.
+**Milestone audit:** `tech_debt` — **0 blockers**, 2 warnings, 5/5 E2E flows traced end-to-end. The pre-existing audit was a *mid-milestone* one from 2026-08-11 scoring 10/17 and 7/12; it was replaced with a close-out audit rather than archived stale.
+
+**Key accomplishments:**
+
+- **108 Per-Profile Engine Telemetry (7 plans):** the astridr-side per-profile emit plus a scoped `swap.set`, with ENGINE-05's integration gate closed *during* execution per the Phase-90 lesson. The gate earned its place — it found three real defects (a `session_id=None` drop, a providerAffinity array-vs-string mismatch, a stale `pinned` row surviving a restore) that code review had passed.
+- **109 Per-Agent Engine UI (10 plans):** "This profile" picker scope, header badge and pre-swap confirm column, all sourced from telemetry and never from a config read. TELE-02's surfacing half moved here mid-milestone after its own decision D-15 was **falsified during execution** — the chosen host turned out to be the all-profiles axis with a query signature that could not serve it even in principle.
+- **110 Convex Durability (6 plans):** `aggregates` bounded and batch-capped, a full verified prune pass across every `RETENTION_DAYS` table, and the memory-growth root cause documented with evidence (upstream `convex-backend#495`) — so `ConvexNightlyRestart` is a recorded mitigation rather than an unexplained workaround.
+- **111 Mission Board (3 plans):** honest status and history on the data that actually exists. Every affordance asserting an unbacked figure was **removed from both consumers**, not zeroed — and MISSION-01 was split rather than claimed whole when the duration and orphan halves proved structurally underivable.
+- **112 Telemetry Coverage Closure (8 plans):** 5 Group A kinds corrected in the contract doc as aspirational, every remaining Group B kind given a machine-readable disposition cross-checked against the live ingest switch, and one confirmed-live null-drop defect normalized.
+- **113 Debt Sweep (8 plans):** skill-catalog prune made fail-closed. **DEBT-06 is the honest one:** 80 clean soak iterations produced no reproduction, so instead of claiming a fix, the criterion was reworded, the refuted hypotheses recorded, and instrumentation shipped so the next occurrence self-diagnoses.
+- **114/115 Workspace map + scanner (21 plans):** deny-by-default classification with zero content reads in the walk path; 115 verified *passed-with-concerns* and said so.
+- **116–119 Seiðr Suite (23 plans):** Galdr prompt library, Bifröst link hub, **Studio media gallery**, Loom pipelines. Studio (118) proved **three genuinely different generator backends end-to-end** — a CLI leg, a from-scratch fal.ai queue/poll client, and an in-session MCP leg — with content-hash identity and ≤200KB thumbnails.
+
+**The failure worth recording — Phase 118 found NINE defective checks inside itself.** Every one had passed while blind to the thing it existed to assert: a whole-file substring test that stayed green when the string it guarded was changed; a script that **exited 0 having done nothing** because `main()` was exported but never invoked; a regex that matched the module's own comment saying it did the opposite; a scan that matched markdown backticks in a comment. Two more were caught in the new test suite before landing. The generalisable lesson is that a green which was never shown able to go red carries no information — mutation-proof both directions, and pair every zero with a known-positive control. The phase's own guard against a tenth was to refuse to record itself complete until the verifier had actually run.
+
+**Known deferred at close:** MISSION-01's duration + orphan-recovery halves and MISSION-02 in full (both SEED-007, both blocked on data shape rather than effort); `message_routed` routed but deliberately unsurfaced; the `links` table's unrecorded retention decision; the parked `llm-analytics-rollup` CR-01; and partial Nyquist coverage (117 and 119 carry no VALIDATION.md, consistent with their 0/0 plan counts). None blocking — full list in `milestones/v14.0-MILESTONE-AUDIT.md`.
+
+---
+
 ## v13.0 Brain-Swap Control, Cost Intelligence & Consolidation (Shipped: 2026-08-06)
 
 > **Record added 2026-08-06 at v14.0 scoping.** The v13.0 hand-close wrote the audit and the archives but never appended this entry, so `MILESTONES.md` skipped from v11.0 straight to nothing. Reconstructed from `milestones/v13.0-MILESTONE-AUDIT.md`, not from memory.

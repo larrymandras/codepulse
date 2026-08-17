@@ -8,9 +8,17 @@ Multi-provider operational command center for Ástríðr AI assistant. React 19 
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
-## Current Milestone: v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board
+## No Current Milestone
+
+**v14.0 shipped 2026-08-17.** The next milestone has not been scoped — run `/gsd-new-milestone` to start one. Phase numbering continues from 119 → **Phase 120+**.
+
+Open items carried out of v14.0 (none blocking) are listed in [REQUIREMENTS.md](REQUIREMENTS.md#carried-forward-from-v140-non-blocking-not-yet-scoped) and evidenced in [milestones/v14.0-MILESTONE-AUDIT.md](milestones/v14.0-MILESTONE-AUDIT.md).
+
+## Prior Milestone (shipped 2026-08-17, tagged `v14.0`): v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board
 
 **Goal:** Finish the per-agent half of brain-swap that v13.0 deliberately deferred, make the self-hosted Convex instance durable rather than nightly-restarted, and turn the leftover jobs surface into a real mission board. Formalized 2026-08-06 via `/gsd-new-milestone`.
+
+**Outcome:** 12 phases (108–119, grown from the original 6 when 114–119 were appended 2026-08-08), **86 plans**, **15/17 requirements satisfied**, all 12 phases verified. Suite 4654 passing / 0 failing. Audit `tech_debt` — 0 blockers, 2 warnings, 5/5 E2E flows. The two exceptions are deliberate and were *not* rounded up: **MISSION-01 ⚠ PARTIAL** (duration + orphan recovery are structurally underivable on current data — no `running` row can arrive — so the requirement was split and the remainder deferred to SEED-007) and **MISSION-02 ↗ REASSIGNED** to SEED-007 (no job↔tool join key exists in astridr). Phases 114–119 were design-doc-driven, tracing to per-phase `D-NN` decisions rather than REQ-IDs. Closed BY HAND per the standing rule. Audit: `milestones/v14.0-MILESTONE-AUDIT.md`.
 
 **Target features:**
 

@@ -245,6 +245,50 @@
 - Almost the entire spend was one long interactive session: execute phase → code review → fix → verify → live UAT → in-session redesign (5 increments) → bridge investigation → milestone close. The redesign + operator-loop dwarfed the original phase execution.
 - Bridge-gap investigation delegated to a background agent (cross-repo, huge astridr-repo); findings verified before use.
 
+## Milestone: v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board
+
+**Shipped:** 2026-08-17
+**Phases:** 12 (108–119) | **Plans:** 86 | **Timeline:** 11 days (2026-08-06 → 2026-08-17)
+
+*(No v13.0 section exists in this file — that milestone's hand-close wrote the audit and archives
+but skipped the retrospective and both trend tables, the same omission MILESTONES.md records for
+its own entry. Noted here rather than silently continued; not reconstructed, since doing it from
+memory is exactly what that entry warns against.)*
+
+### What Was Built
+- Per-profile engine telemetry and scoped `swap.set` (108/109) — closing BSC-01, the one requirement v13.0 left PARTIAL
+- Convex durability: bounded `aggregates`, a verified full prune pass, and a documented memory-growth root cause (110)
+- An honest Mission Board built only on data that exists (111)
+- Telemetry coverage closure: contract corrections + a machine-readable disposition per event kind (112)
+- Debt sweep (113), workspace map + scanner (114/115), and the Seiðr Suite — Galdr, Bifröst, Studio, Loom (116–119)
+
+### What Worked
+- **The integration gate kept earning its place.** ENGINE-05 was closed *during* execution, not claimed after, and found three defects code review had passed: a `session_id=None` drop, a providerAffinity array-vs-string mismatch, and a stale `pinned` row surviving a restore.
+- **Splitting a requirement instead of claiming it whole.** MISSION-01's duration and orphan-recovery halves were shown to be structurally underivable on current data — no `running` row can arrive — so the requirement was split and the remainder deferred with evidence, rather than rounded up.
+- **Rewording a criterion instead of faking it.** DEBT-06's 80 clean soak iterations produced no reproduction, so the phase reworded its criterion, recorded the refuted hypotheses, and shipped instrumentation. "Closed guarded" is an honest status that a pass/fail field alone cannot express.
+- **Decisions were allowed to be falsified mid-flight.** D-15 (TELE-02's host surface) was disproven during execution and the work moved phases rather than being forced into a host whose query signature could not serve it.
+
+### What Was Inefficient
+- **`gsd-sdk` state verbs cost more than they saved, again.** `phase.complete 118` returned a clean 12-field payload claiming success while writing the naive trap value into `completed_plans`, failing to increment `completed_phases` at all, pointing `status` at an already-complete phase, wiping the narrative — and silently missing the ROADMAP Progress table. Every one of its writes had to be audited by hand.
+- **The milestone audit went stale mid-flight** — a `gaps_found` snapshot from 2026-08-11 at 10/17 and 7/12, six phases out of date at close. This is lesson 6 in the list below, recorded at v9.0 and recurring here.
+- **Nine defective checks inside a single phase (118).** Each passed while blind to what it existed to assert; finding them was unplanned work that displaced planned work.
+
+### Patterns Established
+- **Mutation-proof in both directions.** A check that has never been shown able to go red carries no information. Break the thing, watch it fail, restore byte-identical.
+- **Pair every zero with a known-positive control.** A negative result is a claim about the probe, not the system, until a control in the same data proves the probe discriminates.
+- **Re-derive counters from disk; never trust a verb's payload.** Judge state writes by `git diff` and a coherence guard, not by the JSON handed back.
+- **Refuse rather than half-write.** Bookkeeping scripts assert their anchors and abort — the STATE.md updater's refusal genuinely fired here, catching a duplicate `Last activity:` line.
+
+### Key Lessons
+1. **A tool's success payload is not evidence of its behaviour.** Three separate GSD verbs corrupted state behind clean payloads this milestone.
+2. **An exit code is not an outcome.** A script exited 0 having printed and written nothing, because `main()` was exported and never invoked.
+3. **Write the green only after the gate that could falsify it has run.** Phase 118 held its own completion open for a verifier rather than recording itself done — and the verifier was worth it.
+4. **A subagent's finding is a claim.** The integration checker's headline detail ("the one new-table `.collect()` without a stated exception") was wrong on a 10-second check; the underlying finding was real but narrower.
+
+### Cost Observations
+- 602 commits since the `v13.0` tag; suite grew to 4654 passing / 0 failing.
+- The expensive work was not building — it was proving. Nine defective checks in one phase, three corrupted state writes, and a stale audit all consumed budget that planning had allocated to features.
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -256,6 +300,7 @@
 | v9.0 | 7 days | 5 | Token-first theming, lazy-chunk build gates, operator manual-gates; live-integration gate lesson (cross-repo features must run live before "done") *(v7/v8 retros not recorded)* |
 | v12.0 | 5 days | 2 | Interleaved side-quest milestone (ran inside in-progress v11.0); extract-don't-delete REQUIREMENTS.md at close; audit shipped as a real gate then closed by a numbered tech-debt phase |
 | v11.0 | ~8 days | 4 | Live operator UAT as the load-bearing gate — a green suite (2564) shipped, but operating it revealed two-catalog data debt + mangled names + no-op silence, driving an in-session redesign folded into the phase; DB-query-to-diagnose and instrument-then-repro for live drag bugs |
+| v14.0 | 11 days | 12 | Milestone grew mid-flight (6 phases -> 12; 114-119 design-doc-driven with D-NN decisions instead of REQ-IDs). Requirement SPLIT rather than claimed whole (MISSION-01) and a criterion REWORDED rather than faked (DEBT-06). Hand-audited every gsd-sdk state write after three corrupted STATE.md behind clean payloads |
 
 ### Cumulative Quality
 
@@ -266,6 +311,7 @@
 | v9.0 | 88: 47/47 · 92: 83/83 Nyquist; 91 verifier 10/10 | green at ship | 277 files, +33,655 / −3,495; ~86,100 LOC |
 | v12.0 | 101: Nyquist 17/17 tasks; 101-RETEST-UAT 7/7 Playwright vs live | green at ship | cross-repo; ~10 core-surface files; live-verified (Google ×3, Telegram, cron) |
 | v11.0 | full suite 2564 green at ship; Phase 100 code review 2 Critical + 1 Info fixed w/ regression tests | green at ship | operator UAT round-trip PASSED live (archive→restore); cross-repo (Forge daemon) |
+| v14.0 | full suite 4654 passing / 0 failing at ship; 12/12 phases carry a VERIFICATION.md | green at ship | 86 plans / 86 summaries; 15/17 requirements (2 deliberate exceptions); audit tech_debt, 0 blockers, 5/5 E2E flows; Nyquist partial (6 compliant / 4 partial / 2 missing) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -275,3 +321,4 @@
 4. Verify every telemetry widget's full data path end-to-end; a green build can still ship silently-empty widgets
 5. (v9.0) Cross-repo features must be exercised against the **live** stack before "done" — `convex-test`/jsdom green ≠ working; a declared integration gate must be an executed checklist, not a scoping note
 6. (v9.0) Refresh the milestone audit at close if phases shipped after it ran — a stale `gaps_found` snapshot forces manual reconciliation
+7. (v14.0) **Lesson 6 recurred** — v14.0 reached close with a `gaps_found` audit six phases out of date. A lesson that repeats is a missing mechanism, not a missing reminder: make the close-out audit a gate of the close itself, not a step someone remembers
