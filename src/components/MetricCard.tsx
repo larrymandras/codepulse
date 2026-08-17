@@ -102,7 +102,7 @@ function MetricCardInner({
 
   return (
     <div
-      className="glow-card bg-card/60 backdrop-blur-md p-5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:border-primary/50 hover:scale-[1.01] transition-transform duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="glow-card bg-card/60 backdrop-blur-md p-5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}

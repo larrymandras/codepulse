@@ -181,7 +181,7 @@ export default function GraphsHub() {
 
       {/* Code/Vault Graph hero */}
       <SectionErrorBoundary name="Code/Vault Graph">
-        <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
+        <GlassPanel className="rounded-xl">
           <CodeVaultGraph />
         </GlassPanel>
       </SectionErrorBoundary>

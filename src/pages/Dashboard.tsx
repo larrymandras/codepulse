@@ -73,7 +73,7 @@ export default function Dashboard() {
         {/* Activity Charts with Tab Toggle (Hero Panel) */}
         <div className="md:col-span-8 flex flex-col">
           <SectionErrorBoundary name="Activity Charts">
-            <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl relative group overflow-hidden hover:scale-[1.01] transition-transform duration-300 shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] h-full flex flex-col">
+            <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl relative group overflow-hidden shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] h-full flex flex-col">
               <div className="flex items-center gap-6 p-4 pb-0 border-b border-border/50">
                 <button
                   onClick={() => setChartTab("pulse")}
@@ -110,13 +110,13 @@ export default function Dashboard() {
         {/* Right side topology & sessions */}
         <div className="md:col-span-4 space-y-6">
           <SectionErrorBoundary name="Agent Topology">
-            <div className="hover:scale-[1.01] transition-transform duration-300">
+            <div className="">
               <AgentTopology />
             </div>
           </SectionErrorBoundary>
           
           <SectionErrorBoundary name="Active Sessions">
-            <div className="hover:scale-[1.01] transition-transform duration-300">
+            <div className="">
               <ActiveSessions />
             </div>
           </SectionErrorBoundary>
@@ -125,7 +125,7 @@ export default function Dashboard() {
         {/* Mid-sized widgets */}
         <div className="md:col-span-4">
           <SectionErrorBoundary name="Docker">
-            <div className="hover:scale-[1.01] transition-transform duration-300 h-full">
+            <div className="h-full">
               <DockerPanel />
             </div>
           </SectionErrorBoundary>
@@ -133,7 +133,7 @@ export default function Dashboard() {
         
         <div className="md:col-span-4">
           <SectionErrorBoundary name="Tool Breakdown">
-            <div className="hover:scale-[1.01] transition-transform duration-300 h-full">
+            <div className="h-full">
               <ToolBreakdown events={events} />
             </div>
           </SectionErrorBoundary>
@@ -141,7 +141,7 @@ export default function Dashboard() {
 
         <div className="md:col-span-4">
           <SectionErrorBoundary name="Event Feed">
-            <div className="hover:scale-[1.01] transition-transform duration-300 h-full">
+            <div className="h-full">
               <EventFeed />
             </div>
           </SectionErrorBoundary>
@@ -150,12 +150,12 @@ export default function Dashboard() {
         {/* Lower Left - Wide Widgets */}
         <div className="md:col-span-8 space-y-6">
           <SectionErrorBoundary name="Drift Timeline">
-            <div className="hover:scale-[1.01] transition-transform duration-300">
+            <div className="">
               <DriftTimeline />
             </div>
           </SectionErrorBoundary>
           <SectionErrorBoundary name="Tool Executions">
-            <div className="hover:scale-[1.01] transition-transform duration-300">
+            <div className="">
               <ToolExecutionPanel />
             </div>
           </SectionErrorBoundary>
@@ -164,12 +164,12 @@ export default function Dashboard() {
         {/* Lower Right - Tall/List Widgets */}
         <div className="md:col-span-4 space-y-6">
           <SectionErrorBoundary name="LLM Providers">
-            <div className="hover:scale-[1.01] transition-transform duration-300">
+            <div className="">
               <LlmProviderPanel />
             </div>
           </SectionErrorBoundary>
           <SectionErrorBoundary name="Git Activity">
-            <div className="hover:scale-[1.01] transition-transform duration-300">
+            <div className="">
               <GitActivityWidget />
             </div>
           </SectionErrorBoundary>

@@ -143,7 +143,7 @@ export default function MeetingBot() {
       <SectionErrorBoundary name="Send Bot">
         <SectionHeader title="Send Bot to Meeting" />
         <Separator className="my-2" />
-        <GlassPanel className="rounded-xl p-4 hover:scale-[1.01] transition-transform duration-300">
+        <GlassPanel className="rounded-xl p-4">
           <div className="flex flex-col sm:flex-row gap-3 items-end">
             <div className="flex-1 space-y-1.5">
               <Label htmlFor="meeting-url">Meeting URL</Label>
@@ -187,7 +187,7 @@ export default function MeetingBot() {
         <SectionHeader title="Active Calls" />
         <Separator className="my-2" />
         {activeCalls.length === 0 ? (
-          <GlassPanel className="rounded-xl p-8 text-center hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="rounded-xl p-8 text-center">
             <p className="text-base text-muted-foreground">No active calls</p>
             <p className="text-sm text-muted-foreground mt-1">
               Send a bot to a meeting to monitor it here.
@@ -201,7 +201,7 @@ export default function MeetingBot() {
                 className="cursor-pointer"
                 onClick={() => setSelectedCallId(call.callId)}
               >
-                <GlassPanel className="rounded-xl p-4 hover:bg-(--accent)/50 transition-colors hover:scale-[1.01] transition-transform duration-300">
+                <GlassPanel className="rounded-xl p-4 hover:bg-(--accent)/50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-base font-mono text-muted-foreground">
@@ -230,13 +230,13 @@ export default function MeetingBot() {
         <SectionHeader title="Recent Calls" />
         <Separator className="my-2" />
         {sortedRecentCalls.length === 0 ? (
-          <GlassPanel className="rounded-xl p-8 text-center hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="rounded-xl p-8 text-center">
             <p className="text-base text-muted-foreground">
               No completed calls yet.
             </p>
           </GlassPanel>
         ) : (
-          <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="rounded-xl overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -303,7 +303,7 @@ export default function MeetingBot() {
       {/* Inline Call Detail */}
       {selectedCall && (
         <SectionErrorBoundary name="Call Detail">
-          <GlassPanel className="rounded-xl p-4 hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="rounded-xl p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold">
                 Call: {selectedCall.callId}

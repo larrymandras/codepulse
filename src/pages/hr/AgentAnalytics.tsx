@@ -96,7 +96,7 @@ export default function AgentAnalytics() {
       <div className="m-6 flex flex-col gap-6">
         {/* Header + time selector */}
         <SectionErrorBoundary name="Header">
-          <GlassPanel className="p-6 relative overflow-hidden hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="p-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
             <div className="relative z-10">
               <PageHeader
@@ -125,7 +125,7 @@ export default function AgentAnalytics() {
 
         {/* Controls: team filter + weight sliders */}
         <SectionErrorBoundary name="Controls">
-          <GlassPanel className="p-6 glow-card transition-all duration-300 hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="p-6 glow-card transition-all duration-300">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Team selector */}
               <div className="flex flex-col gap-2 lg:w-64">
@@ -169,7 +169,7 @@ export default function AgentAnalytics() {
         {/* Team summary cards (only when team selected and data present) */}
         {selectedTeamId && scoredRows.length > 0 && (
           <SectionErrorBoundary name="Team Summary">
-            <GlassPanel className="p-6 glow-card transition-all duration-300 hover:scale-[1.01] transition-transform duration-300">
+            <GlassPanel className="p-6 glow-card transition-all duration-300">
               <TeamSummaryCards rows={scoredRows} />
             </GlassPanel>
           </SectionErrorBoundary>
@@ -177,7 +177,7 @@ export default function AgentAnalytics() {
 
         {/* Leaderboard */}
         <SectionErrorBoundary name="Leaderboard">
-          <GlassPanel className="p-6 glow-card transition-all duration-300 hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="p-6 glow-card transition-all duration-300">
             <h2 className="text-base font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
               Leaderboard
@@ -201,7 +201,7 @@ export default function AgentAnalytics() {
         {/* Comparison chart (only when team selected and data present) */}
         {selectedTeamId && scoredRows.length > 0 && (
           <SectionErrorBoundary name="Comparison Chart">
-            <GlassPanel className="p-6 glow-card transition-all duration-300 hover:scale-[1.01] transition-transform duration-300">
+            <GlassPanel className="p-6 glow-card transition-all duration-300">
               <h2 className="text-base font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
                 Agent Comparison

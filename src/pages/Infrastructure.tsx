@@ -105,7 +105,7 @@ export default function Infrastructure() {
       <div className="md:col-span-12">
       <SectionErrorBoundary name="Startup Waterfall">
         <SectionHeader title="Startup Waterfall" />
-        <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+        <GlassPanel className="p-4">
           {startupEvents && startupEvents.length > 0 ? (
             <div className="space-y-2">
               {startupEvents
@@ -161,7 +161,7 @@ export default function Infrastructure() {
       <div className="md:col-span-12">
       <SectionErrorBoundary name="Auth Aliases">
         <SectionHeader title="Auth Aliases" />
-        <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+        <GlassPanel className="p-4">
           <Table>
             <TableHeader>
               <TableRow>
@@ -219,7 +219,7 @@ export default function Infrastructure() {
               </GlassPanel>
             ))
           ) : (providerMetrics ?? []).map(pm => (
-            <GlassPanel key={pm.provider} className="p-4 hover:scale-[1.01] transition-transform duration-300">
+            <GlassPanel key={pm.provider} className="p-4">
               <p className="text-sm text-muted-foreground uppercase tracking-wide">{pm.provider}</p>
               <p className="text-2xl font-semibold tabular-nums mt-1">{pm.count} calls</p>
               <p className="text-sm text-muted-foreground mt-1">

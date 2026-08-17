@@ -161,7 +161,7 @@ export default function ForgePage() {
       </div>
 
       {/* Master-detail body — GlassPanel wraps the list+detail row (D-11) */}
-      <GlassPanel className="flex-1 flex overflow-hidden min-h-0 hover:scale-[1.01] transition-transform duration-300">
+      <GlassPanel className="flex-1 flex overflow-hidden min-h-0">
         {/* Mobile backdrop for the list overlay (F8) */}
         {listOpen && (
           <div

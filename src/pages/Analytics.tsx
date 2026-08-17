@@ -103,7 +103,7 @@ export default function Analytics() {
         {/* Top Row */}
         <div className="md:col-span-8">
           <SectionErrorBoundary name="Cost Forecast">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <CostForecastPanel />
              </GlassPanel>
           </SectionErrorBoundary>
@@ -111,7 +111,7 @@ export default function Analytics() {
         <div className="md:col-span-4">
            {/* SDK Spend Cap */}
            <SectionErrorBoundary name="SDK Spend Cap">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <SDKSpendGuard />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -119,7 +119,7 @@ export default function Analytics() {
         
         {/* Summary Row */}
         <div className="md:col-span-12">
-           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+           <GlassPanel className="p-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="flex items-start gap-2">
                     <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
@@ -304,14 +304,14 @@ export default function Analytics() {
         {/* Cost Trend & Gateway Quota */}
         <div className="md:col-span-8">
            <SectionErrorBoundary name="Cost Trend">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <CostTrendChart />
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
         <div className="md:col-span-4">
            <SectionErrorBoundary name="Gateway Quota">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <GatewayQuotaPanel />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -320,7 +320,7 @@ export default function Analytics() {
         {/* Cost Breakdown — per-provider/per-model table with Unpriced rows (COST-01) */}
         <div className="md:col-span-12">
           <SectionErrorBoundary name="Cost Breakdown">
-            <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+            <GlassPanel className="p-4">
               <CostBreakdownTable />
             </GlassPanel>
           </SectionErrorBoundary>
@@ -334,14 +334,14 @@ export default function Analytics() {
             this widget. 35 sibling sections were already wrapped. */}
         <div className="md:col-span-6">
            <SectionErrorBoundary name="LLM Analytics">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <LlmAnalyticsPanel />
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
         <div className="md:col-span-6">
            <SectionErrorBoundary name="Capability Growth">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <CapabilityGrowthChart />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -350,7 +350,7 @@ export default function Analytics() {
         {/* Session Comparison */}
         <div className="md:col-span-12">
            <SectionErrorBoundary name="Session Comparison">
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                <SessionComparison />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -363,7 +363,7 @@ export default function Analytics() {
         {/* Heatmap */}
         <div className="md:col-span-12">
            <SectionErrorBoundary name="Activity Heatmap">
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                <ActivityHeatmap />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -372,14 +372,14 @@ export default function Analytics() {
         {/* Sankey & Sunburst */}
         <div className="md:col-span-8">
            <SectionErrorBoundary name="Token Flow">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <SankeyFlow />
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
         <div className="md:col-span-4">
            <SectionErrorBoundary name="Token Sunburst">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <TokenSunburst />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -388,14 +388,14 @@ export default function Analytics() {
         {/* Error Rate & Session Duration */}
         <div className="md:col-span-6">
            <SectionErrorBoundary name="Error Rate Trend">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <ErrorRateTrend />
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
         <div className="md:col-span-6">
            <SectionErrorBoundary name="Session Duration">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <SessionDurationHistogram />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -404,7 +404,7 @@ export default function Analytics() {
         {/* Token Waterfall */}
         <div className="md:col-span-12">
            <SectionErrorBoundary name="Token Waterfall">
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                <TokenWaterfall />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -416,7 +416,7 @@ export default function Analytics() {
         
         <div className="md:col-span-12">
            <SectionErrorBoundary name="Prompt Activity">
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                <PromptActivityChart />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -424,14 +424,14 @@ export default function Analytics() {
 
         <div className="md:col-span-6">
            <SectionErrorBoundary name="LLM by Provider">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <LlmProviderPanel />
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
         <div className="md:col-span-6">
            <SectionErrorBoundary name="Provider Comparison">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <ProviderComparisonChart />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -439,7 +439,7 @@ export default function Analytics() {
 
         <div className="md:col-span-12">
            <SectionErrorBoundary name="Routing Decisions">
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                <RoutingDecisionsTable />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -447,7 +447,7 @@ export default function Analytics() {
 
         <div className="md:col-span-12">
            <SectionErrorBoundary name="Gateway Tasks">
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                <GatewayTasksPanel />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -455,14 +455,14 @@ export default function Analytics() {
 
         <div className="md:col-span-8">
            <SectionErrorBoundary name="Permission Decisions">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <PermissionDecisionsChart />
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
         <div className="md:col-span-4">
            <SectionErrorBoundary name="Active Time">
-             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 h-full">
                <ActiveTimeChart />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -470,7 +470,7 @@ export default function Analytics() {
         
         <div className="md:col-span-12">
            <SectionErrorBoundary name="API Errors">
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                <ApiErrorPanel />
              </GlassPanel>
            </SectionErrorBoundary>
@@ -480,7 +480,7 @@ export default function Analytics() {
         <div className="md:col-span-12 mt-4">
            <SectionErrorBoundary name="Execution Depth">
              <SectionHeader title="Execution Depth Distribution" />
-             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4">
                {depthHistogram && depthHistogram.length > 0 ? (
                  <FlexBarChart
                    data={depthHistogram.map(d => ({ label: d.label, value: d.count }))}
@@ -497,13 +497,13 @@ export default function Analytics() {
            <SectionErrorBoundary name="Advisor Strategy">
              <SectionHeader title="Advisor Strategy" />
              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-               <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <GlassPanel className="p-4">
                  <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Savings</p>
                  <p className="text-2xl font-semibold tabular-nums mt-1">
                    ${(advisorSavings?.totalSavings ?? 0).toFixed(2)}
                  </p>
                </GlassPanel>
-               <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <GlassPanel className="p-4">
                  <p className="text-sm text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
                  <p className="text-2xl font-semibold tabular-nums mt-1">
                    {advisorRecent && advisorRecent.length > 0
@@ -513,7 +513,7 @@ export default function Analytics() {
                </GlassPanel>
              </div>
              {/* Cost comparison table */}
-             <GlassPanel className="p-4 mt-4 hover:scale-[1.01] transition-transform duration-300">
+             <GlassPanel className="p-4 mt-4">
                <Table>
                  <TableHeader>
                    <TableRow>

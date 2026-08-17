@@ -308,7 +308,7 @@ export default function WhatsApp() {
       </AnimatePresence>
 
       {/* Connection status card */}
-      <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+      <GlassPanel className="p-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground uppercase tracking-wider font-medium">
@@ -343,7 +343,7 @@ export default function WhatsApp() {
       </GlassPanel>
 
       {/* QR pairing card — PRIMARY VISUAL ANCHOR */}
-      <GlassPanel className="p-6 hover:scale-[1.01] transition-transform duration-300">
+      <GlassPanel className="p-6">
         <AnimatePresence mode="wait">
           {/* State 1: Idle */}
           {pairingState === "idle" && (

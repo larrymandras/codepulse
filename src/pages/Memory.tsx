@@ -624,7 +624,7 @@ export default function Memory() {
                 <>
                   {/* Stats row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
+                    <GlassPanel className="rounded-xl">
                       <MetricCard
                         label="Hit Rate"
                         value={`${((preflightStats?.hitRate ?? 0) * 100).toFixed(1)}%`}
@@ -637,7 +637,7 @@ export default function Memory() {
                         }}
                       />
                     </GlassPanel>
-                    <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
+                    <GlassPanel className="rounded-xl">
                       <MetricCard
                         label="Avg Latency (ms)"
                         value={`${(preflightStats?.avgLatencyMs ?? 0).toFixed(0)}ms`}
@@ -658,7 +658,7 @@ export default function Memory() {
                         </p>
                       </div>
                     ) : (
-                      <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
+                      <GlassPanel className="rounded-xl overflow-hidden">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -720,7 +720,7 @@ export default function Memory() {
                   </p>
                 </div>
               ) : (
-                <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
+                <GlassPanel className="rounded-xl overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -799,7 +799,7 @@ export default function Memory() {
                   </Button>
                 </div>
               ) : (
-                <GlassPanel className="rounded-xl overflow-hidden p-0 relative hover:scale-[1.01] transition-transform duration-300">
+                <GlassPanel className="rounded-xl overflow-hidden p-0 relative">
                   <div className="absolute top-4 left-4 z-10 flex gap-2">
                     <Button variant="secondary" size="sm" onClick={handleConnectVault}>
                       Change Vault

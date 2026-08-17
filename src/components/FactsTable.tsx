@@ -99,7 +99,7 @@ export function FactsTable({
             </p>
           </div>
         ) : (
-          <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="rounded-xl overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
