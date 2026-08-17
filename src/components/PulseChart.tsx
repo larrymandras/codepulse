@@ -22,7 +22,7 @@ export default function PulseChart({ events }: PulseChartProps) {
   return (
     <div className="p-6 h-full flex flex-col">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-primary" />
         Activity Pulse
         <InfoTooltip text="Real-time event activity over the last hour, grouped into 1-minute buckets" />
       </h2>

@@ -84,7 +84,7 @@ export function SkillCommandDeck({ skills, onToggleFavorite }: SkillCommandDeckP
   return (
     <aside aria-label="Command deck" className="flex flex-col gap-3.5">
       <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2">
-        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[var(--glow-xs)]" />
+        <span className="w-1.5 h-1.5 bg-primary rounded-full shadow-[var(--glow-xs)]" />
         Command Deck
       </h2>
 

@@ -39,6 +39,7 @@ import { useThemeColors, type ThemeColors } from "@/hooks/useThemeColors";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { usePrivacyMask } from "@/hooks/usePrivacyMask";
 import type { WorkspaceMapData } from "@/hooks/useWorkspaceMap";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
   buildTree,
   computeRollups,
@@ -143,6 +144,11 @@ export function WorkspaceMapCanvas({ payload, onNodeSelect }: WorkspaceMapCanvas
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const fgRef = useRef<ForceGraphHandle>(null);
+  // D-11 (reclassified from the plan's draft "KILL" proposal, 120-06 triage):
+  // the ring loader below only renders while `payload === undefined`, i.e.
+  // genuinely while data is loading — not unconditional — so it is
+  // state-gated per D-09 and gets the D-11 gate rather than being de-animated.
+  const reducedMotion = prefersReducedMotion();
 
   // ESC to exit fullscreen — same convention as CodeVaultGraph.tsx:292-300.
   useEffect(() => {
@@ -267,7 +273,9 @@ export function WorkspaceMapCanvas({ payload, onNodeSelect }: WorkspaceMapCanvas
           {[0, 1, 2].map((ring) => (
             <div
               key={ring}
-              className="absolute rounded-full border border-dashed border-muted-foreground/30 animate-pulse"
+              className={`absolute rounded-full border border-dashed border-muted-foreground/30 ${
+                reducedMotion ? "" : "animate-pulse"
+              }`}
               style={{ inset: `${ring * 24}px`, animationDelay: `${ring * 150}ms` }}
             />
           ))}

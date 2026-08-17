@@ -19,7 +19,7 @@ export function NewSkillsBanner({
       </div>
 
       <div className="flex items-center gap-3 relative z-10">
-        <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
+        <span className="flex h-2 w-2 rounded-full bg-primary shadow-[var(--glow-xs)]" />
         <span className="text-sm text-primary font-mono font-bold tracking-widest uppercase relative z-10">
         {count} new skill{count !== 1 ? "s" : ""} auto-categorized.
       </span>

@@ -45,6 +45,7 @@ import { useGlobalModelNames, useResolvedBrain } from "@/hooks/useResolvedBrain"
 import { modelIdsMatch, resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { cn } from "@/lib/utils";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 function formatTtl(expiresAt?: number): string {
   if (!expiresAt) return "soon";
@@ -59,6 +60,8 @@ export function BrainHeaderBadge() {
   // Control Center's `BrainControl` read, so this badge cannot disagree with them (BSC-01).
   const resolved = useResolvedBrain();
   const globalModelNames = useGlobalModelNames();
+  // D-11: gates the two in-flight dots below (ReadinessPill precedent).
+  const reducedMotion = prefersReducedMotion();
 
   // Phase 109 D-01/D-03: the catalogue and Ástríðr's own resolved `default_profile_id` now come
   // from the ONE swap.catalogue fetcher (display-metadata resolution — provider identity dot,
@@ -141,13 +144,17 @@ export function BrainHeaderBadge() {
               {isConfirmedLive && (
                 <span
                   aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary animate-pulse"
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full bg-primary ${
+                    reducedMotion ? "" : "animate-pulse"
+                  }`}
                 />
               )}
               {pending?.kind === "inflight" && (
                 <span
                   aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) ${
+                    reducedMotion ? "" : "animate-pulse"
+                  }`}
                 />
               )}
               {/* kind "uncertain" -- BrainPicker's onPendingChange mirrors 109-UI-SPEC.md §C's

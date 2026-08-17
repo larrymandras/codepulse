@@ -29,7 +29,7 @@ export default function ConversationTimeline() {
     <div className="p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-primary" />
           Conversation Timeline
         </h2>
         <div className="flex items-center gap-2 bg-card/60 border border-border/50 rounded-lg p-1">

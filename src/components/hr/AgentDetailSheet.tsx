@@ -199,7 +199,7 @@ export function AgentDetailSheet({
                     onClick={() => setShowAvatarUpload(!showAvatarUpload)}
                     title="Click to change avatar"
                   >
-                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl animate-pulse" />
+                    <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl" />
                     <AgentAvatar
                       avatar={matchedAvatar ?? { name: agentDetail.name }}
                       status={avatarStatus as "active" | "idle"}

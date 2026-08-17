@@ -151,7 +151,7 @@ function OperatorScoreCard() {
       {/* Header row */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: color }} />
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
           System Integrity <span className="text-xs text-muted-foreground">({label})</span>
         </h2>
         <div className="flex items-center gap-3 text-xs uppercase font-mono tracking-widest text-muted-foreground">

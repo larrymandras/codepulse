@@ -1,5 +1,6 @@
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 interface ThinkingBlockProps {
   block: { type: string; round_num?: number; thinking_text?: string };
@@ -10,6 +11,8 @@ export function ThinkingBlock({ block, streaming = false }: ThinkingBlockProps) 
   const [expanded, setExpanded] = useState(false);
   const text = block.thinking_text ?? "";
   const preview = text.length > 120 ? text.slice(0, 120) + "…" : text;
+  // D-11: gates the streaming dot below (ReadinessPill precedent).
+  const reducedMotion = prefersReducedMotion();
 
   return (
     <div
@@ -29,7 +32,11 @@ export function ThinkingBlock({ block, streaming = false }: ThinkingBlockProps) 
           Round {block.round_num ?? "?"}
         </span>
         {streaming && (
-          <span className="h-2 w-2 rounded-full bg-(--status-warn) animate-pulse" />
+          <span
+            className={`h-2 w-2 rounded-full bg-(--status-warn) ${
+              reducedMotion ? "" : "animate-pulse"
+            }`}
+          />
         )}
         {!expanded && text && (
           <span className="text-sm text-(--muted-foreground) truncate">

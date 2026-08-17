@@ -53,7 +53,7 @@ export default function EventFeed() {
 
       <div className="flex flex-wrap items-center justify-between mb-4 pb-4 border-b border-border/30 gap-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-primary" />
           tail -f /var/log/events
         </h2>
         

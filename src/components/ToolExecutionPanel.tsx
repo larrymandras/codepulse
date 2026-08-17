@@ -134,14 +134,14 @@ export default function ToolExecutionPanel() {
     return (
       <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
+          <span className="w-2 h-2 rounded-full bg-primary shadow-[var(--glow-xs)]" />
           Tool Executions
           <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
         </h2>
-        
+
         <div className="flex-1 flex flex-col items-center justify-center opacity-70 min-h-[200px]">
           <div className="w-12 h-12 border border-primary/20 rounded-full border-t-primary animate-spin mb-4 shadow-[var(--glow-sm)]" />
-          <p className="text-xs font-mono tracking-widest text-primary uppercase animate-pulse">Awaiting Telemetry</p>
+          <p className="text-xs font-mono tracking-widest text-primary uppercase">Awaiting Telemetry</p>
           <div className="mt-4 text-[11px] font-mono text-primary/40 flex flex-col items-center gap-1.5">
             <span className="bg-primary/10 px-2 py-0.5 rounded border border-primary/20">[ SYSTEM STANDBY ]</span>
             <span>Intercepting agent tool calls...</span>
@@ -154,7 +154,7 @@ export default function ToolExecutionPanel() {
   return (
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-primary" />
         Tool Executions
         <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
         <Link to="/tools" className="text-primary text-xs font-mono tracking-widest uppercase hover:underline ml-auto">View in Tools →</Link>
@@ -254,7 +254,7 @@ export default function ToolExecutionPanel() {
                   >
                     <span
                       className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
-                        exec.success ? "bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-destructive animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+                        exec.success ? "bg-primary shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.8)]"
                       }`}
                     />
                     <div className="flex-1 min-w-0">

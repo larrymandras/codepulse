@@ -63,6 +63,7 @@ import { SwapHistoryList } from "@/components/brains/SwapHistoryList";
 import { useCommandDispatch } from "@/hooks/useCommandDispatch";
 import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import { modelIdsMatch, type CatalogueEntry } from "@/lib/brainsApi";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 /** TELEMETRY-shaped — mirrors `ActiveEngine.mode` (`useActiveEngine.ts`) verbatim. Kept distinct
  * from `hasConfiguredDefault` (below) on purpose (103-17): this is "what the live engine reading
@@ -266,6 +267,8 @@ export function GlobalSwapModal({
 }: GlobalSwapModalProps) {
   const { dispatch } = useCommandDispatch();
   const { modelOverride } = useGlobalBrainOverride();
+  // D-11: gates the pending/confirming swap-in-flight dot below.
+  const reducedMotion = prefersReducedMotion();
 
   /**
    * The single dispatch seam for both legs (UAT test 16). Guarantees a settled, shaped result no
@@ -601,7 +604,9 @@ export function GlobalSwapModal({
                 {(outcome.status === "pending" || outcome.status === "confirming") && (
                   <span
                     aria-hidden="true"
-                    className="h-2 w-2 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                    className={`h-2 w-2 shrink-0 rounded-full bg-(--status-info) ${
+                      reducedMotion ? "" : "animate-pulse"
+                    }`}
                   />
                 )}
                 <span className="flex-1">

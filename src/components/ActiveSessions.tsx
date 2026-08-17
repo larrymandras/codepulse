@@ -12,7 +12,7 @@ export default function ActiveSessions() {
   return (
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-primary" />
         Active Sessions
         <InfoTooltip text="Currently active Claude Code sessions with event counts and last activity" />
       </h2>
@@ -61,7 +61,7 @@ export default function ActiveSessions() {
                   </span>
                   {session.lastEventAt && (
                     <span className="col-span-2 flex items-center gap-1.5 mt-1 pt-2 border-t border-border/30 text-primary/60">
-                      <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-pulse" />
+                      <span className="w-1.5 h-1.5 bg-primary/60 rounded-full" />
                       Last: {formatTimestamp(session.lastEventAt)}
                     </span>
                   )}

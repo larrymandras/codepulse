@@ -35,7 +35,7 @@ export default function GitActivityWidget() {
   return (
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-primary" />
         Git Activity
         <InfoTooltip text="Git activity: commits, pull requests, and lines of code changed over time" />
       </h2>

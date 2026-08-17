@@ -406,7 +406,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
           <div className="border border-primary/20 rounded-xl p-5 flex flex-col gap-4 bg-primary/5 backdrop-blur glow-card shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] transition-all relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <h3 className="text-base font-bold font-mono tracking-wide text-primary uppercase flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-primary" />
               Team Members ({memberIds.length})
             </h3>
             <SortableContext

@@ -67,7 +67,7 @@ export function WarRoomKanbanColumn({
             </span>
           )}
           <span className="text-xs text-primary/70 uppercase font-mono tracking-widest mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
+            <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary shadow-[var(--glow-xs)]" />
             Online
           </span>
         </div>

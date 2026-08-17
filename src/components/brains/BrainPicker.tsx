@@ -104,6 +104,7 @@ import {
 } from "@/lib/brainsApi";
 import { mapCatalogueVendorToBilling } from "@/lib/catalogueBilling";
 import { cn } from "@/lib/utils";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 /**
  * Adapts a live `swap.catalogue` entry (`useBrainCatalogue`'s `BrainCatalogueEntry` —
@@ -210,6 +211,8 @@ export function BrainPicker({
   const open = isOpenControlled ? openProp : uncontrolledOpen;
   const [scope, setScope] = useState<PickerScope>("profile");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // D-11: gates the in-flight dot below (ReadinessPill precedent).
+  const reducedMotion = prefersReducedMotion();
 
   // Consumed at most once, ever, across this component's lifetime — the mixed-badge contextual
   // default (D-08) is not a preference that can re-arm itself.
@@ -446,7 +449,9 @@ export function BrainPicker({
             {pendingInfo?.kind === "inflight" && (
               <span
                 aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                className={`h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) ${
+                  reducedMotion ? "" : "animate-pulse"
+                }`}
               />
             )}
             {pendingInfo?.kind === "uncertain" && (

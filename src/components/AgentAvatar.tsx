@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 interface AvatarData {
   name: string;
@@ -59,7 +60,13 @@ function AvatarImage({ storageId, size, alt }: { storageId: Id<"_storage">; size
 
 export default function AgentAvatar({ avatar, status = "idle", size = "md" }: AgentAvatarProps) {
   const px = SIZE_MAP[size];
-  const ringClass = STATUS_RING[status] ?? STATUS_RING.idle;
+  // D-11: "working" is the only STATUS_RING value with animate-pulse. The Record
+  // above holds a static string and can't call a hook, so the pulse is
+  // stripped at the consumption site — leave the ring color and glow, only the
+  // pulse stops under reduced motion.
+  const reducedMotion = prefersReducedMotion();
+  const rawRingClass = STATUS_RING[status] ?? STATUS_RING.idle;
+  const ringClass = reducedMotion ? rawRingClass.replace(/\s*animate-pulse/, "") : rawRingClass;
   const fontSize = size === "sm" ? "text-sm" : size === "md" ? "text-base" : size === "2xl" ? "text-5xl" : size === "xl" ? "text-4xl" : "text-2xl";
 
   return (

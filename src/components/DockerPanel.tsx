@@ -2,10 +2,14 @@ import { useState } from "react";
 import { useDockerHealth } from "../hooks/useDockerHealth";
 import InfoTooltip from "./InfoTooltip";
 import { ScrollArea } from "./ui/scroll-area";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 export default function DockerPanel() {
   const containers = useDockerHealth();
   const [refreshing, setRefreshing] = useState(false);
+  // D-11: gates the "Refreshing..." label below (a genuine in-flight fetch
+  // signal). See ReadinessPill.tsx for the precedent this mirrors.
+  const reducedMotion = prefersReducedMotion();
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -39,7 +43,7 @@ export default function DockerPanel() {
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-primary" />
           Docker Containers
           <InfoTooltip text="Docker container status including health, CPU, and memory usage" />
         </h2>
@@ -49,7 +53,7 @@ export default function DockerPanel() {
           className="text-xs uppercase tracking-widest font-mono px-3 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all disabled:opacity-50 flex items-center gap-2"
         >
           {refreshing ? (
-            <span className="animate-pulse">Refreshing...</span>
+            <span className={reducedMotion ? "" : "animate-pulse"}>Refreshing...</span>
           ) : (
             "Refresh"
           )}

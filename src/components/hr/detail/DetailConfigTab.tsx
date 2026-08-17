@@ -36,7 +36,7 @@ function Field({
 function SectionHeader({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-2 mb-4 border-b border-primary/20 pb-2">
-      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[var(--glow-xs)]" />
       <h4 className="text-sm font-bold font-mono text-primary uppercase tracking-[0.2em] drop-shadow-sm">
         {title}
       </h4>
@@ -59,7 +59,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
   if (!agentDetail) {
     return (
       <div className="flex items-center justify-center p-8 border border-dashed border-primary/20 rounded-lg bg-primary/5">
-        <p className="text-sm font-mono tracking-widest uppercase text-muted-foreground animate-pulse">
+        <p className="text-sm font-mono tracking-widest uppercase text-muted-foreground">
           No configuration telemetry
         </p>
       </div>

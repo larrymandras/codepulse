@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table";
 import { FlexBarChart } from "./FlexBarChart";
 import { useCostByGoal, useLlmByGoal } from "../hooks/useCostByGoal";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 // ── D-11: Configurable runaway threshold (module constant per threat model T-149-10) ──
 export const RUNAWAY_THRESHOLD = 0.50;
@@ -104,6 +105,8 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
   const isRunaway = billedTotal > RUNAWAY_THRESHOLD;
   const tierFlag = computeTierFlag(llmRows, goalId);
   const { dotClass, labelClass } = tierFlagConfig[tierFlag];
+  // D-11: gates the "OPUS WORKER" tier dot below.
+  const reducedMotion = prefersReducedMotion();
 
   // Sparkline data: one bar per row (label=model, value=billedUsd). Unpriced
   // rows (billedUsd === null) render as a zero-height bar — the sparkline is
@@ -123,8 +126,13 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
               isRunaway ? RUNAWAY_TEXT_CLASS : "text-primary"
             }`}
           >
+            {/* D-09 disagreement (120-06 triage): the plan's draft classified
+               this as KEEP+GATE, but animate-pulse applies to BOTH branches of
+               the isRunaway ternary — only the color differs — so it renders
+               regardless of any state value and is decorative per the rule.
+               De-animated, not gated. See 120-PULSE-TRIAGE.md §3. */}
             <span
-              className={`w-2 h-2 rounded-full animate-pulse ${
+              className={`w-2 h-2 rounded-full ${
                 isRunaway ? RUNAWAY_DOT_CLASS : "bg-primary"
               }`}
             />
@@ -139,7 +147,10 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
 
         {/* Model-tier flag */}
         <div className="flex items-center gap-1.5">
-          <span className={dotClass} />
+          {/* D-11: "OPUS WORKER"'s dotClass carries animate-pulse (runaway
+             tier alert). The Record above holds a static string and can't
+             call a hook, so the pulse is stripped at the consumption site. */}
+          <span className={reducedMotion ? dotClass.replace(/\s*animate-pulse/, "") : dotClass} />
           <span className={labelClass}>{tierFlag}</span>
         </div>
       </div>

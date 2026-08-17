@@ -43,7 +43,7 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
       {/* Header with stepper */}
       <div className="px-6 pt-5 pb-3 border-b border-border/30 relative z-10">
         <h1 className="text-lg font-bold font-mono tracking-wide text-foreground mb-3 uppercase flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
+          <span className="w-2 h-2 rounded-full bg-primary shadow-[var(--glow-xs)]" />
           Agent Initialization
         </h1>
         <WizardStepper

@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { WSStatusIndicator } from "./WSStatusIndicator";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,8 @@ export function ConnectionPopover({ forceAuthError = false }: ConnectionPopoverP
   const [lastEventAt, setLastEventAt] = useState<Date | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [, setTick] = useState(0); // drives uptime/relative refresh
+  // D-11: gates the reconnecting dot below (ReadinessPill precedent).
+  const reducedMotion = prefersReducedMotion();
 
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const uptimeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -209,7 +212,7 @@ export function ConnectionPopover({ forceAuthError = false }: ConnectionPopoverP
                   status === "connected"
                     ? "bg-(--status-ok)"
                     : status === "reconnecting"
-                      ? "bg-(--status-warn) animate-pulse"
+                      ? `bg-(--status-warn) ${reducedMotion ? "" : "animate-pulse"}`
                       : "bg-(--status-error)"
                 }`}
                 aria-hidden="true"

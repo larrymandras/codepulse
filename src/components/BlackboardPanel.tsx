@@ -6,6 +6,7 @@
  * Data sourced from useSwarmGraph(goalId) (Plan 03).
  */
 
+import { cloneElement } from "react";
 import {
   Clock,
   ArrowRight,
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { EntityRow } from "./EntityRow";
 import StatusBadge from "./StatusBadge";
 import { useSwarmGraph } from "../hooks/useSwarmGraph";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 // ── State icon mapping (mirrors SwarmTaskNode state icons) ──────────────────
 const stateIcon: Record<string, React.ReactNode> = {
@@ -61,13 +63,17 @@ interface BlackboardPanelProps {
 export default function BlackboardPanel({ goalId, completedGoal = false, onSelectTask }: BlackboardPanelProps) {
   const tasks = useSwarmGraph(goalId);
   const taskCount = tasks.length;
+  // D-11 (Phase 120): gates the "running" state icon at :100 below, since the
+  // icon lives in a module-level Record and can't call a hook itself. See
+  // src/lib/prefersReducedMotion.ts for why the optional-call form matters.
+  const reducedMotion = prefersReducedMotion();
 
   return (
     <div>
       {/* Header: BLACKBOARD label + live-pulse dot + task count badge */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-mono uppercase tracking-widest text-primary flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-primary" />
           BLACKBOARD
         </h2>
         <Badge variant="outline" className="text-xs font-mono">
@@ -97,7 +103,19 @@ export default function BlackboardPanel({ goalId, completedGoal = false, onSelec
                 key={task.subtaskId}
                 wrapPrimary
                 onClick={onSelectTask ? () => onSelectTask(task) : undefined}
-                icon={stateIcon[task.state] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                icon={
+                  // D-11: "running" is the only state icon in the Record below
+                  // that pulses (a genuine in-progress signal). The Record
+                  // holds a static JSX literal and can't call a hook, so the
+                  // pulse is stripped at the consumption site via cloneElement
+                  // — the Record itself is left untouched, matching the
+                  // AgentAvatar/CostBreakdown consumption-site pattern.
+                  reducedMotion && task.state === "running"
+                    ? cloneElement(stateIcon.running as React.ReactElement<{ className?: string }>, {
+                        className: "h-3.5 w-3.5 text-[#22c55e]",
+                      })
+                    : stateIcon[task.state] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                }
                 primary={task.subtask}
                 secondary={task.claimedBy}
                 trailing={

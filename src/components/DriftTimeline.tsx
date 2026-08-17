@@ -5,6 +5,7 @@ import { useDriftChanges, useDriftSummary } from "../hooks/useDrift";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
 import type { Id } from "../../convex/_generated/dataModel";
 import InfoTooltip from "./InfoTooltip";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 function relativeTime(ts: number): string {
   const now = Date.now() / 1000;
@@ -74,6 +75,8 @@ export default function DriftTimeline() {
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [changeTypeFilter, setChangeTypeFilter] = useState<string>("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // D-11: gates the DRIFTING badge below (genuinely gated on isDrifting).
+  const reducedMotion = prefersReducedMotion();
   const [confirmingAckAll, setConfirmingAckAll] = useState(false);
 
   // Derive categories dynamically from data
@@ -132,12 +135,16 @@ export default function DriftTimeline() {
       <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
         <div className="flex items-center gap-3">
           <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-primary" />
             Config Drift
             <InfoTooltip text="Configuration change timeline tracking drift across MCP servers, plugins, and settings" />
           </h2>
           {summary.isDrifting && (
-            <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/40 font-mono uppercase tracking-widest animate-pulse">
+            <span
+              className={`text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/40 font-mono uppercase tracking-widest ${
+                reducedMotion ? "" : "animate-pulse"
+              }`}
+            >
               DRIFTING
             </span>
           )}

@@ -14,6 +14,7 @@
 
 import { useMemo } from "react";
 import { RunBlock } from "./RunBlock";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,10 +72,16 @@ export function RunTimeline({ blocks, streaming = false }: RunTimelineProps) {
     () => groupIntoRounds(blocks, streaming),
     [blocks, streaming]
   );
+  // D-11: gates the "Thinking..." indicator and the active-round dot below.
+  const reducedMotion = prefersReducedMotion();
 
   if (showThinking) {
     return (
-      <div className="text-(--muted-foreground) text-base animate-pulse">
+      <div
+        className={`text-(--muted-foreground) text-base ${
+          reducedMotion ? "" : "animate-pulse"
+        }`}
+      >
         Thinking...
       </div>
     );
@@ -105,7 +112,11 @@ export function RunTimeline({ blocks, streaming = false }: RunTimelineProps) {
                 <span className="text-sm text-(--status-ok)">✓</span>
               )}
               {isActive && streaming && (
-                <span className="h-2 w-2 rounded-full bg-(--status-warn) animate-pulse" />
+                <span
+                  className={`h-2 w-2 rounded-full bg-(--status-warn) ${
+                    reducedMotion ? "" : "animate-pulse"
+                  }`}
+                />
               )}
             </summary>
             <div className="pl-4 flex flex-col gap-1">

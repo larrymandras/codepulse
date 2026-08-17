@@ -22,7 +22,7 @@ export default function ToolBreakdown({ events }: ToolBreakdownProps) {
   return (
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-primary" />
         Tool Usage
         <InfoTooltip text="Top 10 most-used tools ranked by execution count" />
         <Link to="/tools" className="text-primary text-xs font-mono tracking-widest uppercase hover:underline ml-auto">View in Tools →</Link>

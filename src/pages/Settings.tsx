@@ -35,6 +35,7 @@ import { useBrainCatalogue } from "../hooks/useBrainCatalogue";
 import { PROVIDER_COLORS } from "../lib/providers";
 import { modelIdsMatch } from "../lib/brainsApi";
 import type { AgentProfile, Avatar } from "../types";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
 const CONVEX_DEPLOYMENT = CONVEX_URL ? new URL(CONVEX_URL).hostname.split(".")[0] : "unknown";
@@ -291,6 +292,9 @@ export function AgentProfileRows({
   const [pendingByProfile, setPendingByProfile] = useState<
     Record<string, { label: string; kind: "inflight" | "uncertain" } | null>
   >({});
+  // D-11: gates the in-flight dot below (ReadinessPill precedent). Read once
+  // per render, not per row, same pattern as the two override axes above.
+  const reducedMotion = prefersReducedMotion();
 
   if (profileConfigs.length === 0) {
     return (
@@ -365,7 +369,9 @@ export function AgentProfileRows({
                     {pending.kind === "inflight" && (
                       <span
                         aria-hidden="true"
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) ${
+                          reducedMotion ? "" : "animate-pulse"
+                        }`}
                       />
                     )}
                     {/* kind "uncertain" -- BrainPicker's onPendingChange mirrors 109-UI-SPEC.md

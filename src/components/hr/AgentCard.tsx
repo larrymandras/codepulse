@@ -84,7 +84,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
         
         {/* Avatar Container with glowing rings */}
         <div className="relative group-hover:scale-110 transition-transform duration-500 mb-5">
-          <div className="absolute inset-0 rounded-full bg-primary/20 blur-[20px] animate-pulse opacity-50 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 rounded-full bg-primary/20 blur-[20px] opacity-50 group-hover:opacity-100 transition-opacity" />
           <div className="absolute inset-[-4px] rounded-full border border-primary/20 border-dashed opacity-0 group-hover:opacity-100 group-hover:animate-[spin_10s_linear_infinite]" />
           <AgentAvatar
             avatar={agent.avatarData ?? { name: agent.name }}

@@ -49,7 +49,7 @@ export default function HivePage() {
       <PageHeader
         title={
           <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-primary" />
             Hive Mind
           </span>
         }

@@ -559,7 +559,7 @@ function SkillsBody() {
             {/* Categories — the long list; scrolls internally so Scope/nav above stay pinned. */}
             <div className="flex flex-col gap-2 lg:flex-1 lg:min-h-0 border-t border-primary/20 pt-3">
               <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2 flex-shrink-0">
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[var(--glow-xs)]" />
+                <span className="w-1.5 h-1.5 bg-primary rounded-full shadow-[var(--glow-xs)]" />
                 Categories
               </h2>
               <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">

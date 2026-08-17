@@ -1,4 +1,5 @@
 import AgentAvatar from "./AgentAvatar";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 interface TeamInfo {
   name: string;
@@ -50,6 +51,10 @@ interface TeamStatusCardsProps {
 
 export default function TeamStatusCards({ components, pipelines }: TeamStatusCardsProps) {
   const teams = deriveTeams(components, pipelines);
+  // D-11: gates the "Active" team dot below. Reclassified from the plan's
+  // draft (which flagged this as a possible kill) after verifying it is
+  // genuinely gated on `team.status === "active"` — see 120-PULSE-TRIAGE.md.
+  const reducedMotion = prefersReducedMotion();
 
   if (teams.length === 0) {
     return (
@@ -88,7 +93,12 @@ export default function TeamStatusCards({ components, pipelines }: TeamStatusCar
                   </span>
                   {team.status === "active" && (
                     <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" aria-hidden="true" />
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full bg-green-400 ${
+                          reducedMotion ? "" : "animate-pulse"
+                        }`}
+                        aria-hidden="true"
+                      />
                       <span className="sr-only">Active</span>
                     </>
                   )}
