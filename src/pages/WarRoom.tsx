@@ -37,6 +37,7 @@ import { resolveParticipant, resolveAgentColor } from "@/lib/warRoomIdentity";
 import { useWarRoomVoice } from "@/hooks/useWarRoomVoice";
 import { closeWarRoom } from "@/lib/astridrApi";
 import { toast } from "sonner";
+import { DeleteWarRoomDialog } from "@/components/warroom/DeleteWarRoomDialog";
 
 // Stable empty reference — passing an inline `[]` would change identity every
 // render and (combined with the dialog's open-effect) churn the launch form.
@@ -80,36 +81,46 @@ export default function WarRoom() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const deleteWarRoom = useMutation(api.v6Mutations.deleteWarRoom);
 
+  // Pending-room-then-dialog gate (Phase 120, POLISH-03 / D-12 / D-14) —
+  // replaces the prior browser-native confirm() prompt, which is unthemeable
+  // and ignores every data-theme block.
+  const [pendingDeleteRoom, setPendingDeleteRoom] = useState<{
+    roomId: string;
+    status: string;
+    name: string;
+  } | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
   const handleDeleteRoom = useCallback(
-    async (room: { roomId: string; status: string; name: string }) => {
-      if (
-        !window.confirm(
-          `Delete war room "${room.name}"? This removes it and its transcript.`,
-        )
-      ) {
-        return;
-      }
-      try {
-        // Tear down the live LiveKit room + agents first (best-effort — a room
-        // seeded via ingest may have no live LiveKit room behind it).
-        if (room.status === "active") {
-          try {
-            await closeWarRoom(room.roomId);
-          } catch {
-            /* no live room to close — proceed to remove the record */
-          }
-        }
-        await deleteWarRoom({ roomId: room.roomId });
-        setSelectedRoomId((cur) => (cur === room.roomId ? null : cur));
-        toast.success(`Deleted "${room.name}"`);
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to delete room",
-        );
-      }
+    (room: { roomId: string; status: string; name: string }) => {
+      setPendingDeleteRoom(room);
+      setDeleteConfirmOpen(true);
     },
-    [deleteWarRoom],
+    [],
   );
+
+  const handleConfirmDeleteRoom = useCallback(async () => {
+    if (!pendingDeleteRoom) return;
+    const room = pendingDeleteRoom;
+    try {
+      // Tear down the live LiveKit room + agents first (best-effort — a room
+      // seeded via ingest may have no live LiveKit room behind it).
+      if (room.status === "active") {
+        try {
+          await closeWarRoom(room.roomId);
+        } catch {
+          /* no live room to close — proceed to remove the record */
+        }
+      }
+      await deleteWarRoom({ roomId: room.roomId });
+      setSelectedRoomId((cur) => (cur === room.roomId ? null : cur));
+      toast.success(`Deleted "${room.name}"`);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete room",
+      );
+    }
+  }, [deleteWarRoom, pendingDeleteRoom]);
 
   const allRooms = [...roomsData.active, ...roomsData.closed];
   const selectedRoom = allRooms.find((r) => r.roomId === selectedRoomId);
@@ -293,7 +304,11 @@ export default function WarRoom() {
 
           {/* Left panel — room list; fixed 280px on desktop, slide-in overlay on mobile (F8) */}
           <GlassPanel
-            className={`w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col hover:scale-[1.01] transition-transform duration-300 fixed inset-y-0 left-0 z-50 md:static md:z-auto md:translate-x-0 ${
+            // transition-transform duration-300 is retained (Phase 120's
+            // kill-list sweep removes only the hover-scale decoration) — it
+            // animates the F8 mobile drawer slide via the translate-x-0 /
+            // -translate-x-full toggle below.
+            className={`w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col transition-transform duration-300 fixed inset-y-0 left-0 z-50 md:static md:z-auto md:translate-x-0 ${
               roomListOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
@@ -373,7 +388,7 @@ export default function WarRoom() {
           </GlassPanel>
 
           {/* Right panel — room detail */}
-          <GlassPanel className="flex-1 flex flex-col rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
+          <GlassPanel className="flex-1 flex flex-col rounded-xl overflow-hidden">
             {showDetail ? (
               <>
                 {/* Room header */}
@@ -465,6 +480,17 @@ export default function WarRoom() {
           </GlassPanel>
         </div>
       </SectionErrorBoundary>
+
+      {/* Delete war room confirm dialog (Phase 120, POLISH-03 / D-12) */}
+      <DeleteWarRoomDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(o) => {
+          setDeleteConfirmOpen(o);
+          if (!o) setPendingDeleteRoom(null);
+        }}
+        roomName={pendingDeleteRoom?.name ?? ""}
+        onConfirm={handleConfirmDeleteRoom}
+      />
     </div>
   );
 }

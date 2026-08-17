@@ -23,6 +23,7 @@ import { TaskCreateForm } from "../components/TaskCreateForm";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { WarRoomKanbanColumn, type TaskItem } from "../components/WarRoomKanbanColumn";
 import { WarRoomTaskCard } from "../components/WarRoomTaskCard";
+import { MoveToActionConfirmDialog } from "@/components/tasks/MoveToActionConfirmDialog";
 import {
   DndContext,
   DragOverlay,
@@ -115,6 +116,13 @@ export default function Tasks() {
   const [createColumn, setCreateColumn] = useState<TaskColumn>("backlog");
   const [createOpen, setCreateOpen] = useState(false);
   const [prefillData, setPrefillData] = useState<Partial<NewTask> | null>(null);
+  const [pendingMove, setPendingMove] = useState<{
+    taskId: string;
+    convexId: string;
+    title: string;
+    column: TaskColumn;
+  } | null>(null);
+  const [moveConfirmOpen, setMoveConfirmOpen] = useState(false);
 
   // Map Convex documents to KanbanTask
   const tasks: KanbanTask[] = (rawTasks as any[]).map((t) => ({
@@ -141,30 +149,25 @@ export default function Tasks() {
     if (!task || !task._id) return;
 
     if (ACTION_COLUMNS.includes(newColumn)) {
-      // Show confirmation toast with 5s timeout before WS command (D-04)
-      toast(`${task.title} -> ${newColumn}. Send command to Astrid?`, {
-        duration: 5000,
-        action: {
-          label: "Confirm",
-          onClick: async () => {
-            // Optimistic Convex update
-            await moveColumn({ id: task._id as any, column: newColumn });
-            // Send WS command to Astrid
-            dispatch(
-              { type: "task.move", task_id: taskId, column: newColumn },
-              `Task moved to ${newColumn}.`
-            );
-          },
-        },
-        cancel: {
-          label: "Cancel",
-          onClick: () => { /* no-op, toast dismissed */ },
-        },
-      });
+      // Confirm-first via a timeout-free AlertDialog (Phase 120, POLISH-03 /
+      // D-12 / D-14) — replaces the prior 5-second auto-dismissing toast.
+      setPendingMove({ taskId, convexId: task._id as string, title: task.title, column: newColumn });
+      setMoveConfirmOpen(true);
     } else {
-      // Non-action columns: move immediately, no WS command
+      // Non-action columns: move immediately, no dialog, no WS command
       await moveColumn({ id: task._id as any, column: newColumn });
     }
+  }
+
+  async function handleConfirmMove() {
+    if (!pendingMove) return;
+    // Optimistic Convex update
+    await moveColumn({ id: pendingMove.convexId as any, column: pendingMove.column });
+    // Send WS command to Astrid — confirm still precedes dispatch (D-14).
+    dispatch(
+      { type: "task.move", task_id: pendingMove.taskId, column: pendingMove.column },
+      `Task moved to ${pendingMove.column}.`
+    );
   }
 
   function handleAddTask(column: TaskColumn) {
@@ -419,6 +422,18 @@ export default function Tasks() {
           setCreateOpen(false);
           toast("Task created.");
         }}
+      />
+
+      {/* Move-to-action-column confirm dialog (Phase 120, POLISH-03 / D-12) */}
+      <MoveToActionConfirmDialog
+        open={moveConfirmOpen}
+        onOpenChange={(o) => {
+          setMoveConfirmOpen(o);
+          if (!o) setPendingMove(null);
+        }}
+        taskTitle={pendingMove?.title ?? ""}
+        column={pendingMove?.column ?? ""}
+        onConfirm={handleConfirmMove}
       />
     </div>
   );
