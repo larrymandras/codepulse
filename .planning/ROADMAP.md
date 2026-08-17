@@ -667,3 +667,133 @@ Plans:
 - [x] **Phase 119 — Loom curated pipelines** (phase-level summary, 0 per-plan files) — pipeline run tracking with capped step events
 
 **Known deferred at close:** MISSION-01's duration + orphan-recovery halves and MISSION-02 in full, both to SEED-007 and both blocked on data shape rather than effort — no `running` row can arrive and no job↔tool join key exists. Plus `message_routed` routed but deliberately unsurfaced (needs its own UI pass), the `links` table's unrecorded retention decision, and the parked `llm-analytics-rollup` CR-01. None blocking; all in [milestones/v14.0-MILESTONE-AUDIT.md](milestones/v14.0-MILESTONE-AUDIT.md).
+
+---
+
+## v15.0 "Borealis Console" Premium UI Overhaul
+
+> **Started 2026-08-17** via `/gsd-new-milestone`, consuming `MILESTONE-CONTEXT.md` (prepared 2026-08-07). Continues phase numbering from v14.0 (108–119) → **Phases 120–125**. The design law is already decided (variant B "Borealis blend", approved 2026-08-07 against three model proposals) — phases consume it from `Skill("sketch-findings-codepulse")` and `.planning/sketches/001-dashboard-quiet-control-room/index.html`; they do not re-litigate it.
+
+**Milestone goal:** Make CodePulse look and feel genuinely premium — calm layered matte surfaces, colour spent only on state, two signature layers (aurora Signal Horizon + Pulse ECG hero), Ástríðr's serif voice — while raising usability through honest states, quiet badges, a 3-zone header and a 4-domain sidebar.
+
+**Phase summary:**
+
+- [ ] **Phase 120 — Polish & Verified Defects** — remove the unanimous 3-model kill list and fix three code-verified defects (fabricated Integrations row, destructive confirm living in a toast, `--status-ok` identical to `--primary`); the cheapest work, done first so it clears the decoration that would otherwise confound later visual-regression and contrast measurement
+- [ ] **Phase 121 — Analytics Query Resilience** — `/analytics` survives any single failing query, and its LLM cost/latency queries (`costByModel`, `latencyOverTime`, `providerBreakdown`) move onto the `aggregates` rollups (DEBT-08) — a hard prerequisite for the six-state tile contract, not a passenger
+- [ ] **Phase 122 — Tokens, Primitives & Contrast Measurement** — layered surface tokens across all 5 themes, the three-hue-owner law, motion tokens, the six-state metric-tile primitive, shared `PageHeader`/`EmptyState` — plus A11Y-01, sizing the true scope of the contrast problem before any remediation is planned
+- [ ] **Phase 123 — Accessibility Remediation** — fix every violation A11Y-01 measured, and prove the contrast suite cannot report green against a page it never rendered
+- [ ] **Phase 124 — Shell & Information Architecture** — the 48px 3-zone header and the 232px sidebar's 4-domain regroup, a pure `navRegistry.ts` change with no route changes
+- [ ] **Phase 125 — Signature Layers** — the aurora Signal Horizon, the Pulse ECG canvas hero, and a one-surface trial of Ástríðr's serif voice
+
+**Execution order:** 120 → 121 → 122 → 123 → 124 → 125, sequential. 120 is first because it is the cheapest work and removes the decoration that would otherwise confound Phase 122's A11Y-01 contrast measurement. 121 must land at or before 122 — 122 carries TOKEN-04's six-state tile contract, and a tile cannot render an honest `unavailable` state while a single `useQuery` throw still blanks `/analytics`; 121 has no code dependency on 120 and could run in parallel, but is sequenced second to keep the milestone linear. 123 (A11Y remediation) is sequenced immediately after 122, not at the end, per the standing rule that redoing contrast work after the palette is frozen means touching all 5 themes twice. 124 depends on 122's surface/hairline tokens. 125 depends on both 122 (the tokens the Signal Horizon and ECG hero read via `getComputedStyle`) and 124 (the shell the Signal Horizon renders on top of).
+
+| Phase | Milestone | Plans Complete | Status | Completed | Notes |
+|-------|-----------|----------------|--------|-----------|-------|
+| 120. Polish & Verified Defects | v15.0 | 0/0 | Not started | - | |
+| 121. Analytics Query Resilience | v15.0 | 0/0 | Not started | - | |
+| 122. Tokens, Primitives & Contrast Measurement | v15.0 | 0/0 | Not started | - | |
+| 123. Accessibility Remediation | v15.0 | 0/0 | Not started | - | |
+| 124. Shell & Information Architecture | v15.0 | 0/0 | Not started | - | |
+| 125. Signature Layers | v15.0 | 0/0 | Not started | - | |
+
+## Phase Details
+
+### Phase 120: Polish & Verified Defects
+
+**Goal**: No surface in the app carries the unanimous 3-model kill-list decoration or any of the three code-verified honesty defects — the cheapest, least-confounding work, done first so later visual-regression and contrast work measures a clean surface.
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: POLISH-01, POLISH-02, POLISH-03, POLISH-04, POLISH-05, POLISH-06
+**Success Criteria** (what must be TRUE):
+
+  1. A repo-wide search for the kill-list patterns (`hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, `nav-active-shadow`/`nav-hover-shadow`, decorative pulse dots, cyan scrollbar glow, violet search pill) returns zero live hits.
+  2. The E-Stop control holds fixed geometry and never wraps or reflows at any viewport width, from mobile to ultrawide.
+  3. Deleting a task (or any other destructive action) requires confirming in a dialog — the toast-based confirm at `Tasks.tsx:144-145` no longer exists anywhere in the app.
+  4. `HeroStatsBar`'s Integrations row either shows a real, emitter-backed figure or is gone — no surface renders a number with no live source behind it.
+  5. Status badges follow the quiet law (only Failed renders filled) under one unified vocabulary (Running/Succeeded/Failed/Cancelled), and the sidebar and Settings no longer collide at 900px.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 121: Analytics Query Resilience
+
+**Goal**: `/analytics` cannot be blanked by a single failing query, and its LLM cost/latency queries read from the durable `aggregates` rollups instead of scanning raw `llmMetrics` — the prerequisite that makes an honest six-state tile possible on that route.
+**Depends on**: Nothing — independent Convex/data-layer work with no shared surface with Phase 120; sequenced second because it must land before Phase 122's TOKEN-04 tile contract is built against `/analytics`.
+**Requirements**: DEBT-08
+**Success Criteria** (what must be TRUE):
+
+  1. Forcing a throw in any one of `costByModel`, `latencyOverTime`, or `providerBreakdown` leaves the other two rendering — no single failing query takes down the whole route.
+  2. `costByModel` (`llm.ts:231`), `latencyOverTime` (`:308`), and `providerBreakdown` (`:275`) all read the `aggregates` rollups, not raw `llmMetrics` scans.
+  3. Each of the three queries can independently report its own failure without silently absorbing or masking a sibling's.
+
+**Plans**: TBD
+
+---
+
+### Phase 122: Tokens, Primitives & Contrast Measurement
+
+**Goal**: The shared token layer and primitives that 200+ components inherit from carry the Borealis surface/motion/state law, and the true size of the contrast problem is measured across the full theme × page matrix before any remediation is planned.
+**Depends on**: Phase 120 (a clean surface, free of kill-list decoration, is what A11Y-01 must measure against) and Phase 121 (TOKEN-04's six-state contract needs `/analytics` to survive a failing query first).
+**Requirements**: TOKEN-01, TOKEN-02, TOKEN-03, TOKEN-04, TOKEN-05, A11Y-01
+**Success Criteria** (what must be TRUE):
+
+  1. All 5 themes define the layered surface tokens (`--surface-0/1/2/3`, `--hairline`), and every surface reads them instead of a hardcoded value.
+  2. `--status-ok` is visually distinct from `--primary` in every theme — the three-hue-owner law (cyan = machine, violet = Ástríðr only, `--status-*` = state) holds app-wide.
+  3. Every animation is driven by the shared motion tokens (120/200/320ms, the house easing), gated on `prefers-reduced-motion`, with `readable` staying fully effect-free.
+  4. A shared metric-tile primitive renders all six explicit states (loading/ready/empty/stale/unavailable/error) — no surface shows a bare "Loading…" or renders "—" as a confident value.
+  5. Every route uses the shared `PageHeader` contract, and the true count of WCAG-AA contrast violations across the full 4-themes × 5-pages matrix is measured and recorded — not sized against the known single-cell figure of 234.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 123: Accessibility Remediation
+
+**Goal**: Every contrast violation Phase 122 measured is fixed, and the automated suite is proven unable to report green against a page it never rendered.
+**Depends on**: Phase 122 — needs A11Y-01's measured scope (which theme × page cells actually violate) before remediation can be sized or planned; sequenced immediately after the token phase, not at the end, so the palette is never touched twice.
+**Requirements**: A11Y-02, A11Y-03
+**Success Criteria** (what must be TRUE):
+
+  1. `e2e/theme-contrast.spec.ts` passes with zero `wcag2a`/`wcag2aa` violations against `dev:noauth`, across every theme × page cell A11Y-01 measured.
+  2. Deliberately raising the Clerk gate mid-run makes the suite fail (not skip) on the page it can no longer reach — proving the vacuous-pass guard shipped in `fee96b5d` still holds after the token rewrite.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 124: Shell & Information Architecture
+
+**Goal**: Every route shares one calm 3-zone header and a 4-domain sidebar — presentation-only, with no route in the app changing address.
+**Depends on**: Phase 122 — the header and sidebar are built on the surface/hairline tokens and quiet-badge law established there.
+**Requirements**: SHELL-01, SHELL-02
+**Success Criteria** (what must be TRUE):
+
+  1. A 48px 3-zone header (breadcrumb / command bar / system-chip + E-Stop + overflow menu) renders on every route, replacing today's header everywhere.
+  2. The 232px sidebar shows 4 collapsible domains (Command / Observe / Agents / System) with count badges and a 2px active rail.
+  3. A route-list diff taken before and after the regroup is identical — the `navRegistry.ts` change is presentation-only; no URL moves.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 125: Signature Layers
+
+**Goal**: The two moments that make Borealis feel like itself are live on top of the new token and shell layers, and Ástríðr's serif voice has been trialled on one real surface rather than committed app-wide.
+**Depends on**: Phase 122 (the tokens the Signal Horizon and ECG hero read via `getComputedStyle`) and Phase 124 (the shell the Signal Horizon renders on top of).
+**Requirements**: SIGNAL-01, SIGNAL-02, SIGNAL-03
+**Success Criteria** (what must be TRUE):
+
+  1. The aurora-textured Signal Horizon renders as a 2px shell line carrying event packets on every page, turns crimson the instant E-Stop arms, and eases back through amber over ~2.6s on disarm — static or hidden under `prefers-reduced-motion` and in `readable`.
+  2. The Dashboard's synthetic "SYSTEM LOAD" bar is replaced by a Pulse ECG canvas hero driven by real events over a 60s window, reading its colours from tokens via `getComputedStyle` — one component, no Recharts, entry-chunk budget holds.
+  3. Ástríðr's serif voice is live on exactly one surface (Briefings or Insights), and its evaluation is recorded before any app-wide font commit is even proposed.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+*Last updated: 2026-08-17 — **v15.0 "Borealis Console" Premium UI Overhaul roadmapped**: 6 phases (120–125) derived from the milestone's 20 requirements — 100% coverage, zero orphans, zero duplicates. Continues phase numbering from v14.0 (108–119). Awaiting `/gsd:plan-phase 120`.*

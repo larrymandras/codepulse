@@ -103,10 +103,30 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 
 ## Traceability
 
-Filled by the roadmapper.
-
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
+| POLISH-01 | Phase 120 | Pending |
+| POLISH-02 | Phase 120 | Pending |
+| POLISH-03 | Phase 120 | Pending |
+| POLISH-04 | Phase 120 | Pending |
+| POLISH-05 | Phase 120 | Pending |
+| POLISH-06 | Phase 120 | Pending |
+| DEBT-08 | Phase 121 | Pending |
+| TOKEN-01 | Phase 122 | Pending |
+| TOKEN-02 | Phase 122 | Pending |
+| TOKEN-03 | Phase 122 | Pending |
+| TOKEN-04 | Phase 122 | Pending |
+| TOKEN-05 | Phase 122 | Pending |
+| A11Y-01 | Phase 122 | Pending |
+| A11Y-02 | Phase 123 | Pending |
+| A11Y-03 | Phase 123 | Pending |
+| SHELL-01 | Phase 124 | Pending |
+| SHELL-02 | Phase 124 | Pending |
+| SIGNAL-01 | Phase 125 | Pending |
+| SIGNAL-02 | Phase 125 | Pending |
+| SIGNAL-03 | Phase 125 | Pending |
+
+**Coverage: 20/20 v15.0 requirements mapped, 100%. No orphans, no duplicates.**
 
 ---
 
