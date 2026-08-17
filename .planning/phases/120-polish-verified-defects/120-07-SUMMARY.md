@@ -1,8 +1,7 @@
 ---
 phase: 120-polish-verified-defects
 plan: 07
-status: PARTIAL — Tasks 1-3 of 5 complete; Task 4 (human-verify checkpoint) and Task 5 (formal
-  evidence write-up) not yet performed
+status: complete — 5/5 tasks
 subsystem: ui
 tags: [tailwind, flexbox, e2e, playwright, geometry, header]
 
@@ -16,8 +15,8 @@ provides:
   - "e2e/polish-geometry.spec.ts — permanent in-page geometry regression guard for the E-Stop control and the shared header row"
   - "src/components/EStopButton.tsx fixed geometry (shrink-0 + whitespace-nowrap), measurement-justified"
   - "src/layouts/DashboardLayout.tsx header flex-wrap fix for the 900px collision — root cause was the shared header, not Settings.tsx"
-  - ".planning/phases/120-polish-verified-defects/120-GEOMETRY-EVIDENCE.md — BEFORE/fix/control evidence for Tasks 1-3 (PARTIAL, Task 5 must extend it)"
-affects: [120-07-task-4, 120-07-task-5, 124-shell-01, 124-shell-02]
+  - ".planning/phases/120-polish-verified-defects/120-GEOMETRY-EVIDENCE.md — BEFORE/AFTER/control/corrections/attended/handoff evidence, complete"
+affects: [124-shell-01, 124-shell-02]
 
 tech-stack:
   added: []
@@ -40,29 +39,35 @@ key-decisions:
   - "Block 2's culprit-detection criterion was narrowed from (scrollWidth>clientWidth OR right>innerWidth) to right>innerWidth only, and sr-only elements are excluded from the walk — the scrollWidth half fired on two benign, pre-existing, unrelated patterns (Radix/shadcn's sr-only 1px-clip a11y technique, and the sidebar nav's own already-declared overflow-x-auto) once the walk was widened from <main> to <body>."
   - "Fix is header-only: h-14 -> min-h-14, added flex-wrap + gap-y-1. No sidebar width change, no literal 900 breakpoint, no Settings.tsx edit — proven load-bearing by a revert-and-refail control (fails with 15 culprits and a 256px overflow when reverted, passes cleanly across 3 independent runs when restored)."
 
-requirements-completed: []
-requirements-partial: [POLISH-02, POLISH-06]
+requirements-completed: [POLISH-02, POLISH-06]
+requirements-partial: []
 
 # Metrics
-duration: ~110min
-completed: 2026-08-17 (Tasks 1-3 only)
+duration: ~110min (Tasks 1-3) + Task 5 evidence write-up (this continuation)
+completed: 2026-08-17
 ---
 
-# Phase 120 Plan 07: E-Stop & 900px Collision Geometry Fixes (PARTIAL — Tasks 1-3) Summary
+# Phase 120 Plan 07: E-Stop & 900px Collision Geometry Fixes Summary
 
-**Reproduced and fixed both geometry defects by in-page measurement: the E-Stop label was wrapping at its hyphen under header-row compression (fixed with `shrink-0` + `whitespace-nowrap`), and the true 900px collision was a shared, unbounded `<header>` flex row — not Settings' own TabsList/Sheet as the plan's draft candidates suggested — fixed with `flex-wrap` on the header alone. Task 4 (human-verify) and Task 5 (formal evidence write-up) remain.**
+**Reproduced and fixed both geometry defects by in-page measurement: the E-Stop label was wrapping at its hyphen under header-row compression (fixed with `shrink-0` + `whitespace-nowrap`), and the true 900px collision was a shared, unbounded `<header>` flex row — not Settings' own TabsList/Sheet as the plan's draft candidates suggested — fixed with `flex-wrap` on the header alone. Human operator returned a bare `approved` for Task 4 with no specific observations reported, so the substantive proof rests on the measurements and the revert-and-refail control, not the attended pass.**
 
-## Status: PARTIAL
+## Status: COMPLETE (5/5 tasks)
 
-This SUMMARY covers **Tasks 1, 2, and 3 only**, per the orchestrator's explicit dispatch. Task 4 is
-a `checkpoint:human-verify` with `gate="blocking"` and was **not performed or simulated** by this
-executor. Task 5 (which formalizes the AFTER evidence and records Task 4's result) was **not
-written**. The plan is not complete; do not treat this as final closure of `120-07-PLAN.md`.
+Tasks 1-3 (reproduce, E-Stop fix, 900px-collision fix) were executed and committed by a prior
+session. Task 4 (`checkpoint:human-verify`, `gate="blocking"`) was resolved by the human operator
+returning the plan's own resume signal, `approved`, with no further detail. This continuation
+performed Task 5: appended `§ AFTER`, `§ The load-bearing control`, `§ Corrections to
+CONTEXT.md` (three corrections, including a new third one this continuation added — the plan's
+own predicted 900px culprit, `Settings.tsx`, was wrong), `§ Attended verification`, and
+`§ Handoff` to `120-GEOMETRY-EVIDENCE.md`, using only verbatim evidence already in the file plus
+two fresh greps re-run directly for the Corrections section. The plan is complete.
 
 ## Performance
 
-- **Duration:** ~110 min (includes methodology corrections found live — see Deviations)
-- **Tasks:** 3 of 5 complete (Task 1 reproduce, Task 2 E-Stop fix, Task 3 900px-collision fix)
+- **Duration:** ~110 min (Tasks 1-3, prior session, includes methodology corrections found
+  live — see Deviations) + this continuation's Task 5 write-up
+- **Tasks:** 5 of 5 complete (Task 1 reproduce, Task 2 E-Stop fix, Task 3 900px-collision fix,
+  Task 4 human-verify checkpoint resolved, Task 5 evidence formalization)
 - **Files modified:** 3 existing (`EStopButton.tsx`, `EStopButton.test.tsx`, `DashboardLayout.tsx`)
   + 2 new (`e2e/polish-geometry.spec.ts`, `120-GEOMETRY-EVIDENCE.md`)
 
@@ -267,29 +272,39 @@ The one trust boundary named in this plan's own threat model (`dev:noauth` bound
 `127.0.0.1` only) was respected throughout — `--host 127.0.0.1` was never dropped, and the server
 was stopped at the end of this session.
 
-## Next Phase Readiness — NOT READY, this plan is not complete
+## Next Phase Readiness — READY
 
-- **Task 4 (human-verify, `gate="blocking"`) must run next**, performed by the human operator per
-  its own `<how-to-verify>` steps (start `dev:noauth`, drag-resize the browser watching the E-Stop,
-  check `/settings` at ~900px with the side sheet both closed and open).
-- **Task 5 must then run**, formalizing the evidence already captured in
-  `120-GEOMETRY-EVIDENCE.md § Task 2` / `§ Task 3` into the plan's required `§ AFTER` / `§ The
-  load-bearing control` / `§ Corrections to CONTEXT.md` / `§ Attended verification` / `§ Handoff`
-  structure, incorporating Task 4's human result. Supporting data for the Corrections section
-  (the case-insensitive `estop` render-site search) is already gathered and included in
-  `120-GEOMETRY-EVIDENCE.md § Not yet done`.
+- Task 4 (human-verify, `gate="blocking"`) is resolved: operator returned `approved`. Recorded as
+  APPROVED-WITHOUT-DETAIL in `120-GEOMETRY-EVIDENCE.md § Attended verification` — no specific
+  observation was reported, so that section states plainly that the substantive proof rests on
+  the automated measurements and the revert-and-refail control, not the attended pass. 120-03's
+  and 120-04's attended checks, folded into this same checkpoint, are recorded the same way.
+- Task 5 is done: `120-GEOMETRY-EVIDENCE.md` now carries `§ AFTER`, `§ The load-bearing control`,
+  `§ Corrections to CONTEXT.md` (three corrections — the E-Stop single-render-site correction and
+  the sidebar-width correction, each re-verified with a fresh grep run in this continuation rather
+  than copied from the plan, plus a new third correction stating the plan's own predicted 900px
+  culprit, `Settings.tsx`, measured clean and was never the fix site), `§ Attended verification`,
+  and `§ Handoff`.
 - **The orchestrator's phase-level CRITERION-1 AGGREGATE check** (appended to this plan's
   `<verification>` section, checking `hover:scale-[1.01]` / `glitch-text` / `matrix-bg` /
   `nav-active-shadow` / `nav-hover-shadow` are 0 and `crt-scanline-bar` / `glow-card` survived at
-  their expected counts, across ALL of 120-01..06) has **not been run** by this executor — it is
-  not scoped to Tasks 1-3 and depends on all prior plans having landed, which is outside this
-  partial execution's visibility. Left for whoever performs Task 5.
+  their expected counts, across ALL of 120-01..06) was **not run by this continuation** — it
+  depends on all of 120-01..06 having landed and is explicitly scoped to whichever agent finishes
+  last across the whole phase, not to this single plan's Task 5. Left for the orchestrator or a
+  phase-level closure step.
+
+## Task Commits (this continuation)
+
+Per the same `CRITICAL_COMMIT_OVERRIDE` that governed the prior session: **no commits were made
+by this continuation either.** Only `120-GEOMETRY-EVIDENCE.md` and this `120-07-SUMMARY.md` were
+edited (both append/update-only); `.planning/STATE.md` and `.planning/ROADMAP.md` were not read as
+ground truth, not edited, and not staged. All work remains uncommitted for the orchestrator.
 
 ---
 *Phase: 120-polish-verified-defects*
-*Status: PARTIAL — awaiting Task 4 (human-verify checkpoint) and Task 5*
+*Status: COMPLETE — 5/5 tasks*
 
-## Self-Check: PASSED
+## Self-Check: PASSED (updated by Task 5 continuation)
 
 - FOUND: `e2e/polish-geometry.spec.ts`
 - FOUND: `.planning/phases/120-polish-verified-defects/120-GEOMETRY-EVIDENCE.md`
@@ -297,12 +312,26 @@ was stopped at the end of this session.
 - FOUND: `src/components/__tests__/EStopButton.test.tsx`
 - FOUND: `src/layouts/DashboardLayout.tsx`
 - FOUND: `.planning/phases/120-polish-verified-defects/120-07-SUMMARY.md` (this file)
-- No commit hashes to verify — per `CRITICAL_COMMIT_OVERRIDE`, this executor made zero commits;
-  all work is uncommitted in the working tree for the orchestrator to commit.
-- `git status --short` reflects exactly the 5 files this plan's Tasks 1-3 touched
-  (`EStopButton.tsx`, `EStopButton.test.tsx`, `DashboardLayout.tsx` modified;
-  `polish-geometry.spec.ts`, `120-GEOMETRY-EVIDENCE.md` new), plus `.planning/STATE.md` modified
-  by a concurrent session (not read as ground truth, not edited, not staged, out of this plan's
-  scope entirely, per the executor dispatch's explicit instruction).
-- `dev:noauth` background server (port 5181) was stopped at the end of this session; port 5181 is
-  free.
+- No commit hashes to verify for this continuation's own work — per `CRITICAL_COMMIT_OVERRIDE`,
+  this continuation made zero commits. Tasks 1-3's five files (`EStopButton.tsx`,
+  `EStopButton.test.tsx`, `DashboardLayout.tsx`, `polish-geometry.spec.ts`, and this evidence
+  file's Tasks 1-3 content) were already committed by the orchestrator in a prior single commit
+  before this continuation was dispatched (per the dispatch's `<completed_state>`), confirmed
+  live: `git status --short` at the start of this continuation showed only
+  `.planning/STATE.md` modified (a concurrent session, out of scope, untouched) — none of the
+  five source/spec files appeared as modified or untracked, confirming they are already committed.
+- `git status --short` at the end of this continuation shows exactly two files changed beyond the
+  pre-existing `.planning/STATE.md` concurrent-session drift: `120-GEOMETRY-EVIDENCE.md` (appended
+  §§ AFTER / control / corrections / attended / handoff) and `120-07-SUMMARY.md` (this file,
+  updated PARTIAL → complete). Nothing else in the working tree was touched by this continuation.
+  `.planning/ROADMAP.md` was not touched.
+- The Task 5 acceptance-criteria automated check, re-run directly: `grep -c 'AFTER'
+  120-GEOMETRY-EVIDENCE.md` → `4` (the § AFTER heading plus three prose references to "AFTER"
+  within it and the load-bearing-control section), confirming the section was written.
+- Both `§ Corrections to CONTEXT.md` greps (`estop` render-site search, `w-60` sidebar-width
+  search) were re-run directly in this continuation (not copied from the plan or from Task 1's
+  prior run) and their literal output is pasted in `120-GEOMETRY-EVIDENCE.md § Corrections to
+  CONTEXT.md`.
+- `dev:noauth` background server was not started by this continuation (no live measurement was
+  needed — all evidence quoted was already captured verbatim by the prior session); port 5181 was
+  not touched.

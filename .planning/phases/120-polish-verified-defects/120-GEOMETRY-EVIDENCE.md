@@ -1,9 +1,10 @@
 # 120-07 Geometry Evidence — POLISH-02 (E-Stop) & POLISH-06 (900px collision)
 
-**Status: PARTIAL.** This file covers Tasks 1-3 of `120-07-PLAN.md` (reproduction, E-Stop fix,
-900px-collision fix). Task 4 (human-verify checkpoint) and Task 5 (formal AFTER / Corrections /
-Attended / Handoff write-up) have **not** run yet — Task 5 should extend this file rather than
-replace it, incorporating the Task 4 human result once available.
+**Status: COMPLETE.** Tasks 1-5 of `120-07-PLAN.md` are all done. Tasks 1-3 (reproduction,
+E-Stop fix, 900px-collision fix) are recorded below under `§ BEFORE` / `§ Task 2` / `§ Task 3`.
+Task 4 (human-verify checkpoint) and Task 5 (formal AFTER / Corrections / Attended / Handoff
+write-up) are recorded in the sections following `§ Not yet done` (retained below as a dated
+record of what this file looked like mid-plan).
 
 All measurements below were taken with `npm run dev:noauth` (keyless server) on `127.0.0.1:5181`,
 driven via `PW_BASE_URL=http://localhost:5181 npm run test:e2e:noauth -- polish-geometry`, issued
@@ -308,3 +309,184 @@ SETTINGS-900-EVIDENCE {"innerWidth":900, ..., "culprits":[]}
   `<verification>` section) has **not** been run. It is not scoped to any specific task number and
   reads most naturally as part of finishing this evidence file (Task 5), after all of 120-01..06
   have landed. Left for whoever performs Task 5.
+
+---
+
+## § AFTER (Task 5)
+
+### E-Stop, post-fix
+
+The post-fix E-Stop record captured during Task 2 is a single `ESTOP-GEOMETRY-CROSSWIDTH-EVIDENCE`
+line (one JSON array covering all five widths in one console emission), not five separate
+per-width `ESTOP-GEOMETRY-EVIDENCE` lines — that is genuinely what Task 2 pasted into
+`§ Task 2` above, elisions (`...`) included, and no separate per-width post-fix lines exist
+in this file to quote instead. Rather than reconstruct or retype the elided fields from memory,
+here is that line exactly as it already appears above (§ Task 2, "Post-fix E-Stop evidence"):
+
+```
+ESTOP-GEOMETRY-CROSSWIDTH-EVIDENCE [{"requestedWidth":360,...,"buttonWidth":81.34375,"buttonHeight":28,"labelTextNodeRectsLength":1},{"requestedWidth":640,...,"buttonWidth":81.34375,"buttonHeight":28,"labelTextNodeRectsLength":1},{"requestedWidth":900,...,"buttonWidth":81.34375,"buttonHeight":28,"labelTextNodeRectsLength":1},{"requestedWidth":1440,...,"buttonWidth":81.34375,"buttonHeight":28,"labelTextNodeRectsLength":1},{"requestedWidth":2560,...,"buttonWidth":81.34375,"buttonHeight":28,"labelTextNodeRectsLength":1}]
+```
+
+Reading it: `buttonWidth` and `buttonHeight` are **81.34375 × 28 at every one of the five widths**
+(360, 640, 900, 1440, 2560) — identical, where pre-fix they varied (67-81 wide, 28-48 tall
+depending on whether the wrap fired). `labelTextNodeRectsLength` is **1 at every width** — no
+line break at the hyphen anywhere in the range, where pre-fix it was 2 at 360/640/900px (and
+intermittently 1440px). All 7 spec tests (5 per-width + 1 cross-width + 1 collision) pass on
+this run, per § Task 2's "All five per-width tests plus the cross-width comparison test pass."
+
+### 900px collision, post-fix
+
+Verbatim, from § Task 3, "Post-fix `SETTINGS-900-EVIDENCE`, 3 consecutive independent runs, all
+clean" — one full, non-elided line, identical across all three runs:
+
+```
+SETTINGS-900-EVIDENCE {"innerWidth":900,"scrollWidth":900,"bodyScrollWidth":900,"asideRect":{"x":0,"y":0,"width":240,"height":900},"mainRect":{"x":240,"y":89,"width":660,"height":811},"culprits":[]}
+```
+
+`scrollWidth (900) <= innerWidth (900)`, `culprits: []`. Note `mainRect.y` moved from 56 (pre-fix)
+to 89 — the header grew from a fixed 56px to a slightly taller box even in its passing state,
+consistent with `min-h-14` plus the added `gap-y-1`/`flex-wrap` allowing (but not forcing) a
+taller box; it did not need to wrap to two lines at exactly 900px in this run.
+
+---
+
+## § The load-bearing control (Task 5)
+
+From § Task 3, "The load-bearing control (revert-and-refail)" — restated here as the two-halves
+pair Task 5 requires:
+
+**Reverted** (header `className` restored to its exact pre-fix string, no `flex-wrap`/`gap-y-1`/
+`min-h-14`):
+```
+SETTINGS-900-EVIDENCE {"innerWidth":900,"scrollWidth":900,"bodyScrollWidth":900,"asideRect":{"x":0,"y":0,"width":240,"height":900},"mainRect":{"x":240,"y":56,"width":660,"height":844},"culprits":[{"tag":"DIV","className":"flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10","scrollWidth":570,"clientWidth":570,"right":1156.53125,"overflowAmount":256.53125}, ...14 more...]}
+1 failed
+6 passed (4.0s)
+```
+256.5px of overflow, 15 culprit elements, 1 test failed.
+
+**Restored** (fix reapplied, `diff` against the pre-revert file confirmed byte-identical —
+"IDENTICAL - restore confirmed"):
+```
+SETTINGS-900-EVIDENCE {"innerWidth":900, ..., "culprits":[]}
+7 passed (4.0s)
+```
+`culprits: []`, all 7 tests pass.
+
+**What this rules out:** the only variable that changed between the two runs is that one class
+string on `<header>`. Nothing else in the page, the test harness, the viewport, or the route was
+touched between them. So the control rules out coincidence, test flakiness, and any timing- or
+state-dependent explanation for the pass (e.g. async header content having settled differently
+between runs) — the `flex-wrap`/`gap-y-1`/`min-h-14` change on `<header>` is what closes the
+900px gap, not an unrelated factor. It also rules out that the fix works by accident of ordering:
+reverting to the byte-identical original string reproduces the byte-identical original failure
+(256px overflow, 15 culprits — the same shape recorded in § BEFORE), so the fix and the defect
+are the same mechanism observed from both sides.
+
+---
+
+## § Corrections to CONTEXT.md (Task 5)
+
+Three corrections. The first two were already flagged in this plan's own `<interfaces>` section
+before execution began; both are re-verified here with a fresh search run during Task 5, not
+copied from the plan's or Task 1's prior claim.
+
+### 1. `EStopButton` renders at exactly ONE site, not the four CONTEXT.md lists
+
+Search run directly (Task 5, this session):
+
+```
+$ grep -rniE "estop" src/components/control-center/CompactControlStrip.tsx \
+    src/components/control-center/ControlCenterPanel.tsx src/components/CommandPalette.tsx \
+    src/layouts/DashboardLayout.tsx
+src/components/control-center/CompactControlStrip.tsx:15: * `onScreenShareStart` / `onScreenShareStop` callbacks `ControlCenterPanel`
+src/components/control-center/CompactControlStrip.tsx:42:  onScreenShareStop: () => void;
+src/components/control-center/CompactControlStrip.tsx:53:  onScreenShareStop,
+src/components/control-center/CompactControlStrip.tsx:115:        onClick={() => (sharing ? onScreenShareStop() : void onScreenShareStart())}
+src/components/control-center/ControlCenterPanel.tsx:87:  onScreenShareStop: () => void;
+src/components/control-center/ControlCenterPanel.tsx:101:  onScreenShareStop,
+src/components/control-center/ControlCenterPanel.tsx:193:            onStop={onScreenShareStop}
+src/layouts/DashboardLayout.tsx:23:import { EStopButton } from "../components/EStopButton";
+src/layouts/DashboardLayout.tsx:639:            <EStopButton />
+```
+
+`CompactControlStrip.tsx` and `ControlCenterPanel.tsx` match the case-insensitive `estop` pattern
+only via `onScreenShareStop` / `onScreenShareStart` — screen-share callbacks, unrelated to the
+Emergency Stop control. `CommandPalette.tsx` produces zero matches (absent from the output above
+entirely). `DashboardLayout.tsx` is the only file with a real `EStopButton` reference: the import
+at line 23 and the single render site at line 639 (`<EStopButton />`, inside the shared
+`<header>`). CONTEXT.md's claim of four render sites (`CompactControlStrip.tsx`,
+`ControlCenterPanel.tsx`, `layouts/DashboardLayout.tsx`, `CommandPalette.tsx`) is wrong; there is
+exactly one.
+
+### 2. The sidebar is `w-60` (240px), not the 232px REQUIREMENTS.md/CONTEXT.md mention
+
+Search run directly (Task 5, this session):
+
+```
+$ grep -n 'w-60' src/layouts/DashboardLayout.tsx
+524:      <aside className={`hidden md:flex ${sidebarCollapsed ? "w-[48px]" : "w-60"} flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-200`}>
+545:        className={`fixed inset-y-0 left-0 z-50 w-60 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex flex-col transform transition-transform duration-200 md:hidden ${
+```
+
+Two occurrences: the desktop `<aside>` (line 524, live at Tailwind's `md:` / 768px) and the
+mobile overlay drawer (line 545). Both are `w-60` = 240px. REQUIREMENTS.md and CONTEXT.md's
+232px is SHELL-02's **target** width for Phase 124's shell restructure, not today's rendered
+value — this plan (120-07) deliberately left both occurrences unchanged (`grep -c 'w-60'` is 2
+before and after Task 3, per § Task 3 above).
+
+### 3. The plan's own predicted 900px culprit (`Settings.tsx`) was wrong
+
+This plan's `<interfaces>` section (and Tasks 2/3's candidate lists) ranked `Settings.tsx`'s
+`TabsList` (line ~501, already `overflow-x-auto`) and its `Sheet` (line ~886, `w-[400px]
+sm:w-[540px]`) as the most likely 900px culprits. **Both measured clean at every width tried** —
+the plain `<main>`-scoped reproduction in § BEFORE found zero culprits and `scrollWidth ===
+innerWidth` on `/settings` at a plain 900×900 load, and the widened document-body-wide walk
+(820-1000px) traced the entire 204-384px overflow to the shared `<header>` in
+`DashboardLayout.tsx` — present on every route, not Settings-specific. `Settings.tsx` was never
+modified by this plan (`git diff --stat src/pages/Settings.tsx` is empty, per § Task 3). A future
+reader must not carry forward the plan's prediction that Settings.tsx was, or needed to be, the
+fix site — it was a reasonable candidate that the measurement ruled out, not a fact.
+
+---
+
+## § Attended verification (Task 5)
+
+Task 4 (`checkpoint:human-verify`, `gate="blocking"`) was presented to the human operator with
+the plan's five-step live-verification procedure (start `dev:noauth`, drag-resize the window
+watching the E-Stop across the full width range, load `/settings` at ~900px and check for
+horizontal scroll, repeat with a side sheet open, write down anything that still moves/wraps/
+overflows).
+
+The operator's complete and literal response was the single word:
+
+> approved
+
+He reported no specific observations, no measurements, no widths, and did not describe anything
+he saw. That bare `approved` is the plan's own specified resume signal (`<resume-signal>Type
+"approved", or describe what still wraps or overflows and at which width.</resume-signal>`) and
+is recorded here as a valid approval on that basis.
+
+It is recorded as **APPROVED-WITHOUT-DETAIL** — this section deliberately does not claim, imply,
+or embroider that the operator dragged the window, that the E-Stop held its size or stayed on
+one line, that he visited `/settings` at 900px, that he opened a side sheet, or that he
+"confirmed," "observed," or "verified by eye" anything. None of that was said. The substantive
+proof for POLISH-02 and POLISH-06 therefore rests on the in-page Playwright measurements
+(§ BEFORE, § AFTER) and the revert-and-refail control (§ The load-bearing control) — not on the
+attended pass, which contributes only the operator's sign-off signal.
+
+Two earlier plans' attended checks were folded into this same checkpoint and are recorded here
+as **outstanding, not performed**: 120-03's dialog check and 120-04's badge check were both
+reported by their own executors as not performed for want of a browser. They are likewise
+approved-without-detail by the same `approved` response, with the same caveat — no specific
+observation of either was reported.
+
+---
+
+## § Handoff (Task 5)
+
+`e2e/polish-geometry.spec.ts` now exists as a permanent geometry regression guard for the E-Stop
+control and the shared `<header>` row (7 tests: 5 per-width E-Stop checks, 1 cross-width E-Stop
+comparison, 1 document-body-wide 900px collision check). Phase 124's shell restructure must keep
+this spec green — it directly measures the `<header>`'s flex-wrap behavior and the sidebar's
+`w-60` width that Phase 124 is expected to touch, so a Phase 124 change that breaks either
+geometry contract will be caught here rather than discovered visually later.
