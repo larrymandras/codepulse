@@ -689,7 +689,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed | Notes |
 |-------|-----------|----------------|--------|-----------|-------|
-| 120. Polish & Verified Defects | v15.0 | 0/0 | Not started | - | |
+| 120. Polish & Verified Defects | v15.0 | 7/7 | Executed — verification `human_needed` | - | Not complete. All 7 plans landed 2026-08-17 and every automated gate is green, but `120-VERIFICATION.md` returned `human_needed`: 2 visual checks in `120-HUMAN-UAT.md` have never been performed by anyone. POLISH-04 is PARTIAL by design (3 fabrication residues assigned to 122/125). Checkbox stays unticked until verification re-runs `passed`. |
 | 121. Analytics Query Resilience | v15.0 | 0/0 | Not started | - | |
 | 122. Tokens, Primitives & Contrast Measurement | v15.0 | 0/0 | Not started | - | |
 | 123. Accessibility Remediation | v15.0 | 0/0 | Not started | - | |
