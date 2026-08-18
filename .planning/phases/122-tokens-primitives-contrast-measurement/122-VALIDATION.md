@@ -1,10 +1,11 @@
 ---
 phase: 122
 slug: tokens-primitives-contrast-measurement
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-18
+approved: 2026-08-18
 ---
 
 # Phase 122 — Validation Strategy
@@ -93,18 +94,23 @@ This phase's decisions mandate controls at three separate points. A measurement 
 
 ## Sampling Limit (must be stated in the phase artifact)
 
-A11Y-01 measures **4 themes × 5 pages**. `src/pages/` holds ~42 source pages, so **5 of ~42 routes are measured** and the unmeasured routes must be **named** in `122-CONTRAST-BASELINE.md`, in this phase's verification, and in Phase 123's scope (D-24). Phase 123's success criterion is "zero violations across every cell A11Y-01 measured" — so an unmeasured route can be broken while 123 reports green. No silent caps.
+A11Y-01 measures **4 themes × 5 pages**. Re-derived 2026-08-18: `src/pages/` holds **42** top-level non-test pages plus **5** in `src/pages/hr/` = **47** (`src/pages/__tests__/` excluded; control — the same glob including tests returns 62). So **5 of ~47 routes are measured** and the unmeasured routes must be **named** in `122-CONTRAST-BASELINE.md`, in this phase's verification, and in Phase 123's scope (D-24). Phase 123's success criterion is "zero violations across every cell A11Y-01 measured" — so an unmeasured route can be broken while 123 reports green. No silent caps.
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have an automated verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without an automated verify
-- [ ] Wave 0 covers all ❌ references above
-- [ ] No watch-mode flags
-- [ ] Unit-suite feedback latency measured and recorded
-- [ ] Every measurement above ships with its control (see Control Requirements)
-- [ ] `nyquist_compliant: true` set in frontmatter
+Checked items were verified by `gsd-plan-checker` against the 19 plans on 2026-08-18. Unchecked
+items are genuinely outstanding and are **not** to be ticked until the thing itself is done.
 
-**Approval:** pending
+- [x] All tasks have an automated verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without an automated verify
+- [x] Wave 0 covers all ❌ references above
+- [x] No watch-mode flags
+- [ ] Unit-suite feedback latency measured and recorded — **outstanding**, Wave 0 (`122-01`) records it; the runtime figure above is still marked unmeasured
+- [x] Every measurement above ships with its control (see Control Requirements)
+- [x] `nyquist_compliant: true` set in frontmatter
+
+`wave_0_complete` stays `false` until `122-01` executes — planning approval is not execution.
+
+**Approval:** approved 2026-08-18 (plan-checker: VERIFICATION PASSED, 19/19 plans)

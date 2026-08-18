@@ -260,6 +260,17 @@ badges, and `readable` staying effect-free are all *inputs*, not open questions.
   violations across every cell A11Y-01 measured", so an unmeasured route can be broken while 123
   reports green. No silent caps.
 
+  > **Correction to this decision's denominator (2026-08-18, during planning).** D-24 says "~42",
+  > counting only `src/pages/*.tsx`. That undercounts: D-18 above separately names **5** more page
+  > files in `src/pages/` subdirectories that it requires sweeping. The two figures belong to the
+  > same population, so the honest denominator is **47**. Re-derived at planning time:
+  > `ls src/pages/*.tsx | grep -v '\.test\.' | wc -l` → **42**, `ls src/pages/*/*.tsx | grep -v
+  > '\.test\.' | wc -l` → **5** (`src/pages/hr/`; `src/pages/__tests__/` is a test directory and is
+  > correctly excluded). Control: the same top-level glob *including* tests returns 62, which is the
+  > figure D-18's own note warns against propagating. Plans `122-01` and `122-19` therefore state
+  > **"5 of ~47 routes measured"**. The law D-24 sets is unchanged — state the limit, name the
+  > unmeasured routes — only the number it quotes is corrected.
+
 ### Verification of the sweep
 
 - **D-25: A corpus-derived ratchet, committed as a test.** It must derive its population from the
