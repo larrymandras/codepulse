@@ -71,7 +71,7 @@ Pulled in because this milestone rewrites the palette. Fixing contrast separatel
 
 Numbering continues from v14.0's DEBT-05..07.
 
-- [ ] **DEBT-08** — `/analytics` survives a failing query: no single `useQuery` throw can blank the page, and its LLM queries (`costByModel` `llm.ts:231`, `latencyOverTime` `:308`, `providerBreakdown` `:275`) read the `aggregates` rollups rather than raw `llmMetrics`. **This is a prerequisite for TOKEN-04 on `/analytics`** — a tile cannot render an honest `unavailable` state if the throw unmounts the React tree first. Full brief: `todos/pending/llm-analytics-rollup-migration-cr01.md`.
+- [x] **DEBT-08** — `/analytics` survives a failing query: no single `useQuery` throw can blank the page, and its LLM queries (`costByModel`, `providerBreakdown`) read the `aggregates` rollups rather than raw `llmMetrics`. *(Corrected 2026-08-18 at Phase 121 close, per the Stale Docs rule: this line also listed `latencyOverTime` `:308` as migrating to the rollups. Per `121-CONTEXT.md` D-06 it was DELETED instead -- zero consumers, and no `latency` rollup exists or was added -- together with `costByProvider` `:214`. The deletion SATISFIES this requirement and is not an unmet clause. The `:231`/`:275` line numbers are dropped because both surviving queries moved when the two dead ones were removed.)* **This is a prerequisite for TOKEN-04 on `/analytics`** — a tile cannot render an honest `unavailable` state if the throw unmounts the React tree first. Full brief: `todos/pending/llm-analytics-rollup-migration-cr01.md`.
 
 ---
 
@@ -111,7 +111,7 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | POLISH-04 | Phase 120 | Partial — 3 fabrication residues assigned to 122/125, see 120-FABRICATION-INVENTORY.md |
 | POLISH-05 | Phase 120 | Complete |
 | POLISH-06 | Phase 120 | Complete |
-| DEBT-08 | Phase 121 | Pending |
+| DEBT-08 | Phase 121 | Complete |
 | TOKEN-01 | Phase 122 | Pending |
 | TOKEN-02 | Phase 122 | Pending |
 | TOKEN-03 | Phase 122 | Pending |
