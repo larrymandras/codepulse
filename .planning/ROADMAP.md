@@ -723,7 +723,7 @@ Plans:
   Waves: 1 = `120-01`..`120-05` (zero file overlap, genuinely parallel) · 2 = `120-06` (depends on `120-01`) · 3 = `120-07` (depends on `120-02`, `120-06`; `autonomous: false` — carries a human checkpoint).
   All 17 decisions D-01..D-17 covered; POLISH-01..06 all mapped.
 
-**UI hint**: yes — but **no UI-SPEC.md was written for this phase, deliberately** (Larry, 2026-08-17). This phase builds no new surface: the design law is already locked in `Skill("sketch-findings-codepulse")` and D-01..D-17, and `REQUIREMENTS.md:16-18` declares those inputs closed to re-litigation. Matches v14.0 precedent, where sweep phases (113-debt-sweep, 110, 115, 117, 119) had no UI-SPEC while new-surface phases did. Phases 122/124/125 DO build new surface and still need their own.
+**UI hint**: yes — but **no UI-SPEC.md was written for this phase, deliberately** (Larry, 2026-08-17). This phase builds no new surface: the design law is already locked in `Skill("sketch-findings-codepulse")` and D-01..D-17, and `REQUIREMENTS.md:16-18` declares those inputs closed to re-litigation. Matches v14.0 precedent, where sweep phases (113-debt-sweep, 110, 115, 117, 119) had no UI-SPEC while new-surface phases did. Phases 124/125 DO build new surface and still need their own. **Phase 122 was reclassified 2026-08-18** — its discuss-phase output (`122-CONTEXT.md:14`) established that it builds no new surface either (token layer + shared primitives that existing surfaces read from), and its primitive contracts are already specified in D-07/D-13/D-14/D-17/D-19/D-20, so it too was planned with `--skip-ui` (Larry, 2026-08-18).
 
 ---
 
