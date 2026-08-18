@@ -195,3 +195,10 @@ None - no external service configuration required.
 ---
 *Phase: 121-analytics-query-resilience*
 *Completed: 2026-08-18*
+
+## Self-Check: PASSED
+
+- All 8 created files confirmed present on disk (`src/components/analytics/*.tsx`).
+- All 3 commits confirmed in `git log --oneline --all`: `0837b1c3` (Task 1), `4204bdf0` (Task 2),
+  `9caa03e4` (this summary).
+- `git status --short` clean after the summary commit.
