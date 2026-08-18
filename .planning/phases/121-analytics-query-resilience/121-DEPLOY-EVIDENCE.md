@@ -125,3 +125,75 @@ This is a genuine production write to the live self-hosted backend, so this exec
 retrying the same command, NOT attempting an alternate tool/route to the same effect, and NOT
 proceeding to Task 3 (which depends on the deploy having landed). Escalated to the orchestrator —
 see the return report. **STOPPED HERE. Tasks 2 (deploy onward), 3, and 4 are NOT complete.**
+
+### 4. Deploy — RE-ATTEMPTED BY THE OPERATOR (not this executor)
+
+The prior executor's escalation was resolved out-of-band: the operator ran the deploy themselves,
+at the keyboard, because `npx convex deploy` is refused by the Claude Code auto-mode permission
+classifier for any agent-driven attempt. **This executor did not run this command.** It is recorded
+here, attributed to the operator, exactly as relayed by the orchestrator.
+
+```
+$ npx convex deploy --env-file C:/Users/mandr/convex-selfhost/selfhosted.envfile -y
+```
+
+Output (verbatim, as relayed by the orchestrator):
+
+```
+▌ Deploying code to deployment:
+▌ └─ http://127.0.0.1:3210
+- Deploying to http://127.0.0.1:3210...
+
+✔ No indexes are deleted by this push
+Uploading functions to Convex...
+Generating TypeScript bindings...
+Running TypeScript...
+Pushing code to your Convex deployment...
+Schema validation complete.
+Finalizing push...
+✔ Deployed Convex functions to http://127.0.0.1:3210
+```
+
+**`Deleted table indexes:` check (T-121-29): the line is ABSENT.** The deploy instead printed its
+affirmative counterpart, `✔ No indexes are deleted by this push`. No schema rollback occurred.
+Target was `http://127.0.0.1:3210` — the self-hosted backend — never the retired cloud deployment
+`tidy-whale-981`.
+
+### 5. Post-deploy interface probes — run by the ORCHESTRATOR (not this executor)
+
+Via unauthenticated `POST http://127.0.0.1:3210/api/query`, attributed to the orchestrator, relayed
+verbatim:
+
+```
+llm:providerBreakdown -> {"status":"success","value":{"asOf":null,"expectedBuckets":720.0,"presentBuckets":0.0,"rows":[],"rowsRead":0.0,"truncated":false}}
+llm:costByModel       -> {"status":"success","value":{"asOf":1787068800.0,"expectedBuckets":720.0,"presentBuckets":494.0,"rows":[{"calls":0.0,"model":"claude-cli","tokens":47230466.0},{"calls":0.0,"model":"claude-sonnet-4-6","tokens":4732822.0}, ...]}}
+llm:latencyOverTime   -> {"status":"error","errorMessage":"[Request ID: 381ac9d0d60e4a1d] Server Error\nCould not find public function for 'llm:latencyOverTime'.\n"}
+llm:costByProvider    -> {"status":"error","errorMessage":"[Request ID: e9164b7a7c21894c] Server Error\nCould not find public function for 'llm:costByProvider'.\n"}
+CONTROL llm:notARealFn9x7q2 -> {"status":"error","errorMessage":"[Request ID: 4d2ed004607ef0d0] Server Error\nCould not find public function for 'llm:notARealFn9x7q2'.\n"}
+```
+
+**Read of these five probes:**
+- `llm:providerBreakdown` returns the NEW shape (`rows`, `asOf`, `expectedBuckets`, `presentBuckets`,
+  `rowsRead`, `truncated`) — the deploy landed. But `rows: []`, `presentBuckets: 0`, `asOf: null`:
+  ZERO `calls` metric buckets exist yet. This phase added the `calls` rollup (121-01); nothing has
+  materialized it. The Provider Comparison panel on `/analytics` is empty in production right now —
+  closing that gap is Task 3's backfill below.
+- `llm:costByModel` confirms this from the other side: `presentBuckets: 494` of `tokens` data
+  (pre-existing, unaffected by this migration), but every model shows `calls: 0.0` — the same missing
+  `calls` rollup.
+- `llm:latencyOverTime` and `llm:costByProvider` both return `Could not find public function` — the
+  deletion landed.
+- The **control**, `llm:notARealFn9x7q2`, returns the IDENTICAL error text
+  (`Could not find public function for 'llm:notARealFn9x7q2'`). This is what makes the two deletion
+  results a real measurement rather than an unfalsifiable absence: the probe demonstrably
+  distinguishes "deployed and reachable" from "no such function", and `costByProvider`/
+  `latencyOverTime` land in the same bucket as the known-nonexistent control, not in the
+  known-present bucket occupied by `providerBreakdown`/`costByModel`.
+
+**Task 2 acceptance criteria — final status:** all five commands recorded verbatim with their exact
+command lines (git status, git log SHA, cursor read, deploy, post-deploy probes); deploy line
+contains `--env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile`; no recorded command contains
+`--push`; `Deleted table indexes:` explicitly checked and confirmed absent; `providerBreakdown`
+returns the required key set; `latencyOverTime` returns the required control error; pre-run cursor
+(`"done"`, latched) recorded above with its one-line note. **Task 2 is now DONE**, continuing to
+Task 3 below.
