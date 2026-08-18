@@ -690,7 +690,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed | Notes |
 |-------|-----------|----------------|--------|-----------|-------|
 | 120. Polish & Verified Defects | v15.0 | 7/7 | Complete | 2026-08-17 | VERIFIED `passed` 6/6 (`120-VERIFICATION.md`). POLISH-04 is **Partial** by design — 3 fabrication residues assigned to Phases 122/125. Carried to 122/123/124 in `120-DESIGN-REVIEW-HANDOFF.md`: the one sub-AA badge (Forge `failed`, pre-existing), emphasis keyed to the legacy semantic bucket, and the geometry spec's 900px-only overflow assertion. |
-| 121. Analytics Query Resilience | v15.0 | 0/0 | Not started | - | |
+| 121. Analytics Query Resilience | v15.0 | 0/7 | Planned | - | 7 plans in 4 waves. Wave 4 (`121-07`) is attended (`autonomous: false`) — deploy to the self-hosted backend, resumed backfill chain, live read-cap measurement. |
 | 122. Tokens, Primitives & Contrast Measurement | v15.0 | 0/0 | Not started | - | |
 | 123. Accessibility Remediation | v15.0 | 0/0 | Not started | - | |
 | 124. Shell & Information Architecture | v15.0 | 0/0 | Not started | - | |
