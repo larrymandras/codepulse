@@ -3,6 +3,17 @@
    contains example strings like `shadow-[var(--glow-*)]` that Tailwind would
    otherwise emit as invalid CSS (Lightning CSS warns on the `*`/`|`/`...`). */
 @source not "../.planning";
+/* D-10 correction: force-generate the three duration utilities plus ease-house
+   regardless of whether a scanned component file's content contains them yet.
+   Measured 2026-08-18: a plain @theme declaration alone leaves --duration-*
+   as inert :root custom properties but generates NO .duration-fast/normal/slow
+   utility CLASS rule -- Tailwind's content scanner only emits a rule for a
+   class name it finds used somewhere, and this plan touches no component file.
+   @source inline(...) is Tailwind v4's documented mechanism for exactly this
+   case, and it also protects the later mechanical-sweep waves: some of the
+   ~187 motion call sites build their class strings dynamically (motion/react
+   props), which a static scanner can never see. See 122-TOKEN-LAW.md. */
+@source inline("duration-fast duration-normal duration-slow ease-house");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
@@ -12,6 +23,31 @@
 @theme {
   --font-geist: "Geist", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+
+  /* D-10: motion tokens, verbatim from the locked decision. --ease-* IS a real
+     Tailwind v4 theme namespace; --duration-* is NOT (verified by direct
+     compilation of the installed tailwindcss@4.3.2 engine, 122-RESEARCH.md
+     Pattern 2, and re-confirmed against this repo's own real build -- see
+     122-TOKEN-LAW.md). The @utility blocks below plus the @source inline(...)
+     directive above are the mandatory correction that makes duration-fast/
+     duration-normal/duration-slow/ease-house compile to real CSS. */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
+  --ease-house: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* D-10 correction: @utility is Tailwind v4's documented mechanism for adding a
+   utility class outside the built-in namespace list. Call sites stay
+   idiomatic (duration-normal ease-house), matching D-10's stated goal. */
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-normal {
+  transition-duration: var(--duration-normal);
+}
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
 }
 
 @theme inline {
@@ -536,7 +572,8 @@ code, pre, .font-mono {
 /* Privacy modes — PRESERVED */
 .privacy-demo [data-sensitive] {
   filter: blur(4px);
-  transition: filter 0.2s;
+  /* D-09: 0.2s was already exactly --duration-normal; centralised on the token. */
+  transition: filter var(--duration-normal) var(--ease-house);
 }
 
 .privacy-demo [data-sensitive]:hover {
@@ -572,6 +609,11 @@ code, pre, .font-mono {
   display: inline-block;
 }
 
+/* D-09: symmetric back-and-forth bounce, not centralised on --ease-house --
+   --ease-house is an asymmetric single-direction settle-into-place curve
+   (0.22,1,0.36,1); applied to a 0%/50%/100% oscillation it would visibly
+   distort the up/down cycle. Duration is not a house-timing near-neighbour
+   either (0.6-0.9s vs 120/200/320ms). Left as authored, deliberately. */
 .eq-bar-1 { animation: eq-bounce-1 0.8s ease-in-out infinite; }
 .eq-bar-2 { animation: eq-bounce-2 0.6s ease-in-out infinite; }
 .eq-bar-3 { animation: eq-bounce-3 0.9s ease-in-out infinite; }
@@ -590,7 +632,10 @@ code, pre, .font-mono {
   }
 }
 .activity-entry-new {
-  animation: slide-in-entry 520ms ease-out forwards;
+  /* D-09: 520ms is not a house-timing near-neighbour (120/200/320ms), so the
+     duration is left authored; the settle-into-place ease-out IS exactly what
+     --ease-house means, so only the easing centralises on the token. */
+  animation: slide-in-entry 520ms var(--ease-house) forwards;
   box-shadow: inset 2px 0 0 var(--primary);
 }
 
@@ -600,7 +645,9 @@ code, pre, .font-mono {
   100% { background-color: transparent; }
 }
 .live-update-flash {
-  animation: live-update-pulse 600ms ease-out forwards;
+  /* D-09: 600ms is not a house-timing near-neighbour; same rationale as
+     .activity-entry-new above -- duration stays authored, easing centralises. */
+  animation: live-update-pulse 600ms var(--ease-house) forwards;
 }
 
 /* Phase 63 — ping indicator animation */
@@ -608,6 +655,8 @@ code, pre, .font-mono {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.5); opacity: 0.5; }
 }
+/* D-09: symmetric scale+opacity pulse, same rationale as .eq-bar-* above --
+   --ease-house's asymmetric curve does not fit a 0%/50%/100% oscillation. */
 .ping-indicator { animation: ping-pulse 1.5s ease-in-out infinite; }
 
 /* Phase 149-03 — PULSE-03 swarm edge particle flow animation */
@@ -667,6 +716,19 @@ code, pre, .font-mono {
   display: none;
 }
 
+/* D-11: readable's no-effects guarantee, as ONE blanket rule rather than a
+   per-effect enumeration -- mirrors the shape of the global
+   prefers-reduced-motion suppressor above. A new animation added in a later
+   phase is effect-free under readable by default, not by someone remembering
+   to add a rule for it. The scanline-suppression display rule immediately
+   above this comment is untouched -- it is not a motion rule. */
+[data-theme="readable"] *,
+[data-theme="readable"] *::before,
+[data-theme="readable"] *::after {
+  animation: none !important;
+  transition-duration: 0ms !important;
+}
+
 /* Phase 89 — suppress aubergine pseudo-elements under prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   [data-theme="aubergine"] body::before,
@@ -684,6 +746,7 @@ code, pre, .font-mono {
   50%       { opacity: 0.7; box-shadow: 0 0 0 4px transparent; }
 }
 
+/* D-09: symmetric opacity/glow pulse, same rationale as .eq-bar-* above. */
 .voice-listening-dot {
   animation: voice-listen-pulse 1.5s ease-in-out infinite;
 }
@@ -733,7 +796,11 @@ code, pre, .font-mono {
   from { opacity: 0; transform: translateY(7px); filter: blur(2px); }
   to   { opacity: 1; transform: translateY(0);  filter: blur(0); }
 }
-.msg-turn { animation: msg-materialize 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* D-09: 0.34s is a house-timing near-neighbour of --duration-slow (320ms, 6%
+   off), and the cubic-bezier here was ALREADY byte-identical to --ease-house
+   -- strong evidence this was authored as the house curve before the token
+   existed. Both centralise on the tokens. */
+.msg-turn { animation: msg-materialize var(--duration-slow) var(--ease-house) both; }
 
 .bubble-her {
   position: relative;
@@ -782,6 +849,9 @@ code, pre, .font-mono {
   vertical-align: text-bottom;
   background: var(--primary);
   box-shadow: 0 0 8px color-mix(in oklab, var(--primary) 60%, transparent);
+  /* D-09: step-end is a discrete on/off blink cadence, not a continuous curve
+     -- --ease-house's cubic-bezier does not apply to a step function. Left
+     as authored, deliberately. */
   animation: stream-cursor-blink 1s step-end infinite;
 }
 
@@ -826,6 +896,12 @@ code, pre, .font-mono {
     0 0 10px var(--primary),
     0 0 22px color-mix(in oklab, var(--primary) 60%, transparent);
 }
+/* D-09: ambient loops (design law: 4s+) -- durations stay long, per plan.
+   Easing is deliberately NOT centralised on --ease-house: aura-orbit is
+   `linear`, required for a constant angular velocity continuous rotation --
+   ease-house's decelerate-into-place curve would visibly speed up/slow down
+   every lap. aura-float is a symmetric ease-in-out bob, same rationale as
+   .eq-bar-* above. */
 .aura-ring-1 {
   width: 96%;
   animation: aura-orbit 26s linear infinite;

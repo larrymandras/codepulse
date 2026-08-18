@@ -103,5 +103,139 @@ does not) report a failure for readable/aubergine, since those were never sub-AA
 `grep -c -- '--status-error-fill:' src/index.css` = 5, `grep -c -- '--status-error-on-fill:'
 src/index.css` = 5.
 
-<!-- D-09/D-10/D-11 (motion tokens, the @utility correction, and readable's blanket rule) are
-recorded below once Task 2 lands. -->
+## D-09/D-10: Motion tokens and the `@utility` correction
+
+`@theme` carries D-10's block verbatim:
+
+```css
+--duration-fast:   120ms;
+--duration-normal: 200ms;
+--duration-slow:   320ms;
+--ease-house: cubic-bezier(0.22, 1, 0.36, 1);
+```
+
+**Mandatory correction applied, and re-verified independently of `122-RESEARCH.md`'s isolated
+compile test.** `122-RESEARCH.md` Pattern 2 compiled a minimal `theme.css`+`utilities.css`
+snippet by hand and reported `--duration-fast`/`--duration-normal` absent entirely from `:root`.
+Re-verified against THIS repo's real Vite build (not an isolated `compile()` call): the plain
+`@theme` block above by itself left the custom properties alive in `:root` (Tailwind/Lightning
+CSS keeps a theme variable if the authored stylesheet references it via `var()` anywhere, which
+the `@utility` bodies below do) but generated **no** `.duration-fast{}`/`.duration-normal{}`/
+`.ease-house{}` utility CLASS rules -- Tailwind's content scanner only emits a rule for a class
+name it finds used somewhere, and nothing in this plan's file scope (`src/index.css` + this doc)
+is a scannable component file. Confirmed by a clean build+grep before adding any fix:
+`.duration-fast{` / `.duration-normal{` / `.ease-house{` all absent from `dist/assets/*.css`,
+while `--duration-fast`/`--duration-normal`/`--duration-slow` (unit-converted to `.12s`/`.2s`/
+`.32s`) were present and `--ease-house` was absent (nothing referenced it via `var()` yet).
+
+**The fix:** `@source inline("duration-fast duration-normal duration-slow ease-house");` --
+Tailwind v4's documented mechanism (confirmed present in the installed `tailwindcss@4.3.2`
+compiler's source, the `@source ... inline(...)` branch in `dist/lib.js`) for forcing specific
+utility class names to be generated regardless of whether a scanned file's content contains
+them. This keeps the entire fix inside `src/index.css` (the plan's only editable source file --
+this plan is explicitly forbidden from touching any component file), and is also the correct
+long-term choice independent of that restriction: some of the ~187 motion call sites the later
+sweep waves will touch build their class strings dynamically (`motion/react` props), which
+Tailwind's static scanner can never see -- `@source inline(...)` guarantees these three
+utilities exist in the compiled CSS regardless of how later call sites reference them.
+
+**Positive proof, built stylesheet (`dist/assets/index-*.css`), after the fix:**
+
+```
+.duration-fast{transition-duration:var(--duration-fast)}     PRESENT
+.duration-normal{transition-duration:var(--duration-normal)} PRESENT
+.duration-slow{transition-duration:var(--duration-slow)}     PRESENT
+.ease-house{--tw-ease:var(--ease-house);transition-timing-function:var(--ease-house)} PRESENT
+```
+
+**Control -- the search discriminates:** `.duration-nonsense-9x7q2{` searched in the same built
+file -- ABSENT. This string was never added to `@source inline(...)` or anywhere else, so a
+search that found it would mean the search itself was broken (e.g. matching everything).
+
+**Live-DOM proof (not just built-CSS text):** a throwaway Playwright page loaded the built
+stylesheet, created a real `<div class="duration-normal ease-house">`, and read
+`getComputedStyle`:
+
+```
+transitionDuration:       0.2s      (== 200ms, the --duration-normal value; non-zero)
+transitionTimingFunction: cubic-bezier(0.22, 1, 0.36, 1)  (== --ease-house, not the UA default)
+```
+
+This is the "call site resolving to a non-zero computed transition-duration" the plan requires
+-- proven against a live DOM element, not inferred from the CSS text alone.
+
+`grep -cF '@utility duration-fast' src/index.css` / `duration-normal` / `duration-slow` each = 1.
+`grep -cF -- '--ease-house: cubic-bezier(0.22, 1, 0.36, 1)' src/index.css` = 1.
+`grep -v '^\s*/\*' src/index.css | grep -cE 'transition-timing-function:\s*cubic-bezier'` = 0
+(the only remaining `cubic-bezier(...)` text is the token definition itself plus explanatory
+comments, both excluded by the filter).
+
+## `src/index.css`'s own motion, retimed onto the tokens
+
+Every `animation:`/`transition:`/`transition-duration:`/`transition-timing-function:`
+declaration in the file was swept and classified:
+
+| site | before | after | reasoning |
+|---|---|---|---|
+| `.privacy-demo [data-sensitive]` transition | `filter 0.2s` | `filter var(--duration-normal) var(--ease-house)` | 0.2s was exactly `--duration-normal`; no easing was specified, `--ease-house` added explicitly |
+| `.activity-entry-new` (slide-in-entry) | `520ms ease-out` | `520ms var(--ease-house)` | 520ms is not a house-timing near-neighbour (120/200/320ms); the settle-into-place `ease-out` IS what `--ease-house` means, so only easing centralises, duration stays authored |
+| `.live-update-flash` (live-update-pulse) | `600ms ease-out` | `600ms var(--ease-house)` | same rationale as above |
+| `.msg-turn` (msg-materialize) | `0.34s cubic-bezier(0.22, 1, 0.36, 1)` | `var(--duration-slow) var(--ease-house)` | 340ms is a house-timing near-neighbour of 320ms (6% off), AND the cubic-bezier was already byte-identical to `--ease-house` -- strong evidence this was authored as the house curve before the token existed. Both centralise. |
+
+**Deliberately left untouched, with an inline comment naming why (the plan's own escape hatch
+for "the curve is deliberately different"):**
+
+| site | duration | easing | why not `--ease-house` |
+|---|---|---|---|
+| `.eq-bar-1/2/3`, `.eq-bar-fast-1/2/3` (eq-bounce-*) | 0.4-0.9s | `ease-in-out` | symmetric 0%/50%/100% oscillation; `--ease-house`'s asymmetric settle curve would visibly distort the bounce |
+| `.ping-indicator` (ping-pulse) | 1.5s | `ease-in-out` | same symmetric-oscillation rationale |
+| `.voice-listening-dot` (voice-listen-pulse) | 1.5s | `ease-in-out` | same symmetric-oscillation rationale |
+| `.stream-cursor` (stream-cursor-blink) | 1s | `step-end` | discrete on/off blink, not a continuous curve |
+| `.aura-ring-1/2` (aura-orbit) | 26s/34s | `linear` | ambient loop (design law: 4s+); continuous rotation needs constant angular velocity -- `--ease-house` would visibly speed up/slow down every lap |
+| `.aura-float` | 6s | `ease-in-out` | ambient loop, symmetric bob -- same oscillation rationale as eq-bar |
+
+None of these are house-timing near-neighbours either, so their durations were never candidates
+for retargeting regardless of the easing decision.
+
+`0ms !important` suppressors inside `@media (prefers-reduced-motion: reduce)` blocks were left
+completely untouched, per the plan's explicit instruction -- they are suppressors, not timings.
+
+## D-11: `readable`'s blanket no-effects rule
+
+Added ONE new blanket suppressor immediately after the existing (untouched) `crt-scanline-bar`
+display rule, mirroring the shape of the existing global `prefers-reduced-motion` suppressor:
+
+```css
+[data-theme="readable"] *,
+[data-theme="readable"] *::before,
+[data-theme="readable"] *::after {
+  animation: none !important;
+  transition-duration: 0ms !important;
+}
+```
+
+`[data-theme="readable"] .crt-scanline-bar { display: none }` (shared with aubergine in the same
+comma-selector rule) is kept exactly as it was -- a display rule, not a motion rule, per the
+plan's explicit instruction not to fold it in.
+
+**Proof the rule can actually fire (not merely exist):** per the 2026-08-18 lesson that "a rule
+that cannot fire is indistinguishable from one never violated," a throwaway Playwright page
+rendered a real element carrying both an authored `animation` (`.msg-turn`, now
+`var(--duration-slow)` = 320ms) and `data-theme` on `<html>`:
+
+```
+cyan (control, motion allowed):      animationName = msg-materialize, animationDuration = 0.32s
+readable (D-11 blanket rule active): animationName = none,            transitionDuration = 0s
+```
+
+The control (cyan) shows real motion on the identical element/class; the same element under
+`readable` shows none -- the blanket rule is not vacuous, it demonstrably suppresses.
+
+`grep -cF 'crt-scanline-bar' src/index.css` = 2 (readable + aubergine selectors, unchanged).
+
+## Verification (Task 2)
+
+- `npm run build` -> exit 0
+- `npx tsc --noEmit` -> exit 0
+- `npx vitest run` -> **4772 passed | 0 failed** (338 files passed, 17 skipped, 197 todo) --
+  identical to the pre-task baseline recorded in `122-02-SUMMARY.md`, zero new failures
