@@ -1,10 +1,4 @@
-import { useQuery } from "convex/react";
-import { Link } from "react-router";
-import { api } from "../../convex/_generated/api";
-import { useRecentEvents } from "../hooks/useRecentEvents";
-import { useLlmMetrics } from "../hooks/useLlmMetrics";
-import { formatCost, formatDurationMs, formatTimestamp } from "../lib/formatters";
-import MetricCard, { thresholdColor } from "../components/MetricCard";
+import UnpricedModelsNudge from "../components/UnpricedModelsNudge";
 import CostTrendChart from "../components/CostTrendChart";
 import LlmAnalyticsPanel from "../components/LlmAnalyticsPanel";
 import CapabilityGrowthChart from "../components/CapabilityGrowthChart";
@@ -22,70 +16,38 @@ import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
 import SDKSpendGuard from "../components/SDKSpendGuard";
-import UnpricedModelsNudge from "../components/UnpricedModelsNudge";
 import CostBreakdownTable from "../components/CostBreakdownTable";
 import GatewayQuotaPanel from "../components/GatewayQuotaPanel";
 import ProviderComparisonChart from "../components/ProviderComparisonChart";
 import RoutingDecisionsTable from "../components/RoutingDecisionsTable";
 import GatewayTasksPanel from "../components/GatewayTasksPanel";
 import LlmProviderPanel from "../components/LlmProviderPanel";
-import AnomalyBadge from "../components/AnomalyBadge";
-import { FlexBarChart } from "../components/FlexBarChart";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
-import { Badge } from "../components/ui/badge";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "../components/ui/table";
+import TotalEventsCard from "../components/analytics/TotalEventsCard";
+import LlmVolumeCards from "../components/analytics/LlmVolumeCards";
+import CacheHitRateCard from "../components/analytics/CacheHitRateCard";
+import ApiSpendCard from "../components/analytics/ApiSpendCard";
+import PromptCachePanel from "../components/analytics/PromptCachePanel";
+import RecentLlmCallsPanel from "../components/analytics/RecentLlmCallsPanel";
+import ExecutionDepthPanel from "../components/analytics/ExecutionDepthPanel";
+import AdvisorStrategyPanel from "../components/analytics/AdvisorStrategyPanel";
 
-/** Deep-link into the session's Trace tab (TRACE-02, D-08). Null-guarded + encoded, mirrors KGDetailsPanel's provenanceHref. */
-function traceHref(sessionId?: string | null): string | null {
-  return sessionId ? `/sessions/${encodeURIComponent(sessionId)}?tab=trace` : null;
-}
-
+/**
+ * Composition-only page (Phase 121 D-01/D-02). `Analytics()` fetches nothing —
+ * it lays out boundaries and the components they wrap. Every query that used
+ * to be hoisted here now lives inside one of the eight `src/components/
+ * analytics/*` components, each a `SectionErrorBoundary` ancestor of its own
+ * throw. A query throwing during render used to unmount this whole function's
+ * output (the 2026-08-11 blackout); now it can only take down the one
+ * boundary-wrapped child that owns it.
+ *
+ * Any new data need on this page is a new self-fetching child rendered inside
+ * a `SectionErrorBoundary`, never a hook call added to this function body.
+ * `src/pages/Analytics.test.tsx`'s per-query fault-injection cases are the
+ * proof; plan 121-05 adds a structural ratchet over this file's shape.
+ */
 export default function Analytics() {
-  const { events } = useRecentEvents(100);
-  const { calls: llmCalls, status: llmStatus, loadMore: loadMoreLlm } = useLlmMetrics();
-  // Phase 67 D-01: Split cost view — API spend (real money) vs Subscription usage (call counts/tokens)
-  // CR-01 follow-up (2026-08-03, found by the phase verifier): this card was a
-  // THIRD surface still sourcing a displayed dollar figure from the legacy
-  // pre-baked `metric_type: "cost"` aggregate (convex/aggregates.ts sums
-  // `r.cost ?? 0` from the raw ingested llmMetrics.cost). D-01 says that value is
-  // stored but is NOT the truth the UI renders. Left alone it could disagree with
-  // the Cost Forecast and SDK Spend Cap panels directly below it -- the exact
-  // two-sources-of-truth symptom CR-01 was written to remove. Matches the legacy
-  // 30-day window (costByPeriod's default lookbackDays).
-  const apiSpendDerived = useQuery(api.costDerived.billedOverTime, {
-    period: "daily",
-    lookbackHours: 30 * 24,
-  });
-  const subscriptionUsage = useQuery(api.llm.subscriptionUsage) ?? { calls: 0, tokens: 0, truncated: false };
-  // Prompt-cache hit rate (Anthropic) — verifies caching is actually being hit
-  const cacheStats = useQuery(api.llm.cacheStats, {});
-  // (Removed 2026-08-03: a second `costByPeriod` read whose only consumer was
-  // `totalCost`, which was never rendered anywhere. Dead legacy read.)
-  // Swap 3: event counts aggregate for Total Events MetricCard
-  const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" }) ?? {};
-  const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
-
-  const anomalies = useQuery(api.anomalyDetection.getActiveAnomalies) ?? {};
-
-  // Execution depth histogram + Advisor Strategy (CPUX-09)
-  const depthHistogram = useQuery(api.advisorEvents.executionDepthHistogram);
-  const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
-  const advisorRecent = useQuery(api.advisorEvents.recent, { limit: 20 });
-
-  const totalApiSpend = (apiSpendDerived?.buckets ?? []).reduce(
-    (s: number, b: { billedUsd: number }) => s + b.billedUsd,
-    0
-  );
-  const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between col-span-12 mb-6">
@@ -116,44 +78,24 @@ export default function Analytics() {
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
-        
-        {/* Summary Row */}
+
+        {/* Summary Row — four cards, each its own boundary (D-01/D-02): one
+            failing query costs one card, not the whole row. */}
         <div className="md:col-span-12">
            <GlassPanel className="p-4">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="flex items-start gap-2">
-                    <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
-                    {anomalies.errors && (
-                      <AnomalyBadge
-                        severity={anomalies.errors.severity as "warning" | "critical"}
-                        metric="errors"
-                        value={anomalies.errors.value}
-                        mean={anomalies.errors.mean}
-                        zScore={anomalies.errors.zScore}
-                      />
-                    )}
-                  </div>
-                  <MetricCard label="LLM Calls" value={llmCalls.length} />
-                  <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
-                  <MetricCard
-                    label="Cache Hit Rate (24h)"
-                    value={cacheStats ? `${(cacheStats.overall.hitRate * 100).toFixed(1)}%` : "--"}
-                    numericValue={cacheStats ? cacheStats.overall.hitRate * 100 : undefined}
-                    format={(v) => `${v.toFixed(1)}%`}
-                    threshold={{ ok: 50, warn: 20, invertDirection: true }}
-                  />
-                  <div className="flex items-start gap-2">
-                    <MetricCard label="API Spend" value={apiSpendDerived ? formatCost(totalApiSpend) : "--"} />
-                    {anomalies.cost && (
-                      <AnomalyBadge
-                        severity={anomalies.cost.severity as "warning" | "critical"}
-                        metric="cost"
-                        value={anomalies.cost.value}
-                        mean={anomalies.cost.mean}
-                        zScore={anomalies.cost.zScore}
-                      />
-                    )}
-                  </div>
+                  <SectionErrorBoundary name="Total Events">
+                    <TotalEventsCard />
+                  </SectionErrorBoundary>
+                  <SectionErrorBoundary name="LLM Volume">
+                    <LlmVolumeCards />
+                  </SectionErrorBoundary>
+                  <SectionErrorBoundary name="Cache Hit Rate">
+                    <CacheHitRateCard />
+                  </SectionErrorBoundary>
+                  <SectionErrorBoundary name="API Spend">
+                    <ApiSpendCard />
+                  </SectionErrorBoundary>
               </div>
            </GlassPanel>
         </div>
@@ -162,51 +104,7 @@ export default function Analytics() {
         <div className="md:col-span-12">
           <SectionErrorBoundary name="Prompt Cache">
             <GlassPanel className="p-4">
-              <div className="flex items-baseline justify-between mb-3">
-                <h3 className="text-sm font-mono uppercase tracking-widest text-muted-foreground">
-                  Prompt Cache by Model — last 24h
-                </h3>
-                <span className="text-xs text-muted-foreground">
-                  cache reads bill at ~0.1× input
-                </span>
-              </div>
-              {!cacheStats || cacheStats.byModel.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No Anthropic calls in the last 24h.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border/50">
-                        <th className="py-1 pr-4 font-medium">Model</th>
-                        <th className="py-1 pr-4 font-medium text-right">Calls</th>
-                        <th className="py-1 pr-4 font-medium text-right">Hit Rate</th>
-                        <th className="py-1 pr-4 font-medium text-right">Cache Read</th>
-                        <th className="py-1 font-medium text-right">Total Prompt</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cacheStats.byModel.map((m) => (
-                        <tr key={m.model} className="border-b border-border/30 last:border-0">
-                          <td className="py-1.5 pr-4 font-mono">{m.model}</td>
-                          <td className="py-1.5 pr-4 text-right tabular-nums">{m.calls.toLocaleString()}</td>
-                          <td
-                            className="py-1.5 pr-4 text-right tabular-nums font-medium"
-                            style={{ color: thresholdColor(m.hitRate * 100, { ok: 50, warn: 20, invertDirection: true }) }}
-                          >
-                            {(m.hitRate * 100).toFixed(1)}%
-                          </td>
-                          <td className="py-1.5 pr-4 text-right tabular-nums text-muted-foreground">
-                            {m.cacheReadInputTokens.toLocaleString()}
-                          </td>
-                          <td className="py-1.5 text-right tabular-nums text-muted-foreground">
-                            {m.totalPromptTokens.toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <PromptCachePanel />
             </GlassPanel>
           </SectionErrorBoundary>
         </div>
@@ -215,88 +113,7 @@ export default function Analytics() {
         <div className="md:col-span-12">
           <SectionErrorBoundary name="Recent LLM Calls">
             <GlassPanel className="p-4">
-              <SectionHeader title="Recent LLM Calls" />
-              {llmCalls.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No LLM calls recorded yet.</p>
-              ) : (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Model</TableHead>
-                        <TableHead>Cost</TableHead>
-                        <TableHead>Latency</TableHead>
-                        <TableHead>Cache</TableHead>
-                        <TableHead>Trace</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {llmCalls.map((call, i) => {
-                        const href = traceHref(call.sessionId);
-                        return (
-                          <TableRow key={call._id ?? i}>
-                            <TableCell className="font-mono text-sm tabular-nums">
-                              {formatTimestamp(call.timestamp)}
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">{call.model}</TableCell>
-                            <TableCell className="tabular-nums">
-                              {call.cost != null ? formatCost(call.cost) : "—"}
-                            </TableCell>
-                            <TableCell className="tabular-nums">
-                              {formatDurationMs(call.latencyMs)}
-                            </TableCell>
-                            <TableCell>
-                              {call.cacheReadInputTokens === undefined ? (
-                                "—"
-                              ) : call.cacheReadInputTokens > 0 ? (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs"
-                                  style={{ borderColor: "var(--status-ok)", color: "var(--status-ok)" }}
-                                >
-                                  cached
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs"
-                                  style={{ borderColor: "var(--status-warn)", color: "var(--status-warn)" }}
-                                >
-                                  miss
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {href ? (
-                                <Link
-                                  to={href}
-                                  style={{ color: "var(--primary)" }}
-                                  className="hover:underline text-sm font-medium"
-                                >
-                                  View Trace
-                                </Link>
-                              ) : (
-                                "—"
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                  {llmStatus === "CanLoadMore" && (
-                    <div className="flex justify-center mt-3">
-                      <button
-                        onClick={() => loadMoreLlm(25)}
-                        className="px-3 py-1.5 text-sm font-mono text-muted-foreground hover:text-foreground bg-muted hover:bg-accent rounded-lg transition-colors"
-                      >
-                        Load more
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
+              <RecentLlmCallsPanel />
             </GlassPanel>
           </SectionErrorBoundary>
         </div>
@@ -329,9 +146,9 @@ export default function Analytics() {
         {/* LLM Analytics & Capability Growth */}
         {/* Boundary added 2026-08-01: this was one of the few panels on the page
             NOT wrapped, so when its `llm:providerBreakdown` query timed out
-            ("too many system operations") the unhandled useQuery throw unmounted
-            the whole React tree and blanked ALL of Analytics rather than just
-            this widget. 35 sibling sections were already wrapped. */}
+            ("too many system operations") the unhandled query-hook throw
+            unmounted the whole React tree and blanked ALL of Analytics rather
+            than just this widget. 35 sibling sections were already wrapped. */}
         <div className="md:col-span-6">
            <SectionErrorBoundary name="LLM Analytics">
              <GlassPanel className="p-4 h-full">
@@ -384,7 +201,7 @@ export default function Analytics() {
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
-        
+
         {/* Error Rate & Session Duration */}
         <div className="md:col-span-6">
            <SectionErrorBoundary name="Error Rate Trend">
@@ -409,11 +226,11 @@ export default function Analytics() {
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
-        
+
         <div className="md:col-span-12 mt-4">
           <SectionHeader title="Agent Telemetry" />
         </div>
-        
+
         <div className="md:col-span-12">
            <SectionErrorBoundary name="Prompt Activity">
              <GlassPanel className="p-4">
@@ -467,7 +284,7 @@ export default function Analytics() {
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
-        
+
         <div className="md:col-span-12">
            <SectionErrorBoundary name="API Errors">
              <GlassPanel className="p-4">
@@ -476,67 +293,19 @@ export default function Analytics() {
            </SectionErrorBoundary>
         </div>
 
-        {/* Depth Histogram & Advisor Strategy */}
+        {/* Depth Histogram & Advisor Strategy — component owns its own
+            GlassPanel(s) + SectionHeader (see ExecutionDepthPanel.tsx /
+            AdvisorStrategyPanel.tsx header comments); the page contributes
+            only the boundary and grid slot. */}
         <div className="md:col-span-12 mt-4">
            <SectionErrorBoundary name="Execution Depth">
-             <SectionHeader title="Execution Depth Distribution" />
-             <GlassPanel className="p-4">
-               {depthHistogram && depthHistogram.length > 0 ? (
-                 <FlexBarChart
-                   data={depthHistogram.map(d => ({ label: d.label, value: d.count }))}
-                   height={120}
-                 />
-               ) : (
-                 <p className="text-base text-muted-foreground">No execution depth data yet.</p>
-               )}
-             </GlassPanel>
+             <ExecutionDepthPanel />
            </SectionErrorBoundary>
         </div>
 
         <div className="md:col-span-12 mt-4">
            <SectionErrorBoundary name="Advisor Strategy">
-             <SectionHeader title="Advisor Strategy" />
-             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-               <GlassPanel className="p-4">
-                 <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Savings</p>
-                 <p className="text-2xl font-semibold tabular-nums mt-1">
-                   ${(advisorSavings?.totalSavings ?? 0).toFixed(2)}
-                 </p>
-               </GlassPanel>
-               <GlassPanel className="p-4">
-                 <p className="text-sm text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
-                 <p className="text-2xl font-semibold tabular-nums mt-1">
-                   {advisorRecent && advisorRecent.length > 0
-                     ? `${Math.round((advisorRecent.filter(e => e.used).length / advisorRecent.length) * 100)}%`
-                     : "—"}
-                 </p>
-               </GlassPanel>
-             </div>
-             {/* Cost comparison table */}
-             <GlassPanel className="p-4 mt-4">
-               <Table>
-                 <TableHeader>
-                   <TableRow>
-                     <TableHead>Provider</TableHead>
-                     <TableHead>Advisor Cost</TableHead>
-                     <TableHead>Standard Cost</TableHead>
-                     <TableHead>Saved</TableHead>
-                   </TableRow>
-                 </TableHeader>
-                 <TableBody>
-                   {(advisorRecent ?? []).slice(0, 10).map((evt, i) => (
-                     <TableRow key={i}>
-                       <TableCell className="font-mono text-sm">{evt.provider}</TableCell>
-                       <TableCell className="tabular-nums">${evt.costUsd.toFixed(4)}</TableCell>
-                       <TableCell className="tabular-nums">${evt.standardCostUsd.toFixed(4)}</TableCell>
-                       <TableCell className="tabular-nums" style={{ color: "var(--status-ok)" }}>
-                         ${(evt.standardCostUsd - evt.costUsd).toFixed(4)}
-                       </TableCell>
-                     </TableRow>
-                   ))}
-                 </TableBody>
-               </Table>
-             </GlassPanel>
+             <AdvisorStrategyPanel />
            </SectionErrorBoundary>
         </div>
       </div>
