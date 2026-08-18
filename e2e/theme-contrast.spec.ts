@@ -1,6 +1,13 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { mkdirSync, writeFileSync } from "node:fs";
 
+// Phase 122 (A11Y-01) env switches, both no-ops when unset -- default
+// behaviour (neither var set) is byte-for-byte what this spec did before:
+//   A11Y_CAPTURE_DIR   -- directory to write per-cell raw axe violation JSON to
+//   A11Y_MEASURE_ONLY  -- "1" skips the zero-violations assertion so the whole
+//                         matrix completes in one pass instead of stopping at
+//                         the first violating cell (sizing, not remediation)
 const THEMES = ["cyan", "emerald", "readable", "aubergine"] as const;
 const PAGES = [
   { name: "Dashboard", path: "/" },
@@ -65,6 +72,37 @@ for (const theme of THEMES) {
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa"])
         .analyze();
+
+      // Phase 122 (A11Y-01): capture the raw per-cell violation JSON when asked.
+      // This MUST run before the assertion below -- a failing cell throws out of
+      // expect() and never reaches a later write, so ordering it after would
+      // silently leave holes in the baseline for every cell that has violations
+      // (i.e. most of them, which is the entire point of this measurement).
+      const captureDir = process.env.A11Y_CAPTURE_DIR;
+      if (captureDir) {
+        mkdirSync(captureDir, { recursive: true });
+        const payload = {
+          theme,
+          page: pg.name,
+          path: pg.path,
+          url: page.url(),
+          capturedAt: new Date().toISOString(),
+          violationCount: results.violations.length,
+          violations: results.violations,
+          axeVersion: results.testEngine,
+        };
+        writeFileSync(
+          `${captureDir}/${theme}__${pg.name}.json`,
+          JSON.stringify(payload, null, 2),
+        );
+      }
+
+      // A11Y_MEASURE_ONLY=1 -- A11Y-01 is a SIZING requirement, not a
+      // remediation requirement: the whole 20-cell matrix must complete in one
+      // pass so every cell gets measured, rather than the run stopping at the
+      // first violating cell. Remediation (A11Y-02, Phase 123) runs this same
+      // spec with the switch UNSET, where behaviour is unchanged.
+      if (process.env.A11Y_MEASURE_ONLY === "1") return;
 
       expect(results.violations).toEqual([]);
     });
