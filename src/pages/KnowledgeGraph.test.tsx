@@ -312,6 +312,7 @@ import KnowledgeGraph, {
   computeNodeValFn3D,
   D09_FETCH_POLL_MAX_MS,
   ISOLATED_NODE_CAMERA_DISTANCE,
+  flyToLitSources,
 } from "./KnowledgeGraph";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 
@@ -591,6 +592,11 @@ describe("KnowledgeGraph — colorFn3D/nodeValFn3D 5-state priority ladder (D-08
 
 describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)", () => {
   let rafCbs: Array<() => void>;
+  // GLXY-02 (Phase 190 Plan 02): spies on the unconditional console branch
+  // logging added to the answer-sync effect. Restored every test (2026-07-30
+  // lesson: a leaked console spy silences a later, unrelated suite).
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -603,11 +609,16 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
       rafCbs.push(cb);
       return rafCbs.length;
     });
+
+    consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    consoleInfoSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
   });
 
   const flushRaf = () => {
@@ -1102,5 +1113,435 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     const [, , filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
     expect(filterFn({ id: UUID_A })).toBe(true);
     expect(filterFn({ id: UUID_B })).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // GLXY-02 (Phase 190 Plan 02, D-04/D-05/D-06) — unconditional console branch
+  // logging. Every assertion below checks BOTH that the branch's own message
+  // fired AND that a sibling branch's message did not — presence alone is
+  // not the assertion (D-06: a diagnostic that cannot discriminate absence
+  // from breakage is worse than none).
+  // -------------------------------------------------------------------------
+
+  it("GLXY-02: no sync row logs the no-row line, not the not-3d line", () => {
+    mockLatestAnswerSync.mockReturnValue(undefined);
+    mockKgReturn = makeMockKg({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+    render(<KnowledgeGraph />);
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith("[kg-answer-sync] no-row");
+    expect(consoleInfoSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] not-3d"),
+      expect.anything(),
+    );
+  });
+
+  it("GLXY-02: a sync row present but renderMode 2D logs the not-3d line naming the mode, not the no-row line", () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-log-2d:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+    mockKgReturn = makeMockKg({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+    // idbGet default resolves undefined -> stays 2D (no hydration override).
+    render(<KnowledgeGraph />);
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] not-3d"),
+      { renderMode: "2d" },
+    );
+    expect(consoleInfoSpy).not.toHaveBeenCalledWith("[kg-answer-sync] no-row");
+  });
+
+  it("GLXY-02: a payload with only invalid ids logs zero-valid-ids with the raw and valid counts", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-log-invalid:1",
+      sourceNodeIds: [NOT_A_UUID],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] zero-valid-ids"),
+      expect.objectContaining({ turnId: "sess-log-invalid:1", requested: 1, valid: 0 }),
+    );
+  });
+
+  it("GLXY-02: the all-on-screen branch logs requested/resolved counts, not the ego-lens-fallback line", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-log-allonscreen:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B], links: [], stats: EMPTY_STATS },
+    });
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] all-on-screen"),
+      expect.objectContaining({ turnId: "sess-log-allonscreen:1", requested: 2, resolved: 2 }),
+    );
+    expect(consoleInfoSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] ego-lens-fallback"),
+      expect.anything(),
+    );
+  });
+
+  it("GLXY-02: the D-09 ego-lens fallback logs requested/resolved counts and the pinned id, not the all-on-screen line", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-log-fallback:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    // UUID_A is off-screen (only a distractor is present) -> D-09 fallback.
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => expect(setLens).toHaveBeenCalledWith("entity"));
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] ego-lens-fallback"),
+      expect.objectContaining({
+        turnId: "sess-log-fallback:1",
+        requested: 1,
+        resolved: 0,
+        pinnedId: UUID_A,
+      }),
+    );
+    expect(consoleInfoSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] all-on-screen"),
+      expect.anything(),
+    );
+  });
+
+  it("GLXY-02: a re-delivered row with the SAME turnId logs already-applied, carrying the turnId, without a second camera move", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-log-repeat:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    const { rerender } = await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B], links: [], stats: EMPTY_STATS },
+    });
+
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+    consoleInfoSpy.mockClear();
+
+    // A genuinely NEW object reference carrying the SAME turnId — mirrors a
+    // real Convex subscription re-delivering the same logical turn (e.g. an
+    // unrelated field changing on the row). A literal-same object reference
+    // would never re-run the effect at all (React's dependency comparison
+    // is by reference), so this is the only way to reach this branch.
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-log-repeat:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 2,
+    });
+    rerender(<KnowledgeGraph />);
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] already-applied"),
+      { turnId: "sess-log-repeat:1" },
+    );
+    // SC#2's zero-motion guarantee, reconfirmed alongside the log assertion.
+    expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+  });
+
+  it("GLXY-02/D-06 aggregate: every effect branch logs its own distinct message tag", async () => {
+    const seenTags = new Set<string>();
+    const collectTag = (args: unknown[]) => {
+      const first = args[0];
+      if (typeof first === "string") {
+        const match = first.match(/^\[kg-answer-sync\] (\S+)/);
+        // flyToLitSources' own outcome tags ("fly-*") are exercised and
+        // asserted distinct separately below, in the dedicated
+        // flyToLitSources describe block — this aggregate is scoped to the
+        // six effect-guard/branch tags named in this plan's <behavior>.
+        if (match && !match[1].startsWith("fly-")) seenTags.add(match[1]);
+      }
+    };
+    consoleInfoSpy.mockImplementation((...args: unknown[]) => collectTag(args));
+    consoleWarnSpy.mockImplementation((...args: unknown[]) => collectTag(args));
+
+    // no-row
+    mockLatestAnswerSync.mockReturnValue(undefined);
+    mockKgReturn = makeMockKg({ graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS } });
+    render(<KnowledgeGraph />);
+    cleanup();
+
+    // not-3d
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "agg:not-3d",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+    mockKgReturn = makeMockKg({ graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS } });
+    render(<KnowledgeGraph />);
+    cleanup();
+
+    // zero-valid-ids
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "agg:zero-valid",
+      sourceNodeIds: [NOT_A_UUID],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+    await renderIn3D({ graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS } });
+    cleanup();
+
+    // all-on-screen, then already-applied via a re-delivered row (same
+    // turnId, new object reference).
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "agg:repeat",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+    const { rerender } = await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B], links: [], stats: EMPTY_STATS },
+    });
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "agg:repeat",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 2,
+    });
+    rerender(<KnowledgeGraph />);
+    cleanup();
+
+    // ego-lens-fallback
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "agg:fallback",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+    await renderIn3D({ graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS } });
+
+    expect(seenTags).toEqual(
+      new Set([
+        "no-row",
+        "not-3d",
+        "zero-valid-ids",
+        "all-on-screen",
+        "already-applied",
+        "ego-lens-fallback",
+      ]),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// flyToLitSources — direct unit tests (Phase 190 Plan 02, GLXY-02).
+//
+// DEVIATION FROM PLAN: 190-02-PLAN.md's Task 2 action states flyToLitSources
+// "is exported and already has direct unit tests" and instructs asserting
+// its three outcome lines "there". No such tests exist anywhere in the repo
+// (verified: `flyToLitSources` has zero matches outside KnowledgeGraph.tsx's
+// own definition) — every existing exercise of it is indirect, through a
+// full KnowledgeGraph mount (the "answer sync reaction" describe block
+// above). This describe block is new, not an extension.
+//
+// onFlown(resolvedIds) fires identically on all three outcomes (success,
+// expired-with-partial-fly, expired-with-no-fly), so the discriminating
+// assertion has to be against the console spy, not against onFlown's own
+// call — that is the entire reason D-04 requires the log to live inside
+// flyToLitSources rather than at either call site.
+// ---------------------------------------------------------------------------
+describe("flyToLitSources — outcome logging (Phase 190 Plan 02, GLXY-02)", () => {
+  let rafCbs: Array<() => void>;
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    rafCbs = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
+      rafCbs.push(cb);
+      return rafCbs.length;
+    });
+    consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    consoleInfoSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+  });
+
+  const flushRaf = () => {
+    const batch = rafCbs;
+    rafCbs = [];
+    batch.forEach((cb) => cb());
+  };
+
+  const makeHandle = () => ({ zoomToFit: vi.fn(), cameraPosition: vi.fn() });
+
+  it("logs fly-success when the handle is present and all lit ids resolve on the first tick", () => {
+    const handle = makeHandle();
+    const onFlown = vi.fn();
+
+    flyToLitSources({
+      litIds: new Set([UUID_A]),
+      getNodes: () => [{ id: UUID_A, x: 1, y: 2, z: 0 }],
+      getHandle: () => handle,
+      isStale: () => false,
+      onFlown,
+    });
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] fly-success"),
+      expect.objectContaining({ requested: 1, resolved: 1 }),
+    );
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+    expect(onFlown).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs fly-expired-partial when the budget expires with a mounted handle and a partial resolved set", () => {
+    const handle = makeHandle();
+    const onFlown = vi.fn();
+    const UUID_C = "55555555-5555-4555-8555-555555555555";
+
+    // litIds has 3 members; UUID_A and UUID_C resolve, UUID_B never lays out
+    // -> never hits the "all resolved" branch on tick 1, so a 1-frame budget
+    // forces expiry. Two (not one) resolved keeps flyCamera's framing set
+    // above the isolated-node cameraPosition path, so this genuinely
+    // exercises the zoomToFit fly, matching a real multi-source partial.
+    flyToLitSources({
+      litIds: new Set([UUID_A, UUID_B, UUID_C]),
+      getNodes: () => [
+        { id: UUID_A, x: 1, y: 2, z: 0 },
+        { id: UUID_C, x: 3, y: 4, z: 0 },
+      ],
+      getHandle: () => handle,
+      isStale: () => false,
+      onFlown,
+      maxFrames: 1,
+    });
+    for (let i = 0; i < 3; i++) flushRaf();
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] fly-expired-partial"),
+      expect.objectContaining({ requested: 3, resolved: 2 }),
+    );
+    expect(consoleInfoSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] fly-success"),
+      expect.anything(),
+    );
+    expect(handle.zoomToFit).toHaveBeenCalled();
+    expect(onFlown).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs fly-expired-none when the budget expires with nothing resolved", () => {
+    const handle = makeHandle();
+    const onFlown = vi.fn();
+
+    flyToLitSources({
+      litIds: new Set([UUID_A]),
+      getNodes: () => [], // UUID_A never lays out.
+      getHandle: () => handle,
+      isStale: () => false,
+      onFlown,
+      maxFrames: 1,
+    });
+    for (let i = 0; i < 3; i++) flushRaf();
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] fly-expired-none"),
+      expect.objectContaining({ requested: 1, resolved: 0 }),
+    );
+    expect(handle.zoomToFit).not.toHaveBeenCalled();
+    expect(handle.cameraPosition).not.toHaveBeenCalled();
+    expect(onFlown).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs fly-stale-cancelled and never calls onFlown when isStale() is already true on the first tick", () => {
+    const handle = makeHandle();
+    const onFlown = vi.fn();
+
+    flyToLitSources({
+      litIds: new Set([UUID_A]),
+      getNodes: () => [{ id: UUID_A, x: 1, y: 2, z: 0 }],
+      getHandle: () => handle,
+      isStale: () => true,
+      onFlown,
+    });
+
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] fly-stale-cancelled"),
+      expect.objectContaining({ requested: 1 }),
+    );
+    expect(onFlown).not.toHaveBeenCalled();
+    expect(handle.zoomToFit).not.toHaveBeenCalled();
+    expect(handle.cameraPosition).not.toHaveBeenCalled();
+  });
+
+  it("the three onFlown outcomes are pairwise distinct in the console even though onFlown itself cannot tell them apart", () => {
+    // success
+    flyToLitSources({
+      litIds: new Set([UUID_A]),
+      getNodes: () => [{ id: UUID_A, x: 1, y: 2, z: 0 }],
+      getHandle: () => makeHandle(),
+      isStale: () => false,
+      onFlown: vi.fn(),
+    });
+
+    // expired-partial
+    flyToLitSources({
+      litIds: new Set([UUID_A, UUID_B]),
+      getNodes: () => [{ id: UUID_A, x: 1, y: 2, z: 0 }],
+      getHandle: () => makeHandle(),
+      isStale: () => false,
+      onFlown: vi.fn(),
+      maxFrames: 1,
+    });
+    for (let i = 0; i < 3; i++) flushRaf();
+
+    // expired-none
+    flyToLitSources({
+      litIds: new Set([UUID_A]),
+      getNodes: () => [],
+      getHandle: () => makeHandle(),
+      isStale: () => false,
+      onFlown: vi.fn(),
+      maxFrames: 1,
+    });
+    for (let i = 0; i < 3; i++) flushRaf();
+
+    const tags = new Set(
+      [...consoleInfoSpy.mock.calls, ...consoleWarnSpy.mock.calls]
+        .map((call) => call[0])
+        .filter((m): m is string => typeof m === "string" && m.startsWith("[kg-answer-sync] fly-"))
+        .map((m) => m.match(/^\[kg-answer-sync\] (\S+)/)?.[1]),
+    );
+    expect(tags).toEqual(new Set(["fly-success", "fly-expired-partial", "fly-expired-none"]));
   });
 });
