@@ -20,6 +20,7 @@ const defaultFilters: KgFilters = {
   agentId: null,
   entityName: "",
   entityId: null,
+  entityIds: null,
   hops: 1,
   asOf: null,
   limit: 100,

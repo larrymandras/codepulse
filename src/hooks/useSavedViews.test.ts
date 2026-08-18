@@ -60,6 +60,7 @@ const sampleFilters: KgFilters = {
   agentId: null,
   entityName: "Alice",
   entityId: null,
+  entityIds: null,
   hops: 2,
   asOf: null,
   limit: 50,
@@ -140,6 +141,34 @@ describe("useSavedViews", () => {
 
     const callArgs = mockSaveMutation.mock.calls[0][0];
     expect(callArgs.filters).not.toHaveProperty("entityId");
+  });
+
+  // -------------------------------------------------------------------------
+  // Test 1c (190-08/D-11/GLXY-04): entityIds is also excluded from persisted
+  // filters — same rationale as entityId above (Test 1b's sibling).
+  // -------------------------------------------------------------------------
+  it("saveView passes filters object WITHOUT entityIds key to the mutation", async () => {
+    const { useSavedViews } = await import("./useSavedViews");
+    const { result } = renderHook(() => useSavedViews());
+
+    await act(async () => {
+      await result.current.saveView(
+        "My View",
+        "entity" as KgLens,
+        {
+          ...sampleFilters,
+          entityIds: [
+            "11111111-1111-4111-8111-111111111111",
+            "22222222-2222-4222-8222-222222222222",
+          ],
+        },
+        "Alice",
+        2,
+      );
+    });
+
+    const callArgs = mockSaveMutation.mock.calls[0][0];
+    expect(callArgs.filters).not.toHaveProperty("entityIds");
   });
 
   // -------------------------------------------------------------------------

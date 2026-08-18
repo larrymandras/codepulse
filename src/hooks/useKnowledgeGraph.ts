@@ -10,6 +10,7 @@ import {
   deriveView,
   normalizeOverview,
   normalizeEntity,
+  normalizeEntities,
   normalizeContradictions,
   computeFocusSet,
   derivePredicates,
@@ -29,12 +30,23 @@ export interface KgFilters {
   /**
    * entity lens: pins the fetch to an exact entity UUID, bypassing
    * name-similarity resolution (187-05 D-09 fix). Takes precedence over
-   * `entityName` when set. Programmatic only (set by the answer-sync
-   * ego-lens fallback) — never bound to a user-facing text input, and
-   * excluded from idb persistence (ephemeral, mirrors `searchQuery`) so a
-   * stale id can never survive a reload or leak into a later manual search.
+   * `entityName` when set (but see `entityIds`, which takes precedence over
+   * THIS). Programmatic only (set by the answer-sync ego-lens fallback) —
+   * never bound to a user-facing text input, and excluded from idb
+   * persistence (ephemeral, mirrors `searchQuery`) so a stale id can never
+   * survive a reload or leak into a later manual search.
    */
   entityId: string | null;
+  /**
+   * 190-08/D-11/GLXY-04: entity lens, pins the fetch to N entity UUIDs in one
+   * round-trip (a turn resolving N>1 sources — the D-09 answer-sync
+   * fallback). Takes precedence over `entityId`, which still takes
+   * precedence over `entityName`. Programmatic only, same rationale as
+   * `entityId` above — never bound to a user-facing input, excluded from idb
+   * persistence and from saved views (a transient, sync-driven id set must
+   * never survive a reload or leak into a later manual search/saved view).
+   */
+  entityIds: string[] | null;
   hops: number;
   /** temporal lens: as-of ISO date (or null = current) */
   asOf: string | null;
@@ -50,6 +62,7 @@ const DEFAULT_FILTERS: KgFilters = {
   agentId: null,
   entityName: "",
   entityId: null,
+  entityIds: null,
   hops: 1,
   asOf: null,
   limit: 100,
@@ -153,14 +166,15 @@ export function useKnowledgeGraph(): UseKnowledgeGraph {
 
   // Persist lens + filters (after hydration so we don't write defaults over saved).
   // Strip searchQuery — it is ephemeral and must not be persisted (RESEARCH Pitfall 6).
-  // Strip entityId (187-05) for the same reason: it is programmatic/sync-driven,
-  // re-derived fresh from the latest kg_answer_sync row on every mount (D-08
-  // page-open replay) — persisting a stale UUID across reloads/sessions would
-  // let it silently outlive the sync it came from.
+  // Strip entityId (187-05) and entityIds (190-08/D-11) for the same reason:
+  // both are programmatic/sync-driven, re-derived fresh from the latest
+  // kg_answer_sync row on every mount (D-08 page-open replay) — persisting a
+  // stale id (or id set) across reloads/sessions would let it silently
+  // outlive the sync it came from.
   useEffect(() => {
     if (!hydrated) return;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { searchQuery: _sq, entityId: _eid, ...persistableFilters } = filters;
+    const { searchQuery: _sq, entityId: _eid, entityIds: _eids, ...persistableFilters } = filters;
     idbSet(PERSIST_KEY, { lens, filters: persistableFilters } as PersistedState).catch(() => {});
   }, [lens, filters, hydrated]);
 
@@ -180,9 +194,9 @@ export function useKnowledgeGraph(): UseKnowledgeGraph {
   const refresh = useCallback(() => setRefreshTick((t) => t + 1), []);
 
   // ── Fetch the active lens. Re-runs when lens / relevant filters change. ───
-  // The entity lens fetches when a name OR entityId is present; entityId
-  // (187-05) takes precedence when both are set.
-  const { entityName, entityId, hops, asOf, entityType, agentId, limit } = filters;
+  // The entity lens fetches when a name, entityId, OR entityIds is present.
+  // Precedence: entityIds (190-08/D-11) > entityId (187-05) > entityName.
+  const { entityName, entityId, entityIds, hops, asOf, entityType, agentId, limit } = filters;
 
   useEffect(() => {
     if (!hydrated) return;
@@ -207,7 +221,12 @@ export function useKnowledgeGraph(): UseKnowledgeGraph {
           next = toGraphData(payload);
           trunc = { truncated: resp.truncated, total: resp.total };
         } else if (lens === "entity") {
-          if (entityId) {
+          if (entityIds && entityIds.length > 0) {
+            // 190-08/D-11/GLXY-04: N>1 resolved sources known — fetch all in
+            // one round-trip via the multi-id path, ahead of entityId/name.
+            const resp = await fetchEntity({ entityIds, hops, agentId, asOf });
+            next = toGraphData(normalizeEntities(resp));
+          } else if (entityId) {
             // 187-05 D-09 fix: an exact UUID is known — fetch by id, bypassing
             // astridr's name-similarity resolver entirely (never ambiguous).
             const resp = await fetchEntity({ entityId, hops, agentId, asOf });
@@ -255,6 +274,7 @@ export function useKnowledgeGraph(): UseKnowledgeGraph {
     lens,
     entityName,
     entityId,
+    entityIds,
     hops,
     asOf,
     entityType,
