@@ -159,6 +159,9 @@
   --dept-work: #f97316;
   --accent: #8b5cf6; /* Violet */
   --accent-foreground: #ffffff;
+  /* D-08: --astridr is the third hue owner (Ástríðr the entity, and only her) --
+     separate token from --accent/--vault-node-color, which keep their own jobs. */
+  --astridr: #8b5cf6;
   --destructive: oklch(0.704 0.191 22.216);
   --border: var(--hairline);
   --input: var(--hairline);
@@ -177,10 +180,18 @@
   --sidebar-border: #1e1e24;
   --sidebar-ring: #06b6d4;
 
-  --status-ok: #06b6d4; /* Cyan */
+  /* D-05: decoupled from --primary (was #06b6d4, identical to --primary above --
+     the exact collision TOKEN-02 removes). Measured 2026-08-18: #34d399 is the
+     same sea-green used by readable/aubergine, which were already compliant. */
+  --status-ok: #34d399;
   --status-error: #ef4444;
   --status-warn: #eab308;
   --status-info: #3b82f6;
+  /* D-06: Forge `failed` fill/foreground pair. Opaque (not the old bg-red-900/60
+     translucent fill), so the pair's contrast is theme-independent and does not
+     depend on --card underneath -- measured 10.02:1, see 122-TOKEN-LAW.md. */
+  --status-error-fill: #7f1d1d;
+  --status-error-on-fill: #ffffff;
 
   --color-gray-400: #d4d4d8;
   --color-gray-500: #a1a1aa;
@@ -224,18 +235,30 @@
   --input: var(--hairline);
   --primary: #10b981; /* Emerald */
   --accent: #059669;
+  /* D-08: --astridr, same as every theme -- see cyan block's comment. */
+  --astridr: #8b5cf6;
   --ring: #10b981;
   --chart-1: #10b981;
   --chart-2: #059669;
   --sidebar-primary: #10b981;
   --sidebar-ring: #10b981;
-  --status-ok: #10b981;
+  /* D-05: hue-separated exception, NOT #34d399 -- emerald's own --primary is
+     already a green (#10b981), so sea-green would recreate the exact collision
+     TOKEN-02 removes. #22d3ee measured 2026-08-18: OKLCH hue 211.53deg vs
+     --primary's 162.48deg = 49.05deg separation (>= 30deg required), and
+     10.820:1 against --surface-1 #030a25 (>= 4.5:1 required). See
+     122-TOKEN-LAW.md for the rasterised measurement. */
+  --status-ok: #22d3ee;
   --chart-bar-accent: #10b981;
   --chart-p50: #10b981;
   --speaking-ring: #10b981;
   --speaking-ring-glow: rgba(16, 185, 129, 0.35);
   --glass-bg: rgba(2, 6, 23, 0.6);
   --glass-border: rgba(16, 185, 129, 0.1);
+  /* D-06: Forge `failed` fill/foreground pair -- theme-independent, see cyan
+     block's comment. */
+  --status-error-fill: #7f1d1d;
+  --status-error-on-fill: #ffffff;
   --vault-node-color: #8b5cf6;
   --dept-personal: #f472b6;
   --dept-consulting: #8b5cf6;
@@ -264,18 +287,27 @@
   --input: var(--hairline);
   --primary: #f59e0b; /* Amber */
   --accent: #ea580c;
+  /* D-08: --astridr, same as every theme -- see cyan block's comment. Amber is
+     unexposed (D-04) but gets the full token set so the block never rots. */
+  --astridr: #8b5cf6;
   --ring: #f59e0b;
   --chart-1: #f59e0b;
   --chart-2: #ea580c;
   --sidebar-primary: #f59e0b;
   --sidebar-ring: #f59e0b;
-  --status-ok: #f59e0b;
+  /* D-05: decoupled from --primary (was #f59e0b, identical to --primary above --
+     the exact collision TOKEN-02 removes). Same value as cyan/readable/aubergine. */
+  --status-ok: #34d399;
   --chart-bar-accent: #f59e0b;
   --chart-p50: #f59e0b;
   --speaking-ring: #f59e0b;
   --speaking-ring-glow: rgba(245, 158, 11, 0.35);
   --glass-bg: rgba(10, 10, 10, 0.6);
   --glass-border: rgba(245, 158, 11, 0.1);
+  /* D-06: Forge `failed` fill/foreground pair -- theme-independent, see cyan
+     block's comment. */
+  --status-error-fill: #7f1d1d;
+  --status-error-on-fill: #ffffff;
   --vault-node-color: #8b5cf6;
 }
 
@@ -309,6 +341,8 @@
   --dept-work: #fb923c;
   --accent: #3b82f6;
   --accent-foreground: #ffffff;
+  /* D-08: --astridr, same as every theme -- see cyan block's comment. */
+  --astridr: #8b5cf6;
   --destructive: #ef4444;
   --border: var(--hairline);
   --input: var(--hairline);
@@ -323,10 +357,15 @@
   --chart-p50: #5eead4;
   --chart-p95: #fbbf24;
   --chart-p99: #f87171;
+  /* D-05: already decoupled from --primary (#5eead4) -- left unchanged. */
   --status-ok: #34d399;
   --status-warn: #fbbf24;
   --status-error: #f87171;
   --status-info: #60a5fa;
+  /* D-06: Forge `failed` fill/foreground pair -- theme-independent, see cyan
+     block's comment. */
+  --status-error-fill: #7f1d1d;
+  --status-error-on-fill: #ffffff;
   --metric-ok: #34d399;
   --metric-warn: #fbbf24;
   --metric-error: #f87171;
@@ -388,6 +427,8 @@
   --dept-work: #fb923c;
   --accent: #10b981;
   --accent-foreground: #ffffff;
+  /* D-08: --astridr, same as every theme -- see cyan block's comment. */
+  --astridr: #8b5cf6;
   --destructive: #ef4444;
   --border: var(--hairline);
   --input: var(--hairline);
@@ -402,10 +443,15 @@
   --chart-p50: #c084fc;
   --chart-p95: #fbbf24;
   --chart-p99: #f87171;
+  /* D-05: already decoupled from --primary (#c084fc) -- left unchanged. */
   --status-ok: #34d399;
   --status-warn: #fbbf24;
   --status-error: #f87171;
   --status-info: #818cf8;
+  /* D-06: Forge `failed` fill/foreground pair -- theme-independent, see cyan
+     block's comment. */
+  --status-error-fill: #7f1d1d;
+  --status-error-on-fill: #ffffff;
   --metric-ok: #34d399;
   --metric-warn: #fbbf24;
   --metric-error: #f87171;
