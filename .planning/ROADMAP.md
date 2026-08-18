@@ -767,7 +767,31 @@ All 11 decisions D-01..D-11 covered; DEBT-08 mapped to every plan.
   4. A shared metric-tile primitive renders all six explicit states (loading/ready/empty/stale/unavailable/error) — no surface shows a bare "Loading…" or renders "—" as a confident value.
   5. Every route uses the shared `PageHeader` contract, and the true count of WCAG-AA contrast violations across the full 4-themes × 5-pages matrix is measured and recorded — not sized against the known single-cell figure of 234.
 
-**Plans**: TBD
+**Plans**: 19 plans
+
+Plans:
+- [ ] `122-01-PLAN.md` — A11Y-01 BEFORE contrast capture: per-cell JSON writer added to the 4×5 axe matrix, 20 control cells committed ahead of any `index.css` edit, sampling limit named (D-21, D-22, D-24)
+- [ ] `122-02-PLAN.md` — per-theme surface ramps (`--surface-0/1/2/3`, `--hairline`) in all 5 themes, with `--background`/`--card`/`--popover`/`--border`/`--input` re-pointed as `var()` aliases (D-01, D-03, D-04)
+- [ ] `122-03-PLAN.md` — three-hue-owner law (`--status-ok` decoupled, `--astridr` created, AA error-fill pair), motion tokens plus the three `@utility` duration blocks that make them emit CSS, `readable`'s blanket no-effects rule, then the hard checkpoint (D-05, D-06, D-08, D-09, D-10, D-11, D-28; autonomous: false)
+- [ ] `122-04-PLAN.md` — sweep slice A: `src/components/` A–E, 36 files, all four buckets (palette, hex, duration, violet) with a per-file ledger (D-02)
+- [ ] `122-05-PLAN.md` — sweep slice B: `src/components/` F–M, 21 files, all four buckets (D-08)
+- [ ] `122-06-PLAN.md` — sweep slice C: `src/components/` N–S, 34 files, all four buckets incl. the densest non-`hr/` violet cluster
+- [ ] `122-07-PLAN.md` — sweep slice D: `src/components/` T–Z plus `graph/`, `hr/`, `skills/`, `ui/`, 30 files, with the shadcn alias boundary asserted (D-01)
+- [ ] `122-08-PLAN.md` — sweep slice E: remaining component subtrees, `src/layouts/` and 13 page files, 22 files, with a route-stability check
+- [ ] `122-09-PLAN.md` — shared six-state module, `useMetricState`, and the new `EmptyState` primitive (D-14, D-19, D-20)
+- [ ] `122-10-PLAN.md` — `StatusBadge` re-keyed to operational severity with a separate grammar for execution modes, Forge `failed` corrected to AA against `--card`, `IntakeStatusBadge`'s three filled maps brought under the law (D-06, D-07)
+- [ ] `122-11-PLAN.md` — `PageHeader` grown with eyebrow/subtitle, Analytics and BuildProgress converted, named exemption register written (D-17, D-18)
+- [ ] `122-12-PLAN.md` — VitalsRail's Convex dot bound to the REACTIVE `useConvexConnectionState()`, HeroStatsBar's dead interpolated class removed and its surfaces tokenised (D-16)
+- [ ] `122-13-PLAN.md` — `MetricCard` rewritten in place to the six-state contract, glow/`text-white`/palette trend colours/inline rgba stripped (D-13, D-14)
+- [ ] `122-14-PLAN.md` — every `MetricCard` render site declares its state, verified live against three real `/analytics` query failures (D-14, D-15)
+- [ ] `122-15-PLAN.md` — bare-`Loading` sweep plus the components-root em-dash placeholders, 19 files, skeletons shaped like their content (D-15)
+- [ ] `122-16-PLAN.md` — em-dash placeholders across the component subtrees and the page tier, 14 files (D-15)
+- [ ] `122-17-PLAN.md` — corpus-derived ratchet over six buckets with a frozen `KNOWN_EXEMPT` record, proven by two syntactically-valid mutations including one in a file on no list (D-25, D-26)
+- [ ] `122-18-PLAN.md` — population-level reduced-motion and `readable` assertions each paired with a must-differ control, plus the rasterised rendered-result spec with pre-phase git controls (D-11, D-12, D-22, D-27)
+- [ ] `122-19-PLAN.md` — A11Y-01 AFTER capture, per-cell delta, completed `122-CONTRAST-BASELINE.md`, operator sign-off and hand-edited requirement marks (D-21, D-23, D-24; autonomous: false)
+
+Waves: 0 = `122-01` · 1 = `122-02` · 2 = `122-03` (checkpoint) · 3 = `122-04`–`122-08` (5 parallel, zero file overlap) · 4 = `122-09`–`122-12` · 5 = `122-13` · 6 = `122-14`–`122-16` · 7 = `122-17`, `122-18` · 8 = `122-19` (checkpoint).
+All 28 decisions D-01..D-28 covered; TOKEN-01..05 and A11Y-01 each mapped to at least one plan.
 **UI hint**: yes
 
 ---
