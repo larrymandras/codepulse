@@ -690,7 +690,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed | Notes |
 |-------|-----------|----------------|--------|-----------|-------|
 | 120. Polish & Verified Defects | v15.0 | 7/7 | Complete | 2026-08-17 | VERIFIED `passed` 6/6 (`120-VERIFICATION.md`). POLISH-04 is **Partial** by design — 3 fabrication residues assigned to Phases 122/125. Carried to 122/123/124 in `120-DESIGN-REVIEW-HANDOFF.md`: the one sub-AA badge (Forge `failed`, pre-existing), emphasis keyed to the legacy semantic bucket, and the geometry spec's 900px-only overflow assertion. |
-| 121. Analytics Query Resilience | v15.0 | 0/7 | Planned | - | 7 plans in 4 waves. Wave 4 (`121-07`) is attended (`autonomous: false`) — deploy to the self-hosted backend, resumed backfill chain, live read-cap measurement. |
+| 121. Analytics Query Resilience | v15.0 | 2/7 | Executing | - | 7 plans in 4 waves. Wave 4 (`121-07`) is attended (`autonomous: false`) — deploy to the self-hosted backend, resumed backfill chain, live read-cap measurement. |
 | 122. Tokens, Primitives & Contrast Measurement | v15.0 | 0/0 | Not started | - | |
 | 123. Accessibility Remediation | v15.0 | 0/0 | Not started | - | |
 | 124. Shell & Information Architecture | v15.0 | 0/0 | Not started | - | |
@@ -741,9 +741,9 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
-- [ ] `121-01-PLAN.md` - `metric_type: "calls"` hourly rollup in the shared `insertTokenSplitBuckets` helper, a de-latched `backfillTokenSplit` cursor, and a shared fake-`ctx.db` harness that records every queried table (D-05, D-08)
+- [x] `121-01-PLAN.md` - `metric_type: "calls"` hourly rollup in the shared `insertTokenSplitBuckets` helper, a de-latched `backfillTokenSplit` cursor, and a shared fake-`ctx.db` harness that records every queried table (D-05, D-08)
 - [ ] `121-02-PLAN.md` - `costByModel`/`providerBreakdown` migrated to bounded `aggregates` reads with `asOf` + coverage; `costByProvider`, `latencyOverTime`, `useLatencyOverTime` and the Phase 104 STOPGAP note deleted; `evalScores` `llmMetrics` read capped (D-06, D-07, D-09, D-10)
-- [ ] `121-03-PLAN.md` - eight self-fetching components created to receive the ten queries hoisted into the page body, none handling its own errors (D-02)
+- [x] `121-03-PLAN.md` - eight self-fetching components created to receive the ten queries hoisted into the page body, none handling its own errors (D-02)
 - [ ] `121-04-PLAN.md` - `Analytics()` stripped of all fetching, Summary Row split across four boundaries, dead `subscriptionUsage` read removed, per-query fault-injection tests (D-01, D-02, D-03; criteria 1 and 3)
 - [ ] `121-05-PLAN.md` - AST-derived structural ratchet over `Analytics.tsx` plus its synthetic-mutation tests, each proven to parse before its failure is believed (D-04)
 - [ ] `121-06-PLAN.md` - `LlmAnalyticsPanel` rewired to the rollup payload plus one `as of HH:MM` freshness label (D-07, D-11)
