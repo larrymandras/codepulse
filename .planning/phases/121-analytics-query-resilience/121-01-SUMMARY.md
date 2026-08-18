@@ -133,6 +133,11 @@ None - no external service configuration required. `backfillTokenSplit` remains 
 - Plan 121-02 (`costByModel`/`providerBreakdown` migration to rollups, D-06/D-07/D-09) can now read a real `calls` metric and can prove its "reads aggregates, never llmMetrics" claim using `convex/lib/fakeCtx.ts`'s new `queriedTables` array.
 - No blockers. The one open item is operational, not code: the live self-hosted instance's `phase104.tokenSplitBackfill.cursor` row may currently hold a legacy `"done"` value from a prior run — this plan's de-latch makes the next invocation of `backfillTokenSplit` automatically reset and reprocess history (including retroactively filling `calls` for the backfill window), but that invocation itself is an attended operator action per D-08/the plan's Claude's Discretion note, not something this plan runs.
 
+## Self-Check: PASSED
+
+- Files: `convex/lib/fakeCtx.ts`, `convex/aggregates.ts`, `convex/aggregates.test.ts`, and this SUMMARY — all confirmed present on disk with `[ -f ... ]`.
+- Commits: `c9368732`, `46b55760`, `ce143d10`, `563f1739` — all confirmed present via `git log --oneline --all`.
+
 ---
 *Phase: 121-analytics-query-resilience*
 *Completed: 2026-08-18*
