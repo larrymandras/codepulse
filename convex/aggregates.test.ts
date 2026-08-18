@@ -482,6 +482,73 @@ describe("aggregates", () => {
   });
 
   // -------------------------------------------------------------------------
+  // Phase 121 (D-05): a "calls" hourly rollup metric, PC-3 proved missing.
+  // Same {provider, model, billingType, goalId} dimension key and the same
+  // llmRows loop insertTokenSplitBuckets already uses for tokens_prompt/
+  // tokens_completion, valued at the per-dimension ROW COUNT rather than a
+  // token or cost sum, behind its own separate insertMissing("calls", …)
+  // idempotency guard. Exercises the REAL computeHourly mutation handler via
+  // `._handler`, same convention as the "token split" block above.
+  // -------------------------------------------------------------------------
+  describe("calls metric (Phase 121 D-05)", () => {
+    test("writes one calls row per distinct dimension key, valued at that key's row count", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.02, promptTokens: 20, completionTokens: 4, billingType: "api", timestamp: hourStart + 15, archived: false },
+          { provider: "openrouter", model: "gpt-4", cost: 0.05, promptTokens: 50, completionTokens: 10, billingType: "api", timestamp: hourStart + 25, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const callsRows = tables.aggregates.filter((r) => r.metric_type === "calls");
+      expect(callsRows).toHaveLength(2); // one per distinct {provider, model, billingType, goalId} key
+      const anthropicRow = callsRows.find((r) => r.dimensions.provider === "anthropic_direct");
+      const openrouterRow = callsRows.find((r) => r.dimensions.provider === "openrouter");
+      expect(anthropicRow!.value).toBe(2); // row COUNT, not a token or cost sum
+      expect(openrouterRow!.value).toBe(1);
+    });
+
+    test("idempotency: running computeHourly twice over the same ctx inserts no additional calls rows", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+          { provider: "openrouter", model: "gpt-4", cost: 0.05, promptTokens: 50, completionTokens: 10, billingType: "api", timestamp: hourStart + 25, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+      const afterFirst = tables.aggregates.filter((r) => r.metric_type === "calls");
+      const afterFirstSnapshot = afterFirst.map((r) => ({ dim: r.dimensions, value: r.value }));
+      expect(afterFirst).toHaveLength(2);
+
+      // Second invocation, no fixture change — a single pass cannot distinguish
+      // a working guard from an absent one, so this is the actual assertion.
+      await (computeHourly as any)._handler(ctx);
+      const afterSecond = tables.aggregates.filter((r) => r.metric_type === "calls");
+      expect(afterSecond).toHaveLength(2); // identical count, not 4
+      expect(afterSecond.map((r) => ({ dim: r.dimensions, value: r.value }))).toEqual(afterFirstSnapshot); // no value changed
+    });
+
+    test("issues no db.patch and no db.delete call on the fake ctx", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, patchCalls, deleteCalls } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      expect(patchCalls).toHaveLength(0);
+      expect(deleteCalls).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Phase 105 (D-04): tool_calls / tool_failures / tool_duration_ms /
   // tool_duration_samples hourly buckets, from a bounded toolExecutions
   // window read alongside the existing llmMetrics one. Exercises the REAL

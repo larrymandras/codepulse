@@ -67,19 +67,30 @@ function reconstructTokenSplitKey(dims: SplitDims | null | undefined): string {
  * (a shared guard would let a partially-completed run double-count one split half
  * while correctly skipping the other). Never patches or deletes an existing row —
  * insert-only, per CLAUDE.md's self-hosted Convex rules.
+ *
+ * Phase 121 (D-05): also accumulates a `calls` bucket — one per {provider, model,
+ * billingType, goalId} dimension key, valued at that key's row COUNT (not a token
+ * or cost sum) — behind its own separate per-dimension-key guard call below, for
+ * the same reason the token halves each get their own: a shared guard across
+ * metric types would let a partially-completed run double-count one metric while
+ * correctly skipping another. This is the call-count rollup PC-3 found missing;
+ * `costByModel`/`providerBreakdown` (Plan 121-02) read it instead of scanning
+ * raw `llmMetrics` for a count.
  */
 async function insertTokenSplitBuckets(
   ctx: { db: any },
   hourStart: number,
   llmRows: Array<Doc<"llmMetrics">>
-): Promise<{ promptInserted: number; completionInserted: number }> {
+): Promise<{ promptInserted: number; completionInserted: number; callsInserted: number }> {
   const promptByDim: Record<string, number> = {};
   const completionByDim: Record<string, number> = {};
+  const callsByDim: Record<string, number> = {};
   for (const r of llmRows) {
     const billingType = (r as any).billingType ?? getBillingType(r.provider);
     const key = `${r.provider}::${r.model}::${billingType}::${(r as any).goalId ?? ""}`;
     promptByDim[key] = (promptByDim[key] ?? 0) + ((r as any).promptTokens ?? 0);
     completionByDim[key] = (completionByDim[key] ?? 0) + ((r as any).completionTokens ?? 0);
+    callsByDim[key] = (callsByDim[key] ?? 0) + 1;
   }
 
   async function insertMissing(metricType: string, byDim: Record<string, number>): Promise<number> {
@@ -108,7 +119,8 @@ async function insertTokenSplitBuckets(
 
   const promptInserted = await insertMissing("tokens_prompt", promptByDim);
   const completionInserted = await insertMissing("tokens_completion", completionByDim);
-  return { promptInserted, completionInserted };
+  const callsInserted = await insertMissing("calls", callsByDim);
+  return { promptInserted, completionInserted, callsInserted };
 }
 
 // ---- D-04 (Phase 105) tool usage bucket helpers -------------------------
@@ -814,8 +826,8 @@ export const backfillTokenSplit = internalMutation({
           `[backfillTokenSplit] hour ${hourStart} hit the ${LLM_WINDOW_READ_CAP}-row read cap — its token buckets undercount.`
         );
       }
-      const { promptInserted, completionInserted } = await insertTokenSplitBuckets(ctx, hourStart, llmRows);
-      rowsInserted += promptInserted + completionInserted;
+      const { promptInserted, completionInserted, callsInserted } = await insertTokenSplitBuckets(ctx, hourStart, llmRows);
+      rowsInserted += promptInserted + completionInserted + callsInserted;
       hoursProcessed++;
       cursor = hourStart - 3600;
     }
