@@ -1,0 +1,11 @@
+# Graphify exclusions — files that produce zero graph nodes.
+# Verified 2026-08-18: each pattern below was 100% zero-node in graphify-out/graph.json
+# (manifest.json scanned vs graph.json source_file diff). Nothing in-graph is lost.
+# Deliberately NARROW: .planning/**.md is 1235/1235 in-graph and must stay indexed.
+
+# GSD machine state — counters and config, no code structure
+phase-state.json
+.planning/config.json
+
+# Throwaway superpowers brainstorm mockups
+.superpowers/brainstorm/
