@@ -158,9 +158,12 @@ const EMPTY_STATS = {
   contradictionEdges: 0,
 };
 
-// A single non-"person" entity (organization, #3b82f6) — deliberately avoids
-// the entityTypeColor("person") === "#10b981" collision (RESEARCH Pitfall 5)
-// so the lit-color assertion below is unambiguous.
+// A single non-"person" entity (organization, #3b82f6). Historically chosen
+// to dodge the entityTypeColor("person") === "#10b981" collision the lit
+// branch used to hardcode into (RESEARCH Pitfall 5); the branch now passes
+// the node's own color through instead of overwriting it (Phase 190
+// GLXY-03/D-07), so the collision no longer exists — kept as the fixture
+// anyway since the assertions below already depend on its #3b82f6 value.
 const FIXTURE_NODE = {
   id: "org-1",
   name: "Acme Corp",
@@ -467,7 +470,7 @@ describe("KnowledgeGraph — colorFn3D/nodeValFn3D 5-state priority ladder (D-08
     ).toBe("#ffffff");
   });
 
-  it("priority 3: a lit non-person entity returns #10b981 even while an ego-lens filter is active (dim-exempt)", () => {
+  it("priority 3: a lit node returns its own type color even while an ego-lens filter is active (dim-exempt)", () => {
     expect(
       computeColorFn3D({
         node: { id: "org-1", color: "#3b82f6" },
@@ -475,6 +478,18 @@ describe("KnowledgeGraph — colorFn3D/nodeValFn3D 5-state priority ladder (D-08
         hoveredNodeId: null,
         litNodeIds: new Set(["org-1"]),
         focusSet: activeFocusSet, // org-1 is NOT in the focus set — would dim, but lit wins
+      }),
+    ).toBe("#3b82f6");
+  });
+
+  it("priority 3: a lit person entity returns its own #10b981 type color, not a lit-branch hardcode (GLXY-03/D-07 — the collision case this requirement exists for)", () => {
+    expect(
+      computeColorFn3D({
+        node: { id: "person-1", color: "#10b981" },
+        selectedNodeId: null,
+        hoveredNodeId: null,
+        litNodeIds: new Set(["person-1"]),
+        focusSet: activeFocusSet, // person-1 is NOT in the focus set — would dim, but lit wins
       }),
     ).toBe("#10b981");
   });
@@ -506,7 +521,7 @@ describe("KnowledgeGraph — colorFn3D/nodeValFn3D 5-state priority ladder (D-08
       litNodeIds: new Set(["org-1"]),
       focusSet: activeFocusSet,
     });
-    expect(litId).toBe("#10b981");
+    expect(litId).toBe("#3b82f6");
     expect(dimmedId).toBe("#27272a");
   });
 
@@ -812,7 +827,7 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     // must never be colored/sized as "lit" even though it's in-frame.
     const colorFn3D = mockForceGraph3DProps.current?.colorFn;
     expect(colorFn3D).toBeTypeOf("function");
-    expect(colorFn3D({ id: UUID_A, color: "#3b82f6" })).toBe("#10b981"); // lit
+    expect(colorFn3D({ id: UUID_A, color: "#3b82f6" })).toBe("#3b82f6"); // lit — passes its own color through
     expect(colorFn3D({ id: ONSCREEN_NEIGHBOR_OF_A.id, color: "#3b82f6" })).toBe("#3b82f6"); // NOT lit — normal color
   });
 

@@ -60,9 +60,12 @@ export function computeColorFn3D(params: {
   const { node, selectedNodeId, hoveredNodeId, litNodeIds, focusSet } = params;
   if (node.id === selectedNodeId) return "#ffffff"; // priority 1: selected
   if (node.id === hoveredNodeId) return "#ffffff"; // priority 2: hovered
-  // priority 3: lit (dim-exempt) — Plan 05 populates litNodeIds from the
-  // kg_answer_sync subscription; empty here (dormant).
-  if (litNodeIds.has(node.id)) return "#10b981";
+  // priority 3: lit (dim-exempt) — this branch's job is to EXEMPT a lit node
+  // from priority 4's dimming, not to recolour it (Phase 190 GLXY-03/D-07).
+  // It passes the node's own type colour through untouched; lit-ness is
+  // carried on a separate visual channel (the halo ring, 190-05) so the
+  // colour channel never collides with ENTITY_TYPE_COLORS/COMMUNITY_PALETTE.
+  if (litNodeIds.has(node.id)) return node.color;
   // priority 4: dimmed — non-focus-set node while an ego-lens filter/selection
   // is active (#27272a zinc-800 hex, NOT rgba — Three.js Color drops alpha).
   if (focusSet && !focusSet.has(node.id)) return "#27272a";
