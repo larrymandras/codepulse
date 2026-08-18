@@ -1717,6 +1717,8 @@ export default function KnowledgeGraph() {
                             data={anim.currentGraph}
                             colorFn={colorFn3D}
                             nodeValFn={nodeValFn3D}
+                            litNodeIds={litNodeIds}
+                            litRestingMultiplier={LIT_RESTING_MULTIPLIER}
                             labelFn={labelFn}
                             onNodeClick={(n: any) => selectNode(n.id)}
                             onNodeHover={(n: any) => setHoveredNodeId(n?.id ?? null)}
@@ -1789,6 +1791,8 @@ export default function KnowledgeGraph() {
                         data={activeGraph}
                         colorFn={colorFn3D}
                         nodeValFn={nodeValFn3D}
+                        litNodeIds={litNodeIds}
+                        litRestingMultiplier={LIT_RESTING_MULTIPLIER}
                         labelFn={labelFn}
                         onNodeClick={(n: any) => selectNode(n.id)}
                         onNodeHover={(n: any) => setHoveredNodeId(n?.id ?? null)}
@@ -1831,6 +1835,8 @@ export default function KnowledgeGraph() {
                         data={graph}
                         colorFn={colorFn3D}
                         nodeValFn={nodeValFn3D}
+                        litNodeIds={litNodeIds}
+                        litRestingMultiplier={LIT_RESTING_MULTIPLIER}
                         labelFn={labelFn}
                         onNodeClick={(n: any) => selectNode(n.id)}
                         onNodeHover={(n: any) => setHoveredNodeId(n?.id ?? null)}
