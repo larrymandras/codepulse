@@ -142,11 +142,11 @@
   --hairline: #1c2029;
   --hairline-strong: #2a2f3b;
 
-  --background: #040405; /* Deep, almost black violet */
+  --background: var(--surface-0); /* Deep, almost black violet */
   --foreground: #f8fafc;
-  --card: #0a0a0c;
+  --card: var(--surface-1);
   --card-foreground: #f8fafc;
-  --popover: #0a0a0c;
+  --popover: var(--surface-2);
   --popover-foreground: #f8fafc;
   --primary: #06b6d4; /* Electric Cyan */
   --primary-foreground: #040405;
@@ -160,8 +160,8 @@
   --accent: #8b5cf6; /* Violet */
   --accent-foreground: #ffffff;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: #1e1e24;
-  --input: #1e1e24;
+  --border: var(--hairline);
+  --input: var(--hairline);
   --ring: #06b6d4;
   --chart-1: #06b6d4;
   --chart-2: #8b5cf6;
@@ -214,7 +214,14 @@
   --hairline: #07154f;
   --hairline-strong: #08185d;
 
-  --background: #020617; /* Very dark slate */
+  --background: var(--surface-0); /* Very dark slate */
+  /* card/popover/border/input added here (D-01 Task 2) -- previously undeclared,
+     so this theme silently inherited cyan's literals through the shared .dark
+     selector list. */
+  --card: var(--surface-1);
+  --popover: var(--surface-2);
+  --border: var(--hairline);
+  --input: var(--hairline);
   --primary: #10b981; /* Emerald */
   --accent: #059669;
   --ring: #10b981;
@@ -247,7 +254,14 @@
   --hairline: #292929;
   --hairline-strong: #303030;
 
-  --background: #0a0a0a; /* Almost black */
+  --background: var(--surface-0); /* Almost black */
+  /* card/popover/border/input added here (D-01 Task 2) -- previously undeclared,
+     so this theme silently inherited cyan's literals through the shared .dark
+     selector list. */
+  --card: var(--surface-1);
+  --popover: var(--surface-2);
+  --border: var(--hairline);
+  --input: var(--hairline);
   --primary: #f59e0b; /* Amber */
   --accent: #ea580c;
   --ring: #f59e0b;
@@ -278,11 +292,11 @@
   --hairline: #2a3144;
   --hairline-strong: #374059;
 
-  --background: #111318;
+  --background: var(--surface-0);
   --foreground: #e8eaf0;
-  --card: #181c24;
+  --card: var(--surface-1);
   --card-foreground: #e8eaf0;
-  --popover: #1d2130;
+  --popover: var(--surface-2);
   --popover-foreground: #e8eaf0;
   --primary: #5eead4;
   --primary-foreground: #0c1118;
@@ -296,8 +310,8 @@
   --accent: #3b82f6;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
-  --border: #2a3144;
-  --input: #2a3144;
+  --border: var(--hairline);
+  --input: var(--hairline);
   --ring: #5eead4;
   --chart-1: #5eead4;
   --chart-2: #3b82f6;
@@ -357,11 +371,11 @@
   --hairline: #2e2040;
   --hairline-strong: #3d2a54;
 
-  --background: #120d18;
+  --background: var(--surface-0);
   --foreground: #f0e8dc;
-  --card: #1a1324;
+  --card: var(--surface-1);
   --card-foreground: #f0e8dc;
-  --popover: #1e172a;
+  --popover: var(--surface-2);
   --popover-foreground: #f0e8dc;
   --primary: #c084fc;
   --primary-foreground: #120d18;
@@ -375,8 +389,8 @@
   --accent: #10b981;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
-  --border: #2e2040;
-  --input: #2e2040;
+  --border: var(--hairline);
+  --input: var(--hairline);
   --ring: #c084fc;
   --chart-1: #c084fc;
   --chart-2: #10b981;
