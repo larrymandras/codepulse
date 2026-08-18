@@ -1,0 +1,71 @@
+{
+  "phase": 121,
+  "phaseName": "analytics-query-resilience",
+  "created": "2026-08-18T19:25:28.429Z",
+  "history": [
+    {
+      "timestamp": "2026-08-18T19:25:28.430Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-18T19:25:28.430Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "121-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "121-DISCUSSION-LOG.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "121-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 7,
+      "files": [
+        "121-01-PLAN.md",
+        "121-02-PLAN.md",
+        "121-03-PLAN.md",
+        "121-04-PLAN.md",
+        "121-05-PLAN.md",
+        "121-06-PLAN.md",
+        "121-07-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 7,
+      "files": [
+        "121-01-SUMMARY.md",
+        "121-02-SUMMARY.md",
+        "121-03-SUMMARY.md",
+        "121-04-SUMMARY.md",
+        "121-05-SUMMARY.md",
+        "121-06-SUMMARY.md",
+        "121-07-SUMMARY.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "121-VALIDATION.md"
+      ]
+    }
+  }
+}
