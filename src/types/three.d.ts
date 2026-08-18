@@ -25,6 +25,8 @@ declare module "three" {
     rotation: { x: number; y: number; z: number };
     scale: Vector3;
     visible: boolean;
+    /** Render sort order within the same depth layer (Phase 190, halo ring). */
+    renderOrder: number;
   }
   export class Group extends Object3D {}
 
@@ -52,6 +54,8 @@ declare module "three" {
     clone(): Color;
     copy(c: Color): this;
     multiplyScalar(s: number): this;
+    /** Phase 190 halo ring test: reads back the constructed hex (no '#'). */
+    getHexString(): string;
   }
 
   export class Texture {
@@ -66,6 +70,8 @@ declare module "three" {
     opacity: number;
     transparent: boolean;
     depthWrite: boolean;
+    /** Phase 190 halo ring: false lets the ring render through occluding geometry. */
+    depthTest: boolean;
     dispose(): void;
   }
   export interface MeshBasicMaterialParams {
@@ -98,6 +104,9 @@ declare module "three" {
     map?: Texture | null;
     transparent?: boolean;
     depthWrite?: boolean;
+    /** Phase 190 halo ring: false lets the ring render through occluding geometry. */
+    depthTest?: boolean;
+    opacity?: number;
     blending?: number;
     color?: number | string | Color;
   }
@@ -105,6 +114,8 @@ declare module "three" {
     constructor(params?: SpriteMaterialParams);
     map: Texture | null;
     blending: number;
+    /** Phase 190 halo ring: tints the (white) annulus texture gold. */
+    color: Color;
   }
   export const AdditiveBlending: number;
 

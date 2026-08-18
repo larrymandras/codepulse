@@ -132,6 +132,11 @@ vi.mock("@/components/ui/tooltip", () => ({
 // ---------------------------------------------------------------------------
 
 import { CodeVaultGraph } from "./CodeVaultGraph";
+import {
+  ForceGraph3D,
+  buildLitHaloSprite,
+  __resetHaloTextureForTests,
+} from "./ForceGraph3D";
 
 // Render inside a Router so react-router hooks resolve
 const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
@@ -325,5 +330,157 @@ describe("ForceGraph3D — Wave 0 RED scaffold (SC#1 / SC#4 / SC#5)", () => {
     // Vault node (vault: id prefix, bare "vault" source) → colors.vaultNode hex
     const vaultNode = { source: "vault", id: "vault:Note.md" };
     expect(capturedColorFn(vaultNode)).toBe("#8b5cf6");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 190 Plan 05 (GLXY-03) — lit-node halo ring
+// ---------------------------------------------------------------------------
+//
+// `buildLitHaloSprite` is a pure function (module-level export), so these
+// tests exercise it directly rather than mounting the canvas — jsdom has no
+// 2D canvas context (`getContext("2d")` returns null), which is itself one
+// of the behaviors asserted below (must degrade, never throw).
+
+describe("buildLitHaloSprite — ring builder (D-08/D-09, must_haves)", () => {
+  const litNodeIds = new Set(["lit-1"]);
+
+  it("returns undefined for a node not in the lit set", () => {
+    expect(
+      buildLitHaloSprite({ id: "unlit-1", val: 1 }, litNodeIds)
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when litNodeIds is not supplied", () => {
+    expect(
+      buildLitHaloSprite({ id: "lit-1", val: 1 }, undefined)
+    ).toBeUndefined();
+  });
+
+  it("never throws under jsdom's null 2D canvas context", () => {
+    // jsdom: document.createElement("canvas").getContext("2d") === null.
+    // The done criteria requires this to degrade (mapless sprite / no
+    // object), not throw — asserting no throw is the direct test of that.
+    expect(() =>
+      buildLitHaloSprite({ id: "lit-1", val: 1 }, litNodeIds)
+    ).not.toThrow();
+  });
+
+  it("returns a Sprite for a lit node, with additive-blended gold material flags", () => {
+    const sprite = buildLitHaloSprite({ id: "lit-1", val: 1 }, litNodeIds);
+    expect(sprite).toBeDefined();
+    expect(sprite!.material.transparent).toBe(true);
+    expect(sprite!.material.depthWrite).toBe(false);
+    expect(sprite!.material.depthTest).toBe(false);
+    expect(sprite!.material.opacity).toBeCloseTo(0.55);
+    // color is coerced to a THREE.Color internally by SpriteMaterial; assert
+    // via the constructed material's own getHexString rather than the raw
+    // constructor arg, so this fails if the library ever stops accepting a
+    // hex string directly.
+    expect(sprite!.material.color.getHexString()).toBe("fde047");
+  });
+
+  it("renderOrder is set above the scene default (occlusion answer, T-190-13)", () => {
+    const sprite = buildLitHaloSprite({ id: "lit-1", val: 1 }, litNodeIds);
+    expect(sprite!.renderOrder).toBeGreaterThan(0);
+  });
+
+  it("sizes the outer diameter at 1.6x the RESTING sphere diameter, from node.val alone", () => {
+    // Sphere radius formula, verified live against the installed library
+    // (three-forcegraph.mjs:1157): radius = Math.cbrt(val) * nodeRelSize.
+    // ForceGraph3D.tsx passes nodeRelSize=4. "Resting" means val is
+    // node.val * litRestingMultiplier (default 1.8), NOT the live/pulsing
+    // litSizeMultiplier the arrival bloom animates through (D-09).
+    const val = 5;
+    const restingMultiplier = 1.8;
+    const nodeRelSize = 4;
+    const expectedDiameter =
+      2 * Math.cbrt(val * restingMultiplier) * nodeRelSize * 1.6;
+
+    const sprite = buildLitHaloSprite(
+      { id: "lit-1", val },
+      litNodeIds,
+      restingMultiplier
+    );
+    expect(sprite!.scale.x).toBeCloseTo(expectedDiameter, 5);
+  });
+
+  it("does NOT scale with the live/animated multiplier — same litRestingMultiplier yields an identical size regardless of val's caller-side animation state (D-09: no pulse)", () => {
+    // Two calls with the same node.val and the same resting multiplier must
+    // produce byte-identical sizing, proving the ring has no dependency on
+    // any animation-tick state — it is driven purely by membership + the
+    // resting constant, which is the property the D-10 still-screenshot
+    // acceptance test relies on.
+    const a = buildLitHaloSprite({ id: "lit-1", val: 3 }, litNodeIds, 1.8);
+    const b = buildLitHaloSprite({ id: "lit-1", val: 3 }, litNodeIds, 1.8);
+    expect(a!.scale.x).toBeCloseTo(b!.scale.x, 10);
+  });
+
+  it("allocates the halo texture at most once and shares it across every sprite (T-190-11)", () => {
+    __resetHaloTextureForTests();
+    const createElementSpy = vi.spyOn(document, "createElement");
+
+    const ids = new Set(["n1", "n2", "n3"]);
+    const sprites = [
+      buildLitHaloSprite({ id: "n1", val: 1 }, ids),
+      buildLitHaloSprite({ id: "n2", val: 2 }, ids),
+      buildLitHaloSprite({ id: "n3", val: 3 }, ids),
+      buildLitHaloSprite({ id: "n1", val: 1 }, ids), // re-call the same node too
+    ];
+
+    const canvasCreations = createElementSpy.mock.calls.filter(
+      ([tag]) => tag === "canvas"
+    ).length;
+    // jsdom returns a null 2D context, so the texture memoizes to `null` —
+    // still only ONE canvas element is ever created to discover that.
+    expect(canvasCreations).toBe(1);
+
+    // Every sprite's material.map (the memoized texture, or null under
+    // jsdom) is the exact same reference — proves sharing independent of
+    // whether jsdom happens to support a real canvas.
+    const maps = sprites.map((s) => s!.material.map);
+    expect(new Set(maps).size).toBe(1);
+
+    createElementSpy.mockRestore();
+  });
+});
+
+describe("ForceGraph3D — litNodeIds forwarding to nodeThreeObject (Phase 190 Plan 05)", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("forwards litNodeIds into an accessor that yields an object for a lit node and nothing for an unlit one", async () => {
+    const data = {
+      nodes: [
+        { id: "lit-1", val: 1 },
+        { id: "unlit-1", val: 1 },
+      ],
+      links: [],
+    };
+
+    render(<ForceGraph3D data={data} litNodeIds={new Set(["lit-1"])} />);
+
+    await screen.findByTestId("force-graph-3d");
+
+    const accessor = lastForceGraph3DProps.nodeThreeObject;
+    expect(typeof accessor).toBe("function");
+    expect(accessor({ id: "lit-1", val: 1 })).toBeTruthy();
+    expect(accessor({ id: "unlit-1", val: 1 })).toBeFalsy();
+
+    // nodeThreeObjectExtend must be `true` — extends the default sphere
+    // rather than replacing it (D-08's coexistence requirement).
+    expect(lastForceGraph3DProps.nodeThreeObjectExtend).toBe(true);
+  });
+
+  it("with no litNodeIds prop, the accessor yields nothing for any node", async () => {
+    const data = { nodes: [{ id: "n1", val: 1 }], links: [] };
+
+    render(<ForceGraph3D data={data} />);
+
+    await screen.findByTestId("force-graph-3d");
+
+    const accessor = lastForceGraph3DProps.nodeThreeObject;
+    expect(accessor({ id: "n1", val: 1 })).toBeFalsy();
   });
 });
