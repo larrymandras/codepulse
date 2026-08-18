@@ -738,7 +738,19 @@ Plans:
   2. `costByModel` (`llm.ts:231`) and `providerBreakdown` (`:275`) read the `aggregates` rollups, not raw `llmMetrics` scans. *(Amended 2026-08-18 per `121-CONTEXT.md` D-06: `latencyOverTime` (`:308`) is **deleted, not migrated** — it has zero consumers, `useLatencyOverTime` at `useAnalytics.ts:4-6` is imported nowhere, and no `latency` rollup exists or is being added. `costByProvider` (`:214`) is deleted with it. Verification must read the deletion as satisfying this criterion, not as an unmet gap.)*
   3. Each surviving query can independently report its own failure without silently absorbing or masking a sibling's.
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+- [ ] `121-01-PLAN.md` - `metric_type: "calls"` hourly rollup in the shared `insertTokenSplitBuckets` helper, a de-latched `backfillTokenSplit` cursor, and a shared fake-`ctx.db` harness that records every queried table (D-05, D-08)
+- [ ] `121-02-PLAN.md` - `costByModel`/`providerBreakdown` migrated to bounded `aggregates` reads with `asOf` + coverage; `costByProvider`, `latencyOverTime`, `useLatencyOverTime` and the Phase 104 STOPGAP note deleted; `evalScores` `llmMetrics` read capped (D-06, D-07, D-09, D-10)
+- [ ] `121-03-PLAN.md` - eight self-fetching components created to receive the ten queries hoisted into the page body, none handling its own errors (D-02)
+- [ ] `121-04-PLAN.md` - `Analytics()` stripped of all fetching, Summary Row split across four boundaries, dead `subscriptionUsage` read removed, per-query fault-injection tests (D-01, D-02, D-03; criteria 1 and 3)
+- [ ] `121-05-PLAN.md` - AST-derived structural ratchet over `Analytics.tsx` plus its synthetic-mutation tests, each proven to parse before its failure is believed (D-04)
+- [ ] `121-06-PLAN.md` - `LlmAnalyticsPanel` rewired to the rollup payload plus one `as of HH:MM` freshness label (D-07, D-11)
+- [ ] `121-07-PLAN.md` - attended deploy to the self-hosted backend, resumed backfill chain, live read-cap measurement and `/analytics` smoke check (autonomous: false)
+
+Waves: 1 = `121-01`, `121-03` (zero file overlap) - 2 = `121-02`, `121-04` - 3 = `121-05`, `121-06` - 4 = `121-07` (attended).
+All 11 decisions D-01..D-11 covered; DEBT-08 mapped to every plan.
 
 ---
 
