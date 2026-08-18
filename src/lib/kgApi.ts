@@ -96,9 +96,12 @@ export interface KgEntityResponse {
      * because older astridr deployments predate this field — `undefined` and
      * `null` both mean "unknown", never "person". Previously ABSENT entirely,
      * which forced `kg-graph.ts` `normalizeEntity` to hardcode
-     * `entityType: "person"` for every ego-lens focus node — byte-identical
-     * to the lit-node fill color (`#10b981`), so the color channel carried
-     * zero information for a lit source arriving via the D-09 ego-lens path.
+     * `entityType: "person"` for every ego-lens focus node — a wrong guess
+     * that also used to collide visually, back when the lit branch itself
+     * hardcoded `person`'s own fill color (`#10b981`) for every lit node
+     * (fixed in Phase 190/GLXY-03, which made the lit branch pass the node's
+     * real color through instead). This field is why `normalizeEntity` no
+     * longer has to guess "person" at all.
      */
     entityType?: string | null;
   } | null;

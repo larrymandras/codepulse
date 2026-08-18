@@ -211,9 +211,11 @@ export function normalizeEntity(resp: KgEntityResponse): KgPayload {
       // 187 post-verify fix (GLXY-01): use the API's real entityType — it now
       // includes one (astridr kg_read_api.py entity()). Fall back to null
       // (-> "other" via normalizeEntityType), NEVER "person": that hardcode
-      // collapsed the lit-node color signal because "person" is byte-identical
-      // to the lit fill color (#10b981). Neighbor entities synthesized from
-      // triples still have genuinely unknown types and normalize to "other"
+      // used to collapse the lit-node color signal too, because "person" was
+      // byte-identical to the lit branch's old hardcoded fill color (#10b981)
+      // before Phase 190/GLXY-03 made the lit branch pass the node's own
+      // color through instead. Neighbor entities synthesized from triples
+      // still have genuinely unknown types and normalize to "other"
       // separately (toGraphData's upsertNode, undefined seed.entityType).
       entityType: resp.entity.entityType ?? null,
       agentId: "",

@@ -280,7 +280,10 @@ describe("normalizeEntity", () => {
     const p = normalizeEntity(resp);
     expect(p.entities[0].entityType).toBe("tool");
     // The regression this guards: "tool" must never silently become "person"
-    // (byte-identical to the lit color #10b981 — see ENTITY_TYPE_COLORS).
+    // (its own #10b981 color — see ENTITY_TYPE_COLORS). Historically this
+    // was also a lit-color collision, back when the lit branch hardcoded
+    // that same hex for every lit node; Phase 190/GLXY-03 removed that
+    // hardcode, but the entity-typing guard below still matters on its own.
     expect(p.entities[0].entityType).not.toBe("person");
   });
 
