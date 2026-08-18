@@ -4,6 +4,7 @@ import {
   deriveView,
   normalizeOverview,
   normalizeEntity,
+  normalizeEntities,
   normalizeContradictions,
   normalizeEntityType,
   entityTypeColor,
@@ -299,6 +300,87 @@ describe("normalizeEntity", () => {
     const p = normalizeEntity(resp);
     expect(p.entities[0].entityType).not.toBe("person");
     expect(p.entities[0].entityType).toBeNull();
+  });
+});
+
+describe("normalizeEntities (190-08/D-11/GLXY-04)", () => {
+  it("maps every element of `entities`, preserving requested order", () => {
+    const resp: KgEntityResponse = {
+      entity: { id: "a", name: "CodePulse", entityType: "project" },
+      entities: [
+        { id: "a", name: "CodePulse", entityType: "project", agentId: "" },
+        { id: "b", name: "Convex", entityType: "tool", agentId: "" },
+        { id: "c", name: "TypeScript", entityType: "tool", agentId: "" },
+      ],
+      triples: [triple({ id: "t1", subjectId: "a", objectId: "b" })],
+      hops: 1,
+      asOf: null,
+    };
+    const p = normalizeEntities(resp);
+    expect(p.entities.map((e) => e.id)).toEqual(["a", "b", "c"]);
+    expect(p.entities[1].entityType).toBe("tool");
+    expect(p.triples).toHaveLength(1);
+  });
+
+  it("never defaults entityType to 'person' — null/undefined pass through as null", () => {
+    const resp: KgEntityResponse = {
+      entity: null,
+      entities: [
+        { id: "a", name: "memory_search", agentId: "" } as KgEntity, // entityType absent
+        { id: "b", name: "obsidian", entityType: null, agentId: "" },
+      ],
+      triples: [],
+      hops: 1,
+      asOf: null,
+    };
+    const p = normalizeEntities(resp);
+    expect(p.entities[0].entityType).not.toBe("person");
+    expect(p.entities[0].entityType).toBeNull();
+    expect(p.entities[1].entityType).toBeNull();
+  });
+
+  it("degrades to normalizeEntity's single-entity behavior when `entities` is absent", () => {
+    const resp: KgEntityResponse = {
+      entity: { id: "a", name: "Larry", entityType: "person" },
+      triples: [triple({ subjectId: "a", objectId: "b" })],
+      hops: 1,
+      asOf: null,
+    };
+    const p = normalizeEntities(resp);
+    const viaSingle = normalizeEntity(resp);
+    expect(p).toEqual(viaSingle);
+    expect(p.entities).toHaveLength(1);
+    expect(p.entities[0].id).toBe("a");
+  });
+
+  it("degrades to an empty payload when `entities` is present but empty (all ids unresolvable)", () => {
+    const resp: KgEntityResponse = {
+      entity: null,
+      entities: [],
+      triples: [],
+      hops: 1,
+      asOf: null,
+    };
+    const p = normalizeEntities(resp);
+    expect(p.entities).toHaveLength(0);
+    expect(p.triples).toHaveLength(0);
+  });
+
+  it("triples pass through unchanged — neighbor synthesis stays toGraphData's job", () => {
+    const resp: KgEntityResponse = {
+      entity: { id: "a", name: "CodePulse" },
+      entities: [
+        { id: "a", name: "CodePulse", entityType: "project", agentId: "" },
+        { id: "b", name: "Convex", entityType: "tool", agentId: "" },
+      ],
+      triples: [triple({ id: "t1", subjectId: "a", objectId: "ghost" })],
+      hops: 1,
+      asOf: null,
+    };
+    const g = toGraphData(normalizeEntities(resp));
+    const ghost = g.nodes.find((n) => n.id === "ghost")!;
+    expect(ghost).toBeTruthy();
+    expect(ghost.synthetic).toBe(true);
   });
 });
 

@@ -105,6 +105,15 @@ export interface KgEntityResponse {
      */
     entityType?: string | null;
   } | null;
+  /**
+   * 190-08/D-11/GLXY-04: present only on a multi-id `entity_ids=` request —
+   * every resolved entity, in requested order (`KGReadService.entities()`,
+   * astridr `kg_read_api.py`). Optional/additive so a single-`entity_id` or
+   * `name` response (which never carries this key) still type-checks; the
+   * multi normalizer (`kg-graph.ts` `normalizeEntities`) degrades to the
+   * single-entity behaviour when this is absent.
+   */
+  entities?: KgEntity[];
   triples: KgTriple[];
   hops: number;
   asOf: string | null;
@@ -169,10 +178,12 @@ export interface OverviewParams {
 
 export interface EntityParams {
   /**
-   * Exactly one of `name` / `entityId` is required — mirrors the astridr
-   * `/api/kg/entity` route contract (187-05 fix). `entityId` takes
-   * precedence: when both are supplied here, `name` is dropped before the
-   * request is sent (see `fetchEntity`) so the two can never collide server-side.
+   * Exactly one of `name` / `entityId` / `entityIds` reaches the wire —
+   * mirrors the astridr `/api/kg/entity` route contract (187-05, extended by
+   * 190-07/D-11 for `entityIds`). Precedence is `entityIds` > `entityId` >
+   * `name`: when more than one is supplied here, the lower-precedence ones
+   * are dropped before the request is sent (see `fetchEntity`) so the astridr
+   * route's three-way mutual-exclusion check never sees more than one.
    */
   name?: string;
   /**
@@ -183,6 +194,18 @@ export interface EntityParams {
    * a name-only fetch can silently resolve to the wrong duplicate.
    */
   entityId?: string;
+  /**
+   * 190-08/D-11/GLXY-04: pins the lookup to N entity UUIDs in one round-trip
+   * (a turn resolving N>1 sources, e.g. the D-09 answer-sync fallback with
+   * more than one resolved source). Takes precedence over `entityId`/`name`
+   * when non-empty. An empty array is treated as absent (no `entity_ids`
+   * param reaches the wire) so the caller can pass `[]` as a no-op without a
+   * separate guard. The astridr route bounds this at `_MAX_ENTITY_IDS` (8,
+   * `kg_read_api.py`) and 422s above it — the caller (`KnowledgeGraph.tsx`
+   * `MAX_LENS_SOURCE_IDS`) must truncate before calling `fetchEntity`, since
+   * a 422 here would error the whole lens rather than degrade gracefully.
+   */
+  entityIds?: string[];
   hops?: number;
   agentId?: string | null;
   asOf?: string | null;
@@ -237,11 +260,17 @@ export function fetchOverview(
 }
 
 export function fetchEntity(params: EntityParams): Promise<KgEntityResponse> {
-  // entity_id takes precedence — never send both (the astridr route 422s on
-  // both/neither, 187-05). kgGet already drops undefined/null/"" params.
+  // 190-08/D-11: entityIds > entityId > name — never send more than one (the
+  // astridr route 422s on any combination of >1, 190-07's three-way check).
+  // kgGet already drops undefined/null/"" params, so an absent/empty
+  // entityIds falls through to the entityId/name modes unchanged — this is
+  // the D-13 control: a single-source call (no entityIds) sends entity_id
+  // and no entity_ids, byte-identical to pre-190-08 behavior.
+  const hasIds = !!params.entityIds && params.entityIds.length > 0;
   return kgGet<KgEntityResponse>("/api/kg/entity", {
-    name: params.entityId ? undefined : params.name,
-    entity_id: params.entityId,
+    name: hasIds || params.entityId ? undefined : params.name,
+    entity_id: hasIds ? undefined : params.entityId,
+    entity_ids: hasIds ? params.entityIds!.join(",") : undefined,
     hops: params.hops,
     agent_id: params.agentId,
     asOf: params.asOf,

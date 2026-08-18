@@ -228,6 +228,35 @@ export function normalizeEntity(resp: KgEntityResponse): KgPayload {
   };
 }
 
+/**
+ * 190-08/D-11/GLXY-04: the multi-id ego endpoint (`entity_ids=`) returns every
+ * resolved entity in requested order plus the merged/deduped triples across
+ * all of them. Degrades to `normalizeEntity`'s single-entity behaviour when
+ * `entities` is absent (an older astridr deployment, or a `name`/single
+ * `entity_id` response reused through this same code path) — `normalizeEntity`
+ * itself is NOT modified (it is the D-13 control path and must stay
+ * byte-identical), this function only wraps it for the degrade case.
+ */
+export function normalizeEntities(resp: KgEntityResponse): KgPayload {
+  if (!resp.entities || resp.entities.length === 0) {
+    return normalizeEntity(resp);
+  }
+  const entities: KgEntity[] = resp.entities.map((e) => ({
+    id: e.id,
+    name: e.name,
+    // Never defaulted to "person" — same reasoning as normalizeEntity's own
+    // entityType handling (187 post-verify fix, GLXY-01): null/undefined
+    // both mean "unknown", never a guessed type.
+    entityType: e.entityType ?? null,
+    agentId: e.agentId ?? "",
+  }));
+  return {
+    entities,
+    triples: resp.triples ?? [],
+    meta: { asOf: resp.asOf },
+  };
+}
+
 /** Contradictions returns a flat triple list; neighbor entities are synthesized. */
 export function normalizeContradictions(
   resp: KgContradictionsResponse,

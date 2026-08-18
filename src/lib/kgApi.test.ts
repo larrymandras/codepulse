@@ -116,6 +116,90 @@ describe("kgApi — fetchEntity", () => {
     );
     expect(url.searchParams.has("name")).toBe(false);
   });
+
+  // -------------------------------------------------------------------------
+  // 190-08/D-11/D-12/D-13/GLXY-04 — entityIds multi-id mode.
+  // -------------------------------------------------------------------------
+
+  const IDS_3 = [
+    "11111111-1111-4111-8111-111111111111",
+    "22222222-2222-4222-8222-222222222222",
+    "33333333-3333-4333-8333-333333333333",
+  ];
+
+  it("190-08: entityIds sends entity_ids as a CSV and OMITS both name and entity_id", async () => {
+    fetchMock.mockResolvedValue(
+      okJson({ entity: null, entities: [], triples: [], hops: 1, asOf: null }),
+    );
+    await fetchEntity({
+      entityIds: IDS_3,
+      // Also supplied to prove entityIds strictly wins over both — the
+      // astridr route 422s on any combination of more than one param.
+      entityId: "44444444-4444-4444-8444-444444444444",
+      name: "should-never-reach-the-wire",
+      hops: 1,
+    });
+    const url = lastUrl();
+    expect(url.searchParams.get("entity_ids")).toBe(IDS_3.join(","));
+    expect(url.searchParams.has("entity_id")).toBe(false);
+    expect(url.searchParams.has("name")).toBe(false);
+  });
+
+  it("190-08/D-13: entityId alone (no entityIds) sends entity_id and NO entity_ids — the single-source control, byte-identical to pre-190-08 behavior", async () => {
+    fetchMock.mockResolvedValue(
+      okJson({ entity: { id: "a", name: "astridr" }, triples: [], hops: 1, asOf: null }),
+    );
+    await fetchEntity({ entityId: "25016ef7-0de5-4af1-af06-f772d8d0faf4", hops: 1 });
+    const url = lastUrl();
+    expect(url.searchParams.get("entity_id")).toBe(
+      "25016ef7-0de5-4af1-af06-f772d8d0faf4",
+    );
+    expect(url.searchParams.has("entity_ids")).toBe(false);
+  });
+
+  it("190-08: an empty entityIds array is treated as absent — falls through to entityId, no empty entity_ids param", async () => {
+    fetchMock.mockResolvedValue(
+      okJson({ entity: { id: "a", name: "astridr" }, triples: [], hops: 1, asOf: null }),
+    );
+    await fetchEntity({
+      entityIds: [],
+      entityId: "25016ef7-0de5-4af1-af06-f772d8d0faf4",
+      hops: 1,
+    });
+    const url = lastUrl();
+    expect(url.searchParams.has("entity_ids")).toBe(false);
+    expect(url.searchParams.get("entity_id")).toBe(
+      "25016ef7-0de5-4af1-af06-f772d8d0faf4",
+    );
+  });
+
+  it("190-08: an empty entityIds array with no entityId/name falls through to an empty request (kgGet drops all three)", async () => {
+    fetchMock.mockResolvedValue(
+      okJson({ entity: null, triples: [], hops: 1, asOf: null }),
+    );
+    await fetchEntity({ entityIds: [], hops: 1 });
+    const url = lastUrl();
+    expect(url.searchParams.has("entity_ids")).toBe(false);
+    expect(url.searchParams.has("entity_id")).toBe(false);
+    expect(url.searchParams.has("name")).toBe(false);
+  });
+
+  it("190-08: response 'entities' key round-trips through fetchEntity untouched", async () => {
+    const body = {
+      entity: { id: "a", name: "CodePulse", entityType: "project" },
+      entities: [
+        { id: "a", name: "CodePulse", entityType: "project", agentId: "" },
+        { id: "b", name: "Convex", entityType: "tool", agentId: "" },
+      ],
+      triples: [],
+      hops: 1,
+      asOf: null,
+    };
+    fetchMock.mockResolvedValue(okJson(body));
+    const out = await fetchEntity({ entityIds: IDS_3.slice(0, 2), hops: 1 });
+    expect(out.entities).toHaveLength(2);
+    expect(out.entities?.[1].name).toBe("Convex");
+  });
 });
 
 describe("kgApi — fetchContradictions", () => {
