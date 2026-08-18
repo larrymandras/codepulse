@@ -133,6 +133,15 @@
 
 .dark,
 [data-theme="cyan"] {
+  /* Borealis surface ramp (D-01/D-03) -- verbatim from
+     .claude/skills/sketch-findings-codepulse/sources/themes/default.css, no adjustment. */
+  --surface-0: #05060a;
+  --surface-1: #0b0d12;
+  --surface-2: #12151c;
+  --surface-3: #191d26;
+  --hairline: #1c2029;
+  --hairline-strong: #2a2f3b;
+
   --background: #040405; /* Deep, almost black violet */
   --foreground: #f8fafc;
   --card: #0a0a0c;
@@ -194,6 +203,17 @@
 }
 
 [data-theme="emerald"] {
+  /* Borealis surface ramp (D-01/D-03) -- derived mechanically from --background:
+     #020617 (HSL H=228.6deg S=84%, L stepped +3pt/stop; surface-0 anchored to the
+     existing background so the page colour does not shift). See
+     122-RAMP-DERIVATION.md for the arithmetic. */
+  --surface-0: #020617;
+  --surface-1: #030a25;
+  --surface-2: #040d33;
+  --surface-3: #061141;
+  --hairline: #07154f;
+  --hairline-strong: #08185d;
+
   --background: #020617; /* Very dark slate */
   --primary: #10b981; /* Emerald */
   --accent: #059669;
@@ -216,6 +236,17 @@
 }
 
 [data-theme="amber"] {
+  /* Borealis surface ramp (D-01/D-03/D-04) -- derived mechanically from
+     --background: #0a0a0a (true neutral gray, no hue; L stepped +3pt/stop). Full
+     token set per D-04 even though this theme is unexposed in ThemeSwitcher. See
+     122-RAMP-DERIVATION.md for the arithmetic. */
+  --surface-0: #0a0a0a;
+  --surface-1: #121212;
+  --surface-2: #191919;
+  --surface-3: #212121;
+  --hairline: #292929;
+  --hairline-strong: #303030;
+
   --background: #0a0a0a; /* Almost black */
   --primary: #f59e0b; /* Amber */
   --accent: #ea580c;
@@ -235,6 +266,18 @@
 }
 
 [data-theme="readable"] {
+  /* Borealis surface ramp (D-01/D-03) -- HAND-TUNED, not stepped mechanically: this
+     is the WCAG-AA-constrained theme. surface-0/1/2 and hairline reuse the existing
+     background/card/popover/border verbatim; surface-3 and hairline-strong are
+     invented steps above surface-2/hairline. Contrast measured by rasterised probe,
+     not asserted -- see 122-RAMP-DERIVATION.md. */
+  --surface-0: #111318;
+  --surface-1: #181c24;
+  --surface-2: #1d2130;
+  --surface-3: #24293b;
+  --hairline: #2a3144;
+  --hairline-strong: #374059;
+
   --background: #111318;
   --foreground: #e8eaf0;
   --card: #181c24;
@@ -301,6 +344,19 @@
 }
 
 [data-theme="aubergine"] {
+  /* Borealis surface ramp (D-01/D-03) -- HAND-TUNED, not stepped mechanically:
+     preserves the deliberate violet cast of the editorial palette. surface-0/1/2
+     and hairline reuse the existing background/card/popover/border verbatim;
+     surface-3 and hairline-strong are invented steps above surface-2/hairline.
+     Contrast measured by rasterised probe, not asserted -- see
+     122-RAMP-DERIVATION.md. */
+  --surface-0: #120d18;
+  --surface-1: #1a1324;
+  --surface-2: #1e172a;
+  --surface-3: #251c34;
+  --hairline: #2e2040;
+  --hairline-strong: #3d2a54;
+
   --background: #120d18;
   --foreground: #f0e8dc;
   --card: #1a1324;
