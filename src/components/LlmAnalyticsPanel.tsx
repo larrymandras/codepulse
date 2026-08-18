@@ -5,10 +5,18 @@ import { formatCost } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
 
 export default function LlmAnalyticsPanel() {
-  const providerData = useQuery(api.llm.providerBreakdown, {}) ?? [];
+  // Phase 121 D-07: both migrated queries now return
+  // { rows, asOf, expectedBuckets, presentBuckets, rowsRead, truncated } instead
+  // of a bare array / bare record. `presentBuckets`/`expectedBuckets`/`truncated`
+  // are carried in the payload for Phase 122's TOKEN-04 six-state tile and are
+  // deliberately NOT rendered here — D-11 caps this phase at the one freshness
+  // label below, not a full stale/partial/unavailable component.
+  const providerResult = useQuery(api.llm.providerBreakdown, {});
+  const providerData = providerResult?.rows ?? [];
   // Calls and tokens are raw MEASUREMENTS and are fine to read from llmMetrics.
   // The DOLLAR column is not: see the derived join below.
-  const callsAndTokensByModel = useQuery(api.llm.costByModel) ?? {};
+  const modelResult = useQuery(api.llm.costByModel);
+  const modelResultRows = modelResult?.rows ?? [];
 
   // CR-01 follow-up (2026-08-03). This table used to format the legacy per-row
   // cost field directly from `api.llm.costByModel`, which sums the raw ingested
@@ -21,6 +29,11 @@ export default function LlmAnalyticsPanel() {
   // rates), joined by model. 30-day window to match costByModel's own cutoff.
   // A model with no resolvable rate renders "Unpriced" rather than a $0.00 that
   // would read as "this model cost nothing" (D-03).
+  //
+  // Phase 121 D-07 note: `costByModel`/`providerBreakdown` carry no `cost` field
+  // at all anymore (dropped deliberately). Do NOT be tempted to derive a dollar
+  // value from their `calls`/`tokens` fields directly — Phase 104 D-01 forbids
+  // any money figure that isn't the one derived from the join below.
   const breakdown = useQuery(api.costDerived.costBreakdown, {
     period: "hourly",
     lookbackHours: 30 * 24,
@@ -38,11 +51,11 @@ export default function LlmAnalyticsPanel() {
     });
   }
 
-  const modelRows = Object.entries(callsAndTokensByModel)
-    .map(([model, data]) => {
-      const d = derivedByModel.get(model);
+  const modelRows = modelResultRows
+    .map((data) => {
+      const d = derivedByModel.get(data.model);
       return {
-        model,
+        model: data.model,
         calls: data.calls,
         tokens: data.tokens,
         derivedCost: d?.priced ? d.billedUsd : null,
@@ -61,10 +74,48 @@ export default function LlmAnalyticsPanel() {
     value: p.calls,
   }));
 
+  // D-11 freshness label: one `as of HH:MM` for the whole panel, sourced from
+  // the OLDER of the two queries' `asOf` values — the label describes the
+  // panel, and the panel is only as fresh as its stalest input. `asOf` is
+  // epoch SECONDS (a raw `aggregates.bucket_start`); a millisecond
+  // interpretation renders a 1970 date, which is the tell to check for.
+  const providerAsOf = providerResult?.asOf;
+  const modelAsOf = modelResult?.asOf;
+  let freshnessLabel: string | null = null;
+  if (providerAsOf === undefined || modelAsOf === undefined) {
+    // Still loading — render nothing rather than a placeholder time.
+    freshnessLabel = null;
+  } else if (providerAsOf === null && modelAsOf === null) {
+    // Both queries returned zero rows — no rollup data exists yet.
+    freshnessLabel = "no data yet";
+  } else {
+    const asOf =
+      providerAsOf === null
+        ? modelAsOf
+        : modelAsOf === null
+          ? providerAsOf
+          : Math.min(providerAsOf, modelAsOf);
+    if (asOf === null) {
+      freshnessLabel = "no data yet";
+    } else {
+      // asOf is epoch SECONDS (a raw aggregates.bucket_start) — asOf * 1000
+      // converts to millis for Date(). A bare `new Date(asOf)` would render 1970.
+      const d = new Date(asOf * 1000);
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      freshnessLabel = `as of ${hh}:${mm}`;
+    }
+  }
+
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-6">
       <div>
-        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Provider Comparison<InfoTooltip text="Detailed LLM analytics: provider comparison and per-model performance breakdown" /></h2>
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+          Provider Comparison<InfoTooltip text="Detailed LLM analytics: provider comparison and per-model performance breakdown" />
+          {freshnessLabel !== null && (
+            <span className="text-xs font-normal tracking-normal text-muted-foreground normal-case">{freshnessLabel}</span>
+          )}
+        </h2>
         {barData.length === 0 ? (
           <p className="text-gray-500 text-base">No provider data yet.</p>
         ) : (
