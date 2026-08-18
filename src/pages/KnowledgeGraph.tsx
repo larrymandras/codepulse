@@ -386,12 +386,28 @@ export function flyToLitSources(params: {
   };
 
   const tick = () => {
-    if (cancelled || isStale()) return;
+    if (cancelled || isStale()) {
+      // GLXY-02/D-04: a newer sync superseded this poll, or the caller
+      // cancelled it — the camera never moved on this fly, and this is the
+      // only place that fact is observable.
+      console.info(
+        `[kg-answer-sync] fly-stale-cancelled requested=${litIds.size} cancelled=${cancelled}`,
+        { requested: litIds.size, cancelled },
+      );
+      return;
+    }
     const handle = getHandle();
     const resolved = resolvedNow();
 
     if (handle && resolved.size === litIds.size) {
       flyCamera(handle, resolved);
+      // GLXY-02/D-04: onFlown(resolved) fires on this outcome AND on both
+      // expiry outcomes below — from the call site alone these three are
+      // indistinguishable, so the discriminating log lives here.
+      console.info(
+        `[kg-answer-sync] fly-success requested=${litIds.size} resolved=${resolved.size}`,
+        { requested: litIds.size, resolved: resolved.size },
+      );
       onFlown(resolved);
       return;
     }
@@ -409,6 +425,15 @@ export function flyToLitSources(params: {
     // mounted), silently skip the rest — never retries beyond this.
     if (handle && resolved.size > 0) {
       flyCamera(handle, resolved);
+      console.warn(
+        `[kg-answer-sync] fly-expired-partial requested=${litIds.size} resolved=${resolved.size}`,
+        { requested: litIds.size, resolved: resolved.size },
+      );
+    } else {
+      console.warn(
+        `[kg-answer-sync] fly-expired-none requested=${litIds.size} resolved=${resolved.size}`,
+        { requested: litIds.size, resolved: resolved.size },
+      );
     }
     onFlown(resolved);
   };
@@ -688,10 +713,30 @@ export default function KnowledgeGraph() {
   }, []);
 
   useEffect(() => {
-    // SC#2: no sync row yet, or not mounted in 3D — completely silent.
-    if (!answerSync || renderMode !== "3d") return;
+    // GLXY-02/D-04: this guard used to be one combined `if` hiding two
+    // different causes — "no row yet" and "not in 3D" — behind one silent
+    // return. Split so each is its own attributable line (the page defaults
+    // to 2D at :529, and this branch is the one that made "Larry was in 2D"
+    // indistinguishable from "the feature is broken").
+    if (!answerSync) {
+      console.info("[kg-answer-sync] no-row");
+      return;
+    }
+    if (renderMode !== "3d") {
+      console.info(
+        `[kg-answer-sync] not-3d renderMode=${renderMode}`,
+        { renderMode },
+      );
+      return;
+    }
     // SC#2: same turnId already applied — no-op (zero motion/color/toast).
-    if (appliedSyncTurnRef.current === answerSync.turnId) return;
+    if (appliedSyncTurnRef.current === answerSync.turnId) {
+      console.info(
+        `[kg-answer-sync] already-applied turnId=${answerSync.turnId}`,
+        { turnId: answerSync.turnId },
+      );
+      return;
+    }
 
     const turnId = answerSync.turnId;
     const isReplay = !hasAppliedSyncOnceRef.current;
@@ -700,8 +745,15 @@ export default function KnowledgeGraph() {
 
     // V5/T-187-13: UUID-validate before any nodeFilterFn/setFilter use —
     // malformed/empty sourceNodeIds degrades to a graceful no-op.
-    const validIds = filterValidSourceNodeIds(answerSync.sourceNodeIds ?? []);
-    if (validIds.length === 0) return;
+    const rawSourceNodeIds = answerSync.sourceNodeIds ?? [];
+    const validIds = filterValidSourceNodeIds(rawSourceNodeIds);
+    if (validIds.length === 0) {
+      console.warn(
+        `[kg-answer-sync] zero-valid-ids requested=${rawSourceNodeIds.length} valid=0`,
+        { turnId, requested: rawSourceNodeIds.length, valid: 0 },
+      );
+      return;
+    }
 
     const litIds = new Set(validIds);
 
@@ -738,9 +790,18 @@ export default function KnowledgeGraph() {
     }
 
     const nodes = graphNodesRef.current;
-    const allOnScreen = [...litIds].every((id) => nodes.some((n) => n.id === id));
+    // GLXY-02/D-04: derived as a filtered count (not `.every`) so the same
+    // pass yields both the allOnScreen boolean AND the resolved count the
+    // branch logs below — boolean semantics are unchanged (allOnScreen is
+    // still exactly "every requested id is already on screen").
+    const onScreenIds = [...litIds].filter((id) => nodes.some((n) => n.id === id));
+    const allOnScreen = onScreenIds.length === litIds.size;
 
     if (allOnScreen) {
+      console.info(
+        `[kg-answer-sync] all-on-screen requested=${litIds.size} resolved=${onScreenIds.length}`,
+        { turnId, requested: litIds.size, resolved: onScreenIds.length },
+      );
       // D-07 primary path — frame every source directly. Routed through
       // flyToLitSources (not a bare sync zoomToFit call) because fgRef3d.current
       // can still be null immediately after toggling into 3D mode — the lazy
@@ -771,6 +832,10 @@ export default function KnowledgeGraph() {
     // this entire fallback despite a perfectly usable UUID being present —
     // the `if (!answerSync.primaryEntityName) return;` guard that used to
     // sit here is the defect this fixes.
+    console.info(
+      `[kg-answer-sync] ego-lens-fallback requested=${litIds.size} resolved=${onScreenIds.length} pinnedId=${validIds[0]}`,
+      { turnId, requested: litIds.size, resolved: onScreenIds.length, pinnedId: validIds[0] },
+    );
     setLens("entity");
     setFilter("entityId", validIds[0]);
     setFilter("hops", 1);
