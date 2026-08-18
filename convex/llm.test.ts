@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { SESSION_CALLS_READ_CAP, SUBSCRIPTION_PROVIDERS } from "./llm";
+import { SESSION_CALLS_READ_CAP, SUBSCRIPTION_PROVIDERS, costByModel, providerBreakdown } from "./llm";
 import { PROVIDER_BILLING, getBillingType } from "./lib/providers";
+import { makeAggregatesCtx } from "./lib/fakeCtx";
 
 // ---------------------------------------------------------------------------
 // Minimal in-memory ctx.db for goalId-persistence test (Phase 149 PULSE-01)
@@ -354,5 +355,196 @@ describe("llm", () => {
       expect(SUBSCRIPTION_PROVIDERS).not.toContain("anthropic_direct");
       expect(SUBSCRIPTION_PROVIDERS).not.toContain("claude-sdk");
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 121 D-07: costByModel / providerBreakdown now read the `aggregates`
+// rollups (metric_type "calls"/"tokens") and never `llmMetrics`. Proven at
+// the handler level via makeAggregatesCtx's `queriedTables` call-order log —
+// exercised through `._handler`, the raw function Convex's query() wrapper
+// exposes (see convex/modelPricing.test.ts's header comment; this repo has
+// no convex-test).
+// ---------------------------------------------------------------------------
+describe("rollup-backed reads (Phase 121 D-07)", () => {
+  const NOW = Math.floor(Date.now() / 1000);
+  // Three distinct bucket_start values, oldest to newest, all well inside the
+  // 30-day window costByModel/providerBreakdown read.
+  const BUCKET_A = NOW - 3 * 3600; // oldest
+  const BUCKET_B = NOW - 2 * 3600;
+  const BUCKET_C = NOW - 1 * 3600; // newest
+
+  // The `llmMetrics` fixture below is the assertion-discipline CONTROL: if
+  // either migrated handler still scanned `llmMetrics` (pre-migration
+  // behaviour), providerBreakdown would return a row for provider
+  // "azure_openai" and costByModel would return a row for model
+  // "should-not-appear" — neither of which exists anywhere in the
+  // `aggregates` fixture below. Their absence from the result is therefore
+  // meaningful, not vacuous.
+  function seedFixture() {
+    return makeAggregatesCtx({
+      aggregates: [
+        // metric_type "calls" — three distinct buckets, two distinct
+        // provider/model dimension pairs. Newest bucket is BUCKET_C.
+        {
+          metric_type: "calls",
+          period: "hourly",
+          bucket_start: BUCKET_A,
+          value: 5,
+          dimensions: { provider: "anthropic", model: "claude-sonnet-5" },
+        },
+        {
+          metric_type: "calls",
+          period: "hourly",
+          bucket_start: BUCKET_B,
+          value: 3,
+          dimensions: { provider: "anthropic", model: "claude-sonnet-5" },
+        },
+        {
+          metric_type: "calls",
+          period: "hourly",
+          bucket_start: BUCKET_C,
+          value: 7,
+          dimensions: { provider: "openai", model: "gpt-5" },
+        },
+        // metric_type "tokens" — deliberately only BUCKET_A/BUCKET_B (never
+        // BUCKET_C), so its newest bucket (BUCKET_B) differs from calls'
+        // newest bucket (BUCKET_C) — this is what proves costByModel's asOf
+        // takes the OLDER of the two metric types' newest buckets.
+        {
+          metric_type: "tokens",
+          period: "hourly",
+          bucket_start: BUCKET_A,
+          value: 1000,
+          dimensions: { provider: "anthropic", model: "claude-sonnet-5" },
+        },
+        {
+          metric_type: "tokens",
+          period: "hourly",
+          bucket_start: BUCKET_B,
+          value: 2000,
+          dimensions: { provider: "openai", model: "gpt-5" },
+        },
+      ],
+      // Control fixture: if scanned, would produce provider "azure_openai" /
+      // model "should-not-appear" — absent from every assertion below.
+      llmMetrics: [
+        {
+          provider: "azure_openai",
+          model: "should-not-appear",
+          timestamp: NOW - 100,
+          totalTokens: 99999,
+          cost: 12345,
+          latencyMs: 42,
+          archived: false,
+        },
+      ],
+    });
+  }
+
+  describe("providerBreakdown", () => {
+    it("reads aggregates and never reads llmMetrics", async () => {
+      const { ctx, queriedTables } = seedFixture();
+      await (providerBreakdown as any)._handler(ctx, {});
+      expect(queriedTables).toContain("aggregates");
+      expect(queriedTables).not.toContain("llmMetrics");
+    });
+
+    it("groups calls by provider from the aggregates fixture, not the llmMetrics control", async () => {
+      const { ctx } = seedFixture();
+      const result = await (providerBreakdown as any)._handler(ctx, {});
+      const byProvider = Object.fromEntries(result.rows.map((r: any) => [r.provider, r.calls]));
+      expect(byProvider).toEqual({ anthropic: 8, openai: 7 }); // 5+3, 7
+      expect(byProvider.azure_openai).toBeUndefined();
+    });
+
+    it("asOf equals the newest seeded bucket_start", async () => {
+      const { ctx } = seedFixture();
+      const result = await (providerBreakdown as any)._handler(ctx, {});
+      expect(result.asOf).toBe(BUCKET_C);
+    });
+
+    it("presentBuckets/expectedBuckets reflect the seeded buckets and the fixed window", async () => {
+      const { ctx } = seedFixture();
+      const result = await (providerBreakdown as any)._handler(ctx, {});
+      expect(result.presentBuckets).toBe(3); // BUCKET_A, BUCKET_B, BUCKET_C
+      expect(result.expectedBuckets).toBe(720); // 30 days of hourly buckets
+    });
+
+    it("truncated is false for a small fixture", async () => {
+      const { ctx } = seedFixture();
+      const result = await (providerBreakdown as any)._handler(ctx, {});
+      expect(result.truncated).toBe(false);
+    });
+
+    it("an empty aggregates fixture returns asOf: null and empty rows without throwing", async () => {
+      const { ctx } = makeAggregatesCtx({ aggregates: [], llmMetrics: [] });
+      const result = await (providerBreakdown as any)._handler(ctx, {});
+      expect(result.asOf).toBeNull();
+      expect(result.rows).toEqual([]);
+      expect(result.truncated).toBe(false);
+    });
+  });
+
+  describe("costByModel", () => {
+    it("reads aggregates and never reads llmMetrics", async () => {
+      const { ctx, queriedTables } = seedFixture();
+      await (costByModel as any)._handler(ctx, {});
+      expect(queriedTables).toContain("aggregates");
+      expect(queriedTables).not.toContain("llmMetrics");
+    });
+
+    it("groups calls+tokens by model from the aggregates fixture, not the llmMetrics control", async () => {
+      const { ctx } = seedFixture();
+      const result = await (costByModel as any)._handler(ctx, {});
+      const byModel = Object.fromEntries(
+        result.rows.map((r: any) => [r.model, { calls: r.calls, tokens: r.tokens }])
+      );
+      expect(byModel).toEqual({
+        "claude-sonnet-5": { calls: 8, tokens: 1000 }, // calls 5+3, tokens (BUCKET_A only)
+        "gpt-5": { calls: 7, tokens: 2000 }, // calls (BUCKET_C), tokens (BUCKET_B)
+      });
+      expect(byModel["should-not-appear"]).toBeUndefined();
+    });
+
+    it("asOf is the OLDER of the two metric types' newest buckets when they differ", async () => {
+      const { ctx } = seedFixture();
+      const result = await (costByModel as any)._handler(ctx, {});
+      // calls' newest bucket is BUCKET_C; tokens' newest bucket is BUCKET_B.
+      // BUCKET_B < BUCKET_C, so asOf must be BUCKET_B — never overstating freshness.
+      expect(result.asOf).toBe(BUCKET_B);
+    });
+
+    it("presentBuckets/expectedBuckets reflect the seeded buckets and the fixed window", async () => {
+      const { ctx } = seedFixture();
+      const result = await (costByModel as any)._handler(ctx, {});
+      expect(result.presentBuckets).toBe(3); // BUCKET_A, BUCKET_B, BUCKET_C across both reads
+      expect(result.expectedBuckets).toBe(720);
+    });
+
+    it("truncated is false for a small fixture", async () => {
+      const { ctx } = seedFixture();
+      const result = await (costByModel as any)._handler(ctx, {});
+      expect(result.truncated).toBe(false);
+    });
+
+    it("an empty aggregates fixture returns asOf: null and empty rows without throwing", async () => {
+      const { ctx } = makeAggregatesCtx({ aggregates: [], llmMetrics: [] });
+      const result = await (costByModel as any)._handler(ctx, {});
+      expect(result.asOf).toBeNull();
+      expect(result.rows).toEqual([]);
+      expect(result.truncated).toBe(false);
+    });
+  });
+
+  // Harness sanity: proves `queriedTables` itself actually records a read,
+  // so the `not.toContain("llmMetrics")` assertions above are not passing
+  // vacuously because the tracking mechanism is broken. Calls ctx.db.query
+  // directly rather than driving subscriptionUsage (which requires a
+  // SUBSCRIPTION_PROVIDERS-shaped fixture unrelated to this describe block).
+  it("harness sanity: queriedTables DOES record llmMetrics when that table is queried", async () => {
+    const { ctx, queriedTables } = seedFixture();
+    await ctx.db.query("llmMetrics").collect();
+    expect(queriedTables).toContain("llmMetrics");
   });
 });
