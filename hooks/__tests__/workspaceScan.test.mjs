@@ -201,6 +201,101 @@ describe("Suite 4 — D-06: excludeDirs pruning and no numeric depth cap", () =>
 });
 
 // =========================================================================================
+// Suite 4b — D-06 regression: directory identity must not lose precision (2026-08-18).
+//
+// ROOT CAUSE of an intermittent Suite 4 failure. `fs.Stats.ino` is a JS double; on Windows the
+// NTFS 64-bit FileId routinely exceeds Number.MAX_SAFE_INTEGER (measured: 11,692 of 11,700
+// sampled directories, 99.9%), so low-order bits round away and directories created
+// milliseconds apart COLLAPSE TO THE SAME NUMBER. The cycle guard then reads a real subtree as
+// "we have been here" and silently prunes it — a truncated map, counted as a cycle.
+//
+// Measured under 8-way parallel load: 215 collisions with `number`, ZERO with
+// `{ bigint: true }`; the walk truncated in 2 of 480 stress runs (cyclesSkipped=1, deep row
+// missing). Every observed collision was between ADJACENT directories, the signature of
+// sequential FileId allocation losing low bits.
+//
+// Suite 4 could only catch this ~0.4% of the time under load, so it is not a guard. This suite
+// is DETERMINISTIC: the injected statSync returns inos that collide when the options argument
+// is ignored (the old `statSync(p)` form) and are distinct when it is honoured. Reverting
+// workspaceScan.mjs's dirIdentity to a numeric stat turns this RED every run.
+// =========================================================================================
+describe("Suite 4b — D-06: directory identity survives 64-bit inodes", () => {
+  it("does not prune a real subtree whose inode collides only at double precision", () => {
+    const dir = mkRoot();
+    try {
+      // Two nested real directories, each holding one shareable file.
+      mkdirSync(join(dir, "alpha", "beta"), { recursive: true });
+      writeFileSync(join(dir, "alpha", "note.md"), "a");
+      writeFileSync(join(dir, "alpha", "beta", "note.md"), "b");
+
+      const alpha = join(dir, "alpha");
+      const beta = join(dir, "alpha", "beta");
+
+      // Two distinct 64-bit FileIds that differ ONLY below 2^53, so they are indistinguishable
+      // as doubles but distinct as BigInt — exactly the real-world adjacent-allocation case.
+      const INO_ALPHA = 9851624188909056n;
+      const INO_BETA = 9851624188909057n;
+      expect(Number(INO_ALPHA)).toBe(Number(INO_BETA)); // the precision loss, asserted
+
+      const fakeStat = (p, opts) => {
+        const real = statSync(p, opts);
+        const bigint = !!(opts && opts.bigint);
+        if (p === alpha) return { ...real, dev: bigint ? 1n : 1, ino: bigint ? INO_ALPHA : Number(INO_ALPHA), isDirectory: () => true };
+        if (p === beta) return { ...real, dev: bigint ? 1n : 1, ino: bigint ? INO_BETA : Number(INO_BETA), isDirectory: () => true };
+        return real;
+      };
+
+      const root = { id: "fixture", path: dir };
+      const config = makeConfig({ roots: [{ id: "fixture", path: dir, department: "Personal" }] });
+      const result = walkRoot(root, config, { readdirSync, statSync: fakeStat, mountedSet: new Set() });
+      const rollup = rollupRootResults([{ rootId: root.id, ...result }]);
+
+      // beta is a REAL directory, not a cycle. Under the old numeric identity it was pruned.
+      const betaRow = rollup.dirs.find((d) => d.dirPath === "alpha/beta");
+      expect(betaRow).toBeDefined();
+      expect(betaRow.fileCount).toBe(1);
+      expect(result.cyclesSkipped).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("CONTROL: a genuine repeat of the same identity IS still pruned as a cycle", () => {
+    // Without this control the test above would pass against a walker with no cycle guard at
+    // all — it would prove only that nothing is pruned, not that the RIGHT thing is pruned.
+    const dir = mkRoot();
+    try {
+      mkdirSync(join(dir, "alpha", "beta"), { recursive: true });
+      writeFileSync(join(dir, "alpha", "note.md"), "a");
+      writeFileSync(join(dir, "alpha", "beta", "note.md"), "b");
+
+      const alpha = join(dir, "alpha");
+      const beta = join(dir, "alpha", "beta");
+      const SAME = 9851624188909056n;
+
+      const fakeStat = (p, opts) => {
+        const real = statSync(p, opts);
+        const bigint = !!(opts && opts.bigint);
+        if (p === alpha || p === beta) {
+          return { ...real, dev: bigint ? 1n : 1, ino: bigint ? SAME : Number(SAME), isDirectory: () => true };
+        }
+        return real;
+      };
+
+      const root = { id: "fixture", path: dir };
+      const config = makeConfig({ roots: [{ id: "fixture", path: dir, department: "Personal" }] });
+      const result = walkRoot(root, config, { readdirSync, statSync: fakeStat, mountedSet: new Set() });
+      const rollup = rollupRootResults([{ rootId: root.id, ...result }]);
+
+      expect(rollup.dirs.find((d) => d.dirPath === "alpha/beta")).toBeUndefined();
+      expect(result.cyclesSkipped).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// =========================================================================================
 // Suite 5 — Coverage honesty, with a passing control.
 // =========================================================================================
 describe("Suite 5 — coverage honesty", () => {
@@ -304,9 +399,11 @@ describe("Suite 7 — a statSync throw on one file is counted, not fatal", () =>
       writeFileSync(join(dir, "broken.md"), "boom");
 
       const brokenAbs = join(dir, "broken.md");
-      const wrappedStat = (p) => {
+      // Forwards opts so the walker's `{ bigint: true }` identity stat is not silently
+      // downgraded to numeric precision by this wrapper (see workspaceScan.mjs dirIdentity).
+      const wrappedStat = (p, opts) => {
         if (p === brokenAbs) throw new Error("ENOENT simulated");
-        return statSync(p);
+        return statSync(p, opts);
       };
 
       const root = { id: "fixture", path: dir };

@@ -80,6 +80,33 @@ import { postSnapshot as realPostSnapshot } from "./ingestPost.mjs";
 export function walkRoot(root, config, deps) {
   const { readdirSync, statSync, mountedSet } = deps;
 
+  // Directory identity for the D-06 cycle guard MUST be read with `{ bigint: true }`.
+  //
+  // `fs.Stats.ino` is a JS double. On Windows the NTFS 64-bit FileId routinely exceeds
+  // Number.MAX_SAFE_INTEGER (measured 2026-08-18: 11,692 of 11,700 sampled directories,
+  // 99.9%), so the low-order bits are rounded away. Directories created milliseconds apart
+  // differ only in those bits and therefore COLLAPSE TO THE SAME NUMBER — which this guard
+  // reads as "we have been here" and silently prunes a real subtree, counting it as a cycle.
+  //
+  // Measured under 8-way parallel load over 11,700 directories: 215 collisions with `number`,
+  // ZERO with `{ bigint: true }`. Every observed collision was between ADJACENT directories
+  // (c==b, e==d, j==i), which is the signature of sequential FileId allocation losing low bits.
+  //
+  // This is not hypothetical: it reproduced as a truncated walk in 2 of 480 stress runs
+  // (cyclesSkipped=1, the deep row missing entirely), and surfaced originally as an
+  // intermittent failure of the D-06 test that only ever appeared in a loaded full-suite run.
+  //
+  // Only IDENTITY stats use bigint. File stats below stay numeric — `size`/`mtime` feed
+  // arithmetic and the epoch-SECONDS convention documented in this file's header.
+  //
+  // An injected fake `statSync` that ignores the options argument degrades to today's numeric
+  // behaviour rather than throwing; that is acceptable (no worse than before) but real callers
+  // must forward options.
+  const dirIdentity = (absPath) => {
+    const st = statSync(absPath, { bigint: true });
+    return `${st.dev}:${st.ino}`;
+  };
+
   const rows = [];
   const visited = new Set(); // dev:ino identity of every directory descended into (D-06 cycle guard)
   let anySucceeded = false;
@@ -167,8 +194,7 @@ export function walkRoot(root, config, deps) {
     for (const sub of subdirs) {
       let identityKey;
       try {
-        const st = statSync(sub.absPath);
-        identityKey = `${st.dev}:${st.ino}`;
+        identityKey = dirIdentity(sub.absPath);
       } catch {
         // Cannot identify the subdirectory (deleted/denied between readdir and stat) —
         // skip descending. Not a statFailures case: that counter is file-specific.
@@ -187,8 +213,7 @@ export function walkRoot(root, config, deps) {
   // Seed the visited set with the root itself so a junction cycle that loops back to the
   // root is also caught.
   try {
-    const rootStat = statSync(root.path);
-    visited.add(`${rootStat.dev}:${rootStat.ino}`);
+    visited.add(dirIdentity(root.path));
   } catch {
     // Root doesn't exist or can't be identified — walkDir's own readdirSync try/catch below
     // handles the "root path does not exist" contract (covered: false, zero rows, no throw).
