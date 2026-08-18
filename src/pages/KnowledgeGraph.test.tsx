@@ -186,6 +186,16 @@ const UUID_A = "11111111-1111-4111-8111-111111111111";
 const UUID_B = "22222222-2222-4222-8222-222222222222";
 const NOT_A_UUID = "not-a-uuid";
 
+// 190-08/D-12/GLXY-04: generates a distinct, UUID-shaped (SOURCE_NODE_ID_RE)
+// id for the over-bound truncation tests, which need more ids than the fixed
+// UUID_A/UUID_B constants provide. n must be 1-9; offset by 5 (hex digits
+// 5-9,a-d) so generated ids never collide with UUID_A/B (digits 1/2) or
+// DISTRACTOR_NODE/ONSCREEN_NEIGHBOR_OF_A (digits 3/4) used alongside them.
+function nthUuid(n: number): string {
+  const h = (n + 4).toString(16);
+  return `${h.repeat(8)}-${h.repeat(4)}-4${h.repeat(3)}-8${h.repeat(3)}-${h.repeat(12)}`;
+}
+
 // On-screen node (x/y already laid out) matching UUID_A — used for the D-07
 // "all sources on-screen" primary path.
 const ONSCREEN_NODE_A = {
@@ -315,6 +325,7 @@ import KnowledgeGraph, {
   computeNodeValFn3D,
   D09_FETCH_POLL_MAX_MS,
   ISOLATED_NODE_CAMERA_DISTANCE,
+  MAX_LENS_SOURCE_IDS,
   flyToLitSources,
 } from "./KnowledgeGraph";
 import { get as idbGet, set as idbSet } from "idb-keyval";
@@ -331,6 +342,7 @@ function makeMockKg(overrides: Partial<typeof mockKgReturn> = {}) {
       agentId: null,
       entityName: "",
       entityId: null,
+      entityIds: null,
       hops: 1,
       asOf: null,
       limit: 100,
@@ -979,6 +991,183 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
       "entityName",
       expect.anything(),
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // 190-08/D-11/D-12/D-13/GLXY-04 — multi-id fallback (bounded truncation,
+  // D-13 single-source control, precedence-shadow regression guard).
+  // -------------------------------------------------------------------------
+
+  it("190-08/D-13: a single-source turn sets entityId AND clears entityIds — never sets entityIds to an array", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-single-d13:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => {
+      expect(setFilter).toHaveBeenCalledWith("entityId", UUID_A);
+    });
+    expect(setFilter).toHaveBeenCalledWith("entityIds", null);
+    // The single-source path must never set entityIds to a real array — the
+    // wire-level assertion (entity_id sent, no entity_ids) lives in
+    // kgApi.test.ts, since useKnowledgeGraph is mocked in this file.
+    for (const call of setFilter.mock.calls) {
+      if (call[0] === "entityIds") expect(call[1]).toBeNull();
+    }
+  });
+
+  it("190-08/D-13 regression: a single-source turn AFTER a prior multi-source turn still clears entityIds (precedence-shadow guard)", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-shadow-multi:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    const { rerender } = await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => {
+      expect(setFilter).toHaveBeenCalledWith("entityIds", [UUID_A, UUID_B]);
+    });
+    setFilter.mockClear();
+
+    // A NEW turn (distinct turnId) resolving exactly one source. Without the
+    // Rule 1 fix, useKnowledgeGraph's entityIds > entityId precedence would
+    // silently keep using the STALE [UUID_A, UUID_B] pair from turn 1, since
+    // nothing would have nulled it.
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-shadow-single:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 2,
+    });
+    mockKgReturn = makeMockKg({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+    rerender(<KnowledgeGraph />);
+
+    await waitFor(() => {
+      expect(setFilter).toHaveBeenCalledWith("entityId", UUID_A);
+    });
+    expect(setFilter).toHaveBeenCalledWith("entityIds", null);
+    expect(setFilter).not.toHaveBeenCalledWith("entityIds", [UUID_A, UUID_B]);
+  });
+
+  it("190-08/D-11: a multi-source turn (within bound) requests all resolved ids via entityIds and clears entityId", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-multi-basic:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "CodePulse",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => {
+      expect(setLens).toHaveBeenCalledWith("entity");
+    });
+    expect(setFilter).toHaveBeenCalledWith("entityIds", [UUID_A, UUID_B]);
+    expect(setFilter).toHaveBeenCalledWith("entityId", null);
+    expect(setFilter).not.toHaveBeenCalledWith("entityId", UUID_A);
+    expect(setFilter).toHaveBeenCalledWith("hops", 1);
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] ego-lens-fallback-multi"),
+      expect.objectContaining({ requested: 2, sent: 2, truncated: false }),
+    );
+  });
+
+  it("190-08/D-12: an over-bound turn truncates the request to MAX_LENS_SOURCE_IDS", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    const nineIds = Array.from({ length: 9 }, (_, i) => nthUuid(i + 1));
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-overbound:1",
+      sourceNodeIds: nineIds,
+      primaryEntityName: "CodePulse",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => {
+      expect(setLens).toHaveBeenCalledWith("entity");
+    });
+    const call = setFilter.mock.calls.find(
+      (c) => c[0] === "entityIds" && Array.isArray(c[1]),
+    );
+    expect(call).toBeDefined();
+    const sentIds = call![1] as string[];
+    expect(sentIds).toHaveLength(MAX_LENS_SOURCE_IDS);
+    expect(sentIds).toEqual(nineIds.slice(0, MAX_LENS_SOURCE_IDS));
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[kg-answer-sync] ego-lens-fallback-multi"),
+      expect.objectContaining({
+        requested: 9,
+        sent: MAX_LENS_SOURCE_IDS,
+        truncated: true,
+      }),
+    );
+  });
+
+  it("190-08/D-12: over-bound truncation still surfaces the degrade banner against the FULL requested count, not just the truncated/sent count", async () => {
+    const nowSpy = vi.spyOn(performance, "now").mockReturnValue(0);
+    const nineIds = Array.from({ length: 9 }, (_, i) => nthUuid(i + 1));
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-overbound-banner:1",
+      sourceNodeIds: nineIds,
+      primaryEntityName: "CodePulse",
+      updatedAt: 1,
+    });
+
+    // None of the 9 sources ever lay out — proves litNodeIds/the poll target
+    // is still the FULL 9-id set, not just the 8 actually sent on the wire.
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+    });
+
+    await act(async () => {
+      flushRaf();
+    });
+    nowSpy.mockReturnValue(D09_FETCH_POLL_MAX_MS + 1);
+    await act(async () => {
+      flushRaf();
+    });
+
+    expect(
+      screen.getByText(
+        /Some grounded sources are no longer in the graph — showing 0 of 9\./,
+      ),
+    ).toBeDefined();
+
+    nowSpy.mockRestore();
   });
 
   it("stale-source degrade: partial resolution renders the amber banner and still flies to the resolved subset (187-05 wall-clock D-09 budget)", async () => {

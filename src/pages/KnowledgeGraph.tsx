@@ -132,6 +132,25 @@ const D09_POLL_MAX_FRAMES = 90;
 // expiry flyToLitSources still degrades to "fly to whatever resolved,
 // silently skip the rest", exactly like the frame-bounded path.
 export const D09_FETCH_POLL_MAX_MS = 8000;
+// 190-08/D-12/GLXY-04: bound on how many resolved source ids the D-09
+// fallback will request in a single entity_ids= round-trip. Must match the
+// astridr server bound (_MAX_ENTITY_IDS in astridr/channels/kg_read_api.py,
+// currently 8) — the server 422s above it, and a 422 here would error the
+// whole lens and render an empty graph, strictly worse than today's
+// single-id behavior (D-12's whole justification for truncating client-side
+// rather than merely relying on the server's own rejection). Also a
+// visual-legibility constraint per 190-UI-SPEC.md §Many-nodes-lit: that
+// section's "no clustering/simplify fallback" design decision holds only
+// while this stays roughly <=8-10 lit nodes at once.
+export const MAX_LENS_SOURCE_IDS = 8;
+// Known limitation (recorded, not solved here): sourceNodeIds is emitted as,
+// per resolved entity, its own entity_id followed by its fact_object_ids
+// (astridr loop.py:1861-1867). Nothing in the payload marks which ids are
+// "primary", so truncating to the first MAX_LENS_SOURCE_IDS can drop a later
+// primary entity when an earlier one is fact-dense. The emit contract is out
+// of scope for this phase — no client-side heuristic is invented here for
+// which ids matter most; a fact-dense turn simply frames its first 8 in
+// emission order.
 // Camera-park distance for a lit source with no loaded 1-hop neighbors (187-05
 // live-checkpoint fix #2). zoomToFit has nothing to widen the frame to for a
 // truly isolated node, so it zooms in until the single sphere fills the
@@ -824,23 +843,62 @@ export default function KnowledgeGraph() {
     // for layout readiness (and ref-mount readiness), then the SAME
     // zoomToFit call as D-07.
     //
-    // 187 post-verify fix (187-REVIEW WR-03): target the emitted UUID
-    // directly via setFilter("entityId", ...) — validIds[0] is guaranteed to
-    // exist here (the validIds.length===0 guard above already returned), so
-    // this path no longer gates on primaryEntityName at all. Entity names
-    // are NOT unique — a live example has two "astridr" rows (a [person]
-    // with no facts and a [persona] with 5 facts) — so a name-driven fetch
-    // can silently resolve to the WRONG duplicate. Pre-fix, a degraded
-    // `GraphQueryTool.get_name` lookup (primaryEntityName === null) disabled
-    // this entire fallback despite a perfectly usable UUID being present —
-    // the `if (!answerSync.primaryEntityName) return;` guard that used to
-    // sit here is the defect this fixes.
-    console.info(
-      `[kg-answer-sync] ego-lens-fallback requested=${litIds.size} resolved=${onScreenIds.length} pinnedId=${validIds[0]}`,
-      { turnId, requested: litIds.size, resolved: onScreenIds.length, pinnedId: validIds[0] },
-    );
+    // 187 post-verify fix (187-REVIEW WR-03): target the emitted UUID(s)
+    // directly via the entityId/entityIds filter setters below — validIds is
+    // guaranteed non-empty here (the validIds.length===0 guard above already
+    // returned), so this path no longer gates on primaryEntityName at all.
+    // Entity names are NOT unique — a live example has two "astridr" rows (a
+    // [person] with no facts and a [persona] with 5 facts) — so a
+    // name-driven fetch can silently resolve to the WRONG duplicate. Pre-fix,
+    // a degraded `GraphQueryTool.get_name` lookup (primaryEntityName ===
+    // null) disabled this entire fallback despite a perfectly usable UUID
+    // being present — the `if (!answerSync.primaryEntityName) return;` guard
+    // that used to sit here is the defect this fixes.
+    //
+    // 190-08/D-11/D-12/D-13/GLXY-04: a turn resolving N>1 sources requests
+    // all N (truncated to MAX_LENS_SOURCE_IDS) in one round-trip via
+    // entityIds, so every resolved source enters the graph instead of only
+    // validIds[0]. litIds (used below for flyToLitSources/litNodeIds) is
+    // ALWAYS the full un-truncated valid set — only the FETCH is bounded —
+    // so the existing staleSourceBanner still reports "showing N of M"
+    // honestly when a fact-dense turn gets truncated.
     setLens("entity");
-    setFilter("entityId", validIds[0]);
+    if (validIds.length === 1) {
+      // D-13 control: the single-source case is the exact call it was
+      // before this phase, on the exact same code path — do NOT route it
+      // through the multi-id branch "for tidiness". Also clears entityIds
+      // (190-08 addition, Rule 1): entityIds takes precedence over entityId
+      // in useKnowledgeGraph's fetch branch, so without this a STALE
+      // entityIds left over from a PRIOR multi-source turn would silently
+      // shadow this turn's single id and re-request the old multi-id set —
+      // the exact "half-wired cross-cutting field" defect class this phase
+      // exists to avoid. Clearing it does not change the wire request the
+      // D-13 test asserts on: it's dropped before fetchEntity ever runs.
+      console.info(
+        `[kg-answer-sync] ego-lens-fallback requested=${litIds.size} resolved=${onScreenIds.length} pinnedId=${validIds[0]}`,
+        { turnId, requested: litIds.size, resolved: onScreenIds.length, pinnedId: validIds[0] },
+      );
+      setFilter("entityId", validIds[0]);
+      setFilter("entityIds", null);
+    } else {
+      const boundedIds = validIds.slice(0, MAX_LENS_SOURCE_IDS);
+      const truncated = boundedIds.length < validIds.length;
+      console.info(
+        `[kg-answer-sync] ego-lens-fallback-multi requested=${litIds.size} resolved=${onScreenIds.length} sent=${boundedIds.length} truncated=${truncated}`,
+        {
+          turnId,
+          requested: litIds.size,
+          resolved: onScreenIds.length,
+          sent: boundedIds.length,
+          truncated,
+        },
+      );
+      setFilter("entityIds", boundedIds);
+      // Clears any stale single-id pin from a prior turn — entityIds takes
+      // precedence in useKnowledgeGraph regardless, but a stale entityId
+      // left set is needless confusion for anything else reading filters.
+      setFilter("entityId", null);
+    }
     setFilter("hops", 1);
 
     fallbackPollCancelRef.current = flyToLitSources({
@@ -986,9 +1044,11 @@ export default function KnowledgeGraph() {
     appliedFocusRef.current = true;
     if (lensParam === "entity") setLens("entity");
     setFilter("entityName", focusEntity);
-    // 187-05: clear a stale D-09 sync entityId — this is the user-driven
-    // name path, which must win outright, never race a previous sync's id.
+    // 187-05/190-08: clear a stale D-09 sync entityId/entityIds — this is
+    // the user-driven name path, which must win outright, never race a
+    // previous sync's id (or id set).
     setFilter("entityId", null);
+    setFilter("entityIds", null);
     // Clamp ?hops to a sane integer range — a crafted URL could supply a
     // negative or huge value that would otherwise reach the backend (WR-03).
     const parsedHops = Math.max(1, Math.min(6, Math.floor(Number(hopsParam)) || 1));
@@ -1017,10 +1077,11 @@ export default function KnowledgeGraph() {
     setLens(view.lens as KgLens);
     // Apply all persisted filter fields
     setFilter("entityName", (view.filters.entityName as string) ?? "");
-    // 187-05: entityId is never persisted in a saved view (programmatic-only,
-    // excluded from idb persistence) — clear any stale D-09 sync id so the
-    // loaded view's name wins outright.
+    // 187-05/190-08: entityId/entityIds are never persisted in a saved view
+    // (programmatic-only, excluded from idb persistence) — clear any stale
+    // D-09 sync id (or id set) so the loaded view's name wins outright.
     setFilter("entityId", null);
+    setFilter("entityIds", null);
     setFilter("hops", (view.filters.hops as number) ?? 1);
     setFilter("asOf", (view.filters.asOf as string | null) ?? null);
     setFilter("entityType", (view.filters.entityType as string | null) ?? null);
@@ -1095,8 +1156,9 @@ export default function KnowledgeGraph() {
     (view: SavedKgView) => {
       setLens(view.lens as KgLens);
       setFilter("entityName", (view.filters.entityName as string) ?? "");
-      // 187-05: same rationale as the ?view hydration effect above.
+      // 187-05/190-08: same rationale as the ?view hydration effect above.
       setFilter("entityId", null);
+      setFilter("entityIds", null);
       setFilter("hops", (view.filters.hops as number) ?? 1);
       setFilter("asOf", (view.filters.asOf as string | null) ?? null);
       setFilter("entityType", (view.filters.entityType as string | null) ?? null);
@@ -1361,11 +1423,14 @@ export default function KnowledgeGraph() {
   }, [activeGraph.nodes]);
 
   const isEmpty = graph.nodes.length === 0;
-  // 187-05: an entityId-driven fetch (D-09 answer-sync fallback) has no
-  // entityName text — must not show the "type a name" empty state while it
-  // is loading/loaded.
+  // 187-05/190-08: an entityId- or entityIds-driven fetch (D-09 answer-sync
+  // fallback, single- or multi-source) has no entityName text — must not
+  // show the "type a name" empty state while it is loading/loaded.
   const needsEntityName =
-    lens === "entity" && !filters.entityName.trim() && !filters.entityId;
+    lens === "entity" &&
+    !filters.entityName.trim() &&
+    !filters.entityId &&
+    !(filters.entityIds && filters.entityIds.length > 0);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
