@@ -678,7 +678,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 120 — Polish & Verified Defects** — remove the unanimous 3-model kill list and fix the code-verified defects (fabricated Integrations row, destructive confirms living in a toast and a `window.confirm`, E-Stop reflow, the 900px sidebar/Settings collision); the cheapest work, done first so it clears the decoration that would otherwise confound later visual-regression and contrast measurement. *(Corrected 2026-08-17: this line previously listed "`--status-ok` identical to `--primary`" as a Phase 120 defect. `REQUIREMENTS.md:44` assigns that decoupling to TOKEN-02 / Phase 122, and Phase 120's own success criteria below never mention it.)*
+- [x] **Phase 120 — Polish & Verified Defects** — remove the unanimous 3-model kill list and fix the code-verified defects (fabricated Integrations row, destructive confirms living in a toast and a `window.confirm`, E-Stop reflow, the 900px sidebar/Settings collision); the cheapest work, done first so it clears the decoration that would otherwise confound later visual-regression and contrast measurement. *(Corrected 2026-08-17: this line previously listed "`--status-ok` identical to `--primary`" as a Phase 120 defect. `REQUIREMENTS.md:44` assigns that decoupling to TOKEN-02 / Phase 122, and Phase 120's own success criteria below never mention it.)* (completed 2026-08-18)
 - [ ] **Phase 121 — Analytics Query Resilience** — `/analytics` survives any single failing query, and its LLM cost/latency queries (`costByModel`, `latencyOverTime`, `providerBreakdown`) move onto the `aggregates` rollups (DEBT-08) — a hard prerequisite for the six-state tile contract, not a passenger
 - [ ] **Phase 122 — Tokens, Primitives & Contrast Measurement** — layered surface tokens across all 5 themes, the three-hue-owner law, motion tokens, the six-state metric-tile primitive, shared `PageHeader`/`EmptyState` — plus A11Y-01, sizing the true scope of the contrast problem before any remediation is planned
 - [ ] **Phase 123 — Accessibility Remediation** — fix every violation A11Y-01 measured, and prove the contrast suite cannot report green against a page it never rendered
@@ -689,7 +689,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed | Notes |
 |-------|-----------|----------------|--------|-----------|-------|
-| 120. Polish & Verified Defects | v15.0 | 7/7 | Executed — verification `human_needed` | - | Not complete. All 7 plans landed 2026-08-17 and every automated gate is green, but `120-VERIFICATION.md` returned `human_needed`: 2 visual checks in `120-HUMAN-UAT.md` have never been performed by anyone. POLISH-04 is PARTIAL by design (3 fabrication residues assigned to 122/125). Checkbox stays unticked until verification re-runs `passed`. |
+| 120. Polish & Verified Defects | v15.0 | 7/7 | Complete | 2026-08-17 | VERIFIED `passed` 6/6 (`120-VERIFICATION.md`). POLISH-04 is **Partial** by design — 3 fabrication residues assigned to Phases 122/125. Carried to 122/123/124 in `120-DESIGN-REVIEW-HANDOFF.md`: the one sub-AA badge (Forge `failed`, pre-existing), emphasis keyed to the legacy semantic bucket, and the geometry spec's 900px-only overflow assertion. |
 | 121. Analytics Query Resilience | v15.0 | 0/0 | Not started | - | |
 | 122. Tokens, Primitives & Contrast Measurement | v15.0 | 0/0 | Not started | - | |
 | 123. Accessibility Remediation | v15.0 | 0/0 | Not started | - | |

@@ -29,12 +29,12 @@ The design law for this milestone is **already decided and validated**; these ar
 
 The unanimous 3-model kill list plus three defects verified in live code. These are the cheapest wins and should land first — they also unblock honest measurement for the token work.
 
-- [ ] **POLISH-01** — Operator sees no instance of the banned decoration anywhere in the app: `hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, per-item nav glow (`nav-active-shadow`/`nav-hover-shadow`), decorative pulse dots, cyan scrollbar glow, violet search pill. *(Unanimous across all three model proposals — the strongest signal in the comparison.)*
-- [ ] **POLISH-02** — The E-Stop control holds fixed geometry and never wraps or reflows at any viewport width.
-- [ ] **POLISH-03** — A destructive action is confirmed in a **dialog**, never a toast. *(`Tasks.tsx:144-145` puts a destructive confirm in a toast today — a toast can be missed or auto-dismissed, so it cannot carry a decision.)*
-- [ ] **POLISH-04** — No surface asserts a figure that has no emitter behind it. *(`HeroStatsBar.tsx:161-168` renders a fabricated Integrations row and carries a literal "simulation" comment. Same honesty rule that governed v14.0's MISSION-03.)*
-- [ ] **POLISH-05** — Status badges follow the quiet law: only **Failed** renders filled; everything else is quiet. Status vocabulary is unified to Running / Succeeded / Failed / Cancelled.
-- [ ] **POLISH-06** — The sidebar and Settings no longer collide at 900px.
+- [x] **POLISH-01** — Operator sees no instance of the banned decoration anywhere in the app: `hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, per-item nav glow (`nav-active-shadow`/`nav-hover-shadow`), decorative pulse dots, cyan scrollbar glow, violet search pill. *(Unanimous across all three model proposals — the strongest signal in the comparison.)*
+- [x] **POLISH-02** — The E-Stop control holds fixed geometry and never wraps or reflows at any viewport width.
+- [x] **POLISH-03** — A destructive action is confirmed in a **dialog**, never a toast. *(`Tasks.tsx:144-145` puts a destructive confirm in a toast today — a toast can be missed or auto-dismissed, so it cannot carry a decision.)*
+- [~] **POLISH-04 (PARTIAL)** — No surface asserts a figure that has no emitter behind it. *(`HeroStatsBar.tsx:161-168` renders a fabricated Integrations row and carries a literal "simulation" comment. Same honesty rule that governed v14.0's MISSION-03.)*
+- [x] **POLISH-05** — Status badges follow the quiet law: only **Failed** renders filled; everything else is quiet. Status vocabulary is unified to Running / Succeeded / Failed / Cancelled.
+- [x] **POLISH-06** — The sidebar and Settings no longer collide at 900px.
 
 ## Tokens & Primitives (TOKEN)
 
@@ -105,12 +105,12 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| POLISH-01 | Phase 120 | Pending |
-| POLISH-02 | Phase 120 | Pending |
-| POLISH-03 | Phase 120 | Pending |
-| POLISH-04 | Phase 120 | Pending |
-| POLISH-05 | Phase 120 | Pending |
-| POLISH-06 | Phase 120 | Pending |
+| POLISH-01 | Phase 120 | Complete |
+| POLISH-02 | Phase 120 | Complete |
+| POLISH-03 | Phase 120 | Complete |
+| POLISH-04 | Phase 120 | Partial — 3 fabrication residues assigned to 122/125, see 120-FABRICATION-INVENTORY.md |
+| POLISH-05 | Phase 120 | Complete |
+| POLISH-06 | Phase 120 | Complete |
 | DEBT-08 | Phase 121 | Pending |
 | TOKEN-01 | Phase 122 | Pending |
 | TOKEN-02 | Phase 122 | Pending |
