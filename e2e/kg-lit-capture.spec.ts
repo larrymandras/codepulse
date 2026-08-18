@@ -1,5 +1,5 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
-import { mkdirSync, copyFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, copyFileSync, writeFileSync, readFileSync, statSync } from "node:fs";
 import { randomInt } from "node:crypto";
 import path from "node:path";
 
@@ -325,6 +325,26 @@ test.describe("D-10 — knowledge-graph lit-node capture pair", () => {
     copyFileSync(image1Source, image1Path);
     copyFileSync(image2Source, image2Path);
 
+    // ── De-correlate file size from condition ──────────────────────────
+    // Found in review of the first 190-06 run: the experimental capture is
+    // reliably LARGER than the control (the halo ring is extra rendered
+    // content), so a plain copy leaves the condition→image mapping
+    // recoverable from a directory listing alone — no file needs to be
+    // opened. Pad both neutral copies to an IDENTICAL byte length by
+    // appending random bytes after the PNG's own IEND chunk (every PNG
+    // reader/renderer stops at IEND and ignores trailing bytes, so this
+    // does not alter either image). Target size is the larger of the two
+    // plus a random amount of extra jitter, so it isn't simply "whichever
+    // one was smaller, topped up to match" — recorded in mapping.json.
+    const size1 = statSync(image1Path).size;
+    const size2 = statSync(image2Path).size;
+    const paddedTargetSize = Math.max(size1, size2) + randomInt(2048, 8192);
+    for (const p of [image1Path, image2Path]) {
+      const buf = readFileSync(p);
+      const pad = Buffer.alloc(paddedTargetSize - buf.length, 0);
+      writeFileSync(p, Buffer.concat([buf, pad]));
+    }
+
     const mapping = {
       generated_at: new Date().toISOString(),
       coin_flip_result: experimentalFirst ? "experimental-first" : "control-first",
@@ -334,6 +354,7 @@ test.describe("D-10 — knowledge-graph lit-node capture pair", () => {
       control_capture_time_path: path.resolve(control.screenshotPath),
       experimental_node_count: experimental.nodeCount,
       control_node_count: control.nodeCount,
+      neutral_pair_padded_to_bytes: paddedTargetSize,
       note:
         "EXPERIMENTER-ONLY. Do not show this file or its contents to the observer. " +
         "Transcribe the mapping into 190-D10-RESULT.md only AFTER the observer has " +
