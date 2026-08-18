@@ -3,6 +3,21 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { getBillingType, PROVIDER_BILLING } from "./lib/providers";
 
+// Phase 121 (D-07): shared read shape for the two aggregates-backed queries
+// below (costByModel, providerBreakdown).
+//
+// - period is hardcoded "hourly", never a caller-supplied arg — D-10's
+//   freshness contract is "the most recent up-to-60 minutes is permanently
+//   absent"; a daily bucket would widen that gap to up to 24 hours.
+// - 30 days of hourly buckets is at most 720 buckets x the distinct
+//   provider::model::billingType::goalId keys active per hour, which at the
+//   measured call volume is expected to land in the low thousands. 8000
+//   mirrors the pre-migration `PROVIDER_BREAKDOWN_ROW_CAP` precedent on this
+//   same route; the actual figure is MEASURED live in plan 121-07's deploy
+//   gate rather than assumed here.
+const ROLLUP_LOOKBACK_DAYS = 30;
+const ROLLUP_READ_CAP = 8000;
+
 export const recordCall = mutation({
   args: {
     provider: v.string(),
@@ -211,59 +226,163 @@ export const recentCallsPaginated = query({
   },
 });
 
+/**
+ * Per-model call counts and token sums over the trailing `ROLLUP_LOOKBACK_DAYS`,
+ * read from the `aggregates` rollups (metric_type "calls" and "tokens") rather
+ * than scanning raw `llmMetrics` (Phase 121 D-07). Neither `.collect()`s — both
+ * reads are `.order("desc").take(ROLLUP_READ_CAP)`, so a cap hit drops the
+ * OLDEST end of the window and keeps the newest, and `truncated` is reported
+ * rather than silently undercounting.
+ *
+ * Drops the legacy `cost` field entirely: the money column on the panel comes
+ * from `costDerived.costBreakdown` (tokens x the live pricing rate), never
+ * from the raw ingested `llmMetrics.cost` sum this query used to return —
+ * Phase 104 D-01 forbids displaying that figure (it measured ~13% low).
+ *
+ * Honest limits (D-10, must ship in this docstring, not just the payload): a
+ * zero-activity hour is indistinguishable from a missed cron run, so
+ * `presentBuckets` means "hours with data" and nothing stronger — there is no
+ * cross-metric disambiguation. And because the rollup is hourly, the most
+ * recent up-to-60 minutes of activity is PERMANENTLY absent from every read,
+ * not just delayed until the next poll.
+ */
 export const costByModel = query({
   args: {},
   handler: async (ctx) => {
-    const cutoff = Date.now() / 1000 - 30 * 86400;
-    const all = await ctx.db.query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-    const grouped: Record<string, { calls: number; tokens: number; cost: number }> = {};
-    for (const r of all) {
-      const key = r.model;
-      if (!grouped[key]) grouped[key] = { calls: 0, tokens: 0, cost: 0 };
-      grouped[key].calls++;
-      grouped[key].tokens += r.totalTokens;
-      grouped[key].cost += r.cost ?? 0;
+    const period = "hourly";
+    const cutoff = Date.now() / 1000 - ROLLUP_LOOKBACK_DAYS * 86400;
+
+    const callsRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "calls").eq("period", period).gte("bucket_start", cutoff)
+      )
+      .order("desc")
+      .take(ROLLUP_READ_CAP);
+    const callsTruncated = callsRows.length >= ROLLUP_READ_CAP;
+
+    const tokensRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "tokens").eq("period", period).gte("bucket_start", cutoff)
+      )
+      .order("desc")
+      .take(ROLLUP_READ_CAP);
+    const tokensTruncated = tokensRows.length >= ROLLUP_READ_CAP;
+
+    const truncated = callsTruncated || tokensTruncated;
+    if (truncated) {
+      // Loud on purpose: past the cap these per-model totals UNDERCOUNT, and a
+      // silent undercount on a cost/usage surface is exactly what this phase
+      // exists to refuse.
+      console.warn(
+        `[llm.costByModel] hit the ${ROLLUP_READ_CAP}-row cap over ${ROLLUP_LOOKBACK_DAYS}d ` +
+          `(calls=${callsTruncated}, tokens=${tokensTruncated}) — totals undercount.`
+      );
     }
-    return grouped;
+
+    const callsByModel: Record<string, number> = {};
+    const tokensByModel: Record<string, number> = {};
+    const presentBuckets = new Set<number>();
+    for (const r of callsRows) {
+      const model = (r.dimensions as { model?: string } | null)?.model ?? "unknown";
+      callsByModel[model] = (callsByModel[model] ?? 0) + r.value;
+      presentBuckets.add(r.bucket_start);
+    }
+    for (const r of tokensRows) {
+      const model = (r.dimensions as { model?: string } | null)?.model ?? "unknown";
+      tokensByModel[model] = (tokensByModel[model] ?? 0) + r.value;
+      presentBuckets.add(r.bucket_start);
+    }
+
+    const models = new Set([...Object.keys(callsByModel), ...Object.keys(tokensByModel)]);
+    const rows = Array.from(models).map((model) => ({
+      model,
+      calls: callsByModel[model] ?? 0,
+      tokens: tokensByModel[model] ?? 0,
+    }));
+
+    // asOf is the OLDER of the two metric types' newest buckets, so the
+    // freshness label can never overstate how current the payload is — if
+    // either read returned zero rows, asOf is null rather than pretending
+    // the other metric type's freshness applies to both.
+    const callsAsOf = callsRows[0]?.bucket_start ?? null;
+    const tokensAsOf = tokensRows[0]?.bucket_start ?? null;
+    const asOf =
+      callsAsOf === null
+        ? tokensAsOf
+        : tokensAsOf === null
+          ? callsAsOf
+          : Math.min(callsAsOf, tokensAsOf);
+
+    return {
+      rows,
+      asOf,
+      expectedBuckets: Math.floor((ROLLUP_LOOKBACK_DAYS * 86400) / 3600),
+      presentBuckets: presentBuckets.size,
+      rowsRead: callsRows.length + tokensRows.length,
+      truncated,
+    };
   },
 });
 
-const PROVIDER_BREAKDOWN_DEFAULT_DAYS = 30;
-const PROVIDER_BREAKDOWN_ROW_CAP = 8000;
-
+/**
+ * Per-provider call counts over the trailing `ROLLUP_LOOKBACK_DAYS`, read
+ * from the `aggregates` "calls" rollup rather than scanning raw `llmMetrics`
+ * (Phase 121 D-07). Bounded (`.order("desc").take(ROLLUP_READ_CAP)`, never
+ * `.collect()`); a cap hit drops the OLDEST end of the window and is reported
+ * via `truncated` rather than silently undercounting.
+ *
+ * Drops `avgLatency` and `cost` entirely — both were computed by the
+ * pre-migration handler but rendered nowhere on the panel (PC-4), and `cost`
+ * carried the same raw `llmMetrics.cost` sum Phase 104 D-01 forbids
+ * displaying on a public surface.
+ *
+ * Honest limits (D-10, must ship in this docstring, not just the payload): a
+ * zero-activity hour is indistinguishable from a missed cron run, so
+ * `presentBuckets` means "hours with data" and nothing stronger — there is no
+ * cross-metric disambiguation. And because the rollup is hourly, the most
+ * recent up-to-60 minutes of activity is PERMANENTLY absent from every read,
+ * not just delayed until the next poll.
+ */
 export const providerBreakdown = query({
-  args: { lookbackDays: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    const days = args.lookbackDays ?? PROVIDER_BREAKDOWN_DEFAULT_DAYS;
-    const cutoff = Date.now() / 1000 - days * 86400;
-    const all = await ctx.db.query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .filter((q) => q.neq(q.field("archived"), true))
-      .take(PROVIDER_BREAKDOWN_ROW_CAP);
-    if (all.length >= PROVIDER_BREAKDOWN_ROW_CAP) {
-      // Loud on purpose: past the cap these per-provider totals UNDERCOUNT, and
-      // a silent undercount on a cost surface is exactly what D-03 forbids.
+  args: {},
+  handler: async (ctx) => {
+    const period = "hourly";
+    const cutoff = Date.now() / 1000 - ROLLUP_LOOKBACK_DAYS * 86400;
+
+    const rows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "calls").eq("period", period).gte("bucket_start", cutoff)
+      )
+      .order("desc")
+      .take(ROLLUP_READ_CAP);
+    const truncated = rows.length >= ROLLUP_READ_CAP;
+    if (truncated) {
+      // Loud on purpose: past the cap these per-provider totals UNDERCOUNT.
       console.warn(
-        `[llm.providerBreakdown] hit the ${PROVIDER_BREAKDOWN_ROW_CAP}-row cap over ${days}d — ` +
-          `totals undercount. Move this onto the aggregates rollups (CR-01 gap plan).`
+        `[llm.providerBreakdown] hit the ${ROLLUP_READ_CAP}-row cap over ${ROLLUP_LOOKBACK_DAYS}d — ` +
+          `totals undercount.`
       );
     }
-    const grouped: Record<string, { calls: number; totalLatency: number; cost: number }> = {};
-    for (const r of all) {
-      if (!grouped[r.provider]) grouped[r.provider] = { calls: 0, totalLatency: 0, cost: 0 };
-      grouped[r.provider].calls++;
-      grouped[r.provider].totalLatency += r.latencyMs;
-      grouped[r.provider].cost += r.cost ?? 0;
+
+    const grouped: Record<string, number> = {};
+    const presentBuckets = new Set<number>();
+    for (const r of rows) {
+      const provider = (r.dimensions as { provider?: string } | null)?.provider ?? "unknown";
+      grouped[provider] = (grouped[provider] ?? 0) + r.value;
+      presentBuckets.add(r.bucket_start);
     }
-    return Object.entries(grouped).map(([provider, data]) => ({
-      provider,
-      calls: data.calls,
-      avgLatency: Math.round(data.totalLatency / data.calls),
-      cost: data.cost,
-    }));
+
+    return {
+      rows: Object.entries(grouped).map(([provider, calls]) => ({ provider, calls })),
+      asOf: rows[0]?.bucket_start ?? null,
+      expectedBuckets: Math.floor((ROLLUP_LOOKBACK_DAYS * 86400) / 3600),
+      presentBuckets: presentBuckets.size,
+      rowsRead: rows.length,
+      truncated,
+    };
   },
 });
 
