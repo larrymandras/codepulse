@@ -766,26 +766,125 @@ describe("aggregates", () => {
       expect(completionRows).toHaveLength(1); // independent guard still inserts this one
     });
 
-    test("reaching the retention floor returns done: true and writes the terminal cursor sentinel", async () => {
+    test("reaching the retention floor mid-walk returns done: true and RESETS the cursor (Phase 121 D-08 — no longer a terminal sentinel)", async () => {
       const hourStart = currentHourStart();
-      // Cursor already sits well past the (default 30-day) retention floor.
+      // A short 1-day retention window means the floor is only ~24 hours back,
+      // so a generous maxHours (30) walks straight past it in one invocation.
+      const shortRetention = { configKey: "retention_days", value: 1, source: "runtime", updatedAt: 0 };
+      const { ctx, tables } = makeAggregatesCtx({ agentConfigs: [shortRetention] });
+
+      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 30 });
+
+      expect(result.done).toBe(true);
+      expect(result.hoursProcessed).toBeLessThan(30); // stopped at the floor, not the maxHours cap
+      // Pre-change (latching) behaviour would have asserted result.nextCursor === "done".
+      // Post-change: a completed sweep resets to the freshest hour instead.
+      expect(result.nextCursor).toBe(hourStart);
+      const cursorRows = tables.agentConfigs.filter(
+        (r) => r.configKey === "phase104.tokenSplitBackfill.cursor"
+      );
+      expect(cursorRows[cursorRows.length - 1].value).toBe(hourStart);
+    });
+
+    test("a cursor already well past the retention floor is CLAMPED to a fresh start rather than terminating immediately (Phase 121 D-08 clamp)", async () => {
+      const hourStart = currentHourStart();
+      // Pre-Task-3 behaviour: a stale numeric cursor this old fails the
+      // `cursor < retentionFloorHour` check on the FIRST loop iteration and
+      // returns hoursProcessed: 0 immediately. Post-Task-3: the clamp treats
+      // any cursor outside [retentionFloorHour, startingHour] as "start fresh",
+      // so this now processes real hours instead of no-op'ing forever.
       const staleCursor = {
         configKey: "phase104.tokenSplitBackfill.cursor",
         value: hourStart - 40 * 86400,
         source: "runtime",
         updatedAt: 0,
       };
-      const { ctx, tables } = makeAggregatesCtx({ agentConfigs: [staleCursor] });
+      const { ctx, tables } = makeAggregatesCtx({
+        agentConfigs: [staleCursor],
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+      });
 
-      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 6 });
+      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 1 });
 
-      expect(result.done).toBe(true);
-      expect(result.hoursProcessed).toBe(0);
-      expect(result.nextCursor).toBe("done");
-      const cursorRows = tables.agentConfigs.filter(
+      expect(result.hoursProcessed).toBe(1);
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      expect(promptRows).toHaveLength(1);
+      expect(promptRows[0].value).toBe(10);
+    });
+
+    test('a "done" cursor no longer blocks a fresh pass (Phase 121 D-08 de-latch)', async () => {
+      const hourStart = currentHourStart();
+      // Pre-change, this exact fixture would have short-circuited on the
+      // `cursorRow?.value === "done"` early return and reported
+      // hoursProcessed: 0 forever. That early return is gone.
+      const doneCursor = {
+        configKey: "phase104.tokenSplitBackfill.cursor",
+        value: "done",
+        source: "runtime",
+        updatedAt: 0,
+      };
+      const { ctx, tables } = makeAggregatesCtx({
+        agentConfigs: [doneCursor],
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 2 });
+
+      expect(result.hoursProcessed).toBeGreaterThan(0);
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      expect(promptRows.length).toBeGreaterThan(0);
+    });
+
+    test("a cursor newer than the current hour is clamped back to a fresh start (Phase 121 D-08)", async () => {
+      const hourStart = currentHourStart();
+      const futureCursor = {
+        configKey: "phase104.tokenSplitBackfill.cursor",
+        value: hourStart + 100 * 3600, // nonsensically far in the future
+        source: "runtime",
+        updatedAt: 0,
+      };
+      const { ctx, tables } = makeAggregatesCtx({
+        agentConfigs: [futureCursor],
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 1 });
+
+      expect(result.hoursProcessed).toBe(1); // clamped to hourStart, not stuck 100 hours out
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      expect(promptRows).toHaveLength(1);
+      expect(promptRows[0].value).toBe(10);
+    });
+
+    test("a resumed run writes its cursor via insert only, with patchCalls/deleteCalls empty", async () => {
+      const hourStart = currentHourStart();
+      const doneCursor = {
+        configKey: "phase104.tokenSplitBackfill.cursor",
+        value: "done",
+        source: "runtime",
+        updatedAt: 0,
+      };
+      const { ctx, tables, patchCalls, deleteCalls } = makeAggregatesCtx({
+        agentConfigs: [doneCursor],
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      await (backfillTokenSplit as any)._handler(ctx, { maxHours: 1 });
+
+      const cursorRowsAfter = tables.agentConfigs.filter(
         (r) => r.configKey === "phase104.tokenSplitBackfill.cursor"
       );
-      expect(cursorRows[cursorRows.length - 1].value).toBe("done");
+      expect(cursorRowsAfter.length).toBeGreaterThan(1); // a new row was inserted, the old one untouched
+      expect(patchCalls).toHaveLength(0);
+      expect(deleteCalls).toHaveLength(0);
     });
 
     test("issues no db.patch and no db.delete call on the fake ctx", async () => {

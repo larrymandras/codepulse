@@ -767,12 +767,33 @@ async function fetchLlmRowsForHour(
  * none for this table.
  *
  * Resume position: agentConfigs["phase104.tokenSplitBackfill.cursor"], whose
- * value is the bucket_start (epoch seconds) of the NEXT hour to process, or the
- * string "done" once the retention floor is reached. Written via ctx.db.insert
- * ONLY (never patch) — the newest row for that configKey (by insertion/
- * _creationTime order, Convex's default collect() order) is the current cursor.
- * This keeps the whole mutation insert-only end to end, matching the aggregates
- * writes above.
+ * value is the bucket_start (epoch seconds) of the NEXT hour to process.
+ * Written via ctx.db.insert ONLY (never patch) — the newest row for that
+ * configKey (by insertion/_creationTime order, Convex's default collect()
+ * order) is the current cursor. This keeps the whole mutation insert-only
+ * end to end, matching the aggregates writes above.
+ *
+ * Phase 121 follow-up (D-08, mirroring the COST-01 fix already shipped on
+ * backfillDailyRollup below): this cursor used to LATCH. A completed sweep
+ * persisted the string "done", and the handler's first act was to return
+ * early on it — so the tool was single-use, and once `calls` (Task 2) started
+ * riding this same backfill, that latch made 30 days of `calls` history
+ * permanently unreachable without hand-editing agentConfigs.
+ *
+ * A finished sweep now RESETS to the most recently completed hour instead of
+ * latching, exactly like backfillDailyRollup's day cursor, so the next
+ * invocation starts a fresh pass. `done: true` is still returned, so an
+ * operator loop that repeats "until done" still terminates after one pass.
+ * A reset re-run is safe (never a double-count) because every insert this
+ * mutation makes is already per-dimension-key idempotent via
+ * insertTokenSplitBuckets's own guards — a second pass over an
+ * already-covered hour inserts nothing for any of the three metric types.
+ * The cost of a re-run is re-READING those hours (a bounded llmMetrics window
+ * read per hour), never re-WRITING them.
+ *
+ * Reading a legacy "done" (or any non-finite value) as "start fresh" is
+ * deliberate: it un-sticks the row already sitting in the live DB from an
+ * earlier run, with no hand-editing of agentConfigs.
  */
 export const backfillTokenSplit = internalMutation({
   args: { maxHours: v.optional(v.float64()) },
@@ -795,14 +816,23 @@ export const backfillTokenSplit = internalMutation({
     // collect() order) is the most recently written cursor value.
     const cursorRow = cursorRows.length > 0 ? cursorRows[cursorRows.length - 1] : null;
 
-    if (cursorRow?.value === "done") {
-      return { hoursProcessed: 0, rowsInserted: 0, nextCursor: "done" as const, done: true, truncatedHours: [] as number[] };
-    }
+    // Freshest hour a brand-new pass would start from — the same expression a
+    // first-ever run has always used, and the value a completed pass now
+    // resets to instead of latching (see the doc comment above).
+    const startingHour = Math.floor(Date.now() / 1000 / 3600) * 3600 - 3600;
 
+    const rawCursor = cursorRow?.value;
     let cursor: number =
-      cursorRow?.value != null
-        ? Number(cursorRow.value)
-        : Math.floor(Date.now() / 1000 / 3600) * 3600 - 3600;
+      rawCursor == null || rawCursor === "done" || !Number.isFinite(Number(rawCursor))
+        ? startingHour
+        : Number(rawCursor);
+
+    // A cursor outside the window is meaningless — restart the sweep rather
+    // than walking hours that can never be filled. Mirrors
+    // backfillDailyRollup's identical clamp below.
+    if (cursor > startingHour || cursor < retentionFloorHour) {
+      cursor = startingHour;
+    }
 
     let hoursProcessed = 0;
     let rowsInserted = 0;
@@ -836,7 +866,10 @@ export const backfillTokenSplit = internalMutation({
       done = true;
     }
 
-    const nextCursorValue: number | "done" = done ? "done" : cursor;
+    // Reset-on-completion, never latch — see the cursor note in the doc
+    // comment above. `done` is still reported so a "repeat until done"
+    // operator loop terminates.
+    const nextCursorValue: number = done ? startingHour : cursor;
     await ctx.db.insert("agentConfigs", {
       configKey: TOKEN_SPLIT_BACKFILL_CURSOR_KEY,
       value: nextCursorValue,
