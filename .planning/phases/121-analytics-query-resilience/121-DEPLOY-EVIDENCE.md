@@ -368,3 +368,102 @@ or `src/` source was modified.
 
 **No bulk delete or bulk patch was issued against any table.** Every write in this task was the
 backfill's own single-row `ctx.db.insert` calls (`insertTokenSplitBuckets`), exactly as designed.
+
+## Task 4: Live smoke check that /analytics mounts and isolates after the relocation
+
+**Performed by the orchestrator via Chrome browser automation on
+`http://localhost:5173/analytics`** — the executor that ran Tasks 2–3 has no browser tool and
+correctly stopped at this checkpoint rather than fabricate a result (see its checkpoint return).
+This is not a probe run by that executor, and not a manual check run by the operator directly;
+recorded here exactly as relayed by the orchestrator.
+
+**Resume signal received: `approved`.**
+
+### Environment caveat — a real, since-disproven backend degradation, not a phase defect
+
+The FIRST smoke attempt was run against a degraded backend and showed all-zero tiles. This is
+recorded honestly rather than silently re-run and forgotten, because it could have been mistaken for
+a Phase 121 regression:
+
+- `docker stats convex-backend` at the time of the first attempt: **19.19 GiB memory / 120.9% CPU**.
+- `metrics:dashboardSummary`, invoked from the CLI with **no browser involved**, returned:
+  `Your request timed out performing too many system operations` — proving the failure was
+  server-side and unrelated to this phase's frontend/query changes (a query outside this phase's
+  scope, per `convex/metrics.ts`).
+- The operator approved a health-gated restart: `convex-selfhost\restart-convex.ps1`.
+  Result: `memory before : 24934 MiB` → `memory after : 9282 MiB (reclaimed 15652 MiB)` →
+  `OK: healthy after 45s`.
+- **Stated honestly: the restart did NOT resolve the aggregate-query timeouts.** Both
+  `metrics:dashboardSummary` and `analytics:activityHeatmap` still time out post-restart. The
+  memory-starvation hypothesis for THOSE two queries was WRONG; the residual cause is per-query scan
+  cost on unbounded queries that are outside this phase's scope (see "Out-of-scope follow-up" below).
+  The smoke check below was re-run post-restart and reflects the backend's steady state.
+
+### Task 4 observations, post-restart, all from the live page
+
+1. `/analytics` mounts; every section renders. No page-level blank (the exact 2026-08-11 blackout
+   failure mode this phase exists to prevent did not recur, even while three unrelated queries below
+   were actively timing out).
+
+2. **SectionErrorBoundary isolation demonstrated against REAL, un-injected failures — the strongest
+   evidence in the phase.** Exactly three boundaries were in their fallback state: `Activity Heatmap
+   failed to load`, `Token Flow failed to load`, `Prompt Activity failed to load`. Every other panel
+   rendered real content throughout. Console confirmed:
+   `SectionErrorBoundary [Activity Heatmap] caught: Error: [CONVEX Q(analytics:activityHeatmap)] ...
+   Your request timed out performing too many system operations`, and the identical shape for
+   `[Token Flow]` / `analytics:toolFlowSankey`. Three simultaneous live query failures, zero
+   collateral damage to any other panel — the pre-121 architecture (ten queries hoisted into the page
+   component, no boundaries) would have blanked the entire route on any one of these.
+
+3. **D-11 freshness label renders `as of 13:00`** — a plausible recent LOCAL time. Cross-checked
+   against Task 3's measured `providerBreakdown.asOf = 1787072400` = `2026-08-18T17:00:00Z` =
+   `13:00 ET`. Not 1970, not "no data yet".
+
+4. Summary Row populated with real figures: `TOTAL EVENTS 155982`, `LLM CALLS 25`,
+   `TOTAL TOKENS 338,612`, `CACHE HIT RATE (24H) 57.6%`, `API SPEND $83.7227`. Cost Forecast renders
+   `$1.9313` daily / `$13.5190` weekly / `$57.9386` monthly.
+
+5. **Model Breakdown Calls/Tokens columns populated by this session's Task 3 backfill**:
+   `claude-sonnet-5` 1301 calls / 11,039,719 tokens / $48.3448; `claude-sonnet-4-6` 410 /
+   4,732,822 / $17.5559; `claude-haiku-4-5` 2158 calls. Before the backfill, every `calls` figure
+   was 0 (see Task 3's before/after). Cost column shows real dollars; the single `$0.0000` entry is
+   `Claude CLI / Subscription`, paired with `$27.8310` in the COVERED column and an explicit
+   "Not billed" note — the honest subscription representation this phase's docstrings require, not a
+   fabricated `$0.00`.
+
+6. **"Load more" verified working — recorded honestly because the first measurement attempt was a
+   false negative.** First click with a fixed 2.5s wait showed 25 rows unchanged (looked like a
+   regression). Re-measured with sampling at 1/2/4/8s: the table went 25 → 50 → 75 rows, taking
+   ~3-4s per page against the currently-loaded backend — a timing artifact of the first check, not a
+   bug. The button correctly disappears while `status === "LoadingMore"` and returns at
+   `CanLoadMore` (gate at `RecentLlmCallsPanel.tsx:102`, identical to the pre-phase original). While
+   the table grew to 75 rows, the Summary Row's `LLM CALLS` held steady at 25 and `TOTAL TOKENS` at
+   338,612 — the stated, intended consequence of the table having its own subscription (121-04), not
+   a bug.
+
+7. **No stale-service-worker confound** (per the 2026-07-22 lesson on this exact failure class):
+   `navigator.serviceWorker.getRegistrations()` → `[]` (0 registrations), `caches.keys()` → `[]`.
+   Dev server verified serving CURRENT code: `LlmAnalyticsPanel.tsx` served from `:5173` matched the
+   on-disk file (12/12 matches for the as-of pattern, 27439 bytes) — not a stale cached bundle.
+
+### Acceptance criteria — final status
+
+- Every listed section renders; console was clean of anything BUT the three explained, isolated,
+  real (non-injected) timeout errors above — each correctly caught by its own boundary. No
+  unexplained error, no boundary warning outside those three.
+- `as of 13:00` label present and matches the measured `asOf` — not 1970, not "no data yet".
+- Calls/Tokens columns populated (real values, not zeros); Cost column shows dollars or the honest
+  "Not billed" subscription treatment, never a fabricated `$0.00`.
+- Observed result — including the environment caveat and both things that did NOT match on first
+  attempt (all-zero tiles, "Load more" false negative) — is written into this file above.
+
+**Task 4: APPROVED.**
+
+### Out-of-scope follow-up (explicitly NOT fixed by this phase)
+
+`analytics:activityHeatmap`, `analytics:toolFlowSankey`, `analytics:tokenSunburst` (backs Prompt
+Activity), and `metrics:dashboardSummary` are unbounded scans that now time out server-side at
+current data volume. Phase 121 bounded `costByModel`, `providerBreakdown`, `evalScores`, and
+`cacheStats` — these four are the same debt class, left unfixed, and are a follow-up candidate for a
+future phase. **This phase did not fix them; do not read the working panels above as evidence that
+it did.**
