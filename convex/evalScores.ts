@@ -140,6 +140,15 @@ export const getEvalLLMConfigInternal = internalQuery({
   },
 });
 
+// Phase 121 (D-09): bounds the llmMetrics read below, matching the .take(200)
+// its sibling `events` read (immediately above) already uses in this same
+// function — an asymmetry the originating brief called unintentional. Read
+// in descending timestamp order so a cap hit keeps the MOST RECENT calls
+// (not the oldest); no reversal back to ascending is needed because
+// buildJudgeDigest only sums cost/totalTokens and counts llmMetrics.length —
+// it never reads a per-row field that depends on ordering.
+const JUDGE_DIGEST_LLM_READ_CAP = 200;
+
 export const getJudgeDigestInternal = internalQuery({
   args: { sessionId: v.string() },
   handler: async (ctx, { sessionId }) => {
@@ -155,7 +164,8 @@ export const getJudgeDigestInternal = internalQuery({
     const llmMetrics = await ctx.db
       .query("llmMetrics")
       .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
-      .collect();
+      .order("desc")
+      .take(JUDGE_DIGEST_LLM_READ_CAP);
     return { session, events, llmMetrics };
   },
 });

@@ -211,23 +211,6 @@ export const recentCallsPaginated = query({
   },
 });
 
-export const costByProvider = query({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() / 1000 - 30 * 86400;
-    const all = await ctx.db.query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-    const grouped: Record<string, number> = {};
-    for (const record of all) {
-      grouped[record.provider] =
-        (grouped[record.provider] ?? 0) + (record.cost ?? 0);
-    }
-    return grouped;
-  },
-});
-
 export const costByModel = query({
   args: {},
   handler: async (ctx) => {
@@ -248,27 +231,6 @@ export const costByModel = query({
   },
 });
 
-// STOPGAP (2026-08-01, Phase 104 live gate). This query was an UNBOUNDED
-// 30-day `.collect()` over llmMetrics (~7 080 rows and growing). On its own it
-// still returns, but Analytics fires 10 queries concurrently and Phase 104 added
-// several more readers to that page (CostBreakdownTable, UnpricedModelsNudge,
-// CostTrendChart on costDerived, the rewired SDKSpendGuard and
-// CostForecastPanel). The combined load tipped the self-hosted instance over:
-//   [CONVEX Q(llm:providerBreakdown)] Server Error
-//   Your request timed out performing too many system operations
-// and because an unhandled useQuery throw unmounts the tree, ONE query took the
-// whole Analytics page down.
-//
-// This adds a hard row cap that WARNS rather than silently under-reporting, so
-// the query can no longer grow without bound. NOTE: narrowing the window was
-// TRIED and REVERTED -- 7 days still scanned 7 052 of the 7 080 rows (the data
-// is dense in the last week), so it bought nothing and only cost semantics.
-// The page-wide blackout is fixed separately, by wrapping LlmAnalyticsPanel in
-// the SectionErrorBoundary it was missing. This is a stopgap: the real
-// fix is to read the pre-aggregated `aggregates` rollups instead of raw
-// llmMetrics, which is tracked with CR-01 in the Phase 104 gap plan.
-// Note `.filter()` runs AFTER the index read in Convex, so archived rows are
-// read and then discarded — they count against the budget either way.
 const PROVIDER_BREAKDOWN_DEFAULT_DAYS = 30;
 const PROVIDER_BREAKDOWN_ROW_CAP = 8000;
 
@@ -301,24 +263,6 @@ export const providerBreakdown = query({
       calls: data.calls,
       avgLatency: Math.round(data.totalLatency / data.calls),
       cost: data.cost,
-    }));
-  },
-});
-
-export const latencyOverTime = query({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() / 1000 - 30 * 86400;
-    const all = await ctx.db
-      .query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .order("asc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-    return all.map((r) => ({
-      timestamp: r.timestamp,
-      provider: r.provider,
-      latencyMs: r.latencyMs,
     }));
   },
 });
@@ -384,10 +328,11 @@ export const SUBSCRIPTION_PROVIDERS = (
  * 2026-08-11: 5,274 rows in that window, DOWN from the ~7,080 Phase 104 recorded
  * on 2026-08-01, because the window slides as activity moves.
  *
- * The better-supported mechanism is the one the `providerBreakdown` STOPGAP note
- * below already documents: Analytics fires ~10 queries concurrently, and the
- * combined load tips a memory-loaded instance over. Backend memory was 32.5 GiB
- * last night versus 18 GiB after the nightly restart.
+ * The better-supported mechanism (documented by Phase 104's `providerBreakdown`
+ * comment, removed when Phase 121 migrated that query onto the `aggregates`
+ * rollups): Analytics fires ~10 queries concurrently, and the combined load
+ * tips a memory-loaded instance over. Backend memory was 32.5 GiB last night
+ * versus 18 GiB after the nightly restart.
  *
  * This cap is therefore defence-in-depth, not the load-bearing fix. What actually
  * helps here is reading ~864 rows instead of 5,274 — a ~6x cut in this query's

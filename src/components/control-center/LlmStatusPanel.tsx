@@ -18,8 +18,8 @@
  *   - `--status-info` — the circuit is `half_open` (actively re-testing after a trip = routing
  *     in progress).
  *   - `--primary` — this provider handled the most recently completed LLM call (`useLlmMetrics`'
- *     newest row's own `provider` field, the same field `llm.ts`'s `providerBreakdown`/
- *     `costByProvider` group by) — the resolved winner.
+ *     newest row's own `provider` field, the same field `llm.ts`'s `providerBreakdown`
+ *     groups by) — the resolved winner.
  *   - `--muted-foreground` — no health data yet, or a healthy-but-not-currently-winning
  *     provider. Chips for EVERY configured provider always render (never disappear while
  *     loading), so the panel structurally cannot render empty.
