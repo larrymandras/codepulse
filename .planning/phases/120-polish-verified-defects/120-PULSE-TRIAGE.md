@@ -289,3 +289,49 @@ sites that failed an audit this phase promised they would pass.
 Lesson for the closure record: a census that classifies a site as out-of-scope must be checked
 against the decision text, not against the plan's prelisted file set. Both files were outside
 120-06's `files_modified`, which is what made "not in scope" feel correct.
+
+
+## §7 — Full-class sweep at phase close (third instance, and the class finally closed)
+
+§6 above fixed two ungated survivors found by external review. That was a fix of two INSTANCES,
+not of the CLASS — no repo-wide sweep followed it. The phase's own re-verification then found a
+third: `src/components/skills/SkillRow.tsx:110`, the optimistic-pending bar. It is state-gated on
+`usePendingMove()`, so it survives per D-09, and it had no motion gate at all. It was the one site
+absent from every category of this census.
+
+That is the same defect class twice in a row, so the sweep below was run over the WHOLE corpus
+rather than over the sites anyone happened to report.
+
+**Method.** For every non-test file containing `animate-pulse` (fixed-string, `git grep -lF`),
+count the pulses, count how many are skeleton-shaped, and count motion-gate references
+(`prefersReducedMotion` / `useReducedMotion` / `matchMedia` / `motion/react`). Then cross-check
+each ungated non-skeleton file against this document.
+
+**Population: 42 non-test files.** Result:
+
+| bucket | count | disposition |
+|---|---|---|
+| Motion-gated | 20 files | correct — includes the 5 pre-existing hand-copies (ReadinessPill, ShareScreenToggle, Chat, ReminderList, AvatarAura) that D-02 deliberately left unconsolidated |
+| Skeleton / loading placeholder | 11 files | D-10 carve-out, correctly ungated — `Skeleton.tsx` (11 pulses), `ui/skeleton.tsx`, DeliveryHistory, EmailDigestConfig, ExecutionTable, GovernorDecisionLog, MemoryIndexHealth, OperatorScoreCard, SDKSpendGuard, CatalogBrowser, KGSummaryCards |
+| Loading-text pulses | 6 files | already classified in §2; loading indicators, not state signals — SessionComparison, CodeVaultGraph (×2), KGSearchResults, KnowledgeGraph (×5), Memory, IntegrationHealth |
+| Hover-triggered | 1 file | `ActiveSessions.tsx:33` `group-hover:animate-pulse` — user-initiated, not a state signal; classified in §2 |
+| Utility definition, not a site | 2 | `src/index.css`, `src/lib/prefersReducedMotion.ts` (its own doc comment) |
+| **Unaccounted — GENUINE GAP** | **1** | **`skills/SkillRow.tsx:110`** — now gated |
+
+Every ungated non-skeleton file except `SkillRow.tsx` appears in §2 with a classification.
+`SkillRow.tsx` appeared nowhere in this document at all, which is exactly why two prior passes
+missed it: both were checking sites that had already been written down.
+
+**The class is now closed with evidence, not with a claim.** The sweep above is reproducible:
+
+```
+for f in $(git grep -lF 'animate-pulse' -- 'src/*' | grep -vE '\.test\.|__tests__'); do
+  echo "$f gate=$(grep -cE 'prefersReducedMotion|useReducedMotion|matchMedia|motion/react' "$f")"
+done
+```
+
+**Lesson for the closure record.** A census is only as complete as its population query. Both
+earlier passes verified the sites already in this table; neither re-derived the population from
+the corpus. When a defect is found in a classified site, the next step is not "fix that site" —
+it is "re-derive the population and re-check every member", because the sites most likely to be
+wrong are the ones nobody wrote down.

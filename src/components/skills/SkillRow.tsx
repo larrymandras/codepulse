@@ -3,6 +3,7 @@ import { Check, GripVertical, Pencil, Star } from "lucide-react";
 import { isDormant, skillInvocation, type SkillLike } from "@/lib/skills";
 import { SkillLifecycleMenu } from "./SkillLifecycleMenu";
 import { usePendingMove, useDraggingSkill } from "@/hooks/usePendingLifecycleMoves";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 export type RowSkill = SkillLike & {
   displayName: string;
@@ -107,7 +108,16 @@ export function SkillRow({
       {pending && (
         <div
           data-testid="pending-indicator"
-          className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--status-info)] shadow-[var(--glow-sm)] animate-pulse"
+          /* D-11 (Phase 120): the optimistic-pending bar is a genuine
+             in-flight signal, so its pulse SURVIVES — but every surviving
+             pulse must be gated per-site on prefers-reduced-motion. The bar
+             itself stays visible when motion is reduced; only the animation
+             drops, so the pending state remains legible. Third and final
+             instance of this gap, found by the phase's own re-verification
+             after a full-class sweep. */
+          className={`absolute left-0 top-0 bottom-0 w-1 bg-[var(--status-info)] shadow-[var(--glow-sm)]${
+            prefersReducedMotion() ? "" : " animate-pulse"
+          }`}
         />
       )}
 
