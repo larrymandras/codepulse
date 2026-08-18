@@ -679,7 +679,7 @@ Plans:
 **Phase summary:**
 
 - [x] **Phase 120 — Polish & Verified Defects** — remove the unanimous 3-model kill list and fix the code-verified defects (fabricated Integrations row, destructive confirms living in a toast and a `window.confirm`, E-Stop reflow, the 900px sidebar/Settings collision); the cheapest work, done first so it clears the decoration that would otherwise confound later visual-regression and contrast measurement. *(Corrected 2026-08-17: this line previously listed "`--status-ok` identical to `--primary`" as a Phase 120 defect. `REQUIREMENTS.md:44` assigns that decoupling to TOKEN-02 / Phase 122, and Phase 120's own success criteria below never mention it.)* (completed 2026-08-18)
-- [ ] **Phase 121 — Analytics Query Resilience** — `/analytics` survives any single failing query, and its LLM cost/latency queries (`costByModel`, `latencyOverTime`, `providerBreakdown`) move onto the `aggregates` rollups (DEBT-08) — a hard prerequisite for the six-state tile contract, not a passenger
+- [ ] **Phase 121 — Analytics Query Resilience** — `/analytics` survives any single failing query, and its LLM usage queries (`costByModel`, `providerBreakdown`) move onto the `aggregates` rollups while the two consumer-less unbounded scans (`latencyOverTime`, `costByProvider`) are deleted (DEBT-08; scope amended 2026-08-18 — see the criteria below and `121-CONTEXT.md` D-06) — a hard prerequisite for the six-state tile contract, not a passenger
 - [ ] **Phase 122 — Tokens, Primitives & Contrast Measurement** — layered surface tokens across all 5 themes, the three-hue-owner law, motion tokens, the six-state metric-tile primitive, shared `PageHeader`/`EmptyState` — plus A11Y-01, sizing the true scope of the contrast problem before any remediation is planned
 - [ ] **Phase 123 — Accessibility Remediation** — fix every violation A11Y-01 measured, and prove the contrast suite cannot report green against a page it never rendered
 - [ ] **Phase 124 — Shell & Information Architecture** — the 48px 3-zone header and the 232px sidebar's 4-domain regroup, a pure `navRegistry.ts` change with no route changes
@@ -734,9 +734,9 @@ Plans:
 **Requirements**: DEBT-08
 **Success Criteria** (what must be TRUE):
 
-  1. Forcing a throw in any one of `costByModel`, `latencyOverTime`, or `providerBreakdown` leaves the other two rendering — no single failing query takes down the whole route.
-  2. `costByModel` (`llm.ts:231`), `latencyOverTime` (`:308`), and `providerBreakdown` (`:275`) all read the `aggregates` rollups, not raw `llmMetrics` scans.
-  3. Each of the three queries can independently report its own failure without silently absorbing or masking a sibling's.
+  1. Forcing a throw in any ONE query `/analytics` reads leaves every other panel rendering — no single failing query takes down the whole route. *(Amended 2026-08-18 per `121-CONTEXT.md` D-01/PC-1: the three originally-named queries are already inside `SectionErrorBoundary` at `Analytics.tsx:336`, so criterion 1 as first written plausibly already passed. The live vector is the ~10 `useQuery` calls hoisted into the page component body at `Analytics.tsx:52-81` — including `llm.subscriptionUsage`, the query that actually caused the 2026-08-11 blackout — which execute above every boundary. Scope is now every query the route reads, a strict superset.)*
+  2. `costByModel` (`llm.ts:231`) and `providerBreakdown` (`:275`) read the `aggregates` rollups, not raw `llmMetrics` scans. *(Amended 2026-08-18 per `121-CONTEXT.md` D-06: `latencyOverTime` (`:308`) is **deleted, not migrated** — it has zero consumers, `useLatencyOverTime` at `useAnalytics.ts:4-6` is imported nowhere, and no `latency` rollup exists or is being added. `costByProvider` (`:214`) is deleted with it. Verification must read the deletion as satisfying this criterion, not as an unmet gap.)*
+  3. Each surviving query can independently report its own failure without silently absorbing or masking a sibling's.
 
 **Plans**: TBD
 
