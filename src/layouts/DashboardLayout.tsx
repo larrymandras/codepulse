@@ -186,7 +186,7 @@ function SidebarContent({
 }) {
   const convexState = useConvexConnectionState();
   const isConnected = convexState.isWebSocketConnected;
-  const dotColor = isConnected ? "bg-green-500" : "bg-yellow-500";
+  const dotColor = isConnected ? "bg-(--status-ok)" : "bg-(--status-warn)";
   const statusLabel = isConnected ? "Connected to Convex" : "Convex: reconnecting";
 
   const [isAvatarUploadOpen, setIsAvatarUploadOpen] = useState(false);
