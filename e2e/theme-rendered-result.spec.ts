@@ -252,11 +252,39 @@ test.describe("0. probe self-control (must pass before any other figure is trust
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// 1 & 2. Distinct surfaces + the body actually paints --surface-0
+// 1 & 2. Perceptibly stepped surfaces + the body actually paints --surface-0
 // ─────────────────────────────────────────────────────────────────────────
+// 122-19/122-20: the ORIGINAL version of this test asserted only that the
+// four painted colours were not byte-identical (`Set` size === 4), which a
+// ONE-POINT difference satisfies. The checkpoint's own automated pass on
+// that vacuous check is exactly what let a perceptually flat ramp (adjacent
+// WCAG-style contrast measured 1.032-1.109:1 across all five themes, per
+// 122-19-SUMMARY.md's operator-verdict table) through as a "PASS" while the
+// operator, looking at the running page, called it "one flat tone for the
+// most part". Replaced with a WCAG relative-luminance contrast-ratio floor
+// per ADJACENT pair (using this file's own `contrastRatio`, the same unit
+// the checkpoint's evidence and 122-20-RAMP-REDERIVATION.md are stated in --
+// not `channelDistance`, which answers a different question, hue
+// separation, not lightness-step legibility).
+//
+// Threshold rationale: 122-20's brief cites two real dark-UI reference
+// ramps measured the same way -- shadcn zinc (1.123/1.189/1.426) and GitHub
+// dark (1.094/1.137/1.247) -- and names "roughly 1.10-1.30" as the target
+// band. 1.12 sits just under shadcn zinc's weakest step and above GitHub
+// dark's weakest step, so it sits inside the band while still discriminating
+// EVERY theme's OLD flat values (worst-case per theme: cyan 1.042, emerald
+// 1.032, amber 1.057, readable 1.089/1.067/1.109, aubergine 1.042 -- every
+// one below 1.12, including readable's 2->3 step at 1.109, which very
+// nearly clears a naive 1.10 floor and is why 1.10 itself was rejected as
+// the threshold) from the NEW re-derived ramp (worst-case per theme's first
+// step, 1.138-1.140 -- see the mutation-proof log this test's own MUTATION
+// TEST run against the restored old values, documented in
+// 122-20-RAMP-REDERIVATION.md).
+const SURFACE_STEP_CONTRAST_MIN = 1.12;
+
 for (const theme of THEMES) {
   test.describe(`[${theme}] surfaces`, () => {
-    test(`--surface-0/1/2/3 resolve to four distinct painted colours`, async ({ page }) => {
+    test(`--surface-0/1/2/3 resolve to four perceptibly-stepped painted colours`, async ({ page }) => {
       await gotoWithTheme(page, theme);
       const tokens = ["--surface-0", "--surface-1", "--surface-2", "--surface-3"];
       const triples: (RGB | null)[] = [];
@@ -266,8 +294,25 @@ for (const theme of THEMES) {
       }
       console.log(`[${theme}] surface triples:`, triples);
       for (const t of triples) expect(t, `${theme}: a surface token resolved to an unparseable colour`).not.toBeNull();
+
+      // Byte-identity is still checked (four DIFFERENT colours), but it is
+      // no longer the whole test -- it is now implied by, and strictly
+      // weaker than, the per-adjacent-pair contrast floor below.
       const keys = new Set(triples.map((t) => t!.join(",")));
       expect(keys.size, `${theme}: expected 4 distinct surface colours, got ${keys.size}`).toBe(4);
+
+      const stepRatios: number[] = [];
+      for (let i = 0; i < triples.length - 1; i++) {
+        const ratio = contrastRatio(triples[i + 1]!, triples[i]!);
+        stepRatios.push(ratio);
+      }
+      console.log(`[${theme}] surface step-ratios (0->1, 1->2, 2->3):`, stepRatios.map((r) => r.toFixed(3)));
+      for (let i = 0; i < stepRatios.length; i++) {
+        expect(
+          stepRatios[i],
+          `${theme}: surface-${i}->surface-${i + 1} contrast ${stepRatios[i].toFixed(3)}:1 <= floor ${SURFACE_STEP_CONTRAST_MIN}:1 (perceptually flat)`,
+        ).toBeGreaterThan(SURFACE_STEP_CONTRAST_MIN);
+      }
     });
 
     test(`CONTROL: pre-phase git state had no --surface-N tokens at all`, async ({ page }) => {
