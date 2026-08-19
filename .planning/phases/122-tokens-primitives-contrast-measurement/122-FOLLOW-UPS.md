@@ -26,8 +26,17 @@ Reference, measured identically from their own published hex: shadcn zinc **1.12
 GitHub dark **1.094 / 1.137 / 1.247**. Cyan steps `rgb(5,6,10)` → `rgb(11,13,18)` — about 6/255 in
 near-black.
 
-Being fixed by `122-20` (ramp re-derivation across all five themes + a perceptual assertion).
-**Not done until the operator re-confirms on a running server.**
+**RESOLVED 2026-08-19 by plan 122-20**, pending operator re-confirmation. All five ramps
+re-derived in OKLCH (hue and chroma held, lightness stepped), `--surface-0` unchanged in every
+theme. Measured after: cyan 1.140/1.190/1.255, emerald 1.139/1.190/1.265, amber
+1.138/1.196/1.260, readable 1.140/1.184/1.264, aubergine 1.138/1.190/1.265 -- every step now
+inside the reference band and widening with depth.
+
+Text-contrast cost measured, nothing crossed AA: foreground vs card 18.58->16.97 (cyan),
+14.19->13.55 (readable), 14.86->13.85 (aubergine); muted-foreground vs card 7.58->6.93,
+5.44->5.20, 5.40->5.04.
+
+**Still not done until the operator re-confirms on a running server.**
 
 ### A2. The rendered-result spec's distinctness assertion is vacuous *(in progress, plan 122-20)*
 
@@ -37,11 +46,14 @@ byte-identical (`new Set(...).size === 4`). A one-point difference passes. D-01 
 a `channelDistance` helper whose docstring promises a per-call-site threshold rationale, and this
 test does not use it.
 
-122-20 must mutation-prove the replacement **against the old flat ramp**: if it does not fail on
-today's values for every theme, it is the same empty check with more arithmetic.
+**RESOLVED 2026-08-19 by plan 122-20.** Replaced with a per-adjacent-pair WCAG contrast floor,
+`SURFACE_STEP_CONTRAST_MIN = 1.12`, anchored between shadcn zinc's and GitHub dark's weakest
+steps. Mutation-proven live: with the pre-fix ramp swapped back in, 4/4 themes FAIL citing
+their real ratios; restored, 4/4 pass. The byte-identity check is retained above it as a
+strictly weaker companion, with a comment saying so.
 
-**A sibling audit is pending** — whether any other assertion in that file is a `Set`-size or
-inequality check standing in for a perceptual one.
+Sibling audit done: the file's other two `channelDistance`/`SEPARATION_THRESHOLD` checks are
+already justified. This was the only vacuous instance.
 
 ### A3. The after-matrix and delta were measured against the OLD ramp
 
