@@ -24,7 +24,7 @@ describe('getEventColor', () => {
   });
 
   it('returns fallback color for unknown event types', () => {
-    expect(getEventColor('unknown_event')).toBe('text-gray-400');
-    expect(getEventColor('')).toBe('text-gray-400');
+    expect(getEventColor('unknown_event')).toBe('text-muted-foreground');
+    expect(getEventColor('')).toBe('text-muted-foreground');
   });
 });
