@@ -92,5 +92,5 @@ export function getEventColor(eventType: string): string {
     startup_event: "text-green-400",
     mcp_connection: "text-blue-400",
   };
-  return colors[eventType] || "text-gray-400";
+  return colors[eventType] || "text-muted-foreground";
 }
