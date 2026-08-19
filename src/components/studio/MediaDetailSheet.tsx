@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/formatters";
+import { InlineMetricState } from "@/components/EmptyState";
 import type { MediaRow } from "./MediaCard";
 
 /** The Sheet reads a few fields the card never renders. Declared here rather
@@ -204,7 +205,7 @@ export function MediaDetailSheet({
       ? `${row.width} × ${row.height}`
       : row.durationSec
         ? formatDuration(row.durationSec)
-        : "—";
+        : <InlineMetricState state="empty" label="no dimensions" />;
 
   const handleTrash = () => {
     void softDelete({ id: row._id as never });
@@ -296,7 +297,11 @@ export function MediaDetailSheet({
             <div className="text-muted-foreground flex flex-wrap gap-4 text-xs">
               <span data-testid="studio-detail-dimensions">{dimensions}</span>
               <span data-testid="studio-detail-size">
-                {row.sizeBytes === undefined ? "—" : formatBytes(row.sizeBytes)}
+                {row.sizeBytes === undefined ? (
+                  <InlineMetricState state="empty" label="no size" />
+                ) : (
+                  formatBytes(row.sizeBytes)
+                )}
               </span>
               <span data-testid="studio-detail-created">
                 {new Date(row.createdAt).toLocaleString()}

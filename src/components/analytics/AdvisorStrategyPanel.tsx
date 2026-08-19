@@ -3,6 +3,8 @@ import { api } from "../../../convex/_generated/api";
 import { SectionHeader } from "../SectionHeader";
 import { GlassPanel } from "../GlassPanel";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../ui/table";
+import { useMetricState } from "@/hooks/useMetricState";
+import { InlineMetricState } from "@/components/EmptyState";
 
 /**
  * GlassPanel ownership: this COMPONENT owns all three GlassPanels (Total
@@ -18,6 +20,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from ".
 export default function AdvisorStrategyPanel() {
   const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
   const advisorRecent = useQuery(api.advisorEvents.recent, { limit: 20 });
+  // 122-16 (D-19/D-20): distinguishes "the query hasn't resolved yet" from
+  // "it resolved with zero advisor events" instead of collapsing both into
+  // one ambiguous dash.
+  const { state: advisorRecentState } = useMetricState(advisorRecent, undefined);
 
   return (
     <>
@@ -32,9 +38,11 @@ export default function AdvisorStrategyPanel() {
         <GlassPanel className="p-4">
           <p className="text-sm text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
           <p className="text-2xl font-semibold tabular-nums mt-1">
-            {advisorRecent && advisorRecent.length > 0
-              ? `${Math.round((advisorRecent.filter((e) => e.used).length / advisorRecent.length) * 100)}%`
-              : "—"}
+            {advisorRecentState === "ready" ? (
+              `${Math.round((advisorRecent!.filter((e) => e.used).length / advisorRecent!.length) * 100)}%`
+            ) : (
+              <InlineMetricState state={advisorRecentState} />
+            )}
           </p>
         </GlassPanel>
       </div>

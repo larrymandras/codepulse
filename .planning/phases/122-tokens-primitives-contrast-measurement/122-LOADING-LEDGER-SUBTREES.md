@@ -79,14 +79,16 @@ Columns: **Verdict** — convert (state) / convert (n/a) / convert (plain text) 
 | 37 | Escalation Rate card: `advisorRecent && advisorRecent.length > 0 ? ... : "—"` | convert (state, via `useMetricState`) | tile (GlassPanel stat card) | `useMetricState(advisorRecent, undefined)` distinguishes `loading` (query unresolved) from `empty` (resolved, zero events) instead of collapsing both into one dash; ready renders the real percentage, non-ready renders `<InlineMetricState state={state} />` | migrated |
 | — | JSDoc header prose | legitimate | n/a | unchanged | n/a |
 
-### `src/components/analytics/RecentLlmCallsPanel.tsx` (3 sites convert, 0 legitimate raw beyond the 3 quoted)
+### `src/components/analytics/RecentLlmCallsPanel.tsx` (3 sites convert, 2 legitimate — raw 5 vs. quoted 3, the gap is 2 JSDoc comment em-dashes)
 
-Every site is a per-row cell in an already-resolved `llmCalls.map()` row (the `llmCalls.length === 0`
-branch above already handles the true empty-list case at panel scale with a real sentence) — so
-each `"—"` here is a genuine PER-ROW gap, not a loading/empty ambiguity.
+Every convert site is a per-row cell in an already-resolved `llmCalls.map()` row (the
+`llmCalls.length === 0` branch above already handles the true empty-list case at panel scale with
+a real sentence) — so each `"—"` here is a genuine PER-ROW gap, not a loading/empty ambiguity.
 
 | Line | Site | Verdict | Scale | Replacement | AFTER |
 |---|---|---|---|---|---|
+| 12 | JSDoc: "Moved here from Analytics.tsx — it is used only by this table." | legitimate | n/a | unchanged | n/a |
+| 25 | JSDoc: "No error handling here (D-02) — relies entirely on the error-boundary wrapper its parent supplies." | legitimate | n/a | unchanged | n/a |
 | 58 | `call.cost != null ? formatCost(call.cost) : "—"` | convert (empty, override) | cell | `<InlineMetricState state="empty" label="no cost" />` | migrated |
 | 65 | `call.cacheReadInputTokens === undefined ? "—" : ...` | convert (empty, override) | cell | `<InlineMetricState state="empty" label="no cache data" />` | migrated |
 | 94 | `href ? <Link>...</Link> : "—"` (no `sessionId` to deep-link to) | convert (empty, override) | cell | `<InlineMetricState state="empty" label="no session" />` | migrated |

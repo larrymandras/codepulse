@@ -35,6 +35,7 @@ import { useLlmMetrics } from "@/hooks/useLlmMetrics";
 import { useLastTurnModel } from "@/hooks/useResolvedBrain";
 import { RadialGauge } from "@/components/chat/RadialGauge";
 import { contextWindow, fmtK } from "@/components/chat/vitalsHelpers";
+import { InlineMetricState } from "@/components/EmptyState";
 
 // VitalsRail never plotted a disk gauge, so there is no prior threshold to
 // copy — 90% mirrors the CPU/RAM gauges' own "call it out before it's
@@ -80,13 +81,19 @@ export function SystemMonitorPanel() {
       </span>
 
       {/* Ring cluster — CPU / RAM / DISK (never GPU — the schema stores no
-          GPU source at all). Rings always plot a value (RadialGauge renders
-          "—" rather than disappearing), so this cluster structurally cannot
-          render empty. */}
+          GPU source at all). `loading` (still unresolved) and a resolved
+          metric with no value now read differently (122-16, D-19/D-20) —
+          the ring cluster still structurally cannot render fully empty,
+          only a per-gauge honest state. */}
       <div className="grid grid-cols-3 gap-1">
-        <RadialGauge value={sys?.cpu} label="CPU" warnAt={85} />
-        <RadialGauge value={ramPct} label="RAM" warnAt={80} />
-        <RadialGauge value={diskPct} label="DISK" warnAt={DISK_WARN_AT} />
+        <RadialGauge value={sys?.cpu} label="CPU" warnAt={85} loading={sys === undefined} />
+        <RadialGauge value={ramPct} label="RAM" warnAt={80} loading={sys === undefined} />
+        <RadialGauge
+          value={diskPct}
+          label="DISK"
+          warnAt={DISK_WARN_AT}
+          loading={sys === undefined}
+        />
       </div>
 
       {/* Throughput meters — Latency is end-to-end (never TTFT); Tok/s is
@@ -94,7 +101,11 @@ export function SystemMonitorPanel() {
       <div className="grid grid-cols-3 divide-x divide-border/40 border-t border-border/40 pt-2">
         <div className="text-center px-1">
           <div className="font-mono font-bold text-sm tabular-nums">
-            {llm.tokPerSec != null ? Math.round(llm.tokPerSec) : "—"}
+            {llm.tokPerSec != null ? (
+              Math.round(llm.tokPerSec)
+            ) : (
+              <InlineMetricState state="empty" label="no signal yet" />
+            )}
             {llm.tokPerSec != null && (
               <span className="text-sm text-muted-foreground font-medium"> t/s</span>
             )}
@@ -105,7 +116,11 @@ export function SystemMonitorPanel() {
         </div>
         <div className="text-center px-1">
           <div className="font-mono font-bold text-sm tabular-nums">
-            {llm.avgLatency != null ? (llm.avgLatency / 1000).toFixed(2) : "—"}
+            {llm.avgLatency != null ? (
+              (llm.avgLatency / 1000).toFixed(2)
+            ) : (
+              <InlineMetricState state="empty" label="no signal yet" />
+            )}
             {llm.avgLatency != null && (
               <span className="text-sm text-muted-foreground font-medium">s</span>
             )}

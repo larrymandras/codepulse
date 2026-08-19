@@ -47,6 +47,7 @@ import { centerNodeWhenReady, centerNode3DWhenReady } from "../../lib/graph-cent
 import { useFocusParam } from "../../hooks/useFocusParam";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import { buildFocusUrl, normalizeFocusKey } from "../../lib/focus-url";
+import { InlineMetricState } from "../EmptyState";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -780,7 +781,10 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                 <div>
                   <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">community</p>
                   <p className="text-sm text-muted-foreground">
-                    community: {selectedNode.community ?? "—"}
+                    community:{" "}
+                    {selectedNode.community ?? (
+                      <InlineMetricState state="empty" label="not clustered" />
+                    )}
                   </p>
                 </div>
 

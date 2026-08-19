@@ -30,6 +30,7 @@ import { AlertTriangle, Check, Pin, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { describeSwapOutcome, useCombinedSwapHistory, SWAP_HISTORY_CAP } from "@/hooks/useControlVerbSwaps";
 import { useProfileBrainOverrides } from "@/hooks/useResolvedBrain";
+import { InlineMetricState } from "@/components/EmptyState";
 
 /** `timestamp` on a `controlVerbSwaps` row is epoch SECONDS (`runtimeIngest.ts`'s
  * `now = Date.now() / 1000`), never milliseconds — multiply before handing to `Date`. Short
@@ -97,8 +98,13 @@ export function SwapHistoryList({ profileId }: { profileId: string | undefined }
                     Global
                   </Badge>
                 )}
-                <span className="flex-1">
-                  {row.target ?? "—"} → {row.resolved ?? "—"}
+                <span className="flex-1 inline-flex items-center gap-1">
+                  {row.target ?? <InlineMetricState state="empty" label="no target" />}
+                  {" → "}
+                  {/* `resolved` is already explained by `outcome.label` rendered
+                      right below (Unresolved/Refused branch on this exact
+                      condition in `describeSwapOutcome`) — n/a, not empty. */}
+                  {row.resolved ?? "n/a"}
                 </span>
                 <span className="text-muted-foreground">{outcome.label}</span>
               </div>

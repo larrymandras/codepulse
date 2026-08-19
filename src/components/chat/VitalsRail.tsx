@@ -30,6 +30,8 @@ import { useActiveSessions } from "@/hooks/useActiveSessions";
 import { useRecentEvents } from "@/hooks/useRecentEvents";
 import { RadialGauge } from "./RadialGauge";
 import { contextWindow, fmtK } from "./vitalsHelpers";
+import { InlineMetricState } from "@/components/EmptyState";
+import type { ReactNode } from "react";
 
 // ── small presentational helpers ────────────────────────────────────────────
 
@@ -58,7 +60,7 @@ function Card({
   );
 }
 
-function Meter({ value, unit, label }: { value: string; unit?: string; label: string }) {
+function Meter({ value, unit, label }: { value: ReactNode; unit?: string; label: string }) {
   return (
     <div className="text-center px-1 py-2.5">
       <div className="font-mono font-bold text-sm tabular-nums">
@@ -271,17 +273,29 @@ export default function VitalsRail({
       {/* System Vitals */}
       <Card title="System Vitals" source="systemResources">
         <div className="grid grid-cols-2 gap-1 px-3 py-3.5">
-          <RadialGauge value={sys?.cpu} label="CPU" warnAt={85} />
-          <RadialGauge value={ramPct} label="RAM" warnAt={80} />
+          <RadialGauge value={sys?.cpu} label="CPU" warnAt={85} loading={sys === undefined} />
+          <RadialGauge value={ramPct} label="RAM" warnAt={80} loading={sys === undefined} />
         </div>
         <div className="grid grid-cols-3 divide-x divide-border/40 border-t border-border/40">
           <Meter
-            value={llm.tokPerSec != null ? Math.round(llm.tokPerSec).toString() : "—"}
+            value={
+              llm.tokPerSec != null ? (
+                Math.round(llm.tokPerSec).toString()
+              ) : (
+                <InlineMetricState state="empty" label="no signal yet" />
+              )
+            }
             unit={llm.tokPerSec != null ? " t/s" : undefined}
             label="Tok/s"
           />
           <Meter
-            value={llm.avgLatency != null ? (llm.avgLatency / 1000).toFixed(2) : "—"}
+            value={
+              llm.avgLatency != null ? (
+                (llm.avgLatency / 1000).toFixed(2)
+              ) : (
+                <InlineMetricState state="empty" label="no signal yet" />
+              )
+            }
             unit={llm.avgLatency != null ? "s" : undefined}
             label="Latency"
           />
@@ -295,7 +309,11 @@ export default function VitalsRail({
           <div>
             <div className="flex items-baseline justify-between mb-1.5">
               <span className="font-mono text-[13px] font-bold tabular-nums">
-                {llm.lastCtx != null ? fmtK(llm.lastCtx) : "—"}
+                {llm.lastCtx != null ? (
+                  fmtK(llm.lastCtx)
+                ) : (
+                  <InlineMetricState state="empty" label="no signal yet" />
+                )}
                 {ctxMax && (
                   <span className="text-muted-foreground font-medium text-[11px]">
                     {" "}

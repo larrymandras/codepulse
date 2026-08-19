@@ -27,16 +27,18 @@ import { Button } from "@/components/ui/button";
 import { ForgeStatusBadge } from "./ForgeStatusBadge";
 import { ForgeHostBadge } from "./ForgeHostBadge";
 import { relativeTime } from "@/lib/formatters";
+import { InlineMetricState } from "@/components/EmptyState";
 import type { ForgeJobRow, ForgeCommandRow } from "@/hooks/useForge";
 
 /**
  * relativeTime against an ISO createdAt, guarding malformed/empty values.
  * A bad ingest payload (e.g. createdAt="") would otherwise yield NaN epoch
- * seconds and render "NaNd ago"; show an em dash instead.
+ * seconds and render "NaNd ago"; return `null` instead (122-16, D-19/D-20 —
+ * the call site renders an honest `InlineMetricState`, not a bare dash).
  */
-function safeRelativeTime(iso: string): string {
+function safeRelativeTime(iso: string): string | null {
   const ms = new Date(iso).getTime();
-  return Number.isFinite(ms) ? relativeTime(ms / 1000) : "—";
+  return Number.isFinite(ms) ? relativeTime(ms / 1000) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +117,9 @@ function PendingRow({ cmd }: { cmd: ForgeCommandRow }) {
           )}
         </div>
         <p className="text-sm text-foreground truncate leading-relaxed">
-          {cmd.prompt ?? <span className="text-muted-foreground">—</span>}
+          {cmd.prompt ?? (
+            <span className="text-muted-foreground italic">(no prompt)</span>
+          )}
         </p>
         {isFailed && cmd.error && (
           <p className="text-sm text-destructive" role="alert">
@@ -250,7 +254,9 @@ export function ForgeJobList({
 
                     {/* Relative timestamp — epoch seconds (CodePulse relativeTime contract) */}
                     <p className="text-sm text-muted-foreground">
-                      {safeRelativeTime(job.createdAt)}
+                      {safeRelativeTime(job.createdAt) ?? (
+                        <InlineMetricState state="empty" label="invalid timestamp" />
+                      )}
                     </p>
                   </div>
                 </button>

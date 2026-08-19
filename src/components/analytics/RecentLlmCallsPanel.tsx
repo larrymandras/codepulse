@@ -4,6 +4,7 @@ import { formatCost, formatDurationMs, formatTimestamp } from "../../lib/formatt
 import { SectionHeader } from "../SectionHeader";
 import { Badge } from "../ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../ui/table";
+import { InlineMetricState } from "../EmptyState";
 
 /**
  * Deep-link into the session's Trace tab (TRACE-02, D-08). Null-guarded and
@@ -55,14 +56,18 @@ export default function RecentLlmCallsPanel() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">{call.model}</TableCell>
                     <TableCell className="tabular-nums">
-                      {call.cost != null ? formatCost(call.cost) : "—"}
+                      {call.cost != null ? (
+                        formatCost(call.cost)
+                      ) : (
+                        <InlineMetricState state="empty" label="no cost" />
+                      )}
                     </TableCell>
                     <TableCell className="tabular-nums">
                       {formatDurationMs(call.latencyMs)}
                     </TableCell>
                     <TableCell>
                       {call.cacheReadInputTokens === undefined ? (
-                        "—"
+                        <InlineMetricState state="empty" label="no cache data" />
                       ) : call.cacheReadInputTokens > 0 ? (
                         <Badge
                           variant="outline"
@@ -91,7 +96,7 @@ export default function RecentLlmCallsPanel() {
                           View Trace
                         </Link>
                       ) : (
-                        "—"
+                        <InlineMetricState state="empty" label="no session" />
                       )}
                     </TableCell>
                   </TableRow>

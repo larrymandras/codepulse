@@ -166,7 +166,7 @@ export default function KGAnimateControls({
         />
 
         <span className="text-xs font-mono text-muted-foreground min-w-[80px] tabular-nums">
-          {frames[currentFrameIndex] ?? "—"}
+          {frames[currentFrameIndex] ?? "no frames"}
         </span>
 
         <span className="text-[10px] uppercase tracking-wide whitespace-nowrap">

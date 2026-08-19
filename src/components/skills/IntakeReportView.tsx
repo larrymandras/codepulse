@@ -42,6 +42,7 @@ import {
 import { useForgeWorkspace } from "@/hooks/useForge";
 import type { IntakeCommandRow } from "@/hooks/useIntake";
 import { pluralize } from "@/lib/formatters";
+import { InlineMetricState } from "@/components/EmptyState";
 
 interface IntakeReportViewProps {
   row: IntakeCommandRow;
@@ -151,7 +152,7 @@ export function IntakeReportView({ row }: IntakeReportViewProps) {
                   </TableCell>
                   <TableCell>
                     <span className="font-mono text-xs">
-                      {finding.path ?? "—"}
+                      {finding.path ?? <InlineMetricState state="empty" label="no path" />}
                       {finding.line ? `:${finding.line}` : ""}
                     </span>
                   </TableCell>
