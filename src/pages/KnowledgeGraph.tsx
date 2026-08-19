@@ -935,7 +935,7 @@ export default function KnowledgeGraph() {
   // default ForceGraphCanvas/ForceGraph3D canvasClass so toggling doesn't shift
   // layout while the react-force-graph-3d/three.js chunk is fetched.
   const loading3dFallback = (
-    <div className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]">
+    <div className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-background">
       <div className="flex h-full items-center justify-center">
         <p className="text-primary/70 font-mono text-base animate-pulse">
           Loading 3D render…
@@ -1653,7 +1653,7 @@ export default function KnowledgeGraph() {
                   current
                 </span>
                 <span className="flex items-center gap-2 text-muted-foreground">
-                  <span className="inline-block w-4 border-t-2 border-dashed border-slate-400/50" />
+                  <span className="inline-block w-4 border-t-2 border-dashed border-muted-foreground/50" />
                   superseded
                 </span>
                 <span className="flex items-center gap-2 text-muted-foreground">

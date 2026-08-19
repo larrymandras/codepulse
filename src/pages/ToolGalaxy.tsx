@@ -322,7 +322,7 @@ function GalaxyCanvas({
           className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-background"
           style={{ boxShadow: "var(--glow-lg)" }}
         >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#09090b] to-black opacity-80 pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[var(--surface-3)] via-[#09090b] to-black opacity-80 pointer-events-none" />
 
           {/* Legend */}
           <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono">

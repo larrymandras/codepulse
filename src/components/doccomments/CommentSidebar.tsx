@@ -7,7 +7,7 @@ const BADGE: Record<DocCommentStatus, { label: string; className: string }> = {
   acked: { label: "Acked", className: "bg-blue-500/20 text-blue-300" },
   approved: { label: "Approved", className: "bg-emerald-500/20 text-emerald-300" },
   resolved: { label: "Resolved", className: "bg-emerald-500/10 text-emerald-400" },
-  stale: { label: "Stale", className: "bg-zinc-600/30 text-zinc-400" },
+  stale: { label: "Stale", className: "bg-muted text-muted-foreground" },
 };
 
 interface Props {
@@ -28,14 +28,14 @@ export function CommentSidebar({ comments, onCommentClick, onApply, applyingId }
         return (
           <div
             key={c.id}
-            className="cursor-pointer p-3 hover:bg-zinc-900/50"
+            className="cursor-pointer p-3 hover:bg-[var(--surface-3)]/50"
             onClick={() => onCommentClick(c.id)}
           >
             <div className="mb-1 flex items-center justify-between">
               <Badge className={b.className}>{b.label}</Badge>
               <span className="text-xs text-muted-foreground">{c.author}</span>
             </div>
-            <p className="text-sm text-zinc-200">{c.comment}</p>
+            <p className="text-sm text-foreground">{c.comment}</p>
             <p className="mt-1 truncate text-xs text-muted-foreground">&ldquo;{c.anchor.quote}&rdquo;</p>
             {c.status === "approved" && (
               <ApprovedEditCard comment={c} onApply={onApply} applying={applyingId === c.id} />
@@ -44,7 +44,7 @@ export function CommentSidebar({ comments, onCommentClick, onApply, applyingId }
               <p className="mt-1 text-xs text-emerald-400/80">✓ {c.resolution_note}</p>
             )}
             {c.status === "stale" && (
-              <p className="mt-1 text-xs text-zinc-400">Anchor no longer matches — re-comment on current text.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Anchor no longer matches — re-comment on current text.</p>
             )}
           </div>
         );

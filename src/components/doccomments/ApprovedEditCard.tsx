@@ -27,7 +27,7 @@ export function ApprovedEditCard({ comment, onApply, applying }: Props) {
                 ? "bg-emerald-600/40 text-emerald-100"
                 : p.removed
                   ? "bg-red-600/30 text-red-200 line-through"
-                  : "text-zinc-300"
+                  : "text-muted-foreground"
             }
           >
             {p.value}

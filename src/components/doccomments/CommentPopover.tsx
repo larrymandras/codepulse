@@ -14,7 +14,7 @@ export function CommentPopover({ rect, onSubmit, onCancel, submitting }: Props) 
   if (!rect) return null;
   return (
     <div
-      className="fixed z-50 w-72 rounded-md border border-zinc-700 bg-zinc-900 p-3 shadow-lg"
+      className="fixed z-50 w-72 rounded-md border border-border bg-popover p-3 shadow-lg"
       style={{ top: rect.bottom + 6 + window.scrollY, left: rect.left + window.scrollX }}
     >
       <Textarea
