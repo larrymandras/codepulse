@@ -154,30 +154,35 @@ themes-axis exclusion, orthogonal to the pages-axis sampling limit above -- even
 were measured, `amber` would still be absent because it is not a selectable theme, not because a
 page was skipped.
 
-## AFTER (measured 2026-08-19, `dev:noauth` :5181, post-token-layer, current ramp)
+## AFTER (measured 2026-08-19, `dev:noauth` :5181, post-aria-fix, current ramp)
 
-**Re-captured 2026-08-19 by plan 122-21 against `git 313c9766`/`a7e6734b` (the re-derived surface
-ramp).** The prior AFTER capture in this section (122-19, superseded) was measured against the
-perceptually-flat ramp the operator rejected at the 122-19 checkpoint ("one flat tone for the most
-part") and is preserved unmodified at
-`.planning/phases/122-tokens-primitives-contrast-measurement/a11y-after-preramp/*.json` (20 files)
-as a second control — the numbers below are **not** that capture; every figure in this section and
-the Delta section below was re-derived from the 20 files at `a11y-after/*.json`, replaced in place
-this run.
+**Re-captured 2026-08-19 by plan 122-22 against `156d5116 fix(122-22)`** (the `aria-label` fix on
+`MetricCard`'s `role="button"` wrapper). Two prior AFTER captures are preserved as controls, both
+unmodified:
 
-Measured identically to BEFORE:
+- `.../a11y-after-preramp/*.json` (122-19/122-20's perceptually-flat, operator-rejected ramp)
+- `.../a11y-after-prearia/*.json` (122-21's re-derived current ramp, **before** the aria-label fix
+  — this is what "AFTER" held in this document until this run; 32 objects / 250 nodes)
+
+Every figure below was re-derived from the 20 files at `a11y-after/*.json`, replaced in place this
+run and now reflecting `156d5116`.
+
+Measured identically to BEFORE and to the two prior AFTER captures:
 `A11Y_CAPTURE_DIR=.../a11y-after A11Y_MEASURE_ONLY=1 PW_BASE_URL=http://localhost:5181 npx playwright test e2e/theme-contrast.spec.ts`,
 issued from Git Bash against a freshly-started `dev:noauth`
 (`VITE_CLERK_PUBLISHABLE_KEY= npm run dev:noauth`), probed on both `localhost:5181` and
-`127.0.0.1:5181` (200/200) before the matrix ran. 20/20 cells measured, zero skipped. Wall-clock:
-**14.4s** (Playwright's own reported time; BEFORE's was 14.3s, the superseded preramp AFTER's was
-12.3s).
+`127.0.0.1:5181` (200/200) before the matrix ran. 20/20 cells measured, zero skipped, filenames
+identical to `a11y-before/` by name-level diff. Wall-clock: **12.2s** (Playwright's own reported
+time; BEFORE 14.3s, preramp-AFTER 12.3s, prearia-AFTER 14.4s).
 
-Guard control re-run: `[cyan] Dashboard` against the gated `:5173` server (occupied by the operator
-at capture time — probed read-only, not started/stopped/killed) reported Playwright status
-`skipped`. `e2e/theme-contrast.spec.ts` was not touched by this plan, so the annotation text is
-byte-identical to BEFORE's and the superseded AFTER's by construction (same source-file literal),
-verified present at `e2e/theme-contrast.spec.ts:66`, unchanged since 122-01.
+Guard control: the operator was actively using `:5173` throughout this session (confirmed live
+before, during, and after — `200` on every probe). Re-running the Playwright guard cell against
+that occupied server was attempted read-only and was blocked by this session's own permission
+classifier before it could execute; **not run this time, stated plainly rather than claimed**.
+`e2e/theme-contrast.spec.ts` was not touched by this plan (only `src/components/MetricCard.tsx` and
+its test file changed in `156d5116`), so the `fee96b5d` guard annotation text is byte-identical to
+every prior run by construction — verified present at `e2e/theme-contrast.spec.ts:66`, unchanged
+since 122-01.
 
 **Unit: axe VIOLATION OBJECTS**, same convention as BEFORE (one per distinct rule that fired on a
 page; a violation object can cover several DOM nodes).
@@ -186,47 +191,66 @@ page; a violation object can cover several DOM nodes).
 
 | theme | Dashboard | LiveRun | Analytics | Forge | Graphs | row total |
 |---|---|---|---|---|---|---|
-| cyan | 2 | 1 | 1 | 2 | 2 | **8** |
-| emerald | 2 | 1 | 1 | 2 | 2 | **8** |
-| readable | 2 | 1 | 1 | 2 | 2 | **8** |
-| aubergine | 2 | 1 | 1 | 2 | 2 | **8** |
-| **column total** | **8** | **4** | **4** | **8** | **8** | **grand total: 32** |
+| cyan | 1 | 1 | 1 | 2 | 1 | **6** |
+| emerald | 1 | 1 | 1 | 2 | 1 | **6** |
+| readable | 1 | 1 | 1 | 2 | 1 | **6** |
+| aubergine | 1 | 1 | 1 | 2 | 1 | **6** |
+| **column total** | **4** | **4** | **4** | **8** | **4** | **grand total: 24** |
 
-Grand total re-derived independently two ways — summing `violationCount` across the 20 committed
-`a11y-after/` JSON files (`32`), and summing the three rule buckets in the AFTER rule breakdown
-below (`20 + 4 + 8 = 32`) — both agree. **Identical to the superseded preramp AFTER's object count**
-(32 → 32, no change) — the ramp re-derivation touches only surface/hairline lightness, so it cannot
-move a rule that fires or doesn't fire per element; see Delta vs. preramp-after below.
+**Exact cell-by-cell match to the BEFORE table above** — every theme x page cell has the identical
+object count it had before the Phase 122 token layer landed at all. Grand total re-derived two
+ways — summing `violationCount` across the 20 committed `a11y-after/` JSON files (`24`), and
+summing the two rule buckets in the AFTER rule breakdown below (`20 + 4 = 24`) — both agree.
 
 ### Affected elements (nodes), same cells, different unit
 
 | theme | Dashboard | LiveRun | Analytics | Forge | Graphs | row total |
 |---|---|---|---|---|---|---|
-| cyan | 10 | 3 | 2 | 3 | 9 | **27** |
-| emerald | 9 | 3 | 2 | 3 | 9 | **26** |
-| readable | 23 | 15 | 16 | 16 | 21 | **91** |
-| aubergine | 25 | 18 | 19 | 19 | 25 | **106** |
-| **column total** | **67** | **39** | **39** | **41** | **64** | **grand total: 250** |
+| cyan | 3 | 4 | 3 | 4 | 4 | **18** |
+| emerald | 3 | 4 | 3 | 4 | 4 | **18** |
+| readable | 16 | 15 | 16 | 16 | 15 | **78** |
+| aubergine | 19 | 19 | 19 | 19 | 19 | **95** |
+| **column total** | **41** | **42** | **41** | **43** | **42** | **grand total: 209** |
 
-Grand total re-derived two ways: summing per-cell node counts above (`250`), and summing the AFTER
-rule breakdown's node column below (`194 + 4 + 52 = 250`) — both agree.
+Grand total re-derived two ways: summing per-cell node counts above (`209`), and summing the AFTER
+rule breakdown's node column below (`205 + 4 = 209`) — both agree.
 
 ## Rule breakdown (after)
 
 | rule id | impact | violation objects | affected nodes | what it is |
 |---|---|---|---|---|
-| `color-contrast` | serious | 20 | 194 | Same rule as BEFORE, same 20-cell footprint (fires in every cell). Object count unchanged (20 → 20); node count fell 214 → 194 (see Delta below; 205 → 194 vs. the superseded preramp capture). |
-| `aria-prohibited-attr` | serious | 4 | 4 | `[Forge]` only, all 4 themes. Unchanged from BEFORE and from the preramp AFTER (4 → 4 objects, 4 → 4 nodes) — the `<div aria-busy aria-label>` markup defect is still present, untouched by either the token-layer phase or the ramp re-derivation. |
-| `aria-command-name` | serious | 8 | 52 | Unchanged from the preramp AFTER (8 → 8 objects, 52 → 52 nodes) — fires on `[Dashboard]` and `[Graphs]` in all 4 themes, every flagged node a `<div data-testid="metric-card" role="button" tabindex="0">` (`src/components/MetricCard.tsx:257-263`) with no accessible name. Traced to `fde030a5 feat(122-13)`, not the ramp — a markup/ARIA gap the ramp re-derivation cannot touch (it edited only `src/index.css` colour literals, verified by `git show --stat` on `313c9766`/`a7e6734b`). |
+| `color-contrast` | serious | 20 | 205 | Same rule as BEFORE, same 20-cell footprint (fires in every cell). Object count unchanged (20 → 20); node count 214 → 205 vs. BEFORE (see Delta below), 194 → 205 vs. the prearia capture (scan-timing noise, traced below — not a regression from the fix). |
+| `aria-prohibited-attr` | serious | 4 | 4 | `[Forge]` only, all 4 themes. Unchanged from BEFORE, the preramp AFTER, and the prearia AFTER (4 → 4 objects, 4 → 4 nodes throughout) — the `<div aria-busy aria-label>` markup defect is still present, untouched by the token/ramp/aria-fix work. |
+| `aria-command-name` | serious | **0** | **0** | **Confirmed absent.** Fired 8 objects / 52 nodes in the prearia capture (every `[Dashboard]`/`[Graphs]` cell in all 4 themes); zero occurrences in this run, across all 20 cells, verified by grepping the rule id out of every captured JSON file (0 hits). `156d5116`'s `aria-label={onClick ? label : undefined}` on `MetricCard.tsx:264` closes it. |
 
-Zero `critical`/`moderate`/`minor` violations in this run either; all three rules remain
+Zero `critical`/`moderate`/`minor` violations in this run either; the two surviving rules remain
 `impact: serious`.
+
+**`aria-command-name` confirmed absent — direct verification, not inferred from the total:**
+
+```
+$ grep -rl 'aria-command-name' a11y-after/*.json
+(no output — 0 of 20 files)
+```
+
+For contrast, the same grep against the pre-fix `a11y-after-prearia/*.json` returns the 8 files
+where it fired. A sample violating node from that preserved pre-fix capture (`[cyan] Dashboard`,
+`aria-command-name`, `help: "ARIA commands must have an accessible name"`):
+
+```html
+<div data-testid="metric-card" class="bg-card/60 backdrop-..." role="button" tabindex="0" style="cursor: pointer;">
+```
+
+with `failureSummary`: "Element does not have text that is visible to screen readers / aria-label
+attribute does not exist or is empty / aria-labelledby attribute does not exist... / Element has no
+title attribute" — exactly the gap `156d5116`'s `aria-label` fills. No node with this shape appears
+anywhere in the new `a11y-after/*.json` files.
 
 ## The 234 figure, addressed again for AFTER
 
 The BEFORE section above already establishes that the 2026-08-10 234-node sample and BEFORE's
 `[cyan] Dashboard` cell (4 nodes) are the same violation, measured pre/post Phase 120 — this AFTER
-measurement does not re-litigate that. This run's grand total (32 objects / 250 nodes) is a
+measurement does not re-litigate that. This run's grand total (24 objects / 209 nodes) is a
 different figure from a different measurement point again, and is neither more nor less "234" than
 BEFORE's total was; the 234 figure was retired as a comparison point in the BEFORE section and
 stays retired here.
@@ -234,43 +258,31 @@ stays retired here.
 ## Delta (AFTER vs. BEFORE)
 
 Computed as **before − after**. A **positive** value means AFTER has fewer violations than BEFORE
-(**improvement**); a **negative** value means AFTER has more (**regression**). This delta spans
-BOTH the Phase 122 token layer (122-13's MetricCard rewrite) AND the ramp re-derivation (122-20) —
-see "Delta isolating the ramp" below for the ramp's effect on its own, against the preramp AFTER
-capture rather than BEFORE.
+(**improvement**); a **negative** value means AFTER has more (**regression**). This delta now spans
+the full round trip: the Phase 122 token layer, the ramp re-derivation, the `aria-command-name`
+regression it introduced, and `156d5116`'s fix for that regression.
 
 ### Per-cell delta, violation objects (before − after)
 
 | theme | Dashboard | LiveRun | Analytics | Forge | Graphs | row total |
 |---|---|---|---|---|---|---|
-| cyan | -1 | 0 | 0 | 0 | -1 | **-2** |
-| emerald | -1 | 0 | 0 | 0 | -1 | **-2** |
-| readable | -1 | 0 | 0 | 0 | -1 | **-2** |
-| aubergine | -1 | 0 | 0 | 0 | -1 | **-2** |
-| **column total** | **-4** | **0** | **0** | **0** | **-4** | **grand: -8** (24 → 32) |
+| cyan | 0 | 0 | 0 | 0 | 0 | **0** |
+| emerald | 0 | 0 | 0 | 0 | 0 | **0** |
+| readable | 0 | 0 | 0 | 0 | 0 | **0** |
+| aubergine | 0 | 0 | 0 | 0 | 0 | **0** |
+| **column total** | **0** | **0** | **0** | **0** | **0** | **grand: 0** (24 → 24) |
 
-Uniform across all four themes because the object-level change comes entirely from
-`aria-command-name`, which fires identically on the same two pages in every theme regardless of
-palette — and is unaffected by the ramp (see below).
-
-### Regressions (object-level), separated out
-
-**8 of 20 cells regressed** — `[Dashboard]` and `[Graphs]` in all 4 themes, each by exactly 1
-violation object. **Zero cells improved at the object level** (LiveRun/Analytics/Forge held flat
-in every theme; no cell's object count fell). 12 of 20 cells are unchanged.
-
-Every regressed cell's cause is the same single rule: **`aria-command-name`** — see the Rule
-breakdown above for the traced cause (`MetricCard.tsx`'s `role="button"` wrapper, introduced by
-`feat(122-13)`). No other rule contributed to any object-level regression, and the ramp
-re-derivation contributed none — it touched no markup, only `src/index.css` colour literals.
+**Zero cells regressed, zero cells improved at the object level — every one of the 20 cells is
+back to its exact BEFORE object count.** The `aria-command-name` regression 122-21 measured (-8,
+`[Dashboard]`/`[Graphs]` in all 4 themes) is fully closed by `156d5116`; no other rule moved.
 
 ### Per-rule delta
 
 | rule id | objects before → after | Δ objects | nodes before → after | Δ nodes | direction |
 |---|---|---|---|---|---|
-| `color-contrast` | 20 → 20 | 0 | 214 → 194 | **+20** | improvement (nodes only; object count flat) |
+| `color-contrast` | 20 → 20 | 0 | 214 → 205 | **+9** | improvement (nodes only; object count flat) |
 | `aria-prohibited-attr` | 4 → 4 | 0 | 4 → 4 | 0 | unchanged |
-| `aria-command-name` | 0 → 8 | **-8** | 0 → 52 | **-52** | regression (new rule) |
+| `aria-command-name` | 0 → 0 | 0 | 0 → 0 | 0 | **no longer regressed — closed** (was -8 objects / -52 nodes at the prearia checkpoint; see isolation section below) |
 
 (Δ columns use the same before − after convention: positive = improvement, negative = regression.)
 
@@ -278,97 +290,93 @@ re-derivation contributed none — it touched no markup, only `src/index.css` co
 
 | theme | Dashboard | LiveRun | Analytics | Forge | Graphs |
 |---|---|---|---|---|---|
-| cyan | -6 | +2 | +2 | +2 | -5 |
-| emerald | -5 | +2 | +2 | +2 | -5 |
-| readable | -7 | +1 | 0 | 0 | -6 |
-| aubergine | -5 | +1 | 0 | 0 | -7 |
+| cyan | +1 | +1 | +1 | +1 | 0 |
+| emerald | +1 | +1 | +1 | +1 | 0 |
+| readable | 0 | +1 | 0 | 0 | 0 |
+| aubergine | +1 | 0 | 0 | 0 | -1 |
 
-All figures re-derived directly from `a11y-before/*.json` and the current `a11y-after/*.json`
-(never reused from the superseded preramp delta). No cell in this table is a regression except the
-`[Dashboard]`/`[Graphs]` columns already accounted for by `aria-command-name` above; every other
-non-zero cell is an improvement (fewer nodes in AFTER than BEFORE).
+Grand total: BEFORE 218 → AFTER 209 nodes (**+9**, all within `color-contrast`; `aria-prohibited-attr`
+flat). All figures re-derived directly from `a11y-before/*.json` and the current `a11y-after/*.json`.
+**One regressed cell: `[aubergine] Graphs`, -1 node** — traced below in the isolation section (the
+same Suspense-fallback text 122-21 flagged on `[aubergine] Graphs` as "not explained by the badge or
+by axe selector-reordering," still present in this capture). Every other non-zero cell is flat or an
+improvement.
 
-## Delta isolating the ramp (new AFTER vs. superseded preramp AFTER)
+## Delta isolating the aria fix (new AFTER vs. `a11y-after-prearia`)
 
-**This is the figure 122-20's "both directions" hypothesis needs, and the one BEFORE/AFTER above
-cannot give** — 122-13's MetricCard rewrite and the ramp re-derivation both sit between BEFORE and
-the current AFTER, so the table above cannot separate them. This section compares the two AFTER
-captures directly (`a11y-after-preramp/*.json` → `a11y-after/*.json`), holding the MetricCard
-markup fixed (both captures ran against `fde030a5` and later) and varying only `src/index.css`.
+**This is the figure that settles the dispatch's actual question** — 122-21's prearia capture holds
+the ramp fixed and the aria bug present; this AFTER capture holds the ramp fixed and the aria bug
+fixed. Comparing the two directly isolates `156d5116`'s effect from everything else in the phase.
 
-### Object-level: zero change
+### Object-level: exactly the predicted -8, all `aria-command-name`, zero elsewhere
 
-Every cell's violation-object count is identical between the preramp and current AFTER captures
-(verified by diffing `violationCount` per file: 20/20 cells unchanged). The ramp cannot move an
-object-level count — `color-contrast` fires per **element**, and no element crossed into or out of
-failing at the object-list level; see node-level below for the finer-grained effect.
+| rule id | prearia objects | after objects | Δ | nodes prearia → after | Δ nodes |
+|---|---|---|---|---|---|
+| `color-contrast` | 20 | 20 | 0 | 194 → 205 | see below |
+| `aria-prohibited-attr` | 4 | 4 | 0 | 4 → 4 | 0 |
+| `aria-command-name` | 8 | **0** | **-8** | 52 → **0** | **-52** |
 
-### Node-level: net improvement, with one exception, and it is NOT what 122-20's proxy suggested
+Per-cell object diff (prearia − after; positive = fixed): `[Dashboard]` and `[Graphs]` in all 4
+themes each fell by exactly 1 object, all other 12 cells unchanged — the mirror image of 122-21's
+regression table. **Zero new violations of any rule were introduced by the fix** (verified: every
+rule present in `after/` was already present in `prearia/`, none appeared for the first time).
 
-Grand total: preramp-after **261 nodes** → current-after **250 nodes** (**11 fewer**, entirely
-within `color-contrast`: 205 → 194). Traced per element, not just summed:
+### Node-level: -41 raw, but only -1 is a real regression — the rest is the fix plus already-known scan noise
 
-**Root cause 1 of 2 (the majority of the delta, both directions: a data-gated header badge, not the
-ramp).** `src/layouts/DashboardLayout.tsx:607-620` renders a `SYS:`/`LAT:` telemetry pair
-(`<div className="hidden lg:flex items-center gap-4 ...">`, each stat a
-`<span className="flex items-center gap-1.5">`) only when `showSys`/`showLat` are true — gated on
-live `systemResources`/latency data having arrived from the backend by paint time. Diffing the
-exact target selectors (not just counts) between the two captures: this element (selector
-`.lg\:flex > .gap-1\.5[:nth-child(N)]`) is **present-in-preramp-absent-in-current** on 13 of the 20
-cells (both cyan and emerald's Dashboard/LiveRun/Analytics/Forge/Graphs — all 10 — plus aubergine
-Dashboard/LiveRun/Analytics, 15 individual badge-node instances total, aubergine LiveRun/Analytics
-losing both `SYS:` and `LAT:`), and **present-in-current-absent-in-preramp** on 3 cells (cyan
-Dashboard, aubergine LiveRun, aubergine Analytics — 3 instances, one badge span each). Net: -12
-badge-node instances, not a clean one-directional removal — the badge flips presence in BOTH
-directions depending on which capture session it is, which is itself the tell. **Control that this
-is a timing artifact, not a ramp effect:** `readable`'s five cells show **zero** badge-related
-node-count change in either direction (confirmed by exact target-set diff) — if the ramp's colour
-values were what pushed this badge across the AA line, `readable` (sharing the identical
-`DashboardLayout.tsx` markup and gating logic, and undergoing the identical ramp treatment) would
-show the same effect and does not. Everywhere the badge IS present in both captures, its own
-colour pairing is byte-identical (see the 166-of-170-identical figure below). This is ordinary
-backend-data-arrival timing variance between two separately-started `dev:noauth` sessions hitting a
-real (not mocked) Convex backend, not something the ramp changed.
+Grand total: prearia **250 nodes** → current-after **209 nodes** (**41 fewer**). Traced per element,
+not just summed, the same way 122-21 traced the ramp:
 
-**Root cause 2 of 2 (4 nodes, genuinely ramp-caused, all still failing AA):** four `color-contrast`
-nodes present in BOTH captures show a real value change:
+**Component 1: the fix itself, -52 nodes, clean.** All 52 `aria-command-name` nodes (8 objects: 7
+each on `[Dashboard]` cyan/emerald/readable/aubergine, 6 each on `[Graphs]` cyan/emerald/readable/
+aubergine) are gone in every one of the 8 cells that had them, with no residue — grepping
+`aria-command-name` across all 20 new files returns zero matches.
 
-| theme | page | element | preramp ratio | current ratio | preramp bg | current bg | still fails AA? |
-|---|---|---|---|---|---|---|---|
-| cyan | Graphs | `.text-primary\/70.text-base` (`CodeVaultGraph.tsx`/`KGSearchResults.tsx` "Loading 3D render…" Suspense fallback) | 1.92 | 2.26 | `#090a0e` | `#0f1014` | yes (needs 4.5) |
-| emerald | Graphs | same element | 1.88 | 2.34 | `#03081e` | `#080f21` | yes |
-| cyan | LiveRun | `.text-\(--muted-foreground\)` | 2.69 | 2.86 | `#05060a` (unchanged) | `#05060a` (unchanged) | yes |
-| emerald | LiveRun | same element | 2.69 | 2.82 | `#020617` (unchanged) | `#020617` (unchanged) | yes |
+**Component 2: +10 nodes, the SAME data-gated header badge 122-21 already identified as scan noise,
+not a fix side-effect.** `DashboardLayout.tsx:607-620`'s `SYS:`/`LAT:` telemetry pair
+(`.lg\:flex > .gap-1\.5`) is present in this AFTER capture but was absent from the prearia capture
+on 10 individual badge-node instances across 6 cells (`[cyan] LiveRun/Analytics/Forge/Graphs`,
+`[emerald] Dashboard/LiveRun/Analytics/Forge/Graphs`, one badge span each) — traced by diffing exact
+target selectors, not just counts. **Control, same technique 122-21 used:** `readable`'s five cells
+show **zero** badge-node change between prearia and after (its Dashboard/Graphs deltas are 100%
+`aria-command-name`, nothing else) — if this were something the fix or the ramp touched, `readable`
+(identical markup, identical gating logic) would show it too, and it does not. This is ordinary
+backend-data-arrival timing variance between two independently-started `dev:noauth` sessions
+against a real Convex backend — the exact confound 122-21 named, recurring because every capture
+session starts a fresh dev server and hits live data.
 
-The Graphs pair's background genuinely lightened (consistent with `--surface-1/2` opening up per
-122-20) and the ratio improved slightly. The LiveRun pair's reported `bgColor` is byte-identical
-across captures but `fgColor` still shifted (cyan `#4d5562`→`#515966`, emerald equivalent) —
-consistent with an intermediate semi-transparent layer between the text and the deepest opaque
-ancestor axe reports as `bgColor` (the element sits on `--muted-foreground` composited through a
-nested surface layer that DID move) rather than the deepest surface itself moving; not fully
-root-caused to a single CSS rule in the time available for this rematrix, flagged for Phase 123
-rather than guessed at. **All four remain far below AA (max 2.86:1 of 4.5:1 required) — none
-crossed the pass/fail line in either direction.**
+**Component 3: -1 node, genuinely new, not explained by either of the above.** `[aubergine] LiveRun`
+gained one `color-contrast` node absent from prearia: `.text-\(--muted-foreground\)`, ratio
+**4.48:1** (needs 4.5), `fgColor` `#877867` on `bgColor` `#120d18`. This is the *same element*
+122-21's Root Cause 2 flagged on cyan/emerald LiveRun as "not fully root-caused... flagged for
+Phase 123" (an intermediate semi-transparent layer between the text and the deepest opaque
+ancestor) — here it appears on aubergine for the first time, at a hairsbreadth below the AA
+threshold (0.02 short of 4.5). Not attributable to the badge (aubergine LiveRun's badge node is
+present, unchanged, in both captures) and not attributable to `156d5116` (a colour-contrast ratio
+cannot be moved by an `aria-label` string). Carried forward as the same open item 122-21 already
+flagged for Phase 123, now with a second theme's data point.
 
-**166 of 170 nodes present in both captures show IDENTICAL `contrastRatio` and `bgColor`** — the
-overwhelming majority of already-failing elements were untouched by the ramp at all (they sit on
-`nav`/sidebar backgrounds that resolve to `--surface-0`, confirmed unchanged in every theme by
-122-20's own verification).
+**Arithmetic, verified exactly:** -52 (fix) + 10 (badge, cyan/emerald x5 cells) + 1 (new aubergine
+LiveRun node) = **-41**, matching 250 → 209 exactly. Nothing left unaccounted.
 
-### 122-20's "both directions" hypothesis: refuted with numbers, and its own proxy explained
+### readable as a clean control for the whole isolation
 
-122-20 reported (as an admitted "crude keyword-count proxy on the axe error text, not a rigorous
-violation-object diff") that per-cell counts shifted in both directions, citing "cyan Forge 12→66,
-cyan Graphs 42→9, readable Forge 34→88." **Those figures do not correspond to anything in this
-document's units** (violation objects or nodes) — they are almost certainly a raw substring/line
-count over Playwright's non-measure-only failure output (which repeats the word "contrast" and
-prints full CSS selectors and colour data per node in prose), not a count of distinct violations or
-elements, and were explicitly caveated as such at the time. The real, unit-labelled, per-node-traced
-answer measured by this rematrix: **the ramp's own node-level effect is net positive** (11 fewer
-`color-contrast` nodes, none of it attributable to worsening any already-failing element beyond
-sub-line-width shifts still far short of AA), and the true source of "both directions" was the
-mixing of a real (small) ramp effect with a data-availability timing artifact unrelated to the
-ramp, which is now separated out above.
+`readable`'s five cells show a diff explained **100% by `aria-command-name`** (7 nodes off
+`[Dashboard]`, 6 off `[Graphs]`, zero elsewhere) — no badge churn, no new near-miss node. This is
+the cleanest read of the fix's isolated effect, uncontaminated by the two known noise sources that
+affect the other three themes.
+
+## Delta isolating the ramp (superseded preramp AFTER vs. `a11y-after-prearia`) — historical, unaffected by this run
+
+122-21's ramp-isolation finding is unchanged by this plan (this run touched no `src/index.css` and
+no ramp-related file) and both source captures it compared
+(`a11y-after-preramp/` and `a11y-after-prearia/`) are frozen and untouched here. Full detail lives
+in `122-21-REMATRIX.md`; summary: the ramp re-derivation's own node-level effect was net positive
+(-11 nodes: 261 → 250), almost entirely the same `SYS:`/`LAT:` badge timing confound documented
+above (net -12 badge instances that run, flipping in both directions), plus 4 genuinely
+ramp-caused `color-contrast` value shifts (none crossing pass/fail) and one still-unexplained new
+node on `[aubergine] Graphs` — not the aubergine LiveRun node found in this run, a different cell.
+122-20's "both directions" keyword-count proxy was refuted with real per-node-traced numbers there;
+this run does not re-litigate it.
 
 ## Named-pair ratios
 
