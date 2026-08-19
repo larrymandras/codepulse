@@ -130,3 +130,65 @@ REACHED report returned alongside this summary for the verbatim how-to-verify st
 - Tasks: 2/2 auto tasks completed; 1 checkpoint task pending operator
 - Commits: 2 (`e35bf85f`, `91f47f11`)
 - Files touched: 2 (`src/index.css`, `122-TOKEN-LAW.md`)
+
+## Operator Checkpoint Response (D-28, Task 3) -- 2026-08-19
+
+Recorded VERBATIM per this plan's `<action>` clause. Operator reply, unedited:
+
+> themes look fine
+> i see 4 themes in the themeswitcher
+> I do not see this emerald: a success/OK badge next to a primary action
+> things are readable
+> forge page needs work, do not see failed badge
+
+Verdict: **no token-layer regression named.** The operator named no theme and no surface that
+reads wrong, which is the condition this checkpoint gates on. Steps 1, 2, 3 pass. Steps 4, 5 and 6
+were not cleanly answerable, for reasons that are defects in the CHECKPOINT TEXT, not in the
+token layer -- itemised below so they are fixed rather than absorbed silently.
+
+### Step 4 (emerald OK badge beside a primary action) -- UNVERIFIABLE AS WRITTEN
+The step asks the operator to "find a success/OK badge" under emerald without naming a route or
+component that renders one adjacent to a primary action. The operator could not find one. The
+D-05 judgement it exists to capture -- does `--status-ok` read as a second brand colour next to
+`--primary` -- therefore has NO operator answer, and none should be inferred. Any plan that
+re-asks this must name the exact page and element.
+
+### Step 5 (readable is effect-free) -- ANSWERED A DIFFERENT QUESTION
+The step asks whether *nothing animates*. The reply "things are readable" answers legibility, not
+motion. `readable`'s blanket no-effects rule therefore has no operator confirmation. Not treated
+as a pass.
+
+### Step 6 (Forge `Failed` badge filled AND "now legible") -- PREMATURE BY CONSTRUCTION
+Two separate findings, both measured against the running app at `localhost:5173/forge`:
+
+1. **The Failed badges exist.** The list holds 2 of them (22 `Succeeded`, 4 `Cancelled`,
+   2 `Failed`, counted with a DOM TreeWalker over text nodes). They sit below the initial scroll
+   position, which is why the operator did not see one. An earlier leaf-element probe returned
+   zero for BOTH `Failed` and `Succeeded` -- a broken probe, discarded, not read as absence.
+2. **"now legible" cannot be true yet.** `ForgeStatusBadge.tsx:59` still carries
+   `bg-red-900/60 text-[var(--status-error)]` -- the raw palette fill. The AA-clearing
+   `--status-error-fill` / `--status-error-on-fill` pair that Task 1 of THIS plan defined is
+   declared 5 times in `src/index.css` (once per theme) and consumed in **0** files outside it.
+   Control proving that probe discriminates: `var(--status-error)` IS consumed, in
+   `AnomalyBadge.tsx`, `ChatInput.tsx`, `CostBreakdown.tsx` among others. Re-pointing the badge
+   is plan **122-10**'s job (its `files_modified` names `ForgeStatusBadge.tsx`), which sits in
+   wave 4 -- AFTER this checkpoint. So this checkpoint asks the operator to confirm an
+   improvement the phase has not yet shipped.
+
+### "forge page needs work" -- INVESTIGATED, NOT A REGRESSION FROM THIS PHASE
+The Forge job list renders as a ~280px column with card content clipped at its right edge. Traced
+to `src/pages/ForgePage.tsx:175`, whose class string is
+`fixed inset-y-0 left-0 z-50 w-[280px] ... md:static md:z-auto md:translate-x-0 md:w-[280px] md:shrink-0`.
+At a 1920px viewport the element computes to `position: static; width: 280px`, i.e. the responsive
+override IS applying and the 280px master column is INTENDED. Column-level horizontal overflow is
+zero (`scrollWidth` 279 == `clientWidth` 279); the clipping is per-card row content inside that
+fixed width.
+
+Not caused by this phase: `git diff --name-only 001c1e73..HEAD -- src/` returns `src/index.css`
+ONLY -- no component file changed in waves 0-2. `w-[280px]` is present in `ForgePage.tsx` in the
+pre-phase blob `001c1e73` as well. This is a real pre-existing UI defect, outside 122's scope
+(122 changes what surfaces read FROM, not page layout). Filed for triage rather than fixed here.
+
+### Net
+Token layer: accepted by the operator on the questions that were answerable. Wave 3 release is a
+separate decision recorded in the orchestrator's own notes, not inferred from this file.
