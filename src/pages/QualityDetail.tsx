@@ -43,7 +43,7 @@ function SubScoreBar({ label, value }: { label: string; value: number }) {
         </div>
         <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden relative">
           <div
-            className="absolute top-0 left-0 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_currentColor]"
+            className="absolute top-0 left-0 h-full rounded-full transition-all duration-slow ease-house shadow-[0_0_10px_currentColor]"
             style={{ width: `${Math.min(value, 100)}%`, backgroundColor: barColor, color: barColor }}
           />
         </div>
@@ -86,7 +86,7 @@ export default function QualityDetail() {
       <div>
         <Link
           to="/quality"
-          className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+          className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-normal ease-house"
         >
           <ChevronLeft className="h-3 w-3" />
           Back to Quality

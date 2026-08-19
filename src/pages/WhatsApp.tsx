@@ -425,7 +425,7 @@ export default function WhatsApp() {
               <div className="w-64 space-y-1">
                 <Progress
                   value={progressValue}
-                  className="h-1.5 w-full transition-all duration-1000"
+                  className="h-1.5 w-full transition-all duration-slow ease-house"
                   style={
                     {
                       "--progress-foreground": progressColor,

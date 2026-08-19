@@ -153,7 +153,7 @@ function PanelShell({
           <button
             aria-label={`Return to ${label}`}
             onClick={() => onReturnNav(returnTo)}
-            className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+            className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-normal ease-house"
           >
             <ChevronLeft className="h-3 w-3" />
             {`Back to ${label}`}
@@ -213,7 +213,7 @@ export default function KGDetailsPanel({
             <button
               aria-label={`Return to ${label}`}
               onClick={() => onReturnNav(returnTo)}
-              className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+              className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-normal ease-house"
             >
               <ChevronLeft className="h-3 w-3" />
               {`Back to ${label}`}
@@ -316,7 +316,7 @@ export default function KGDetailsPanel({
             </h4>
             <SectionErrorBoundary name="Cross-graph links">
               <button
-                className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-normal ease-house"
                 onClick={() => onAgentNav(node.agentId, node.name)}
               >
                 <ArrowRight className="h-3 w-3 text-primary shrink-0" />

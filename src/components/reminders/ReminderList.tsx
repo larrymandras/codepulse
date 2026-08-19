@@ -298,7 +298,7 @@ function ReminderRow({
       data-testid="reminder-row"
       data-status={reminder.status}
       data-overdue={isOverdue ? "true" : "false"}
-      className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-all duration-300 ${
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-all duration-slow ease-house ${
         isDone ? "opacity-50" : ""
       } ${
         isOverdue && !reduceMotion

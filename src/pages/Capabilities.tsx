@@ -184,7 +184,7 @@ function HooksPanel({
                   className="flex items-center justify-between bg-background rounded-lg px-4 py-2.5 cursor-pointer hover:bg-accent transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-sm font-mono text-purple-400 flex-shrink-0">
+                    <span className="text-sm font-mono text-indigo-400 flex-shrink-0">
                       {h.hookType}
                     </span>
                     <OriginBadge origin={h.origin} />
@@ -206,7 +206,7 @@ function HooksPanel({
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                       <div>
                         <span className="text-muted-foreground">Hook Type</span>
-                        <p className="text-purple-400 font-mono">{h.hookType}</p>
+                        <p className="text-indigo-400 font-mono">{h.hookType}</p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Matcher</span>

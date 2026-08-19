@@ -788,7 +788,7 @@ export default function Chat() {
           // back the ~100px that puts the band fully on screen. Both numbers
           // are measured, not guessed; re-measure before changing either.
           data-testid="cc-aura-wrapper"
-          className={`w-full ${commandCenter ? "max-w-[260px]" : ""} transition-[opacity,filter] duration-300 ${
+          className={`w-full ${commandCenter ? "max-w-[260px]" : ""} transition-[opacity,filter] duration-slow ease-house ${
             listening ? "" : "opacity-45 saturate-50"
           }`}
         >

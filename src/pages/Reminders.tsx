@@ -66,7 +66,7 @@ function ProfileSwitch({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(p.id)}
-            className={`px-2.5 py-1 text-sm rounded-md font-mono uppercase tracking-wide transition-all duration-300 ${
+            className={`px-2.5 py-1 text-sm rounded-md font-mono uppercase tracking-wide transition-all duration-slow ease-house ${
               active
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"

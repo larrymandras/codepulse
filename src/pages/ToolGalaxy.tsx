@@ -308,7 +308,7 @@ function GalaxyCanvas({
           <button
             aria-label={"Return to " + surfaceLabel(fromParam)}
             onClick={() => navigate(fromParam)}
-            className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+            className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-normal ease-house"
           >
             <ChevronLeft className="h-3 w-3" />
             {"Back to " + surfaceLabel(fromParam)}
@@ -464,7 +464,7 @@ function GalaxyCanvas({
                       <SectionErrorBoundary name="Cross-graph links">
                         {ownerMatch && (
                           <button
-                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-normal ease-house"
                             onClick={() => {
                               const fromGalaxyUrl =
                                 "/tool-galaxy?focus=" +
@@ -489,7 +489,7 @@ function GalaxyCanvas({
                         )}
                         {firstTool && (
                           <button
-                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-normal ease-house"
                             onClick={() => {
                               const fromGalaxyUrl =
                                 "/tool-galaxy?focus=" +
@@ -516,7 +516,7 @@ function GalaxyCanvas({
                         )}
                         {firstGoal && (
                           <button
-                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-normal ease-house"
                             onClick={() =>
                               navigate(
                                 "/hive?goal=" + encodeURIComponent(firstGoal),

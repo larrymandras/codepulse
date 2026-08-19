@@ -259,7 +259,7 @@ export function CalendarOverlay({
               onClick={() => handleDayClick(day)}
               aria-label={format(day, "PPPP")}
               aria-pressed={selected}
-              className={`group/cell flex flex-col items-start gap-1 rounded-lg border p-1.5 min-h-[64px] h-full overflow-hidden text-left motion-safe:transition-all motion-safe:duration-200 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`group/cell flex flex-col items-start gap-1 rounded-lg border p-1.5 min-h-[64px] h-full overflow-hidden text-left motion-safe:transition-all motion-safe:duration-normal motion-safe:ease-house hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 dimmed ? "opacity-40" : ""
               } ${selected ? "border-2" : "border-border/40"}`}
               style={{

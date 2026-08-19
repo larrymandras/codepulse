@@ -149,7 +149,7 @@ function NavGroup({
               }
             >
               <IconComponent
-                className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]"
+                className="h-4 w-4 shrink-0 transition-all duration-slow ease-house group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]"
               />
               {!collapsed && (
                 <span className="group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]">
@@ -229,7 +229,7 @@ function SidebarContent({
                     <img 
                       src={avatarUrl} 
                       alt="Larry Mandras" 
-                      className="w-full h-full object-cover relative z-10 transition-opacity duration-300" 
+                      className="w-full h-full object-cover relative z-10 transition-opacity duration-slow ease-house"
                     />
                   )}
                   {/* Subtle scanline effect on hover */}
@@ -287,7 +287,7 @@ function SidebarContent({
                   }`
                 }
               >
-                <Settings className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]" />
+                <Settings className="h-4 w-4 shrink-0 transition-all duration-slow ease-house group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]" />
                 {!collapsed && <span>Settings</span>}
               </NavLink>
             );
@@ -521,7 +521,7 @@ export default function DashboardLayout() {
       </div>
       
       {/* Sidebar Navigation */}
-      <aside className={`hidden md:flex ${sidebarCollapsed ? "w-[48px]" : "w-60"} flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-200`}>
+      <aside className={`hidden md:flex ${sidebarCollapsed ? "w-[48px]" : "w-60"} flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house`}>
         <SidebarContent
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => {
@@ -542,7 +542,7 @@ export default function DashboardLayout() {
 
       {/* Mobile Sidebar Panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-60 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex flex-col transform transition-transform duration-200 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-60 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex flex-col transform transition-transform duration-normal ease-house md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

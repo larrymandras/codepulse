@@ -41,7 +41,7 @@ function QualityKpiCard({
   const hasData = sparkline.length > 0;
 
   const cardClasses =
-    "glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-5 relative overflow-hidden hover:border-primary/50 transition-all duration-300 cursor-pointer";
+    "glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-5 relative overflow-hidden hover:border-primary/50 transition-all duration-slow ease-house cursor-pointer";
 
   return (
     <div

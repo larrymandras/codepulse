@@ -308,11 +308,11 @@ export default function WarRoom() {
 
           {/* Left panel — room list; fixed 280px on desktop, slide-in overlay on mobile (F8) */}
           <GlassPanel
-            // transition-transform duration-300 is retained (Phase 120's
-            // kill-list sweep removes only the hover-scale decoration) — it
-            // animates the F8 mobile drawer slide via the translate-x-0 /
-            // -translate-x-full toggle below.
-            className={`w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col transition-transform duration-300 fixed inset-y-0 left-0 z-50 md:static md:z-auto md:translate-x-0 ${
+            // transition-transform duration-slow ease-house is retained
+            // (Phase 120's kill-list sweep removes only the hover-scale
+            // decoration) — it animates the F8 mobile drawer slide via the
+            // translate-x-0 / -translate-x-full toggle below.
+            className={`w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col transition-transform duration-slow ease-house fixed inset-y-0 left-0 z-50 md:static md:z-auto md:translate-x-0 ${
               roomListOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >

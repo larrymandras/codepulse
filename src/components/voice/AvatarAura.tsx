@@ -370,7 +370,7 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
           src={avatarSpeakingSrc}
           alt=""
           draggable={false}
-          className="absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ease-out"
+          className="absolute inset-0 h-full w-full object-contain transition-opacity duration-slow ease-house"
           style={{
             WebkitMaskImage: AVATAR_MASK,
             maskImage: AVATAR_MASK,

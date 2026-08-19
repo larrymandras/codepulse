@@ -469,7 +469,7 @@ export default function Memory() {
                               L1: {stat.l1Length}
                             </span>
                             {stat.hadLlmSummarizer && (
-                              <span className="text-sm px-1.5 py-0.5 rounded bg-purple-600/20 text-purple-400">
+                              <span className="text-sm px-1.5 py-0.5 rounded bg-[var(--astridr)]/20 text-(--astridr)">
                                 LLM
                               </span>
                             )}
