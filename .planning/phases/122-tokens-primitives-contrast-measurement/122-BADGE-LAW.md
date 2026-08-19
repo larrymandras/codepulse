@@ -77,7 +77,7 @@ treatment for the whole app rather than two different red fills coexisting.
 | `completed` | quiet (ok token) | **Quietest** | **Yes** | Parallels shared `completed`. `border-[var(--status-ok)]/40 text-[var(--status-ok)]` → `text-muted-foreground` flat. |
 | `failed` | strong (`bg-red-900/60 text-[var(--status-error)]`, sub-AA) | Strong | **Value — the plan's headline fix** | D-06 locks the filled treatment; the pairing corrects to `bg-[var(--status-error-fill)] text-[var(--status-error-on-fill)]`. Measured §5. |
 | `stopped` | quiet (zinc-600/zinc-500) | Quiet | Value only | Parallels shared `cancelled`. Detokenized: `border-zinc-600 text-zinc-500` → `border-border text-muted-foreground`. |
-| `auth_failed` | quiet (warn token) | **Strong** | **Yes — D-07's second headline case** | Moves from quiet to Strong per D-07/T-122-10-A. Uses `bg-[var(--status-warn)] text-[var(--foreground)]` — the app's existing sanctioned solid-warn-fill idiom (`IdeationRow.tsx:30`, `InboxCard.tsx:98`, `ScanResultsPanel.tsx:41`, `TaskDetail.tsx:29` all already use `bg-(--status-warn) text-(--foreground)`), NOT the error-fill pair — SC#4 requires `auth_failed` stay visually distinct from `failed`, and both being "Strong" no longer means both being the same colour: colour still comes from `semantic` (warn vs error), only fill-vs-quiet comes from tier. Measured §5. |
+| `auth_failed` | quiet (warn token) | **Strong** | **Yes — D-07's second headline case** | Moves from quiet to Strong per D-07/T-122-10-A. Background reuses `bg-(--status-warn)` — the app's existing sanctioned solid-warn-fill idiom (`IdeationRow.tsx:30`, `InboxCard.tsx:98`, `ScanResultsPanel.tsx:41`, `TaskDetail.tsx:29`), NOT the error-fill pair — SC#4 requires `auth_failed` stay visually distinct from `failed`, and both being "Strong" no longer means both being the same colour: colour still comes from `semantic` (warn vs error), only fill-vs-quiet comes from tier. **Foreground corrected during measurement (§8):** those four files' own `text-(--foreground)` pairing was tried first and REJECTED — rasterises to ~1.4-1.8:1 (light text on a bright amber fill), far below AA. Shipped foreground is `text-[var(--primary-foreground)]` (a dark near-black token already used app-wide for text on a saturated/bright fill), measured 10.69-11.47:1. |
 | `pending` | quiet (zinc-700 border, primary text) | Quiet | Value only | Parallels shared roster/job `pending`/`queued`. Detokenized: `border-zinc-700` → `border-border`; `text-primary` already token-driven, kept. |
 | `stopping_pending` | quiet (warn token) | Quiet | No | D-07 names `stopping` directly. Already token-driven, unchanged. |
 | `expired` | quiet (zinc-800/zinc-600, faintest) | **Quietest** | Yes (shape) | Distinct terminal state per §4's exceptions register; "administrative/inactive" fits Quietest. Detokenized AND flattened: `border-zinc-800 text-zinc-600` → `text-muted-foreground` (no border — the flattest treatment in the file, matching its pre-existing "faintest of all" intent). |
@@ -166,6 +166,78 @@ counting lines. See the plan's Task 3 acceptance criteria; full diff reproduced 
 
 ## §8 — Rasterised contrast measurements
 
-See `122-10-SUMMARY.md` for the raw measurement script output (Forge `failed` old-vs-new pairing,
-all four exposed themes, with the required below-AA control) and the auth_failed candidate
-check performed as due diligence beyond the plan's strict requirement.
+Method: Playwright + canvas, same as `122-03`'s own script — colour strings (including
+`oklab(... / 0.6)` for the translucent old pairing) handed to `canvas.fillStyle` (a real colour
+parser, never a regex), rasterised with `getImageData`, and the OLD pairing's translucent fill
+composited over each theme's `--card` via canvas's own alpha blending (card `fillRect` first, then
+the badge's own — possibly-alpha — background on top) before computing the WCAG ratio. Known-value
+control: `#ffffff → rgb(255,255,255)`, `#000000 → rgb(0,0,0)`, both exact. Known-invalid control:
+`fillStyle = "not-a-color-9x7q2"` left the sentinel value in place (did not silently substitute a
+guess), confirming the "return null/refuse, don't guess" behaviour the discipline requires.
+
+Class strings measured were rendered from the ACTUAL shipped source (Tailwind's Vite-plugin JIT
+scanner only compiles a utility once its literal class string exists somewhere in the module
+graph — a throwaway probe file only got scanned once temporarily side-effect-imported from
+`main.tsx`; both the scratch file and the import were removed before this plan's commits).
+
+### Forge `failed` — NEW pairing (shipped): `bg-[var(--status-error-fill)] text-[var(--status-error-on-fill)]`
+
+| theme | composited bg | fg | ratio | vs AA (4.5:1) |
+|---|---|---|---|---|
+| cyan | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+| emerald | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+| readable | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+| aubergine | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+
+Identical across all four themes because the fill is opaque — an opaque colour fully covers
+whatever is behind it, so `--card` never enters the composite. Matches `122-03`'s own 10.020:1
+figure exactly (same token pair, same math).
+
+### Forge `failed` — OLD pairing CONTROL: `bg-red-900/60 text-[var(--status-error)]`
+
+| theme | computed bg (pre-composite) | composited over `--card` | fg | ratio | vs AA (4.5:1) |
+|---|---|---|---|---|---|
+| cyan | `oklab(0.396 0.127 0.061 / 0.6)` | rgb(82,19,23) | rgb(239,68,68) | **3.811:1** | **FAIL (below)** |
+| emerald | `oklab(0.396 0.127 0.061 / 0.6)` | rgb(79,18,30) | rgb(239,68,68) | **3.881:1** | **FAIL (below)** |
+| readable | `oklab(0.396 0.127 0.061 / 0.6)` | rgb(87,25,30) | rgb(248,113,113) | 4.857:1 | at/above |
+| aubergine | `oklab(0.396 0.127 0.061 / 0.6)` | rgb(88,21,30) | rgb(248,113,113) | 4.927:1 | at/above |
+
+The probe correctly reports a failure on cyan and emerald — proving it CAN report a failure, not
+just a pass — and correctly does NOT report one on readable/aubergine, which `120-DESIGN-REVIEW-
+HANDOFF.md` and `122-TOKEN-LAW.md` both already record as never sub-AA for this pairing (5.33:1 /
+4.768:1-4.851:1 there, page-background-vs-`--card` accounts for the small numeric difference from
+those documents' own figures — same shape, same conclusion, independently re-derived here rather
+than copied).
+
+### `auth_failed` — measured as due diligence (not required by this plan's acceptance criteria, since only `failed`'s contrast was mandated to be measured)
+
+**First candidate, matching the four other files' existing `bg-(--status-warn) text-(--foreground)` idiom — REJECTED:**
+
+| theme | bg | fg | ratio | vs AA |
+|---|---|---|---|---|
+| cyan | rgb(234,179,8) | rgb(248,250,252) | 1.833:1 | FAIL |
+| emerald | rgb(234,179,8) | rgb(248,250,252) | 1.833:1 | FAIL |
+| readable | rgb(251,191,36) | rgb(232,234,240) | 1.388:1 | FAIL |
+| aubergine | rgb(251,191,36) | rgb(240,232,220) | 1.374:1 | FAIL |
+
+Light text on a bright amber fill — the classic low-contrast combination. Copying an established
+pattern from elsewhere in the app is not a substitute for measuring it in the new context.
+
+**Shipped pairing: `bg-[var(--status-warn)] text-[var(--primary-foreground)]`:**
+
+| theme | bg | fg | ratio | vs AA |
+|---|---|---|---|---|
+| cyan | rgb(234,179,8) | rgb(4,4,5) | **10.686:1** | PASS |
+| emerald | rgb(234,179,8) | rgb(4,4,5) | **10.686:1** | PASS |
+| readable | rgb(251,191,36) | rgb(12,17,24) | **11.343:1** | PASS |
+| aubergine | rgb(251,191,36) | rgb(18,13,24) | **11.473:1** | PASS |
+
+`--primary-foreground` is a dark near-black token already defined in every theme, used app-wide
+for text on a saturated/bright fill (its native pairing is `--primary`, which for `cyan`/`emerald`/
+`amber` is itself a bright/saturated colour — the same shape as `--status-warn`).
+
+cyan and emerald share identical numbers in every table above because `--status-warn`,
+`--status-error`, and `--primary-foreground` are each declared once on the shared `.dark,
+[data-theme="cyan"]` block and inherited by `[data-theme="emerald"]`/`[data-theme="amber"]`
+(undeclared in those themes' own blocks) — the same cascade behaviour `122-TOKEN-LAW.md` already
+documents for `--status-error` on `amber`.

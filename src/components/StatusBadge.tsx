@@ -39,16 +39,20 @@ interface StatusBadgeProps {
 
 // Strong tier: filled. `error` uses the sanctioned fill pair
 // (--status-error-fill/--status-error-on-fill, defined by plan 122-03 for
-// exactly this). `warn` reuses the app's existing sanctioned solid-warn-
-// fill idiom (IdeationRow.tsx:30, InboxCard.tsx:98, ScanResultsPanel.tsx:41,
-// TaskDetail.tsx:29 all already use this exact pairing) rather than
-// inventing a new token — needed so a warn-semantic Strong entry (e.g. an
-// authentication failure) stays visually distinct from an error-semantic
-// Strong entry (a genuine failure) while both are equally "filled". No
-// hex, no palette class — token-driven per CLAUDE.md.
+// exactly this). `warn`'s background reuses the app's existing sanctioned
+// solid-warn-fill idiom (IdeationRow.tsx:30, InboxCard.tsx:98,
+// ScanResultsPanel.tsx:41, TaskDetail.tsx:29 all already use bg-(--status-
+// warn)) rather than inventing a new token — needed so a warn-semantic
+// Strong entry (e.g. an authentication failure) stays visually distinct
+// from an error-semantic Strong entry (a genuine failure) while both are
+// equally "filled". Its FOREGROUND, though, is `--primary-foreground`
+// (dark near-black), not those files' `text-(--foreground)` — measured
+// (122-BADGE-LAW.md §8) and rejected: light --foreground text on the
+// bright amber --status-warn fill rasterises to ~1.4-1.8:1, far below AA.
+// No hex, no palette class — token-driven per CLAUDE.md.
 const strongStyles: Record<string, string> = {
   error: "bg-(--status-error-fill) text-(--status-error-on-fill)",
-  warn: "bg-(--status-warn) text-(--foreground)",
+  warn: "bg-(--status-warn) text-(--primary-foreground)",
 };
 
 // Quiet-but-unmistakable tier: colour lives in the text and a low-opacity

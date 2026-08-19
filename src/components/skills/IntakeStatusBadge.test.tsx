@@ -138,12 +138,19 @@ describe("chip backgrounds follow theme tokens (review #9)", () => {
   // AnomalyBadge's bg-[var(--status-*)]/20 convention instead.
   const noPalette = /bg-(red|amber|blue|green)-\d/;
 
-  it("failed uses --status-error, not bg-red-900", () => {
-    const { container } = render(<RowStatusBadge status="failed" />);
-    const el = container.querySelector('[data-status="failed"]')!;
-    expect(el.className).toContain("bg-[var(--status-error)]");
-    expect(el.className).not.toMatch(noPalette);
-  });
+  it(
+    "failed uses --status-error-fill, not bg-red-900 -- CORRECTED " +
+      "2026-08-19 (D-07/122-10): `failed` moved to the Strong (filled) " +
+      "tier, so the token is the opaque error-fill pairing, not the " +
+      "translucent /20 quiet token this test previously asserted",
+    () => {
+      const { container } = render(<RowStatusBadge status="failed" />);
+      const el = container.querySelector('[data-status="failed"]')!;
+      expect(el.className).toContain("bg-[var(--status-error-fill)]");
+      expect(el.className).toContain("text-[var(--status-error-on-fill)]");
+      expect(el.className).not.toMatch(noPalette);
+    }
+  );
 
   it("executing uses --status-info, not bg-blue-900", () => {
     const { container } = render(<RowStatusBadge status="executing" />);
@@ -159,10 +166,48 @@ describe("chip backgrounds follow theme tokens (review #9)", () => {
     expect(el.className).not.toMatch(noPalette);
   });
 
-  it("verdict admit uses --status-ok, not bg-green-900", () => {
-    const { container } = render(<VerdictBadge verdict="admit" />);
-    const el = container.querySelector('[data-status="admit"]')!;
-    expect(el.className).toContain("bg-[var(--status-ok)]");
+  it(
+    "verdict admit renders quietest (flat bg-muted), not bg-green-900 -- " +
+      "CORRECTED 2026-08-19 (D-07/122-10): `admit` is a definitive " +
+      "positive terminal outcome, moved to the same flat Quietest " +
+      "treatment as job `completed`/swarm `done`, so the colour token is " +
+      "gone entirely rather than swapped",
+    () => {
+      const { container } = render(<VerdictBadge verdict="admit" />);
+      const el = container.querySelector('[data-status="admit"]')!;
+      expect(el.className).toContain("bg-muted");
+      expect(el.className).toContain("text-muted-foreground");
+      expect(el.className).not.toMatch(noPalette);
+      expect(el.className).not.toContain("--status-ok");
+    }
+  );
+
+  it("verdict reject renders Strong (opaque error-fill) — D-07 names 'rejected verification' directly", () => {
+    const { container } = render(<VerdictBadge verdict="reject" />);
+    const el = container.querySelector('[data-status="reject"]')!;
+    expect(el.className).toContain("bg-[var(--status-error-fill)]");
     expect(el.className).not.toMatch(noPalette);
+  });
+
+  it("severity error renders Strong (opaque error-fill) — same 'needs action' category as regression/reject", () => {
+    const { container } = render(<SeverityBadge severity="error" />);
+    const el = container.querySelector('[data-status="error"]')!;
+    expect(el.className).toContain("bg-[var(--status-error-fill)]");
+    expect(el.className).not.toMatch(noPalette);
+  });
+
+  it("row expired and the neutral fallback render quietest (flat bg-muted)", () => {
+    const { container: expiredC } = render(<RowStatusBadge status="expired" />);
+    const expiredEl = expiredC.querySelector('[data-status="expired"]')!;
+    expect(expiredEl.className).toContain("bg-muted");
+    expect(expiredEl.className).toContain("text-muted-foreground");
+
+    const { container: fallbackC } = render(
+      // @ts-expect-error — deliberately passing a garbage value to test the runtime fallback
+      <RowStatusBadge status="some-garbage-value" />
+    );
+    const fallbackEl = fallbackC.querySelector('[data-status="some-garbage-value"]')!;
+    expect(fallbackEl.className).toContain("bg-muted");
+    expect(fallbackEl.className).toContain("text-muted-foreground");
   });
 });
