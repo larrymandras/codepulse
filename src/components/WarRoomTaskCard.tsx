@@ -41,7 +41,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className={`group relative p-4 rounded-lg border-l-[3px] ${PRIORITY_BORDER[task.priority] ?? ""} bg-card/80 backdrop-blur border border-border/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:border-primary/50 transition-all duration-300 ${isDragging ? "opacity-50 scale-95 shadow-xl" : "hover:-translate-y-1 hover:shadow-[var(--glow-sm)]"}`}
+      className={`group relative p-4 rounded-lg border-l-[3px] ${PRIORITY_BORDER[task.priority] ?? ""} bg-card/80 backdrop-blur border border-border/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:border-primary/50 transition-all duration-slow ease-house ${isDragging ? "opacity-50 scale-95 shadow-xl" : "hover:-translate-y-1 hover:shadow-[var(--glow-sm)]"}`}
       onClick={() => onClick?.(task)}
     >
       {/* Drag handle */}

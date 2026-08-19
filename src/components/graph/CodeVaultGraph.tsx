@@ -470,7 +470,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
 
   // ── Container wrapper (fixed overlay when fullscreen) ─────────────────────
   const containerClass = fullscreen
-    ? "fixed inset-0 z-50 bg-background flex flex-col transition-all duration-300"
+    ? "fixed inset-0 z-50 bg-background flex flex-col transition-all duration-slow ease-house"
     : "flex flex-col";
 
   // ── Filter chip helper ────────────────────────────────────────────────────
@@ -714,7 +714,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                     <button
                       aria-label={`Return to ${returnLabel}`}
                       onClick={() => navigate(fromParam)}
-                      className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200 shrink-0"
+                      className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-normal ease-house shrink-0"
                     >
                       <ChevronLeft className="h-3 w-3" />
                       {`Back to ${returnLabel}`}
@@ -834,7 +834,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                       </p>
                       <SectionErrorBoundary name="Cross-graph links">
                         <button
-                          className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                          className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-normal ease-house"
                           onClick={() =>
                             navigate(
                               buildFocusUrl(

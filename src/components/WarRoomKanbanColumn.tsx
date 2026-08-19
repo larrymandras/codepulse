@@ -46,7 +46,7 @@ export function WarRoomKanbanColumn({
 
   return (
     <div
-      className={`flex flex-col w-full max-h-[80vh] flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300 ${
+      className={`flex flex-col w-full max-h-[80vh] flex-shrink-0 rounded-xl overflow-hidden transition-all duration-slow ease-house ${
         isOver
           ? "border-2 border-dashed border-primary bg-primary/10 shadow-[var(--glow-md)]"
           : "border border-border/50 glow-card hover:border-primary/50 shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]"

@@ -37,7 +37,7 @@ const TIER_RANK: Record<string, number> = {
 };
 
 const TIER_COLOR: Record<string, string> = {
-  command: "bg-purple-600 text-white",
+  command: "bg-primary text-primary-foreground",
   domain: "bg-blue-600 text-white",
   shared: "bg-muted text-muted-foreground",
 };

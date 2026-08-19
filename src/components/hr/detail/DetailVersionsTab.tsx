@@ -29,7 +29,7 @@ interface DetailVersionsTabProps {
 const CHANGE_TYPE_COLORS: Record<string, string> = {
   create: "bg-green-600 text-white",
   update: "bg-blue-600 text-white",
-  clone: "bg-purple-600 text-white",
+  clone: "bg-indigo-600 text-white",
   import: "bg-amber-600 text-white",
   rollback: "bg-red-600 text-white",
 };

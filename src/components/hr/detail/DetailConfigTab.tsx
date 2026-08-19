@@ -216,7 +216,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
 
   // Read mode
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-slow ease-house">
       <div className="flex justify-end mb-2">
         <Button 
           variant="outline" 

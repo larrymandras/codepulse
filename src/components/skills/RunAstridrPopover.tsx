@@ -69,7 +69,7 @@ function PersonaSwitch({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(p.id)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md transition-all duration-300 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md transition-all duration-slow ease-house ${
               active
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"

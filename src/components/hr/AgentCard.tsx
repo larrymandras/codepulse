@@ -14,13 +14,13 @@ interface AgentCardProps {
 }
 
 const TIER_BADGE_COLOR: Record<string, string> = {
-  command: "bg-purple-600/20 text-purple-400 border border-purple-500/30",
+  command: "bg-primary/20 text-primary border border-primary/30",
   domain: "bg-blue-600/20 text-blue-400 border border-blue-500/30",
   shared: "bg-muted text-muted-foreground border border-border",
 };
 
 const TIER_GLOW: Record<string, string> = {
-  command: "from-purple-600/20",
+  command: "from-primary/20",
   domain: "from-blue-600/20",
   shared: "from-muted/20",
 };
@@ -54,20 +54,20 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`group bg-card/60 backdrop-blur-md rounded-xl overflow-hidden cursor-pointer transition-all duration-500 relative border ${
+      className={`group bg-card/60 backdrop-blur-md rounded-xl overflow-hidden cursor-pointer transition-all duration-slow ease-house relative border ${
         isPending
           ? "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
           : "border-border/50 glow-card hover:border-primary/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[var(--glow-md)] hover:-translate-y-1.5"
       }`}
     >
       {/* Background ambient tier glow */}
-      <div className={`absolute top-0 left-0 w-full h-[150%] pointer-events-none bg-gradient-to-b ${TIER_GLOW[agent.tier] ?? TIER_GLOW.shared} via-transparent to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500 mix-blend-overlay`} />
+      <div className={`absolute top-0 left-0 w-full h-[150%] pointer-events-none bg-gradient-to-b ${TIER_GLOW[agent.tier] ?? TIER_GLOW.shared} via-transparent to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-slow ease-house mix-blend-overlay`} />
       
       {/* Cybernetic grid overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] group-hover:opacity-40 transition-opacity duration-500" />
+      <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] group-hover:opacity-40 transition-opacity duration-slow ease-house" />
 
       {/* Subtle top scanline */}
-      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-slow ease-house" />
 
       {/* Action Button */}
       <button
@@ -83,7 +83,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
       <div className="flex flex-col items-center px-6 pt-8 pb-5 relative z-10">
         
         {/* Avatar Container with glowing rings */}
-        <div className="relative group-hover:scale-110 transition-transform duration-500 mb-5">
+        <div className="relative group-hover:scale-110 transition-transform duration-slow ease-house mb-5">
           <div className="absolute inset-0 rounded-full bg-primary/20 blur-[20px] opacity-50 group-hover:opacity-100 transition-opacity" />
           <div className="absolute inset-[-4px] rounded-full border border-primary/20 border-dashed opacity-0 group-hover:opacity-100 group-hover:animate-[spin_10s_linear_infinite]" />
           <AgentAvatar

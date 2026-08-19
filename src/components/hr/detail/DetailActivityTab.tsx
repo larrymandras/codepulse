@@ -10,7 +10,7 @@ interface DetailActivityTabProps {
 }
 
 const eventTypeColors: Record<string, string> = {
-  handoff: "text-purple-400 bg-purple-400/10",
+  handoff: "text-indigo-400 bg-indigo-400/10",
   message: "text-blue-400 bg-blue-400/10",
   delegation: "text-cyan-400 bg-cyan-400/10",
   result: "text-green-400 bg-green-400/10",
