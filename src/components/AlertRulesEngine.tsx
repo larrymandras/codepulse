@@ -79,7 +79,7 @@ function StaticRuleRow({
       onMouseLeave={() => setHovered(false)}
     >
       {/* Subtle hover scanline */}
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-300">
+      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-slow ease-house">
         <div className="w-full h-[1px] animate-scanline bg-primary" />
       </div>
 
@@ -207,7 +207,7 @@ function CustomRuleRow({
       }`}
     >
       {/* Subtle hover scanline */}
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-300">
+      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-slow ease-house">
         <div className="w-full h-[1px] animate-scanline bg-primary" />
       </div>
 

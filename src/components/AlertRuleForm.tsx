@@ -425,7 +425,7 @@ export function AlertRuleForm({
                   <CollapsibleTrigger className="flex items-center justify-between w-full border border-border/50 p-3 text-base font-semibold hover:bg-[var(--surface-3)]/30">
                     <div className="flex items-center gap-2">
                       <ChevronRight
-                        className={`w-4 h-4 transition-transform duration-150 ${pdOpen ? "rotate-90" : ""}`}
+                        className={`w-4 h-4 transition-transform duration-fast ease-house ${pdOpen ? "rotate-90" : ""}`}
                       />
                       PagerDuty
                     </div>

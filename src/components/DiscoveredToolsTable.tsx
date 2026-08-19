@@ -19,7 +19,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; dot: string }>
   workspace:      { bg: "bg-indigo-500/10",  text: "text-indigo-400",  dot: "bg-indigo-400" },
   data:           { bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
   social:         { bg: "bg-orange-500/10",  text: "text-orange-400",  dot: "bg-orange-400" },
-  memory:         { bg: "bg-purple-500/10",  text: "text-purple-400",  dot: "bg-purple-400" },
+  memory:         { bg: "bg-[var(--astridr)]/10", text: "text-(--astridr)", dot: "bg-[var(--astridr)]" },
   productivity:   { bg: "bg-yellow-500/10",  text: "text-yellow-400",  dot: "bg-yellow-400" },
   iot:            { bg: "bg-teal-500/10",    text: "text-teal-400",    dot: "bg-teal-400" },
 };

@@ -242,7 +242,7 @@ export default function DriftTimeline() {
             return (
               <div
                 key={String(c.id)}
-                className={`border-b border-border/30 last:border-0 transition-opacity duration-300 ${
+                className={`border-b border-border/30 last:border-0 transition-opacity duration-slow ease-house ${
                   isFading ? "opacity-0" : "opacity-100"
                 }`}
               >
