@@ -411,21 +411,25 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
           </div>
         )}
 
-        {/* Summary strip (D-15) */}
+        {/* Summary strip (D-15). state="ready" is justified above: this
+            component early-returns null while `rows === undefined`
+            (loading) and renders the "No LLM calls yet" panel while
+            `rows.length === 0` (empty) -- neither case reaches this strip. */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <MetricCard label="Total Cost" value={formatCost(summary.totalCost)} />
+            <MetricCard label="Total Cost" value={formatCost(summary.totalCost)} state="ready" />
             {summary.callsWithoutCost > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
                 {summary.callsWithoutCost} call{summary.callsWithoutCost === 1 ? "" : "s"} without cost
               </p>
             )}
           </div>
-          <MetricCard label="Call Count" value={rows.length} />
-          <MetricCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} />
+          <MetricCard label="Call Count" value={rows.length} state="ready" />
+          <MetricCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} state="ready" />
           <MetricCard
             label="Cache Read Ratio"
             value={`${Math.round(summary.cacheRatio * 100)}%`}
+            state="ready"
           />
         </div>
 

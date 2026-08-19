@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { SectionHeader } from "./SectionHeader";
 import MetricCard from "./MetricCard";
 import { FlexBarChart, type StackedSegment } from "./FlexBarChart";
@@ -8,6 +10,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { formatDurationMs } from "../lib/formatters";
 import { useToolUsageOverTime, useToolUsageByTool } from "../hooks/useToolUsage";
+import { useMetricState } from "../hooks/useMetricState";
 
 // D-02 — the four filter options in this order; the widest option's label
 // spells out every source rather than a bare "All" (the exact mistake D-02
@@ -76,6 +79,16 @@ export default function ToolUsagePanel() {
   const overTime = useToolUsageOverTime(source, windowHours);
 
   const truncated = byTool.truncated || overTime.truncated;
+
+  // D-14: useToolUsageByTool collapses `undefined` (loading) into an
+  // honest-empty zero shape (per its own docstring) so the rest of this
+  // component can render unconditionally -- but that collapse is exactly
+  // the ambiguity MetricCard's `state` prop exists to remove. A raw
+  // duplicate of the same query (same function + args, shared Convex
+  // client cache) recovers the loading signal without touching
+  // useToolUsage.ts's public contract or its other consumers.
+  const byToolRaw = useQuery(api.toolAnalytics.usageByTool, { source, windowHours });
+  const byToolState = useMetricState(byToolRaw, undefined, {}).state;
 
   const frequencyChartData = useMemo(
     () =>
@@ -161,10 +174,14 @@ export default function ToolUsagePanel() {
 
       {/* Summary strip — primary visual anchor (UI-SPEC Visual Hierarchy) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Tool Calls" value={byTool.totals.calls} />
-        <MetricCard label="Failures" value={byTool.totals.failures} />
-        <MetricCard label="Success Rate" value={formatSuccessRate(byTool.totals.successRate)} />
-        <MetricCard label="Distinct Tools" value={byTool.rows.length} />
+        <MetricCard label="Tool Calls" value={byTool.totals.calls} state={byToolState} />
+        <MetricCard label="Failures" value={byTool.totals.failures} state={byToolState} />
+        <MetricCard
+          label="Success Rate"
+          value={formatSuccessRate(byTool.totals.successRate)}
+          state={byToolState}
+        />
+        <MetricCard label="Distinct Tools" value={byTool.rows.length} state={byToolState} />
       </div>
 
       {isEmpty ? (

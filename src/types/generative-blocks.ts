@@ -13,6 +13,15 @@ export type MetricBlockData = {
   label: string;
   value: string | number;
   trend?: "up" | "down" | "neutral";
+  /**
+   * D-14: the emitting agent MAY declare a MetricState; MetricBlock forwards
+   * it unchanged rather than inferring one. Omitted defaults to MetricCard's
+   * own "ready" default -- justified because a generative block that has
+   * arrived at all over the WebSocket necessarily already carries a real,
+   * complete `value` (the WS message is the loading boundary, not the
+   * rendering component).
+   */
+  state?: import("@/lib/metricState").MetricState;
 };
 
 export type TableBlockData = {

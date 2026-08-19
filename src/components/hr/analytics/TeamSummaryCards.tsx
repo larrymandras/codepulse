@@ -28,21 +28,28 @@ export function TeamSummaryCards({ rows }: TeamSummaryCardsProps) {
 
   if (!stats) return null;
 
+  // D-14: "ready" is justified by the guard above -- this component returns
+  // null while `rows.length === 0`, so every card below only ever renders
+  // once real, non-empty scored rows have been passed in by the caller.
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <MetricCard label="Total Tasks" value={stats.totalTasks} numericValue={stats.totalTasks} />
+      <MetricCard
+        label="Total Tasks"
+        value={stats.totalTasks}
+        numericValue={stats.totalTasks}
+        state="ready"
+      />
       <MetricCard
         label="Avg Response Time"
         value={stats.avgResponse != null ? formatDurationMs(stats.avgResponse) : "-"}
+        state="ready"
       />
       <MetricCard
         label="Completion Rate"
         value={`${(stats.avgCompletion * 100).toFixed(1)}%`}
+        state="ready"
       />
-      <MetricCard
-        label="Total Cost"
-        value={formatCost(stats.totalCost)}
-      />
+      <MetricCard label="Total Cost" value={formatCost(stats.totalCost)} state="ready" />
     </div>
   );
 }

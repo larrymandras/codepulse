@@ -9,6 +9,7 @@ vi.mock("convex/react", () => ({
 
 vi.mock("../../convex/_generated/api", () => ({
   api: {
+    heroStats: { summary: "heroStats:summary" },
     memoryPreflight: { stats: "memoryPreflight:stats" },
     dreaming: { recentFacts: "dreaming:recentFacts" },
     advisorEvents: { savingsSummary: "advisorEvents:savingsSummary" },

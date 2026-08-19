@@ -58,6 +58,8 @@ export default function KGSummaryCards() {
   );
   const hasContradictions = summary.contradictionCount > 0;
 
+  // D-14: "ready" is justified by the two guards above (loading, !summary)
+  // -- every card here only renders once a real summary doc has resolved.
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -65,24 +67,32 @@ export default function KGSummaryCards() {
           label="Entities"
           value={summary.totalEntities}
           numericValue={summary.totalEntities}
+          state="ready"
         />
         <MetricCard
           label="Current Triples"
           value={summary.currentTripleCount}
           numericValue={summary.currentTripleCount}
+          state="ready"
         />
         <MetricCard
           label="Historical Triples"
           value={summary.historicalTripleCount}
           numericValue={summary.historicalTripleCount}
+          state="ready"
         />
         <MetricCard
           label="Contradictions"
           value={summary.contradictionCount}
           numericValue={summary.contradictionCount}
           severity={hasContradictions ? "warning" : "default"}
+          state="ready"
         />
-        <MetricCard label="Last Extraction" value={relativeFrom(summary.lastExtractionAt)} />
+        <MetricCard
+          label="Last Extraction"
+          value={relativeFrom(summary.lastExtractionAt)}
+          state="ready"
+        />
       </div>
 
       {/* By-type breakdown chips, colored by the stable entity-type palette */}

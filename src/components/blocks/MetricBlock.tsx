@@ -13,6 +13,11 @@ interface MetricBlockProps {
 
 export function MetricBlock({ block }: MetricBlockProps) {
   return (
-    <MetricCard label={block.label} value={block.value} trend={block.trend} />
+    <MetricCard
+      label={block.label}
+      value={block.value}
+      trend={block.trend}
+      state={block.state}
+    />
   );
 }

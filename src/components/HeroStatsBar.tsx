@@ -6,6 +6,8 @@ import { AnimatedNumber, thresholdColor, ThresholdConfig } from "./MetricCard";
 import MetricCard from "./MetricCard";
 import Sparkline from "./Sparkline";
 import InfoTooltip from "./InfoTooltip";
+import { useMetricState } from "../hooks/useMetricState";
+import type { MetricState } from "../lib/metricState";
 
 const healthConfig = {
   green: {
@@ -38,6 +40,8 @@ interface KpiDef {
   sub?: string;
   color?: string;
   onClick: () => void;
+  /** D-14: declared per-kpi since this array blends four different data sources. */
+  state: MetricState;
 }
 
 export default function HeroStatsBar() {
@@ -49,6 +53,18 @@ export default function HeroStatsBar() {
   const preflightStats = useQuery(api.memoryPreflight.stats);
   const durableFacts = useQuery(api.dreaming.recentFacts, { limit: 100 });
   const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
+
+  // D-14: `useHeroStats()` collapses `undefined` (loading) into a zeroed
+  // default shape so its many other consumers keep working unconditionally
+  // -- that default is exactly the ambiguity this plan removes for
+  // MetricCard, so a raw duplicate subscription (same function + args,
+  // shared Convex client cache -- not a second network round-trip) recovers
+  // the loading signal without touching useHeroStats.ts's public contract.
+  const heroStatsRaw = useQuery(api.heroStats.summary, {});
+  const heroState = useMetricState(heroStatsRaw, undefined, {}).state;
+  const memoryHitRateState = useMetricState(preflightStats, undefined, {}).state;
+  const durableFactsState = useMetricState(durableFacts, undefined, {}).state;
+  const advisorSavingsState = useMetricState(advisorSavings, undefined, {}).state;
 
   const hitRateValue =
     preflightStats?.hitRate != null ? Math.round(preflightStats.hitRate * 100) : undefined;
@@ -67,6 +83,7 @@ export default function HeroStatsBar() {
       sub: `${stats.runningAgents} agents`,
       color: "#60a5fa",
       onClick: () => navigate("/hr/roster"),
+      state: heroState,
     },
     {
       label: "Error Rate",
@@ -76,6 +93,7 @@ export default function HeroStatsBar() {
       format: (v: number) => `${Math.round(v)}%`,
       sub: `${stats.errorsThisHour} errors`,
       onClick: () => navigate("/alerts"),
+      state: heroState,
     },
     {
       label: "Alerts",
@@ -90,6 +108,7 @@ export default function HeroStatsBar() {
       color:
         stats.criticalAlerts > 0 ? "#f87171" : stats.errorAlerts > 0 ? "#fb923c" : "#34d399",
       onClick: () => navigate("/alerts"),
+      state: heroState,
     },
     {
       label: "Security",
@@ -98,38 +117,45 @@ export default function HeroStatsBar() {
       sub: "this hour",
       color: stats.securityEvents > 0 ? "#fb923c" : "#34d399",
       onClick: () => navigate("/security"),
+      state: heroState,
     },
     {
       label: "Memory Hit Rate",
-      value: hitRateValue != null ? `${hitRateValue}%` : "\u2014",
+      value: `${hitRateValue ?? 0}%`,
       numericValue: hitRateValue,
       threshold: { ok: 70, warn: 40, invertDirection: true },
       format: (v: number) => `${Math.round(v)}%`,
       onClick: () => navigate("/memory"),
+      state: memoryHitRateState,
     },
     {
       label: "Durable Facts",
-      value: durableFactsCount != null ? durableFactsCount.toString() : "\u2014",
+      value: (durableFactsCount ?? 0).toString(),
       numericValue: durableFactsCount,
       threshold: { ok: 10, warn: 3, invertDirection: true },
       format: (v: number) => Math.round(v).toString(),
       onClick: () => navigate("/dreaming"),
+      state: durableFactsState,
     },
     {
       label: "Advisor Savings",
-      value: advisorSavingsValue != null ? `$${advisorSavingsValue.toFixed(2)}` : "\u2014",
+      value: `$${(advisorSavingsValue ?? 0).toFixed(2)}`,
       numericValue: advisorSavingsValue,
       threshold: { ok: 1.0, warn: 0.1, invertDirection: true },
       format: (v: number) => `$${v.toFixed(2)}`,
       onClick: () => navigate("/analytics"),
+      state: advisorSavingsState,
     },
     {
+      // D-14: no query anywhere computes startup latency -- unavailable,
+      // not a guess. `value` is never read by MetricCard in this state.
       label: "Startup Time",
-      value: "\u2014",
+      value: "",
       numericValue: undefined,
       threshold: { ok: 3000, warn: 8000 },
       format: (v: number) => `${(v / 1000).toFixed(1)}s`,
       onClick: () => navigate("/infrastructure"),
+      state: "unavailable",
     },
   ];
 
@@ -185,6 +211,7 @@ export default function HeroStatsBar() {
             format={kpi.format}
             onClick={kpi.onClick}
             trend={kpi.numericValue != null ? (kpi.numericValue > (kpi.threshold?.ok || 0) ? "up" : "neutral") : undefined}
+            state={kpi.state}
           />
         ))}
         {kpis.slice(4, 8).map((kpi) => (
@@ -197,6 +224,7 @@ export default function HeroStatsBar() {
             format={kpi.format}
             onClick={kpi.onClick}
             trend={kpi.numericValue != null && kpi.threshold ? (kpi.numericValue >= kpi.threshold.ok ? "up" : "down") : undefined}
+            state={kpi.state}
           />
         ))}
       </div>

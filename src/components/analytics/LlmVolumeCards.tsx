@@ -1,5 +1,6 @@
 import { useLlmMetrics } from "../../hooks/useLlmMetrics";
 import MetricCard from "../MetricCard";
+import type { MetricState } from "../../lib/metricState";
 
 /**
  * LLM Calls + Total Tokens summary cards. Self-fetching: owns useLlmMetrics (a
@@ -19,13 +20,19 @@ import MetricCard from "../MetricCard";
  * page can drop both cards straight into the existing 4-column grid.
  */
 export default function LlmVolumeCards() {
-  const { calls: llmCalls } = useLlmMetrics();
+  const { calls: llmCalls, status } = useLlmMetrics();
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
+
+  // D-14: `usePaginatedQuery`'s own `status` is a genuine, undefaulted
+  // signal -- "LoadingFirstPage" means no data has arrived yet, which is
+  // distinct from a resolved page that happens to hold zero calls.
+  const state: MetricState =
+    status === "LoadingFirstPage" ? "loading" : llmCalls.length === 0 ? "empty" : "ready";
 
   return (
     <>
-      <MetricCard label="LLM Calls" value={llmCalls.length} />
-      <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
+      <MetricCard label="LLM Calls" value={llmCalls.length} state={state} />
+      <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} state={state} />
     </>
   );
 }
