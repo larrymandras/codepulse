@@ -8,9 +8,24 @@ import Sparkline from "./Sparkline";
 import InfoTooltip from "./InfoTooltip";
 
 const healthConfig = {
-  green: { bg: "bg-emerald-500", label: "Healthy", ring: "ring-emerald-500/30" },
-  yellow: { bg: "bg-yellow-500", label: "Warning", ring: "ring-yellow-500/30" },
-  red: { bg: "bg-red-500", label: "Critical", ring: "ring-red-500/30" },
+  green: {
+    bg: "bg-(--status-ok)",
+    text: "text-(--status-ok)",
+    label: "Healthy",
+    ring: "ring-(--status-ok)/30",
+  },
+  yellow: {
+    bg: "bg-(--status-warn)",
+    text: "text-(--status-warn)",
+    label: "Warning",
+    ring: "ring-(--status-warn)/30",
+  },
+  red: {
+    bg: "bg-(--status-error)",
+    text: "text-(--status-error)",
+    label: "Critical",
+    ring: "ring-(--status-error)/30",
+  },
 };
 
 interface KpiDef {
@@ -121,10 +136,10 @@ export default function HeroStatsBar() {
   return (
     <div className="flex flex-col gap-6">
       {/* Top Section: Progress Bar and Global Controls */}
-      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
+      <div className="bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-lg">
         <div className="absolute top-4 right-4 flex items-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-mono">Status</span>
-          <span className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${hc.bg} text-${hc.bg.replace('bg-', '')}`} />
+          <span className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${hc.bg} ${hc.text}`} />
         </div>
         
         <div className="flex flex-col gap-4">
@@ -137,22 +152,22 @@ export default function HeroStatsBar() {
           </div>
           
           <div className="flex items-center gap-6">
-            <div className="text-5xl font-medium tracking-tight text-white tabular-nums">
+            <div className="text-5xl font-medium tracking-tight text-foreground tabular-nums">
               <AnimatedNumber value={stats.activeSessions > 0 ? 100 - (stats.errorRate * 2) : 100} format={(v) => `${Math.round(v)}%`} />
             </div>
-            
-            <div className="flex-1 h-8 bg-[#09090b] rounded overflow-hidden border border-[#27272a] relative">
-              <div 
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-900/50 via-primary to-[#fca5a5] shadow-[0_0_20px_rgba(249,115,22,0.6)]" 
+
+            <div className="flex-1 h-8 bg-background rounded overflow-hidden border border-border relative">
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-900/50 via-primary to-(--status-error) shadow-[0_0_20px_rgba(249,115,22,0.6)]"
                 style={{ width: `${stats.activeSessions > 0 ? 100 - (stats.errorRate * 2) : 100}%` }}
               >
                 <div className="w-full h-full opacity-30 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_25%,rgba(255,255,255,0.2)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.2)_75%,rgba(255,255,255,0.2)_100%)] bg-[length:20px_20px]"></div>
               </div>
             </div>
-            
+
             <div className="text-right">
               <div className="text-sm text-muted-foreground font-mono tracking-widest uppercase">Memory</div>
-              <div className="text-base text-white font-mono">{hitRateValue != null ? hitRateValue : 0}% / 100%</div>
+              <div className="text-base text-foreground font-mono">{hitRateValue != null ? hitRateValue : 0}% / 100%</div>
             </div>
           </div>
         </div>
