@@ -6,7 +6,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/StatusBadge";
+import { cn } from "@/lib/utils";
 import type { TaskItem } from "./WarRoomKanbanColumn";
 
 export interface WarRoomTaskCardProps {
@@ -19,6 +19,19 @@ const PRIORITY_BORDER: Record<string, string> = {
   high: "border-l-(--status-error)",
   normal: "border-l-(--status-warn)",
   low: "border-l-(--status-ok)",
+};
+
+// D-07/122-BADGE-LAW.md §5(b): `task.priority` is not a status word in any
+// of StatusBadge's six vocabularies -- it has always silently rendered
+// through the `idle` fallback (T-122-10-A). Priority gets its own small
+// grammar instead, reusing the SAME three-way colour mapping the card's
+// left border already uses (PRIORITY_BORDER above), rather than routing
+// through a component that doesn't recognise it.
+const PRIORITY_TEXT: Record<string, string> = {
+  critical: "text-(--status-error) border-(--status-error)/40",
+  high: "text-(--status-error) border-(--status-error)/40",
+  normal: "text-(--status-warn) border-(--status-warn)/40",
+  low: "text-(--status-ok) border-(--status-ok)/40",
 };
 
 export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
@@ -63,7 +76,14 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
         <div className="flex items-start justify-between gap-2">
           <span className="text-base font-semibold text-foreground/90 leading-tight line-clamp-2">{task.title}</span>
           <div className="shrink-0 scale-90 origin-top-right">
-            <StatusBadge status={task.priority} />
+            <span
+              className={cn(
+                "inline-flex items-center rounded-sm border bg-transparent px-1.5 py-0.5 text-[11px] font-mono uppercase tracking-wider",
+                PRIORITY_TEXT[task.priority] ?? "text-muted-foreground border-border"
+              )}
+            >
+              {task.priority}
+            </span>
           </div>
         </div>
 
