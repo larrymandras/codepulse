@@ -45,7 +45,7 @@ export default function CallGraphPanel() {
         <div className="p-4">
           <SectionHeader title="AGENT CALL GRAPH" />
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-base font-semibold text-gray-300 mb-1">No call graph data</p>
+            <p className="text-base font-semibold text-foreground mb-1">No call graph data</p>
             <p className="text-sm text-muted-foreground max-w-xs">
               Call graph appears here after Ástríðr agents run with call graph telemetry enabled.
             </p>

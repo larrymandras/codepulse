@@ -24,7 +24,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; dot: string }>
   iot:            { bg: "bg-teal-500/10",    text: "text-teal-400",    dot: "bg-teal-400" },
 };
 
-const DEFAULT_CAT = { bg: "bg-gray-700/50", text: "text-gray-400", dot: "bg-gray-400" };
+const DEFAULT_CAT = { bg: "bg-muted/50", text: "text-muted-foreground", dot: "bg-muted-foreground" };
 
 function catStyle(category: string | undefined) {
   return CATEGORY_COLORS[category ?? ""] ?? DEFAULT_CAT;
@@ -106,57 +106,57 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
       <div key={t._id}>
         <div
           onClick={() => setExpandedId(isExpanded ? null : t._id)}
-          className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-gray-700/30 transition-colors"
+          className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-[var(--surface-3)]/30 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cs.dot}`} />
-            <span className="text-base font-mono text-gray-200 truncate">{t.name}</span>
+            <span className="text-base font-mono text-foreground truncate">{t.name}</span>
             <OriginBadge origin={t.origin} />
             {t.description && (
-              <span className="text-sm text-gray-500 truncate max-w-[280px] hidden lg:inline">
+              <span className="text-sm text-muted-foreground truncate max-w-[280px] hidden lg:inline">
                 {t.description}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3 flex-shrink-0 ml-2">
             {t.usageCount > 0 && (
-              <span className="text-xs text-gray-500">{t.usageCount} uses</span>
+              <span className="text-xs text-muted-foreground">{t.usageCount} uses</span>
             )}
-            <span className="text-gray-600 text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+            <span className="text-muted-foreground text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
           </div>
         </div>
         {isExpanded && (
-          <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-sm">
+          <div className="ml-5 mt-1 mb-2 bg-popover/80 border border-border/40 rounded-lg px-4 py-3 text-sm">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
               <div>
-                <span className="text-gray-500">Name</span>
-                <p className="text-gray-200 font-mono">{t.name}</p>
+                <span className="text-muted-foreground">Name</span>
+                <p className="text-foreground font-mono">{t.name}</p>
               </div>
               <div>
-                <span className="text-gray-500">Category</span>
+                <span className="text-muted-foreground">Category</span>
                 <p className={cs.text}>{t.serverName ?? "Uncategorized"}</p>
               </div>
               <div>
-                <span className="text-gray-500">Source</span>
-                <p className="text-gray-300">{t.source}</p>
+                <span className="text-muted-foreground">Source</span>
+                <p className="text-foreground">{t.source}</p>
               </div>
               {t.description && (
                 <div className="col-span-2 md:col-span-3">
-                  <span className="text-gray-500">Description</span>
-                  <p className="text-gray-300">{t.description}</p>
+                  <span className="text-muted-foreground">Description</span>
+                  <p className="text-foreground">{t.description}</p>
                 </div>
               )}
               <div>
-                <span className="text-gray-500">Usage Count</span>
-                <p className="text-gray-300">{t.usageCount}</p>
+                <span className="text-muted-foreground">Usage Count</span>
+                <p className="text-foreground">{t.usageCount}</p>
               </div>
               <div>
-                <span className="text-gray-500">First Discovered</span>
-                <p className="text-gray-300 font-mono">{formatTimestamp(t.discoveredAt)}</p>
+                <span className="text-muted-foreground">First Discovered</span>
+                <p className="text-foreground font-mono">{formatTimestamp(t.discoveredAt)}</p>
               </div>
               <div>
-                <span className="text-gray-500">Last Used</span>
-                <p className="text-gray-300 font-mono">
+                <span className="text-muted-foreground">Last Used</span>
+                <p className="text-foreground font-mono">
                   {t.lastUsedAt ? formatTimestamp(t.lastUsedAt) : "Never"}
                 </p>
               </div>
@@ -174,22 +174,22 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       {/* Header row */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-gray-300">
+        <h2 className="text-base font-semibold text-foreground">
           Tool Catalog
-          <span className="ml-2 text-sm text-gray-500 font-normal">{filtered.length}</span>
+          <span className="ml-2 text-sm text-muted-foreground font-normal">{filtered.length}</span>
           <InfoTooltip text="All Ástríðr Python tool scripts organized by category. Click any tool to see full details." />
         </h2>
         {/* View toggle */}
-        <div className="flex items-center gap-1 bg-gray-900/50 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
           <button
             onClick={() => setViewMode("grouped")}
             className={`px-2.5 py-1 rounded text-sm transition-colors ${
               viewMode === "grouped"
-                ? "bg-gray-700 text-gray-200"
-                : "text-gray-500 hover:text-gray-300"
+                ? "bg-[var(--surface-3)] text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Grouped
@@ -198,8 +198,8 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
             onClick={() => setViewMode("table")}
             className={`px-2.5 py-1 rounded text-sm transition-colors ${
               viewMode === "table"
-                ? "bg-gray-700 text-gray-200"
-                : "text-gray-500 hover:text-gray-300"
+                ? "bg-[var(--surface-3)] text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Table
@@ -213,8 +213,8 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
           onClick={() => setActiveCategory(null)}
           className={`px-2.5 py-1 rounded-full text-sm transition-colors ${
             activeCategory === null
-              ? "bg-gray-600 text-gray-100"
-              : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-300"
+              ? "bg-[var(--surface-3)] text-foreground"
+              : "bg-muted text-muted-foreground hover:bg-[var(--surface-3)] hover:text-foreground"
           }`}
         >
           All ({tools.length})
@@ -229,7 +229,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
               className={`px-2.5 py-1 rounded-full text-sm transition-colors flex items-center gap-1.5 ${
                 isActive
                   ? `${cs.bg} ${cs.text} ring-1 ring-current`
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-300"
+                  : "bg-muted text-muted-foreground hover:bg-[var(--surface-3)] hover:text-foreground"
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${cs.dot}`} />
@@ -240,7 +240,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-base text-gray-500 py-6 text-center">
+        <p className="text-base text-muted-foreground py-6 text-center">
           {filter || activeCategory ? "No tools match your filters" : "No tools discovered yet"}
         </p>
       ) : viewMode === "grouped" ? (
@@ -255,7 +255,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                   <h3 className={`text-sm font-semibold uppercase tracking-wider ${cs.text}`}>
                     {cat}
                   </h3>
-                  <span className="text-xs text-gray-600">{catTools.length}</span>
+                  <span className="text-xs text-muted-foreground">{catTools.length}</span>
                 </div>
                 <div className="space-y-1">
                   {catTools.map(renderToolRow)}
@@ -268,8 +268,8 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
         /* ---- TABLE VIEW ---- */
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-left">
-            <thead className="sticky top-0 bg-gray-800/90 backdrop-blur-sm z-10">
-              <tr className="border-b border-gray-700/50">
+            <thead className="sticky top-0 bg-card/90 backdrop-blur-sm z-10">
+              <tr className="border-b border-border/50">
                 {([
                   ["name", "Tool Name"],
                   ["serverName", "Category"],
@@ -280,7 +280,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                   <th
                     key={field}
                     onClick={() => toggleSort(field)}
-                    className="text-sm text-gray-500 uppercase px-3 py-2 cursor-pointer select-none hover:text-gray-300 transition-colors"
+                    className="text-sm text-muted-foreground uppercase px-3 py-2 cursor-pointer select-none hover:text-foreground transition-colors"
                   >
                     {label}
                     <span className="font-mono text-xs">{arrow(field)}</span>
@@ -297,14 +297,14 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                     <tr
                       key={t._id}
                       onClick={() => setExpandedId(isExpanded ? null : t._id)}
-                      className="border-b border-gray-800/30 hover:bg-gray-700/20 transition-colors cursor-pointer"
+                      className="border-b border-border/30 hover:bg-[var(--surface-3)]/20 transition-colors cursor-pointer"
                     >
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-base font-mono text-gray-200">{t.name}</span>
+                          <span className="text-base font-mono text-foreground">{t.name}</span>
                           <OriginBadge origin={t.origin} />
                           {t.description && (
-                            <span className="text-sm text-gray-500 truncate max-w-[200px] hidden xl:inline">
+                            <span className="text-sm text-muted-foreground truncate max-w-[200px] hidden xl:inline">
                               {t.description}
                             </span>
                           )}
@@ -315,48 +315,48 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                           {t.serverName ?? "uncategorized"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-base text-gray-400">{t.usageCount}</td>
-                      <td className="px-3 py-2 text-sm text-gray-500 font-mono">
+                      <td className="px-3 py-2 text-base text-muted-foreground">{t.usageCount}</td>
+                      <td className="px-3 py-2 text-sm text-muted-foreground font-mono">
                         {formatTimestamp(t.discoveredAt)}
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-500 font-mono">
+                      <td className="px-3 py-2 text-sm text-muted-foreground font-mono">
                         {t.lastUsedAt ? formatTimestamp(t.lastUsedAt) : "--"}
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr key={`${t._id}-detail`}>
                         <td colSpan={5} className="px-3 pb-3">
-                          <div className="ml-3 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-sm">
+                          <div className="ml-3 bg-popover/80 border border-border/40 rounded-lg px-4 py-3 text-sm">
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
                               <div>
-                                <span className="text-gray-500">Name</span>
-                                <p className="text-gray-200 font-mono">{t.name}</p>
+                                <span className="text-muted-foreground">Name</span>
+                                <p className="text-foreground font-mono">{t.name}</p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Category</span>
+                                <span className="text-muted-foreground">Category</span>
                                 <p className={cs.text}>{t.serverName ?? "Uncategorized"}</p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Source</span>
-                                <p className="text-gray-300">{t.source}</p>
+                                <span className="text-muted-foreground">Source</span>
+                                <p className="text-foreground">{t.source}</p>
                               </div>
                               {t.description && (
                                 <div className="col-span-2 md:col-span-3">
-                                  <span className="text-gray-500">Description</span>
-                                  <p className="text-gray-300">{t.description}</p>
+                                  <span className="text-muted-foreground">Description</span>
+                                  <p className="text-foreground">{t.description}</p>
                                 </div>
                               )}
                               <div>
-                                <span className="text-gray-500">Usage Count</span>
-                                <p className="text-gray-300">{t.usageCount}</p>
+                                <span className="text-muted-foreground">Usage Count</span>
+                                <p className="text-foreground">{t.usageCount}</p>
                               </div>
                               <div>
-                                <span className="text-gray-500">First Discovered</span>
-                                <p className="text-gray-300 font-mono">{formatTimestamp(t.discoveredAt)}</p>
+                                <span className="text-muted-foreground">First Discovered</span>
+                                <p className="text-foreground font-mono">{formatTimestamp(t.discoveredAt)}</p>
                               </div>
                               <div>
-                                <span className="text-gray-500">Last Used</span>
-                                <p className="text-gray-300 font-mono">
+                                <span className="text-muted-foreground">Last Used</span>
+                                <p className="text-foreground font-mono">
                                   {t.lastUsedAt ? formatTimestamp(t.lastUsedAt) : "Never"}
                                 </p>
                               </div>

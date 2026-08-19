@@ -209,24 +209,24 @@ export default function DriftTimeline() {
           {Object.entries(summary.byCategory).map(([cat, count]) => (
             <span
               key={cat}
-              className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300 border border-gray-600/30"
+              className="text-xs px-1.5 py-0.5 rounded bg-muted/50 text-foreground border border-border/30"
             >
               {cat}: {count}
             </span>
           ))}
           {Object.keys(summary.byCategory).length === 0 && (
-            <span className="text-xs text-gray-500">No changes</span>
+            <span className="text-xs text-muted-foreground">No changes</span>
           )}
         </div>
         <div className="w-20 shrink-0">
           <VelocityBar data={summary.velocity} />
-          <p className="text-[11px] text-gray-600 text-center mt-0.5">24h velocity</p>
+          <p className="text-[11px] text-muted-foreground text-center mt-0.5">24h velocity</p>
         </div>
       </div>
 
       {/* Timeline */}
       {filteredChanges.length === 0 ? (
-        <p className="text-gray-500 text-base">
+        <p className="text-muted-foreground text-base">
           {changes.length === 0 ? "No data yet." : "No changes match filters."}
         </p>
       ) : (
@@ -242,12 +242,12 @@ export default function DriftTimeline() {
             return (
               <div
                 key={String(c.id)}
-                className={`border-b border-gray-700/30 last:border-0 transition-opacity duration-300 ${
+                className={`border-b border-border/30 last:border-0 transition-opacity duration-300 ${
                   isFading ? "opacity-0" : "opacity-100"
                 }`}
               >
                 <div
-                  className="flex items-start gap-3 py-1.5 cursor-pointer hover:bg-gray-700/20 rounded px-1 -mx-1"
+                  className="flex items-start gap-3 py-1.5 cursor-pointer hover:bg-[var(--surface-3)]/20 rounded px-1 -mx-1"
                   onClick={() => handleToggleExpand(String(c.id))}
                 >
                   {/* Timeline dot */}
@@ -258,21 +258,21 @@ export default function DriftTimeline() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs px-1 py-0.5 rounded bg-gray-700/50 text-gray-400">
+                      <span className="text-xs px-1 py-0.5 rounded bg-muted/50 text-muted-foreground">
                         {prefix}
                       </span>
-                      <span className="text-sm text-gray-200 font-medium truncate">
+                      <span className="text-sm text-foreground font-medium truncate">
                         {name}
                       </span>
                       <span className={`text-xs ${ct.dot.replace("bg-", "text-")}`}>
                         {ct.label}
                       </span>
-                      <span className="text-xs text-gray-600 ml-auto">
+                      <span className="text-xs text-muted-foreground ml-auto">
                         {isExpanded ? "▾" : "▸"}
                       </span>
                     </div>
                     {!isExpanded && c.changeType === "modified" && c.oldValue != null && (
-                      <p className="text-xs text-gray-500 truncate mt-0.5">
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
                         {mask(typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue))}{" "}
                         →{" "}
                         {mask(typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue))}
@@ -287,45 +287,45 @@ export default function DriftTimeline() {
                       handleAcknowledge(String(c.id));
                     }}
                     disabled={isFading}
-                    className="text-gray-600 hover:text-green-400 transition-colors text-sm px-1 pt-0.5 shrink-0"
+                    className="text-muted-foreground hover:text-green-400 transition-colors text-sm px-1 pt-0.5 shrink-0"
                     title="Acknowledge change"
                   >
                     ✓
                   </button>
 
                   {/* Timestamp */}
-                  <span className="text-xs text-gray-600 shrink-0 pt-0.5">
+                  <span className="text-xs text-muted-foreground shrink-0 pt-0.5">
                     {relativeTime(c.changedAt)}
                   </span>
                 </div>
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                  <div className="ml-7 mb-2 p-2 bg-gray-900/40 rounded-lg border border-gray-700/30 text-sm">
+                  <div className="ml-7 mb-2 p-2 bg-popover/40 rounded-lg border border-border/30 text-sm">
                     {c.oldValue != null && (
                       <div className="mb-1.5">
-                        <span className="text-gray-500 font-medium">Old value:</span>
-                        <pre className="text-red-300/80 mt-0.5 whitespace-pre-wrap break-all bg-gray-900/50 rounded px-2 py-1">
+                        <span className="text-muted-foreground font-medium">Old value:</span>
+                        <pre className="text-red-300/80 mt-0.5 whitespace-pre-wrap break-all bg-background/50 rounded px-2 py-1">
                           {mask(typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue, null, 2))}
                         </pre>
                       </div>
                     )}
                     {c.newValue != null && (
                       <div className="mb-1.5">
-                        <span className="text-gray-500 font-medium">New value:</span>
-                        <pre className="text-green-300/80 mt-0.5 whitespace-pre-wrap break-all bg-gray-900/50 rounded px-2 py-1">
+                        <span className="text-muted-foreground font-medium">New value:</span>
+                        <pre className="text-green-300/80 mt-0.5 whitespace-pre-wrap break-all bg-background/50 rounded px-2 py-1">
                           {mask(typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue, null, 2))}
                         </pre>
                       </div>
                     )}
                     {c.changedBy && (
                       <div>
-                        <span className="text-gray-500 font-medium">Changed by:</span>{" "}
-                        <span className="text-gray-300">{c.changedBy}</span>
+                        <span className="text-muted-foreground font-medium">Changed by:</span>{" "}
+                        <span className="text-foreground">{c.changedBy}</span>
                       </div>
                     )}
                     {!c.oldValue && !c.newValue && !c.changedBy && (
-                      <span className="text-gray-500">No additional details available.</span>
+                      <span className="text-muted-foreground">No additional details available.</span>
                     )}
                   </div>
                 )}

@@ -62,9 +62,9 @@ export default function ContextGauge({ sessionId }: ContextGaugeProps) {
 
   if (!latest || latest.contextTokens == null) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Context Window</h2>
-        <p className="text-base text-gray-500 py-6 text-center">No context data</p>
+        <p className="text-base text-muted-foreground py-6 text-center">No context data</p>
       </div>
     );
   }
@@ -97,9 +97,9 @@ export default function ContextGauge({ sessionId }: ContextGaugeProps) {
       : "—";
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-gray-300">Context Window</h2>
+        <h2 className="text-base font-semibold text-foreground">Context Window</h2>
         <span
           className="text-xs font-medium px-2 py-0.5 rounded-full"
           style={{ color, backgroundColor: `${color}15` }}
@@ -133,15 +133,15 @@ export default function ContextGauge({ sessionId }: ContextGaugeProps) {
           </svg>
           {/* Center value */}
           <div className="absolute inset-0 flex flex-col items-center justify-end pb-0">
-            <span className="text-xl font-bold text-gray-100">{pct.toFixed(0)}%</span>
-            <span className="text-[11px] text-gray-500">{(tokens / 1000).toFixed(0)}k / 200k</span>
+            <span className="text-xl font-bold text-foreground">{pct.toFixed(0)}%</span>
+            <span className="text-[11px] text-muted-foreground">{(tokens / 1000).toFixed(0)}k / 200k</span>
           </div>
         </div>
 
         {/* Stats grid */}
         <div className="flex-1 grid grid-cols-2 gap-2">
           <div>
-            <p className="text-[11px] text-gray-500 uppercase">Burn Rate</p>
+            <p className="text-[11px] text-muted-foreground uppercase">Burn Rate</p>
             <p
               className="text-base font-medium"
               style={{ color: burnRate > 0 ? "#f97316" : burnRate < 0 ? "#22c55e" : "#9ca3af" }}
@@ -150,16 +150,16 @@ export default function ContextGauge({ sessionId }: ContextGaugeProps) {
             </p>
           </div>
           <div>
-            <p className="text-[11px] text-gray-500 uppercase">Time to Full</p>
-            <p className="text-base font-medium text-gray-200">{ttfLabel}</p>
+            <p className="text-[11px] text-muted-foreground uppercase">Time to Full</p>
+            <p className="text-base font-medium text-foreground">{ttfLabel}</p>
           </div>
           <div>
-            <p className="text-[11px] text-gray-500 uppercase">Compactions</p>
-            <p className="text-base font-medium text-gray-200">{compactionCount}</p>
+            <p className="text-[11px] text-muted-foreground uppercase">Compactions</p>
+            <p className="text-base font-medium text-foreground">{compactionCount}</p>
           </div>
           <div>
-            <p className="text-[11px] text-gray-500 uppercase">Remaining</p>
-            <p className="text-base font-medium text-gray-200">
+            <p className="text-[11px] text-muted-foreground uppercase">Remaining</p>
+            <p className="text-base font-medium text-foreground">
               {((MAX_TOKENS - tokens) / 1000).toFixed(0)}k
             </p>
           </div>

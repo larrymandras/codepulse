@@ -27,11 +27,11 @@ import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 const stateIcon: Record<string, React.ReactNode> = {
   pending: <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />,
   claimed: <ArrowRight className="h-3.5 w-3.5 text-primary/60" />,
-  running: <Zap className="h-3.5 w-3.5 text-[#22c55e] animate-pulse" />,
+  running: <Zap className="h-3.5 w-3.5 text-(--status-ok) animate-pulse" />,
   verifying: <ShieldCheck className="h-3.5 w-3.5 text-primary" />,
   done: <CheckCircle className="h-3.5 w-3.5 text-primary/80" />,
-  failed: <XCircle className="h-3.5 w-3.5 text-[#ef4444]" />,
-  verify_rejected: <ShieldX className="h-3.5 w-3.5 text-[#ef4444]" />,
+  failed: <XCircle className="h-3.5 w-3.5 text-(--status-error)" />,
+  verify_rejected: <ShieldX className="h-3.5 w-3.5 text-(--status-error)" />,
 };
 
 // Format elapsed time from a timestamp to a short string.
@@ -112,7 +112,7 @@ export default function BlackboardPanel({ goalId, completedGoal = false, onSelec
                   // AgentAvatar/CostBreakdown consumption-site pattern.
                   reducedMotion && task.state === "running"
                     ? cloneElement(stateIcon.running as React.ReactElement<{ className?: string }>, {
-                        className: "h-3.5 w-3.5 text-[#22c55e]",
+                        className: "h-3.5 w-3.5 text-(--status-ok)",
                       })
                     : stateIcon[task.state] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
                 }

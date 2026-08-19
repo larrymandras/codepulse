@@ -95,11 +95,11 @@ export default function AvatarUploader({ onUpload, onCancel }: AvatarUploaderPro
         <div
           onDrop={onDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="border-2 border-dashed border-gray-600/50 rounded-xl p-8 text-center hover:border-gray-500/50 transition-colors cursor-pointer"
+          className="border-2 border-dashed border-border/50 rounded-xl p-8 text-center hover:border-border transition-colors cursor-pointer"
           onClick={() => document.getElementById("avatar-file-input")?.click()}
         >
-          <p className="text-base text-gray-400 mb-1">Drop an image here or click to browse</p>
-          <p className="text-sm text-gray-600">PNG, JPG, WebP</p>
+          <p className="text-base text-muted-foreground mb-1">Drop an image here or click to browse</p>
+          <p className="text-sm text-muted-foreground">PNG, JPG, WebP</p>
           <input
             id="avatar-file-input"
             type="file"
@@ -111,7 +111,7 @@ export default function AvatarUploader({ onUpload, onCancel }: AvatarUploaderPro
         {onCancel && (
           <button
             onClick={onCancel}
-            className="text-sm text-gray-400 hover:text-gray-200"
+            className="text-sm text-muted-foreground hover:text-foreground"
           >
             Cancel
           </button>
@@ -122,7 +122,7 @@ export default function AvatarUploader({ onUpload, onCancel }: AvatarUploaderPro
 
   return (
     <div className="space-y-3">
-      <div className="relative w-full h-64 bg-gray-900 rounded-xl overflow-hidden">
+      <div className="relative w-full h-64 bg-background rounded-xl overflow-hidden">
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -153,14 +153,14 @@ export default function AvatarUploader({ onUpload, onCancel }: AvatarUploaderPro
         </button>
         <button
           onClick={() => setImageSrc(null)}
-          className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-base"
+          className="bg-muted hover:bg-[var(--surface-3)] text-foreground px-4 py-2 rounded-lg text-base"
         >
           Reset
         </button>
         {onCancel && (
           <button
             onClick={onCancel}
-            className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-base"
+            className="bg-muted hover:bg-[var(--surface-3)] text-foreground px-4 py-2 rounded-lg text-base"
           >
             Cancel
           </button>

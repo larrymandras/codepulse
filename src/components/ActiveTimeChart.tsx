@@ -8,11 +8,11 @@ export default function ActiveTimeChart() {
 
   if (rawData.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+        <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
           Active Time<InfoTooltip text="Daily active time split between user interaction and CLI usage" />
         </h2>
-        <p className="text-base text-gray-500 py-4 text-center">No data yet</p>
+        <p className="text-base text-muted-foreground py-4 text-center">No data yet</p>
       </div>
     );
   }
@@ -32,8 +32,8 @@ export default function ActiveTimeChart() {
     .reverse();
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+      <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
         Active Time
       </h2>
       <FlexBarChart data={chartData} height={260} />

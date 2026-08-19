@@ -422,7 +422,7 @@ export function AlertRuleForm({
 
                 {/* PagerDuty config (per D-08, D-13) */}
                 <Collapsible open={pdOpen} onOpenChange={setPdOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full border border-gray-700/50 p-3 text-base font-semibold hover:bg-gray-800/30">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full border border-border/50 p-3 text-base font-semibold hover:bg-[var(--surface-3)]/30">
                     <div className="flex items-center gap-2">
                       <ChevronRight
                         className={`w-4 h-4 transition-transform duration-150 ${pdOpen ? "rotate-90" : ""}`}
@@ -435,7 +435,7 @@ export function AlertRuleForm({
                         : "Off"}
                     </span>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="border border-t-0 border-gray-700/50 p-3 space-y-3">
+                  <CollapsibleContent className="border border-t-0 border-border/50 p-3 space-y-3">
                     <div className="flex items-center gap-3">
                       <Switch
                         checked={pdEnabled}

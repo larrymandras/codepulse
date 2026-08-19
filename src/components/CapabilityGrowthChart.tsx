@@ -7,9 +7,9 @@ export default function CapabilityGrowthChart() {
 
   if (data.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Capability Growth<InfoTooltip text="Growth of registered tools, MCP servers, plugins, and skills over time" /></h2>
-        <p className="text-gray-500 text-base">No capability data yet.</p>
+        <p className="text-muted-foreground text-base">No capability data yet.</p>
       </div>
     );
   }
@@ -21,7 +21,7 @@ export default function CapabilityGrowthChart() {
   }));
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Capability Growth</h2>
       <FlexBarChart data={chartData} height={300} />
     </div>

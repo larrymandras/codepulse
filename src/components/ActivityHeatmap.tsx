@@ -22,15 +22,15 @@ export default function ActivityHeatmap() {
 
   if (cells.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Activity Heatmap<InfoTooltip text="Event density heatmap by day of week and hour — identify peak activity patterns" /></h2>
-        <p className="text-gray-500 text-base">No data yet.</p>
+        <p className="text-muted-foreground text-base">No data yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Activity Heatmap</h2>
       <div className="overflow-x-auto">
         {/* Hour labels */}
@@ -38,7 +38,7 @@ export default function ActivityHeatmap() {
           {HOURS.map((h) => (
             <div
               key={h}
-              className="flex-1 min-w-[18px] text-center text-xs text-gray-500"
+              className="flex-1 min-w-[18px] text-center text-xs text-muted-foreground"
             >
               {h % 3 === 0 ? `${h}` : ""}
             </div>
@@ -47,7 +47,7 @@ export default function ActivityHeatmap() {
         {/* Rows */}
         {DAYS.map((dayLabel, dayIdx) => (
           <div key={dayIdx} className="flex items-center gap-px mb-px">
-            <span className="w-10 text-xs text-gray-500 text-right pr-2 shrink-0">
+            <span className="w-10 text-xs text-muted-foreground text-right pr-2 shrink-0">
               {dayLabel}
             </span>
             {HOURS.map((hour) => {

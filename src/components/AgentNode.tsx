@@ -45,25 +45,25 @@ const MODEL_COLORS: Record<string, string> = {
 };
 
 export function modelBadgeClass(model?: string): string {
-  if (!model) return "bg-gray-700/50 text-gray-400";
+  if (!model) return "bg-muted/50 text-muted-foreground";
   const lower = model.toLowerCase();
   for (const [key, cls] of Object.entries(MODEL_COLORS)) {
     if (lower.includes(key)) return cls;
   }
-  return "bg-gray-700/50 text-gray-400";
+  return "bg-muted/50 text-muted-foreground";
 }
 
 export default function AgentNode({ data }: { data: AgentNodeData }) {
   return (
     <div
       onClick={data.onClick}
-      className={`relative bg-gray-800/80 backdrop-blur border rounded-xl px-3 py-2 min-w-[120px] max-w-[160px] cursor-pointer transition-all hover:bg-gray-700/80 ${
+      className={`relative bg-card/80 backdrop-blur border rounded-xl px-3 py-2 min-w-[120px] max-w-[160px] cursor-pointer transition-all hover:bg-[var(--surface-3)]/80 ${
         data.selected
           ? "border-indigo-500 ring-1 ring-indigo-500/40 shadow-lg shadow-indigo-500/10"
-          : statusBorder[data.status] ?? "border-gray-600/50"
+          : statusBorder[data.status] ?? "border-border/50"
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-gray-500 !w-2 !h-2 !border-gray-800" />
+      <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-2 !h-2 !border-card" />
 
       <div className="flex items-center gap-2 mb-1.5">
         <AgentAvatar
@@ -72,16 +72,16 @@ export default function AgentNode({ data }: { data: AgentNodeData }) {
           size="sm"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-200 truncate">{data.agentId}</p>
-          <p className="text-[11px] text-gray-500 truncate">{data.agentType}</p>
+          <p className="text-sm font-medium text-foreground truncate">{data.agentId}</p>
+          <p className="text-[11px] text-muted-foreground truncate">{data.agentType}</p>
         </div>
       </div>
 
       {/* Bottom row: status + model */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="flex items-center gap-1">
-          <span className={`w-1.5 h-1.5 rounded-full ${statusDot[data.status] ?? "bg-gray-500"}`} />
-          <span className="text-[11px] text-gray-400">
+          <span className={`w-1.5 h-1.5 rounded-full ${statusDot[data.status] ?? "bg-muted-foreground"}`} />
+          <span className="text-[11px] text-muted-foreground">
             {statusLabel[data.status] ?? data.status}
           </span>
         </span>
@@ -93,10 +93,10 @@ export default function AgentNode({ data }: { data: AgentNodeData }) {
       </div>
 
       {data.duration && (
-        <p className="text-[10px] text-gray-600 mt-1">{data.duration}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">{data.duration}</p>
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!bg-gray-500 !w-2 !h-2 !border-gray-800" />
+      <Handle type="source" position={Position.Bottom} className="!bg-muted-foreground !w-2 !h-2 !border-card" />
     </div>
   );
 }

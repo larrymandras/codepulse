@@ -30,7 +30,7 @@ function FilterGroup({
 }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold shrink-0">
+      <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold shrink-0">
         {label}
       </span>
       <button
@@ -38,7 +38,7 @@ function FilterGroup({
         className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
           activeValue === null
             ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/40"
-            : "bg-gray-700/30 text-gray-400 border border-transparent hover:border-gray-600/50"
+            : "bg-muted/30 text-muted-foreground border border-transparent hover:border-border/50"
         }`}
       >
         All
@@ -50,7 +50,7 @@ function FilterGroup({
           className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
             activeValue === opt
               ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/40"
-              : "bg-gray-700/30 text-gray-400 border border-transparent hover:border-gray-600/50"
+              : "bg-muted/30 text-muted-foreground border border-transparent hover:border-border/50"
           }`}
         >
           {opt}

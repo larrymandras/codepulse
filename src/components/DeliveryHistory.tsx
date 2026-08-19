@@ -18,7 +18,7 @@ export function DeliveryHistory() {
 
   const renderEmptyState = () => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <p className="text-base font-semibold text-gray-300 mb-1">
+      <p className="text-base font-semibold text-foreground mb-1">
         No deliveries yet
       </p>
       <p className="text-sm text-muted-foreground max-w-xs">

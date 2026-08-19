@@ -34,9 +34,9 @@ export default function BashLog({ sessionId }: BashLogProps) {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-gray-300">
+        <h2 className="text-base font-semibold text-foreground">
           Bash Commands ({filtered.length}{search ? ` / ${commands.length}` : ""})
         </h2>
         <input
@@ -44,16 +44,16 @@ export default function BashLog({ sessionId }: BashLogProps) {
           placeholder="Filter commands..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-gray-900/50 border border-gray-700/50 rounded-lg px-3 py-1.5 text-sm text-gray-300 placeholder-gray-600 w-48 focus:outline-none focus:border-gray-600"
+          className="bg-background border border-border/50 rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted-foreground w-48 focus:outline-none focus:border-border"
         />
       </div>
       {filtered.length === 0 ? (
-        <p className="text-base text-gray-500 py-8 text-center">No bash commands recorded</p>
+        <p className="text-base text-muted-foreground py-8 text-center">No bash commands recorded</p>
       ) : (
         <div className="max-h-[600px] overflow-y-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-500 border-b border-gray-700/50">
+              <tr className="text-muted-foreground border-b border-border/50">
                 <th className="text-left py-2 px-2 font-medium">Time</th>
                 <th className="text-left py-2 px-2 font-medium">Command</th>
                 <th className="text-left py-2 px-2 font-medium">Status</th>
@@ -69,8 +69,8 @@ export default function BashLog({ sessionId }: BashLogProps) {
                 const isExpanded = expanded.has(id);
 
                 return (
-                  <tr key={id} className="border-b border-gray-700/30 hover:bg-gray-700/20">
-                    <td className="py-2 px-2 text-gray-500 font-mono whitespace-nowrap align-top">
+                  <tr key={id} className="border-b border-border/30 hover:bg-[var(--surface-3)]/20">
+                    <td className="py-2 px-2 text-muted-foreground font-mono whitespace-nowrap align-top">
                       {formatTimestamp(cmd.timestamp)}
                     </td>
                     <td className="py-2 px-2 align-top">
@@ -78,12 +78,12 @@ export default function BashLog({ sessionId }: BashLogProps) {
                         onClick={() => toggle(id)}
                         className="text-left w-full"
                       >
-                        <span className="font-mono text-gray-200 break-all">
+                        <span className="font-mono text-foreground break-all">
                           {mask(isExpanded ? command : command.slice(0, 120) + (command.length > 120 ? "..." : ""))}
                         </span>
                       </button>
                       {isExpanded && output && (
-                        <pre className="mt-2 p-2 bg-gray-900/60 rounded text-gray-400 font-mono text-sm max-h-48 overflow-auto whitespace-pre-wrap break-all">
+                        <pre className="mt-2 p-2 bg-background/60 rounded text-muted-foreground font-mono text-sm max-h-48 overflow-auto whitespace-pre-wrap break-all">
                           {mask(typeof output === "string" ? output : JSON.stringify(output, null, 2))}
                         </pre>
                       )}
@@ -98,7 +98,7 @@ export default function BashLog({ sessionId }: BashLogProps) {
                           {exitCode}
                         </span>
                       ) : (
-                        <span className="text-gray-600">—</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </td>
                   </tr>

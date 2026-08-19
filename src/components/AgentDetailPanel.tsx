@@ -34,8 +34,8 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
 
   if (!detail) {
     return (
-      <div className="bg-gray-800/90 border border-gray-700/50 rounded-xl p-4 w-72">
-        <p className="text-gray-500 text-base">Loading...</p>
+      <div className="bg-popover/90 border border-border/50 rounded-xl p-4 w-72">
+        <p className="text-muted-foreground text-base">Loading...</p>
       </div>
     );
   }
@@ -54,16 +54,16 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
   };
 
   return (
-    <div className="bg-gray-800/95 backdrop-blur border border-gray-700/50 rounded-xl p-4 w-72 shadow-xl">
+    <div className="bg-popover/95 backdrop-blur border border-border/50 rounded-xl p-4 w-72 shadow-xl">
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-semibold text-gray-200 truncate">{redact(detail.agentId, `A-${detail.agentId.slice(-4)}`)}</h3>
-          <p className="text-xs text-gray-500">{detail.agentType}</p>
+          <h3 className="text-base font-semibold text-foreground truncate">{redact(detail.agentId, `A-${detail.agentId.slice(-4)}`)}</h3>
+          <p className="text-xs text-muted-foreground">{detail.agentType}</p>
         </div>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-gray-300 text-base ml-2 shrink-0"
+          className="text-muted-foreground hover:text-foreground text-base ml-2 shrink-0"
         >
           &times;
         </button>
@@ -72,35 +72,35 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
       {/* Metadata grid */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div>
-          <p className="text-[11px] text-gray-500 uppercase">Status</p>
-          <p className={`text-sm font-medium ${statusColor[detail.status] ?? "text-gray-400"}`}>
+          <p className="text-[11px] text-muted-foreground uppercase">Status</p>
+          <p className={`text-sm font-medium ${statusColor[detail.status] ?? "text-muted-foreground"}`}>
             {detail.status}
           </p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-500 uppercase">Duration</p>
-          <p className="text-sm text-gray-200">{duration}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Duration</p>
+          <p className="text-sm text-foreground">{duration}</p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-500 uppercase">Model</p>
-          <p className="text-sm text-gray-200 truncate">{detail.model ?? "—"}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Model</p>
+          <p className="text-sm text-foreground truncate">{detail.model ?? "—"}</p>
         </div>
         <div>
-          <p className="text-[11px] text-gray-500 uppercase">Session Events</p>
-          <p className="text-sm text-gray-200">{detail.eventCount}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Session Events</p>
+          <p className="text-sm text-foreground">{detail.eventCount}</p>
         </div>
         <div className="col-span-2">
-          <p className="text-[11px] text-gray-500 uppercase">Session</p>
-          <p className="text-xs text-gray-400 font-mono truncate">{redact(detail.sessionId, `S-${detail.sessionId.slice(-4)}`)}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Session</p>
+          <p className="text-xs text-muted-foreground font-mono truncate">{redact(detail.sessionId, `S-${detail.sessionId.slice(-4)}`)}</p>
         </div>
         {detail.parentAgentId && (
           <div className="col-span-2">
-            <p className="text-[11px] text-gray-500 uppercase">Parent</p>
-            <p className="text-xs text-gray-400 font-mono truncate">{redact(detail.parentAgentId, `A-${detail.parentAgentId.slice(-4)}`)}</p>
+            <p className="text-[11px] text-muted-foreground uppercase">Parent</p>
+            <p className="text-xs text-muted-foreground font-mono truncate">{redact(detail.parentAgentId, `A-${detail.parentAgentId.slice(-4)}`)}</p>
           </div>
         )}
         <div className="col-span-2">
-          <p className="text-[11px] text-gray-500 uppercase">Memory Source</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Memory Source</p>
           <MemorySourceBadge source="episodic" className="mt-0.5" />
         </div>
       </div>
@@ -108,15 +108,15 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
       {/* Coordination events */}
       {detail.coordination.length > 0 && (
         <>
-          <h4 className="text-xs text-gray-500 uppercase mb-1.5">Coordination</h4>
+          <h4 className="text-xs text-muted-foreground uppercase mb-1.5">Coordination</h4>
           <div className="space-y-1 max-h-[180px] overflow-y-auto pr-1">
             {detail.coordination.map((c: any, i: number) => {
               const isOutgoing = c.fromAgent === agentId;
               const other = isOutgoing ? c.toAgent : c.fromAgent;
-              const etClass = eventTypeColors[c.eventType] ?? "text-gray-400 bg-gray-700/30";
+              const etClass = eventTypeColors[c.eventType] ?? "text-muted-foreground bg-muted/30";
 
               return (
-                <div key={i} className="flex items-start gap-1.5 py-1 border-b border-gray-700/30 last:border-0">
+                <div key={i} className="flex items-start gap-1.5 py-1 border-b border-border/30 last:border-0">
                   <span className="text-[11px] mt-0.5 shrink-0">
                     {isOutgoing ? "→" : "←"}
                   </span>
@@ -125,13 +125,13 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
                       <span className={`text-[11px] px-1 py-0.5 rounded ${etClass}`}>
                         {c.eventType}
                       </span>
-                      <span className="text-[11px] text-gray-500 truncate">{other}</span>
+                      <span className="text-[11px] text-muted-foreground truncate">{other}</span>
                     </div>
                     {c.status && (
-                      <p className="text-[10px] text-gray-600 mt-0.5">{c.status}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{c.status}</p>
                     )}
                   </div>
-                  <span className="text-[10px] text-gray-600 shrink-0">{relativeTime(c.timestamp)}</span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{relativeTime(c.timestamp)}</span>
                 </div>
               );
             })}
@@ -140,11 +140,11 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
       )}
 
       {detail.coordination.length === 0 && (
-        <p className="text-xs text-gray-600">No coordination events</p>
+        <p className="text-xs text-muted-foreground">No coordination events</p>
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-700/50">
+      <div className="flex gap-2 mt-3 pt-3 border-t border-border/50">
         {detail.status === "running" && (
           <button
             onClick={() =>

@@ -60,20 +60,20 @@ export default class AppErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
-          <div className="max-w-md w-full border border-red-500/30 rounded-xl p-6 bg-gray-900/60">
-            <p className="text-lg font-semibold text-gray-100">
+          <div className="max-w-md w-full border border-red-500/30 rounded-xl p-6 bg-card/60">
+            <p className="text-lg font-semibold text-foreground">
               CodePulse hit a backend error
             </p>
-            <p className="text-sm text-gray-400 mt-2 break-words">
+            <p className="text-sm text-muted-foreground mt-2 break-words">
               {this.state.error?.message || "An unexpected error occurred."}
             </p>
-            <p className="text-sm text-gray-500 mt-3">
+            <p className="text-sm text-muted-foreground mt-3">
               Retrying automatically&hellip; the dashboard will come back as
               soon as the backend responds.
             </p>
             <button
               onClick={this.handleManualRetry}
-              className="mt-4 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-sm text-gray-200 rounded-lg transition-colors"
+              className="mt-4 px-3 py-1.5 bg-muted hover:bg-[var(--surface-3)] text-sm text-foreground rounded-lg transition-colors"
             >
               Retry now
             </button>

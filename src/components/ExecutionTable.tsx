@@ -57,7 +57,7 @@ function SkeletonRow() {
   return (
     <div className="flex items-center gap-3 px-3 py-2">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="bg-gray-700/30 animate-pulse h-8 rounded flex-1" />
+        <div key={i} className="bg-muted/30 animate-pulse h-8 rounded flex-1" />
       ))}
     </div>
   );
@@ -97,7 +97,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
   if (executions.length === 0) {
     return (
-      <p className="text-base text-gray-500 py-6 text-center">
+      <p className="text-base text-muted-foreground py-6 text-center">
         {hasActiveFilters
           ? "No executions match these filters."
           : "No executions recorded yet. Tool calls will appear here as Astridr runs."}
@@ -108,7 +108,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
   return (
     <div className="max-h-[360px] overflow-y-auto">
       {/* Sticky header */}
-      <div className="grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-1.5 text-xs text-gray-500 uppercase tracking-wider border-b border-gray-700/30 bg-gray-800/80 sticky top-0 z-10">
+      <div className="grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider border-b border-border/30 bg-card/80 sticky top-0 z-10">
         <span>Time</span>
         <span>Command</span>
         <span>Origin</span>
@@ -131,38 +131,38 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
         return (
           <div key={row._id}>
             <div
-              className={`grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-800/50 ${
-                i % 2 === 0 ? "bg-gray-800/30" : ""
+              className={`grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-[var(--surface-3)]/50 ${
+                i % 2 === 0 ? "bg-muted/30" : ""
               }`}
               onClick={() => handleRowClick(row._id)}
             >
               {/* Time */}
-              <span className="text-sm text-gray-500 font-mono truncate">
+              <span className="text-sm text-muted-foreground font-mono truncate">
                 {formatTime(row.queuedAt)}
               </span>
 
               {/* Command */}
-              <span className="text-sm text-gray-200 font-mono truncate">
+              <span className="text-sm text-foreground font-mono truncate">
                 {row.toolName}
               </span>
 
               {/* Origin */}
-              <span className="text-sm text-gray-400 truncate">
+              <span className="text-sm text-muted-foreground truncate">
                 {row.origin}
               </span>
 
               {/* Channel */}
-              <span className="text-sm text-gray-400 truncate">
+              <span className="text-sm text-muted-foreground truncate">
                 {row.channelId ?? "—"}
               </span>
 
               {/* Profile */}
-              <span className="text-sm text-gray-400 truncate">
+              <span className="text-sm text-muted-foreground truncate">
                 {row.profileId}
               </span>
 
               {/* Duration */}
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {formatDuration(row.durationMs)}
               </span>
 
@@ -176,7 +176,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                 {modeData?.mode ? (
                   <StatusBadge status={modeData.mode} />
                 ) : (
-                  <span className="text-sm text-gray-600">—</span>
+                  <span className="text-sm text-muted-foreground">—</span>
                 )}
                 {(modeData?.fillerCount ?? 0) > 0 && (
                   <span className="text-xs" style={{ color: "var(--status-warn)" }}>
@@ -213,18 +213,18 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
             {/* Expanded detail panel */}
             {isExpanded && (
-              <div className="bg-gray-900/40 rounded-lg p-4 ml-6 mr-3 mb-1 space-y-2 border border-gray-700/20">
+              <div className="bg-popover/40 rounded-lg p-4 ml-6 mr-3 mb-1 space-y-2 border border-border/20">
                 <div>
-                  <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Command</span>
-                  <pre className="text-sm font-mono text-gray-200 mt-0.5 whitespace-pre-wrap break-all">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Command</span>
+                  <pre className="text-sm font-mono text-foreground mt-0.5 whitespace-pre-wrap break-all">
                     {row.toolName}
                   </pre>
                 </div>
 
                 {row.contextSnapshot?.kwargs && (
                   <div>
-                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Arguments</span>
-                    <pre className="text-sm font-mono text-gray-400 mt-0.5 whitespace-pre-wrap break-all">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Arguments</span>
+                    <pre className="text-sm font-mono text-muted-foreground mt-0.5 whitespace-pre-wrap break-all">
                       {JSON.stringify(row.contextSnapshot.kwargs, null, 2)}
                     </pre>
                   </div>
@@ -232,51 +232,51 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-gray-500">Origin: </span>
-                    <span className="text-gray-300">{row.origin}</span>
+                    <span className="text-muted-foreground">Origin: </span>
+                    <span className="text-foreground">{row.origin}</span>
                   </div>
                   {row.parentExecutionId && (
                     <div>
-                      <span className="text-gray-500">Parent ID: </span>
-                      <span className="text-gray-300 font-mono">{row.parentExecutionId}</span>
+                      <span className="text-muted-foreground">Parent ID: </span>
+                      <span className="text-foreground font-mono">{row.parentExecutionId}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-gray-500">Queued: </span>
-                    <span className="text-gray-300">{formatTs(row.queuedAt)}</span>
+                    <span className="text-muted-foreground">Queued: </span>
+                    <span className="text-foreground">{formatTs(row.queuedAt)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Started: </span>
-                    <span className="text-gray-300">{formatTs(row.startedAt)}</span>
+                    <span className="text-muted-foreground">Started: </span>
+                    <span className="text-foreground">{formatTs(row.startedAt)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Completed: </span>
-                    <span className="text-gray-300">{formatTs(row.completedAt)}</span>
+                    <span className="text-muted-foreground">Completed: </span>
+                    <span className="text-foreground">{formatTs(row.completedAt)}</span>
                   </div>
                 </div>
 
                 {modeData && (
-                  <div className="grid grid-cols-3 gap-2 text-sm border-t border-gray-700/30 pt-2">
+                  <div className="grid grid-cols-3 gap-2 text-sm border-t border-border/30 pt-2">
                     <div>
-                      <span className="text-gray-500">Mode: </span>
-                      <span className="text-gray-300 capitalize">{modeData.mode}</span>
+                      <span className="text-muted-foreground">Mode: </span>
+                      <span className="text-foreground capitalize">{modeData.mode}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Rounds: </span>
-                      <span className="tabular-nums text-gray-300">{modeData.roundsDepth}</span>
+                      <span className="text-muted-foreground">Rounds: </span>
+                      <span className="tabular-nums text-foreground">{modeData.roundsDepth}</span>
                     </div>
                     {(modeData.fillerCount ?? 0) > 0 && (
                       <div>
-                        <span className="text-gray-500">Fillers: </span>
+                        <span className="text-muted-foreground">Fillers: </span>
                         <span className="tabular-nums" style={{ color: "var(--status-warn)" }}>{modeData.fillerCount}</span>
                       </div>
                     )}
                     {modeData.stalledAt != null && (
                       <div>
-                        <span className="text-gray-500">Stalled at: </span>
+                        <span className="text-muted-foreground">Stalled at: </span>
                         <span style={{ color: "var(--status-error)" }}>{formatTs(modeData.stalledAt)}</span>
                       </div>
                     )}
@@ -285,7 +285,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
                 {row.errorMessage && (
                   <div>
-                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Error</span>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Error</span>
                     <p className="text-sm text-red-300 mt-0.5">{row.errorMessage}</p>
                   </div>
                 )}

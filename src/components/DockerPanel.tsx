@@ -20,7 +20,7 @@ export default function DockerPanel() {
   const statusColor = (status: string) => {
     if (status === "running") return "bg-green-500";
     if (status === "paused" || status === "restarting") return "bg-yellow-500";
-    if (status === "exited") return "bg-gray-500";
+    if (status === "exited") return "bg-muted-foreground";
     if (status === "unknown") return "bg-yellow-500";
     return "bg-red-500";
   };
@@ -33,7 +33,7 @@ export default function DockerPanel() {
       starting: "text-yellow-400 bg-yellow-400/10",
     };
     return (
-      <span className={`text-xs px-1.5 py-0.5 rounded ${colors[health] ?? "text-gray-400 bg-gray-400/10"}`}>
+      <span className={`text-xs px-1.5 py-0.5 rounded ${colors[health] ?? "text-muted-foreground bg-muted/10"}`}>
         {health}
       </span>
     );

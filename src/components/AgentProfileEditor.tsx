@@ -183,14 +183,14 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
           <div className="flex gap-1">
             <button
               onClick={() => { setShowGallery(!showGallery); setShowUploader(false); }}
-              className="text-[11px] text-gray-500 hover:text-gray-300 px-1.5 py-0.5 rounded bg-gray-700/50 hover:bg-gray-700 transition-colors"
+              className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded bg-muted/50 hover:bg-muted transition-colors"
               title="Pick emoji"
             >
               Emoji
             </button>
             <button
               onClick={() => { setShowUploader(!showUploader); setShowGallery(false); }}
-              className="text-[11px] text-gray-500 hover:text-gray-300 px-1.5 py-0.5 rounded bg-gray-700/50 hover:bg-gray-700 transition-colors"
+              className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded bg-muted/50 hover:bg-muted transition-colors"
               title="Upload image"
             >
               Upload
@@ -203,27 +203,27 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
               value={profileId}
               onChange={(e) => setProfileId(e.target.value)}
               placeholder="Profile ID (e.g. main-agent)"
-              className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200 placeholder-gray-600"
+              className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground placeholder-muted-foreground"
             />
           )}
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name"
-            className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200 placeholder-gray-600"
+            className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground placeholder-muted-foreground"
           />
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             placeholder="Display name (optional)"
-            className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200 placeholder-gray-600"
+            className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground placeholder-muted-foreground"
           />
         </div>
       </div>
 
       {/* Image Uploader */}
       {showUploader && (
-        <div className="border border-gray-700/50 rounded-lg p-3">
+        <div className="border border-border/50 rounded-lg p-3">
           <AvatarUploader
             onUpload={handleImageUpload}
             onCancel={() => setShowUploader(false)}
@@ -244,30 +244,30 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
       )}
 
       {/* Avatar Properties */}
-      <div className="space-y-2 border-t border-gray-700/50 pt-3">
-        <label className="text-sm text-gray-400 block">Avatar Properties</label>
+      <div className="space-y-2 border-t border-border/50 pt-3">
+        <label className="text-sm text-muted-foreground block">Avatar Properties</label>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">Emoji</label>
+            <label className="text-xs text-muted-foreground block mb-0.5">Emoji</label>
             <input
               value={emoji}
               onChange={(e) => setEmoji(e.target.value)}
               placeholder="⚡"
-              className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200 placeholder-gray-600"
+              className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground placeholder-muted-foreground"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-0.5">Color</label>
+            <label className="text-xs text-muted-foreground block mb-0.5">Color</label>
             <div className="flex gap-2">
               <input
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 placeholder="#FBBF24"
-                className="flex-1 bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200 placeholder-gray-600"
+                className="flex-1 bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground placeholder-muted-foreground"
               />
               {color && (
                 <div
-                  className="w-9 h-9 rounded-lg border border-gray-600/50 flex-shrink-0"
+                  className="w-9 h-9 rounded-lg border border-border/50 flex-shrink-0"
                   style={{ backgroundColor: color }}
                 />
               )}
@@ -275,34 +275,34 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
           </div>
         </div>
         <div>
-          <label className="text-xs text-gray-500 block mb-0.5">Description</label>
+          <label className="text-xs text-muted-foreground block mb-0.5">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What this agent does..."
             rows={2}
-            className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200 placeholder-gray-600 resize-none"
+            className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground placeholder-muted-foreground resize-none"
           />
         </div>
         <div>
-          <label className="text-xs text-gray-500 block mb-0.5">
+          <label className="text-xs text-muted-foreground block mb-0.5">
             Capabilities (comma-separated)
           </label>
           <input
             value={capabilities}
             onChange={(e) => setCapabilities(e.target.value)}
             placeholder="Code review, API design, GitHub"
-            className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200 placeholder-gray-600"
+            className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground placeholder-muted-foreground"
           />
         </div>
       </div>
 
       <div>
-        <label className="text-sm text-gray-400 block mb-1">Model</label>
+        <label className="text-sm text-muted-foreground block mb-1">Model</label>
         <select
           value={model}
           onChange={(e) => setModel(e.target.value)}
-          className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-base text-gray-200"
+          className="w-full bg-background border border-border/50 rounded-lg px-3 py-2 text-base text-foreground"
         >
           {MODELS.map((m) => (
             <option key={m} value={m}>{m}</option>
@@ -326,7 +326,7 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
         </button>
         <button
           onClick={onCancel}
-          className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-base"
+          className="bg-muted hover:bg-[var(--surface-3)] text-foreground px-4 py-2 rounded-lg text-base"
         >
           Cancel
         </button>

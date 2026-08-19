@@ -15,7 +15,7 @@ type SortKey = "component" | "phase" | "status" | "progress" | "updatedAt";
 const STATUS_BADGE: Record<string, string> = {
   completed: "bg-green-400/10 text-green-400",
   in_progress: "bg-blue-400/10 text-blue-400",
-  pending: "bg-gray-400/10 text-gray-400",
+  pending: "bg-muted/10 text-muted-foreground",
   failed: "bg-red-400/10 text-red-400",
 };
 
@@ -58,7 +58,7 @@ export default function ComponentTable({ components }: { components: ComponentRo
 
   const colHeader = (label: string, key: SortKey) => (
     <th
-      className="text-left text-sm text-gray-400 uppercase tracking-wide py-2 px-3 cursor-pointer hover:text-gray-200 select-none"
+      className="text-left text-sm text-muted-foreground uppercase tracking-wide py-2 px-3 cursor-pointer hover:text-foreground select-none"
       onClick={() => handleSort(key)}
     >
       {label} {sortKey === key ? (sortAsc ? "^" : "v") : ""}
@@ -66,24 +66,24 @@ export default function ComponentTable({ components }: { components: ComponentRo
   );
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-semibold text-gray-300">Components</h3>
+        <h3 className="text-base font-semibold text-foreground">Components</h3>
         <input
           type="text"
           placeholder="Filter..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="bg-gray-700/50 border border-gray-600/50 rounded-lg px-3 py-1 text-base text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 w-48"
+          className="bg-muted/50 border border-border/50 rounded-lg px-3 py-1 text-base text-foreground placeholder-muted-foreground focus:outline-none focus:border-blue-500/50 w-48"
         />
       </div>
       {sorted.length === 0 ? (
-        <p className="text-center text-gray-500 text-base py-4">No components found</p>
+        <p className="text-center text-muted-foreground text-base py-4">No components found</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-700/50">
+              <tr className="border-b border-border/50">
                 {colHeader("Component", "component")}
                 {colHeader("Phase", "phase")}
                 {colHeader("Status", "status")}
@@ -95,12 +95,12 @@ export default function ComponentTable({ components }: { components: ComponentRo
               {sorted.map((c) => (
                 <tr
                   key={c._id}
-                  className="border-b border-gray-700/30 hover:bg-gray-700/20"
+                  className="border-b border-border/30 hover:bg-[var(--surface-3)]/20"
                 >
-                  <td className="py-2 px-3 text-base font-mono text-gray-200">
+                  <td className="py-2 px-3 text-base font-mono text-foreground">
                     {c.component}
                   </td>
-                  <td className="py-2 px-3 text-base text-gray-400">{c.phase}</td>
+                  <td className="py-2 px-3 text-base text-muted-foreground">{c.phase}</td>
                   <td className="py-2 px-3">
                     <span
                       className={`text-sm px-2 py-0.5 rounded ${STATUS_BADGE[c.status] ?? STATUS_BADGE.pending}`}
@@ -110,18 +110,18 @@ export default function ComponentTable({ components }: { components: ComponentRo
                   </td>
                   <td className="py-2 px-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-16 bg-gray-700/50 rounded-full h-1.5">
+                      <div className="w-16 bg-muted/50 rounded-full h-1.5">
                         <div
                           className="bg-blue-500 h-1.5 rounded-full transition-all"
                           style={{ width: `${c.progress ?? 0}%` }}
                         />
                       </div>
-                      <span className="text-sm text-gray-400 w-8 text-right">
+                      <span className="text-sm text-muted-foreground w-8 text-right">
                         {c.progress ?? 0}%
                       </span>
                     </div>
                   </td>
-                  <td className="py-2 px-3 text-sm text-gray-500">
+                  <td className="py-2 px-3 text-sm text-muted-foreground">
                     {formatTimestamp(c.updatedAt)}
                   </td>
                 </tr>

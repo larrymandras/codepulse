@@ -84,7 +84,7 @@ export default function AmbientAudioPlayer() {
         className={`p-1.5 rounded-lg transition-colors text-sm flex items-center gap-1.5 ${
           enabled
             ? "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"
-            : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+            : "text-muted-foreground hover:text-foreground hover:bg-[var(--surface-3)]"
         }`}
       >
         {enabled ? (
@@ -112,7 +112,7 @@ export default function AmbientAudioPlayer() {
           aria-label={`Ambient preset: ${PRESETS.find((p) => p.value === preset)?.label ?? preset}. Click to change`}
           aria-haspopup="listbox"
           aria-expanded={open}
-          className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors truncate max-w-[80px]"
+          className="px-2 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-[var(--surface-3)] transition-colors truncate max-w-[80px]"
           title="Change ambient preset"
         >
           {PRESETS.find((p) => p.value === preset)?.label ?? preset}
@@ -124,7 +124,7 @@ export default function AmbientAudioPlayer() {
         <div
           role="listbox"
           aria-label="Ambient audio presets"
-          className="absolute top-full right-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 min-w-[120px] py-1"
+          className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl z-50 min-w-[120px] py-1"
         >
           {PRESETS.map((p, idx) => (
             <button
@@ -138,7 +138,7 @@ export default function AmbientAudioPlayer() {
               className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
                 preset === p.value
                   ? "text-emerald-400 bg-emerald-600/10"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800"
+                  : "text-muted-foreground hover:text-foreground hover:bg-[var(--surface-3)]"
               } ${focusedIndex === idx ? "ring-1 ring-indigo-500" : ""}`}
             >
               {p.label}

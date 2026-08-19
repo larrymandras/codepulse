@@ -24,11 +24,11 @@ export default function CompactionTimeline() {
 
   if (events.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+        <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
           Context Compaction Timeline<InfoTooltip text="Context compaction events showing when Claude Code compressed conversation history" />
         </h2>
-        <p className="text-base text-gray-500 py-4 text-center">
+        <p className="text-base text-muted-foreground py-4 text-center">
           No compaction events recorded
         </p>
       </div>
@@ -36,23 +36,23 @@ export default function CompactionTimeline() {
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+      <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
         Context Compaction Timeline
       </h2>
 
       <div className="relative pl-6 space-y-3">
         {/* Vertical line */}
-        <div className="absolute left-2.5 top-1 bottom-1 w-px bg-gray-700" />
+        <div className="absolute left-2.5 top-1 bottom-1 w-px bg-border" />
 
         {events.map((event: any) => (
           <div key={event._id} className="relative flex items-start gap-3">
             {/* Dot */}
-            <div className="absolute left-[-14px] top-1.5 w-3 h-3 rounded-full bg-amber-500/80 border-2 border-gray-800 shrink-0" />
+            <div className="absolute left-[-14px] top-1.5 w-3 h-3 rounded-full bg-amber-500/80 border-2 border-card shrink-0" />
 
-            <div className="flex-1 bg-gray-900/30 rounded-lg px-3 py-2">
+            <div className="flex-1 bg-muted/30 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-200 font-medium">
+                <span className="text-sm text-foreground font-medium">
                   Compaction
                 </span>
                 {event.trigger && (
@@ -60,11 +60,11 @@ export default function CompactionTimeline() {
                     {event.trigger}
                   </span>
                 )}
-                <span className="text-xs text-gray-500 ml-auto">
+                <span className="text-xs text-muted-foreground ml-auto">
                   {relativeTime(event.timestamp)}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {formatTimestamp(event.timestamp)}
                 {event.sessionId && (
                   <>
