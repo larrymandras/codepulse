@@ -8,6 +8,9 @@ import ExecutionTable from "../components/ExecutionTable";
 import ExecutionFilterBar from "../components/ExecutionFilterBar";
 import LoadMoreButton from "../components/LoadMoreButton";
 import { PageHeader } from "@/components/PageHeader";
+import { Skeleton } from "@/components/ui/skeleton";
+import { InlineMetricState } from "@/components/EmptyState";
+import { useMetricState } from "@/hooks/useMetricState";
 
 interface FilterState {
   status: string | null;
@@ -96,12 +99,20 @@ export default function Executions() {
     };
   }, [subscribeEvent, triggerFlash]);
 
-  const totalDisplay = stats != null ? (stats.total ?? 0) + wsTotalDelta : "—";
-  const runningDisplay = stats != null ? (stats.running ?? 0) + wsRunningDelta : "—";
-  const failedDisplay = stats != null ? (stats.failed ?? 0) + wsFailedDelta : "—";
-  const avgDurationDisplay = stats?.avgDuration != null
-    ? `${stats.avgDuration.toFixed(0)}ms`
-    : "—";
+  // 122-16 (D-19/D-20): `stats` is undefined strictly while the query is
+  // unresolved, and a real (always-populated) object once resolved -- so
+  // "no value yet" is a genuine loading state, never a data gap, for
+  // total/running/failed. `avgDuration` is the one field that can also be
+  // genuinely null on a resolved stats object (no completed executions to
+  // average), so it gets its own two-way split below.
+  const { state: statsState } = useMetricState(stats, undefined);
+  const totalDisplay = statsState === "ready" ? (stats!.total ?? 0) + wsTotalDelta : null;
+  const runningDisplay = statsState === "ready" ? (stats!.running ?? 0) + wsRunningDelta : null;
+  const failedDisplay = statsState === "ready" ? (stats!.failed ?? 0) + wsFailedDelta : null;
+  const avgDurationDisplay =
+    statsState === "ready" && stats!.avgDuration != null
+      ? `${stats!.avgDuration.toFixed(0)}ms`
+      : null;
 
   return (
     <div className="space-y-6">
@@ -111,29 +122,39 @@ export default function Executions() {
       {/* Summary stat bar — PRIMARY VISUAL ANCHOR */}
       <SectionErrorBoundary name="Execution Metrics">
         <div ref={flashRef} className="grid grid-cols-4 gap-4">
+          {/* `div`, not `p`, for each value slot below: the loading branch
+              renders a block-level Skeleton, which is invalid inside a <p>
+              (hydration error) -- caught live on /executions during Task 3
+              verification. */}
           <div className="bg-card border border-border rounded-lg p-4">
             <p className="text-base font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
-            <p className="text-2xl font-semibold text-foreground">
-              {totalDisplay}
-            </p>
+            <div className="text-2xl font-semibold text-foreground">
+              {totalDisplay === null ? <Skeleton className="h-8 w-16" /> : totalDisplay}
+            </div>
           </div>
           <div className="bg-card border border-border rounded-lg p-4">
             <p className="text-base font-semibold uppercase tracking-wide text-muted-foreground">Running</p>
-            <p className="text-2xl font-semibold text-foreground">
-              {runningDisplay}
-            </p>
+            <div className="text-2xl font-semibold text-foreground">
+              {runningDisplay === null ? <Skeleton className="h-8 w-16" /> : runningDisplay}
+            </div>
           </div>
           <div className="bg-card border border-border rounded-lg p-4">
             <p className="text-base font-semibold uppercase tracking-wide text-muted-foreground">Failed</p>
-            <p className="text-2xl font-semibold text-red-400">
-              {failedDisplay}
-            </p>
+            <div className="text-2xl font-semibold text-red-400">
+              {failedDisplay === null ? <Skeleton className="h-8 w-16" /> : failedDisplay}
+            </div>
           </div>
           <div className="bg-card border border-border rounded-lg p-4">
             <p className="text-base font-semibold uppercase tracking-wide text-muted-foreground">Avg Duration</p>
-            <p className="text-2xl font-semibold text-indigo-400">
-              {avgDurationDisplay}
-            </p>
+            <div className="text-2xl font-semibold text-indigo-400">
+              {avgDurationDisplay !== null ? (
+                avgDurationDisplay
+              ) : statsState === "ready" ? (
+                <InlineMetricState state="empty" label="no completions yet" />
+              ) : (
+                <Skeleton className="h-8 w-16" />
+              )}
+            </div>
           </div>
         </div>
       </SectionErrorBoundary>

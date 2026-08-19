@@ -37,13 +37,19 @@ export default function AdvisorStrategyPanel() {
         </GlassPanel>
         <GlassPanel className="p-4">
           <p className="text-sm text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
-          <p className="text-2xl font-semibold tabular-nums mt-1">
+          {/* `div`, not `p`: InlineMetricState's "loading" branch renders a
+              block-level Skeleton, which is invalid inside a <p> (hydration
+              error) -- every other InlineMetricState call site in this plan
+              passes a literal state="empty" (span-only, safe in a <p>); this
+              is the one site whose state is a variable that can resolve to
+              "loading". */}
+          <div className="text-2xl font-semibold tabular-nums mt-1">
             {advisorRecentState === "ready" ? (
               `${Math.round((advisorRecent!.filter((e) => e.used).length / advisorRecent!.length) * 100)}%`
             ) : (
               <InlineMetricState state={advisorRecentState} />
             )}
-          </p>
+          </div>
         </GlassPanel>
       </div>
       {/* Cost comparison table */}

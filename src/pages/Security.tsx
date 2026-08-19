@@ -13,6 +13,7 @@ import LoadMoreButton from "../components/LoadMoreButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from "../components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
+import { InlineMetricState } from "@/components/EmptyState";
 
 const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
 type SeverityFilter = (typeof SEVERITY_TABS)[number];
@@ -409,7 +410,11 @@ export default function Security() {
                           label={e.eventType === "browser_guard_block" ? "BLOCKED" : "ALLOWED"}
                         />
                       </span>
-                      <span className="text-muted-foreground truncate">{e.details?.reason ?? "—"}</span>
+                      <span className="text-muted-foreground truncate">
+                        {e.details?.reason ?? (
+                          <InlineMetricState state="empty" label="no reason" />
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -449,7 +454,11 @@ export default function Security() {
                           label={e.eventType === "network_policy_block" ? "BLOCKED" : "ALLOWED"}
                         />
                       </span>
-                      <span className="text-muted-foreground truncate">{e.details?.reason ?? "—"}</span>
+                      <span className="text-muted-foreground truncate">
+                        {e.details?.reason ?? (
+                          <InlineMetricState state="empty" label="no reason" />
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>

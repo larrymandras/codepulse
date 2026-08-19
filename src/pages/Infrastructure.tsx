@@ -27,6 +27,7 @@ import { useSystemResources } from "../hooks/useSystemResources";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { PageHeader } from "@/components/PageHeader";
+import { InlineMetricState } from "@/components/EmptyState";
 
 export default function Infrastructure() {
   const resourceData = useSystemResources();
@@ -138,7 +139,11 @@ export default function Infrastructure() {
               <div className="flex items-center justify-end pt-2 border-t border-border">
                 <span className="text-sm text-muted-foreground mr-2">Total:</span>
                 <span className="text-base font-semibold tabular-nums">
-                  {startupEvents[0]?.totalMs?.toFixed(0) ?? "—"}ms
+                  {startupEvents[0]?.totalMs != null ? (
+                    `${startupEvents[0].totalMs.toFixed(0)}ms`
+                  ) : (
+                    <InlineMetricState state="empty" label="no total" />
+                  )}
                 </span>
               </div>
             </div>
