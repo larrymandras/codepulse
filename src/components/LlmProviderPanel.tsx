@@ -24,7 +24,7 @@ export default function LlmProviderPanel() {
 
   if (raw.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           LLM by Provider
           <InfoTooltip text="Token consumption grouped by provider then model" />
@@ -35,7 +35,7 @@ export default function LlmProviderPanel() {
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4 space-y-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         LLM by Provider
         <InfoTooltip text="Token consumption grouped by provider then model" />

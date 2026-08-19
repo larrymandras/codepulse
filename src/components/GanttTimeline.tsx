@@ -118,15 +118,15 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
   const totalLanes = agentLanes.length + (orphanLane.length > 0 ? 1 : 0);
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-gray-300">Gantt Timeline</h2>
+        <h2 className="text-base font-semibold text-foreground">Gantt Timeline</h2>
         <div className="flex items-center gap-3 flex-wrap">
           {Object.entries(EVENT_COLORS)
             .filter(([k]) => !["SessionStart", "SessionEnd"].includes(k))
             .slice(0, 6)
             .map(([name, color]) => (
-              <span key={name} className="flex items-center gap-1 text-[11px] text-gray-500">
+              <span key={name} className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                 {name}
               </span>
@@ -135,16 +135,16 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
       </div>
 
       {totalLanes === 0 ? (
-        <p className="text-base text-gray-500 py-8 text-center">No agent data for Gantt view</p>
+        <p className="text-base text-muted-foreground py-8 text-center">No agent data for Gantt view</p>
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[600px]">
             {/* Time axis */}
-            <div className="flex items-end ml-28 h-6 relative border-b border-gray-700/30 mb-1">
+            <div className="flex items-end ml-28 h-6 relative border-b border-border/30 mb-1">
               {ticks.map((tick, i) => (
                 <span
                   key={i}
-                  className="absolute text-[11px] text-gray-600 font-mono"
+                  className="absolute text-[11px] text-muted-foreground font-mono"
                   style={{ left: `${tick.pos}%`, transform: "translateX(-50%)" }}
                 >
                   {tick.label}
@@ -171,7 +171,7 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
                         className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: barColor }}
                       />
-                      <span className="text-xs text-gray-300 font-mono truncate">
+                      <span className="text-xs text-foreground font-mono truncate">
                         {redact(agent.agentId, `A-${agent.agentId.slice(-4)}`)}
                       </span>
                     </div>
@@ -179,7 +179,7 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
                     {/* Lane */}
                     <div className="flex-1 relative h-full">
                       {/* Grid line */}
-                      <div className="absolute inset-x-0 top-1/2 h-px bg-gray-700/20" />
+                      <div className="absolute inset-x-0 top-1/2 h-px bg-border/20" />
 
                       {/* Agent lifespan bar */}
                       <div
@@ -222,10 +222,10 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
               {orphanLane.length > 0 && (
                 <div className="flex items-center" style={{ height: ROW_HEIGHT }}>
                   <div className="w-28 shrink-0 pr-2">
-                    <span className="text-xs text-gray-500">session</span>
+                    <span className="text-xs text-muted-foreground">session</span>
                   </div>
                   <div className="flex-1 relative h-full">
-                    <div className="absolute inset-x-0 top-1/2 h-px bg-gray-700/20" />
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-border/20" />
                     {orphanLane.map((e) => {
                       const pos = toPercent(e.timestamp);
                       const color = EVENT_COLORS[e.eventType] ?? "#6b7280";
@@ -254,17 +254,17 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
 
             {/* Hover tooltip */}
             {hoveredEvent && (
-              <div className="mt-2 bg-gray-900/90 border border-gray-700/50 rounded-lg px-3 py-2 text-sm">
+              <div className="mt-2 bg-popover/90 border border-border/50 rounded-lg px-3 py-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: EVENT_COLORS[hoveredEvent.eventType] ?? "#6b7280" }}
                   />
-                  <span className="text-gray-200 font-medium">{hoveredEvent.eventType}</span>
+                  <span className="text-foreground font-medium">{hoveredEvent.eventType}</span>
                   {hoveredEvent.toolName && (
-                    <span className="text-gray-500">{hoveredEvent.toolName}</span>
+                    <span className="text-muted-foreground">{hoveredEvent.toolName}</span>
                   )}
-                  <span className="text-gray-600 font-mono ml-auto">
+                  <span className="text-muted-foreground font-mono ml-auto">
                     +{formatTime(hoveredEvent.timestamp - timeRange.min)}
                   </span>
                 </div>

@@ -29,8 +29,8 @@ function GatewayQuotaPanelInner() {
             if (billing === "subscription") {
               return (
                 <div key={p} className="flex items-center justify-between">
-                  <span className="text-base text-gray-300">{displayName}</span>
-                  <span className="text-sm px-1.5 py-0.5 bg-gray-700/50 text-gray-400 font-mono uppercase tracking-wider">
+                  <span className="text-base text-foreground">{displayName}</span>
+                  <span className="text-sm px-1.5 py-0.5 bg-muted text-muted-foreground font-mono uppercase tracking-wider">
                     UNLIMITED
                   </span>
                 </div>
@@ -43,8 +43,8 @@ function GatewayQuotaPanelInner() {
             if (!snapshot) {
               return (
                 <div key={p} className="flex items-center justify-between">
-                  <span className="text-base text-gray-300">{displayName}</span>
-                  <span className="text-base text-gray-600">No data</span>
+                  <span className="text-base text-foreground">{displayName}</span>
+                  <span className="text-base text-muted-foreground">No data</span>
                 </div>
               );
             }
@@ -59,13 +59,13 @@ function GatewayQuotaPanelInner() {
             return (
               <div key={p} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-base text-gray-300">{displayName}</span>
-                  <span className="font-mono tabular-nums text-base text-gray-300">
+                  <span className="text-base text-foreground">{displayName}</span>
+                  <span className="font-mono tabular-nums text-base text-foreground">
                     {Math.round(snapshot.remainingPct * 100)}%{" "}
-                    <span className="text-gray-500">${snapshot.spendUsd.toFixed(2)}</span>
+                    <span className="text-muted-foreground">${snapshot.spendUsd.toFixed(2)}</span>
                   </span>
                 </div>
-                <div className="w-full h-1 bg-gray-700/50 overflow-hidden">
+                <div className="w-full h-1 bg-muted overflow-hidden">
                   <div
                     className={`h-full ${color}`}
                     style={{ width: `${Math.round(snapshot.remainingPct * 100)}%` }}

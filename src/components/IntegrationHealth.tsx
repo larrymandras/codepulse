@@ -17,7 +17,7 @@ function statusBadge(status: string) {
     Idle: "text-blue-400 bg-blue-400/10",
     Degraded: "text-yellow-400 bg-yellow-400/10",
     Disconnected: "text-red-400 bg-red-400/10",
-    Unknown: "text-gray-400 bg-gray-400/10",
+    Unknown: "text-muted-foreground bg-muted",
   };
   return (
     <span
@@ -39,7 +39,7 @@ export default function IntegrationHealth() {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Integration Health<InfoTooltip text="Connection status for all integrated services with quick test capability" />
       </h2>
@@ -47,13 +47,13 @@ export default function IntegrationHealth() {
         {INTEGRATIONS.map((integration) => (
           <div
             key={integration.name}
-            className="flex items-center justify-between bg-gray-900/50 border border-gray-700/30 rounded-lg px-4 py-3"
+            className="flex items-center justify-between bg-background/50 border border-border/30 rounded-lg px-4 py-3"
           >
             <div className="flex items-center gap-3">
-              <span className="text-sm font-mono text-gray-500 w-6 text-center">
+              <span className="text-sm font-mono text-muted-foreground w-6 text-center">
                 {integration.icon}
               </span>
-              <span className="text-base text-gray-200">{integration.name}</span>
+              <span className="text-base text-foreground">{integration.name}</span>
             </div>
             <div className="flex items-center gap-2">
               {testing === integration.key ? (
@@ -66,7 +66,7 @@ export default function IntegrationHealth() {
               <button
                 onClick={() => handleTest(integration.key)}
                 disabled={testing === integration.key}
-                className="text-xs px-1.5 py-0.5 rounded border border-gray-600/30 text-gray-500 hover:text-gray-300 hover:border-gray-500/50 transition-colors disabled:opacity-50"
+                className="text-xs px-1.5 py-0.5 rounded border border-border/30 text-muted-foreground hover:text-foreground hover:border-border/50 transition-colors disabled:opacity-50"
                 title="Test connection"
               >
                 Test

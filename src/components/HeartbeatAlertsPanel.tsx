@@ -10,14 +10,14 @@ export default function HeartbeatAlertsPanel({ heartbeats }: HeartbeatAlertsPane
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Heartbeat Alerts
-        <span className="ml-2 text-sm text-gray-500 font-normal">{heartbeats.length}</span>
+        <span className="ml-2 text-sm text-muted-foreground font-normal">{heartbeats.length}</span>
         <InfoTooltip text="Periodic health checks from Astridr's heartbeat system. Each beat runs all registered checks and reports alerts." />
       </h2>
       {heartbeats.length === 0 ? (
-        <p className="text-base text-gray-500 py-6 text-center">No heartbeat data yet</p>
+        <p className="text-base text-muted-foreground py-6 text-center">No heartbeat data yet</p>
       ) : (
         <div className="space-y-1 max-h-[360px] overflow-y-auto">
           {heartbeats.map((hb: any) => {
@@ -29,34 +29,34 @@ export default function HeartbeatAlertsPanel({ heartbeats }: HeartbeatAlertsPane
               <div key={hb._id}>
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : hb._id)}
-                  className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                  className="flex items-center justify-between bg-background/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-[var(--surface-3)]/30 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isClean ? "bg-green-400" : "bg-red-400"}`} />
-                    <span className="text-sm text-gray-500 font-mono">{formatTimestamp(hb.timestamp)}</span>
+                    <span className="text-sm text-muted-foreground font-mono">{formatTimestamp(hb.timestamp)}</span>
                     <span className={`text-sm ${isClean ? "text-green-400" : "text-red-400"}`}>
                       {isClean ? "All checks passed" : `${alertCount} alert${alertCount !== 1 ? "s" : ""}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                    <span className="text-sm text-gray-600">{relativeTime(hb.timestamp)}</span>
-                    <span className="text-gray-600 text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    <span className="text-sm text-muted-foreground">{relativeTime(hb.timestamp)}</span>
+                    <span className="text-muted-foreground text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-sm">
+                  <div className="ml-5 mt-1 mb-2 bg-popover/80 border border-border/40 rounded-lg px-4 py-3 text-sm">
                     {Array.isArray(hb.alerts) && hb.alerts.length > 0 ? (
                       <div className="space-y-1">
                         {hb.alerts.map((alert: any, i: number) => (
                           <div key={i} className="flex items-center gap-2 py-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                            <span className="text-gray-400 font-mono">{alert._check ?? alert.check ?? "unknown"}</span>
+                            <span className="text-muted-foreground font-mono">{alert._check ?? alert.check ?? "unknown"}</span>
                             {alert.error && <span className="text-red-300 truncate">{alert.error}</span>}
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-600">No alert details available</p>
+                      <p className="text-muted-foreground">No alert details available</p>
                     )}
                   </div>
                 )}

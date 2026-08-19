@@ -16,7 +16,7 @@ import { ScrollArea } from "./ui/scroll-area";
 const statusColor: Record<string, string> = {
   completed: "bg-emerald-500/20 text-emerald-400",
   running: "bg-blue-500/20 text-blue-400",
-  pending: "bg-gray-500/20 text-gray-400",
+  pending: "bg-muted text-muted-foreground",
   failed: "bg-red-500/20 text-red-400",
 };
 
@@ -75,7 +75,7 @@ export default function GatewayTasksPanel() {
                   </TableCell>
                   <TableCell>
                     <span
-                      className={`text-sm px-1.5 py-0.5 font-mono uppercase ${statusColor[t.status] ?? "bg-gray-500/20 text-gray-400"}`}
+                      className={`text-sm px-1.5 py-0.5 font-mono uppercase ${statusColor[t.status] ?? "bg-muted text-muted-foreground"}`}
                     >
                       {t.status}
                     </span>

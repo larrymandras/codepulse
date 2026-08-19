@@ -18,7 +18,7 @@ const stalenessConfig: Record<
   fresh: { label: "Fresh", color: "text-emerald-400", bg: "bg-emerald-500/20" },
   aging: { label: "Aging", color: "text-yellow-400", bg: "bg-yellow-500/20" },
   stale: { label: "Stale", color: "text-red-400", bg: "bg-red-500/20" },
-  empty: { label: "Empty", color: "text-gray-500", bg: "bg-gray-700/50" },
+  empty: { label: "Empty", color: "text-muted-foreground", bg: "bg-muted" },
 };
 
 const typeColors = [
@@ -37,9 +37,9 @@ export default function MemoryIndexHealth() {
 
   if (!health) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 animate-pulse">
-        <div className="h-4 w-32 bg-gray-700 rounded mb-4" />
-        <div className="h-8 w-20 bg-gray-700 rounded" />
+      <div className="bg-card/50 border border-border/50 rounded-xl p-5 animate-pulse">
+        <div className="h-4 w-32 bg-muted rounded mb-4" />
+        <div className="h-8 w-20 bg-muted rounded" />
       </div>
     );
   }
@@ -49,10 +49,10 @@ export default function MemoryIndexHealth() {
   const agentEntries = Object.entries(health.byAgent);
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-5 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-300">
+        <h2 className="text-base font-semibold text-foreground">
           Memory Index Health<InfoTooltip text="Episodic memory health: total events, recent activity, and breakdown by type and agent" />
         </h2>
         <span
@@ -65,20 +65,20 @@ export default function MemoryIndexHealth() {
       {/* Key metrics */}
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <p className="text-sm text-gray-500">Total</p>
-          <p className="text-lg font-semibold text-gray-100">
+          <p className="text-sm text-muted-foreground">Total</p>
+          <p className="text-lg font-semibold text-foreground">
             {health.totalEvents}
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Last 24h</p>
-          <p className="text-lg font-semibold text-gray-100">
+          <p className="text-sm text-muted-foreground">Last 24h</p>
+          <p className="text-lg font-semibold text-foreground">
             {health.last24h}
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">Last 7d</p>
-          <p className="text-lg font-semibold text-gray-100">
+          <p className="text-sm text-muted-foreground">Last 7d</p>
+          <p className="text-lg font-semibold text-foreground">
             {health.last7d}
           </p>
         </div>
@@ -86,9 +86,9 @@ export default function MemoryIndexHealth() {
 
       {/* Last event */}
       {health.lastEvent && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Last event:{" "}
-          <span className="text-gray-400">
+          <span className="text-muted-foreground">
             {relativeTime(health.lastEvent)}
           </span>
         </p>
@@ -97,7 +97,7 @@ export default function MemoryIndexHealth() {
       {/* Event type breakdown */}
       {typeEntries.length > 0 && (
         <div>
-          <p className="text-sm text-gray-500 mb-2">Event Types</p>
+          <p className="text-sm text-muted-foreground mb-2">Event Types</p>
           <div className="flex flex-wrap gap-1.5">
             {typeEntries.map(([type, count], i) => (
               <span
@@ -115,15 +115,15 @@ export default function MemoryIndexHealth() {
       {/* Agent breakdown */}
       {agentEntries.length > 0 && (
         <div>
-          <p className="text-sm text-gray-500 mb-2">By Agent</p>
+          <p className="text-sm text-muted-foreground mb-2">By Agent</p>
           <div className="space-y-1">
             {agentEntries.map(([agent, count]) => (
               <div
                 key={agent}
                 className="flex items-center justify-between text-sm"
               >
-                <span className="text-gray-400 truncate">{agent}</span>
-                <span className="text-gray-500 ml-2">{count as number}</span>
+                <span className="text-muted-foreground truncate">{agent}</span>
+                <span className="text-muted-foreground ml-2">{count as number}</span>
               </div>
             ))}
           </div>

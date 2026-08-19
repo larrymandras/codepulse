@@ -47,14 +47,14 @@ export default function McpServerPanel({ servers, filter }: McpServerPanelProps)
     : servers;
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         MCP Servers
-        <span className="ml-2 text-sm text-gray-500 font-normal">{filtered.length}</span>
+        <span className="ml-2 text-sm text-muted-foreground font-normal">{filtered.length}</span>
         <InfoTooltip text="External service integrations exposed via Model Context Protocol. Click a server to see connection details." />
       </h2>
       {filtered.length === 0 ? (
-        <p className="text-base text-gray-500 py-6 text-center">
+        <p className="text-base text-muted-foreground py-6 text-center">
           {filter ? "No servers match your search" : "No MCP servers registered"}
         </p>
       ) : (
@@ -65,13 +65,13 @@ export default function McpServerPanel({ servers, filter }: McpServerPanelProps)
               <div key={s._id}>
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : s._id)}
-                  className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                  className="flex items-center justify-between bg-background/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-[var(--surface-3)]/30 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
                       className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot(s.status)}`}
                     />
-                    <span className="text-base font-mono text-gray-200 truncate">
+                    <span className="text-base font-mono text-foreground truncate">
                       {s.name}
                     </span>
                     <OriginBadge origin={s.origin} />
@@ -83,38 +83,38 @@ export default function McpServerPanel({ servers, filter }: McpServerPanelProps)
                   </div>
                   <div className="flex items-center gap-4 flex-shrink-0 ml-2">
                     {s.toolCount != null && (
-                      <span className="text-sm text-gray-400">
+                      <span className="text-sm text-muted-foreground">
                         {s.toolCount} tool{s.toolCount !== 1 ? "s" : ""}
                       </span>
                     )}
-                    <span className="text-sm text-gray-500 font-mono">
+                    <span className="text-sm text-muted-foreground font-mono">
                       {formatTimestamp(s.lastSeenAt)}
                     </span>
-                    <span className="text-gray-600 text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    <span className="text-muted-foreground text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 space-y-2 text-sm">
+                  <div className="ml-5 mt-1 mb-2 bg-popover/80 border border-border/40 rounded-lg px-4 py-3 space-y-2 text-sm">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                       <div>
-                        <span className="text-gray-500">Name</span>
-                        <p className="text-gray-200 font-mono">{s.name}</p>
+                        <span className="text-muted-foreground">Name</span>
+                        <p className="text-foreground font-mono">{s.name}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Status</span>
+                        <span className="text-muted-foreground">Status</span>
                         <p className={`capitalize ${statusColor(s.status)}`}>{s.status}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">URL</span>
-                        <p className="text-gray-300 font-mono truncate">{s.url ?? "Not configured"}</p>
+                        <span className="text-muted-foreground">URL</span>
+                        <p className="text-foreground font-mono truncate">{s.url ?? "Not configured"}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Tools Provided</span>
-                        <p className="text-gray-300">{s.toolCount ?? "Unknown"}</p>
+                        <span className="text-muted-foreground">Tools Provided</span>
+                        <p className="text-foreground">{s.toolCount ?? "Unknown"}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Last Seen</span>
-                        <p className="text-gray-300 font-mono">{formatTimestamp(s.lastSeenAt)}</p>
+                        <span className="text-muted-foreground">Last Seen</span>
+                        <p className="text-foreground font-mono">{formatTimestamp(s.lastSeenAt)}</p>
                       </div>
                       {s.origin && (
                         <div className="flex items-center gap-2 text-sm">
@@ -123,8 +123,8 @@ export default function McpServerPanel({ servers, filter }: McpServerPanelProps)
                         </div>
                       )}
                       <div>
-                        <span className="text-gray-500">Record ID</span>
-                        <p className="text-gray-500 font-mono truncate">{s._id}</p>
+                        <span className="text-muted-foreground">Record ID</span>
+                        <p className="text-muted-foreground font-mono truncate">{s._id}</p>
                       </div>
                     </div>
                   </div>

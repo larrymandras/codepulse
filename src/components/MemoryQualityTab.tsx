@@ -27,7 +27,7 @@ function AccordionSection({
           {title}
         </span>
         <span className="flex items-center gap-2">
-          <span className="text-sm bg-gray-700/60 text-gray-400 px-2 py-0.5 rounded-full">
+          <span className="text-sm bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
             {count}
           </span>
           <ChevronDown
@@ -80,34 +80,34 @@ export default function MemoryQualityTab() {
     <div className="space-y-4">
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <div className="bg-card/50 border border-border/50 rounded-xl p-4">
           <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
             Dedup Rate
           </p>
-          <p className="text-2xl font-semibold tabular-nums text-gray-100">
+          <p className="text-2xl font-semibold tabular-nums text-foreground">
             {(data.deduplicationRate * 100).toFixed(1)}%
           </p>
         </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <div className="bg-card/50 border border-border/50 rounded-xl p-4">
           <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
             Stale Memories
           </p>
-          <p className="text-2xl font-semibold tabular-nums text-gray-100">
+          <p className="text-2xl font-semibold tabular-nums text-foreground">
             {data.staleCount}
           </p>
         </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <div className="bg-card/50 border border-border/50 rounded-xl p-4">
           <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
             Contradictions
           </p>
-          <p className="text-2xl font-semibold tabular-nums text-gray-100">
+          <p className="text-2xl font-semibold tabular-nums text-foreground">
             {data.contradictionCount}
           </p>
         </div>
       </div>
 
       {/* Accordion sections */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-1">
+      <div className="bg-card/50 border border-border/50 rounded-xl px-4 py-1">
         {/* Duplicate Flags */}
         <AccordionSection
           icon={<Copy className="w-4 h-4 text-muted-foreground" />}
@@ -136,7 +136,7 @@ export default function MemoryQualityTab() {
               {staleIds.map((id) => (
                 <div key={id} className="flex items-center gap-3">
                   <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="font-mono text-sm text-gray-300 truncate flex-1">
+                  <span className="font-mono text-sm text-foreground truncate flex-1">
                     {id}
                   </span>
                   <span className="text-sm text-muted-foreground whitespace-nowrap">
@@ -164,7 +164,7 @@ export default function MemoryQualityTab() {
                 <div key={idx} className="flex items-start gap-3">
                   <AlertTriangle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300 font-mono truncate">
+                    <p className="text-sm text-foreground font-mono truncate">
                       {pair.memoryA} vs {pair.memoryB}
                     </p>
                     {pair.reason && (

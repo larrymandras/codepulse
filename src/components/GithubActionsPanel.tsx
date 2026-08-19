@@ -45,9 +45,9 @@ function statusIcon(status: string, conclusion?: string): { icon: string; color:
     case "in_progress":
       return { icon: "\uD83D\uDD04", color: "text-yellow-400", spin: true };
     case "queued":
-      return { icon: "\u23F3", color: "text-gray-400", spin: false };
+      return { icon: "\u23F3", color: "text-muted-foreground", spin: false };
     default:
-      return { icon: "\u2753", color: "text-gray-500", spin: false };
+      return { icon: "\u2753", color: "text-muted-foreground", spin: false };
   }
 }
 
@@ -63,14 +63,14 @@ export default function GithubActionsPanel() {
   const lastStatus = lastRun ? (lastRun.conclusion ?? lastRun.status) : null;
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         GitHub Actions
         <InfoTooltip text="Workflow run status for automated sync checks and CI/CD pipelines" />
       </h2>
 
       {/* Summary bar */}
-      <div className="flex items-center gap-3 mb-3 text-sm text-gray-400">
+      <div className="flex items-center gap-3 mb-3 text-sm text-muted-foreground">
         {lastRun ? (
           <>
             <span>
@@ -87,7 +87,7 @@ export default function GithubActionsPanel() {
                 {lastStatus}
               </span>
             </span>
-            <span className="text-gray-600">|</span>
+            <span className="text-muted-foreground">|</span>
           </>
         ) : null}
         <span>Next check: ~9:17 AM / 5:43 PM UTC</span>
@@ -95,8 +95,8 @@ export default function GithubActionsPanel() {
 
       {runs.length === 0 ? (
         <div className="text-center py-6">
-          <p className="text-base text-gray-400">No workflow runs recorded yet</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-base text-muted-foreground">No workflow runs recorded yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
             Runs will appear after the sync-check workflow executes
           </p>
         </div>
@@ -107,7 +107,7 @@ export default function GithubActionsPanel() {
             return (
               <div
                 key={run._id}
-                className="flex items-center justify-between bg-gray-900/50 border border-gray-700/30 rounded-lg px-3 py-2"
+                className="flex items-center justify-between bg-background/50 border border-border/30 rounded-lg px-3 py-2"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span
@@ -115,15 +115,15 @@ export default function GithubActionsPanel() {
                   >
                     {si.icon}
                   </span>
-                  <span className="text-base text-gray-200 truncate">
+                  <span className="text-base text-foreground truncate">
                     {run.workflowName}
                   </span>
-                  <span className="text-sm text-gray-500 flex-shrink-0">
+                  <span className="text-sm text-muted-foreground flex-shrink-0">
                     {shortRepo(run.repo)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2.5 flex-shrink-0 ml-2">
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     {relativeTime(run.triggeredAt)}
                   </span>
                   {run.runUrl && (

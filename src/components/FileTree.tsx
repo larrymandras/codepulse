@@ -125,19 +125,19 @@ function TreeNodeRow({
     // File leaf
     return (
       <div
-        className="flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-700/20 transition-colors"
+        className="flex items-center gap-2 py-1 px-2 rounded hover:bg-[var(--surface-3)]/20 transition-colors"
         style={{ paddingLeft: depth * 16 + 8 }}
       >
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${opStyle.dot}`} />
-        <span className="text-sm text-gray-200 font-mono truncate flex-1">
+        <span className="text-sm text-foreground font-mono truncate flex-1">
           {maskPath(node.name)}
         </span>
         <span className={`text-xs px-1.5 py-0.5 rounded ${opStyle.text} ${opStyle.bg}`}>
           {node.lastOp}
         </span>
-        <span className="text-xs text-gray-500">{node.ops}×</span>
+        <span className="text-xs text-muted-foreground">{node.ops}×</span>
         {node.linesChanged > 0 && (
-          <span className="text-xs text-gray-600">{node.linesChanged}L</span>
+          <span className="text-xs text-muted-foreground">{node.linesChanged}L</span>
         )}
       </div>
     );
@@ -148,16 +148,16 @@ function TreeNodeRow({
     <div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-700/20 transition-colors text-left"
+        className="w-full flex items-center gap-2 py-1 px-2 rounded hover:bg-[var(--surface-3)]/20 transition-colors text-left"
         style={{ paddingLeft: depth * 16 + 8 }}
       >
-        <span className="text-xs text-gray-600 w-3 shrink-0">
+        <span className="text-xs text-muted-foreground w-3 shrink-0">
           {expanded ? "▼" : "▶"}
         </span>
-        <span className="text-sm text-gray-400 font-mono truncate flex-1">
+        <span className="text-sm text-muted-foreground font-mono truncate flex-1">
           {maskPath(node.name)}/
         </span>
-        <span className="text-xs text-gray-600">{node.ops}×</span>
+        <span className="text-xs text-muted-foreground">{node.ops}×</span>
       </button>
       {expanded &&
         sortedChildren.map((child) => (
@@ -186,26 +186,26 @@ export default function FileTree({ sessionId }: FileTreeProps) {
   const readCount = summary.filter((f: any) => f.lastOp === "read").length;
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-gray-300">
+        <h2 className="text-base font-semibold text-foreground">
           File Tree ({summary.length} files)
         </h2>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-[11px] text-gray-500">
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <span className="w-2 h-2 rounded-full bg-green-400" aria-hidden="true" /> Write ({writeCount})
           </span>
-          <span className="flex items-center gap-1 text-[11px] text-gray-500">
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <span className="w-2 h-2 rounded-full bg-yellow-400" aria-hidden="true" /> Edit ({editCount})
           </span>
-          <span className="flex items-center gap-1 text-[11px] text-gray-500">
+          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
             <span className="w-2 h-2 rounded-full bg-blue-400" aria-hidden="true" /> Read ({readCount})
           </span>
         </div>
       </div>
 
       {summary.length === 0 ? (
-        <p className="text-base text-gray-500 py-6 text-center">No file operations yet</p>
+        <p className="text-base text-muted-foreground py-6 text-center">No file operations yet</p>
       ) : (
         <div className="max-h-[500px] overflow-y-auto -mx-1">
           {[...tree.children.values()]
