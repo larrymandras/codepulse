@@ -41,7 +41,7 @@ export default function RoutingDecisionsTable() {
               className={`text-sm px-2 py-1 font-mono transition-colors ${
                 fallbackFilter === f
                   ? "bg-purple-400/20 text-purple-300 border border-purple-500/40"
-                  : "bg-gray-700/50 text-gray-400 border border-gray-600/30 hover:bg-gray-700/80"
+                  : "bg-muted text-muted-foreground border border-border/30 hover:bg-[var(--surface-3)]"
               }`}
             >
               {f === "all" ? "All" : "Fallback only"}
@@ -70,7 +70,7 @@ export default function RoutingDecisionsTable() {
             className={`text-sm px-2 py-1 font-mono transition-colors ${
               fallbackFilter === f
                 ? "bg-purple-400/20 text-purple-300 border border-purple-500/40"
-                : "bg-gray-700/50 text-gray-400 border border-gray-600/30 hover:bg-gray-700/80"
+                : "bg-muted text-muted-foreground border border-border/30 hover:bg-[var(--surface-3)]"
             }`}
           >
             {f === "all" ? "All" : "Fallback only"}
@@ -124,10 +124,10 @@ export default function RoutingDecisionsTable() {
                           FALLBACK
                         </span>
                       ) : (
-                        <span className="text-sm text-gray-500">—</span>
+                        <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-sm tabular-nums text-gray-400">
+                    <TableCell className="font-mono text-sm tabular-nums text-muted-foreground">
                       {d.finalScore?.toFixed(3) ?? "—"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -138,9 +138,9 @@ export default function RoutingDecisionsTable() {
                     <TableRow>
                       <TableCell
                         colSpan={6}
-                        className="bg-gray-900/30 px-4 py-2"
+                        className="bg-background/30 px-4 py-2"
                       >
-                        <div className="grid grid-cols-4 gap-2 text-sm text-gray-400 font-mono tabular-nums">
+                        <div className="grid grid-cols-4 gap-2 text-sm text-muted-foreground font-mono tabular-nums">
                           <span>Quota: {d.quotaScore?.toFixed(3) ?? "—"}</span>
                           <span>
                             Latency: {d.latencyScore?.toFixed(3) ?? "—"}

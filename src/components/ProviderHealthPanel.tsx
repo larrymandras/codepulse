@@ -27,7 +27,7 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
   // Status dot color per UI-SPEC:
   // available+authenticated = green, available+!authenticated = yellow, !available = red, no data = gray
   const dotColor = !data
-    ? "bg-gray-600"
+    ? "bg-muted-foreground"
     : data.state === "open"
       ? "bg-red-500"
       : data.authenticated === false
@@ -38,7 +38,7 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
   const billingBadge = data?.billingType === "api"
     ? { label: "API-BILLED", cls: "bg-yellow-500/20 text-yellow-400" }
     : data?.billingType === "subscription"
-      ? { label: "SUBSCRIPTION", cls: "bg-gray-700/50 text-gray-400" }
+      ? { label: "SUBSCRIPTION", cls: "bg-muted text-muted-foreground" }
       : null;
 
   // Quota bar color
@@ -51,11 +51,11 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
     : null;
 
   return (
-    <div className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-3">
+    <div className="bg-background/50 border border-border/30 rounded-lg p-3">
       {/* Header row: dot + name + billing badge */}
       <div className="flex items-center gap-2 mb-2">
         <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-        <span className="text-base font-medium text-gray-200 flex-1">{displayName}</span>
+        <span className="text-base font-medium text-foreground flex-1">{displayName}</span>
         {billingBadge && (
           <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${billingBadge.cls}`}>
             {billingBadge.label}
@@ -67,7 +67,7 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
         <div className="space-y-1.5">
           {/* Availability */}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Availability</span>
+            <span className="text-muted-foreground">Availability</span>
             <span className={data.state === "open" ? "text-red-400" : "text-green-400"}>
               {data.state === "open" ? "OFFLINE" : "ONLINE"}
             </span>
@@ -76,7 +76,7 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
           {/* Auth status — only if field present */}
           {data.authenticated !== undefined && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Auth</span>
+              <span className="text-muted-foreground">Auth</span>
               <span className={data.authenticated ? "text-green-400" : "text-red-400"}>
                 {data.authenticated ? "AUTHENTICATED" : "NOT AUTHENTICATED"}
               </span>
@@ -86,8 +86,8 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
           {/* Billing type */}
           {data.billingType !== undefined && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Billing</span>
-              <span className="text-gray-400">{data.billingType}</span>
+              <span className="text-muted-foreground">Billing</span>
+              <span className="text-muted-foreground">{data.billingType}</span>
             </div>
           )}
 
@@ -95,12 +95,12 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
           {data.quotaRemaining !== undefined && (
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Quota</span>
-                <span className="text-sm font-medium font-mono tabular-nums text-gray-300">
+                <span className="text-muted-foreground">Quota</span>
+                <span className="text-sm font-medium font-mono tabular-nums text-foreground">
                   {Math.round(data.quotaRemaining * 100)}%
                 </span>
               </div>
-              <div className="w-full h-1 bg-gray-700/50 rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${quotaBarColor}`}
                   style={{ width: `${Math.round(data.quotaRemaining * 100)}%` }}
@@ -111,12 +111,12 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
 
           {/* Existing fields */}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Latency EMA</span>
-            <span className="text-gray-400">{(data.latencyEmaMs / 1000).toFixed(1)}s</span>
+            <span className="text-muted-foreground">Latency EMA</span>
+            <span className="text-muted-foreground">{(data.latencyEmaMs / 1000).toFixed(1)}s</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Success</span>
-            <span className="text-gray-400">{Math.round(data.successRate)}%</span>
+            <span className="text-muted-foreground">Success</span>
+            <span className="text-muted-foreground">{Math.round(data.successRate)}%</span>
           </div>
 
           {latencyData.length >= 2 && (
@@ -124,7 +124,7 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
           )}
         </div>
       ) : (
-        <p className="text-sm text-gray-500">No data yet</p>
+        <p className="text-sm text-muted-foreground">No data yet</p>
       )}
     </div>
   );
@@ -134,7 +134,7 @@ function ProviderHealthPanelInner() {
   const healthData = useProviderHealth();
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Provider Health
       </h2>

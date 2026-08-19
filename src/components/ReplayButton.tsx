@@ -58,7 +58,7 @@ export default function ReplayButton({ executionId, profileId, disabled }: Repla
 
   if (state === "confirming" || state === "loading") {
     return (
-      <span className="inline-flex items-center gap-2 text-xs text-gray-300">
+      <span className="inline-flex items-center gap-2 text-xs text-foreground">
         <span>Replay this execution?</span>
         <button
           onClick={handleConfirm}
@@ -70,7 +70,7 @@ export default function ReplayButton({ executionId, profileId, disabled }: Repla
         <button
           onClick={handleDismiss}
           disabled={state === "loading"}
-          className="text-gray-500 hover:text-gray-300 disabled:opacity-50"
+          className="text-muted-foreground hover:text-foreground disabled:opacity-50"
         >
           Dismiss
         </button>

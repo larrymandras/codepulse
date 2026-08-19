@@ -108,7 +108,7 @@ export function ObsidianGraph({ data }: ObsidianGraphProps) {
       linkColorFn={linkColorFn}
       linkWidthFn={linkWidthFn}
       nodeRelSize={1}
-      className="w-full h-[600px] border border-[#00ffcc]/20 rounded-xl overflow-hidden bg-gray-950 shadow-[0_0_30px_rgba(0,255,204,0.1)] relative"
+      className="w-full h-[600px] border border-[var(--hairline-strong)] rounded-xl overflow-hidden bg-background shadow-[0_0_30px_rgba(0,255,204,0.1)] relative"
     />
   );
 }

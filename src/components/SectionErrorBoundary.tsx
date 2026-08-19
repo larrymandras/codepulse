@@ -35,22 +35,22 @@ export default class SectionErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-gray-800/50 border border-red-500/30 rounded-xl p-4">
+        <div className="bg-[var(--status-error)]/10 border border-[var(--status-error)]/30 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center shrink-0">
-              <span className="text-red-400 text-base">!</span>
+            <div className="w-8 h-8 rounded-full bg-[var(--status-error)]/10 border border-[var(--status-error)]/30 flex items-center justify-center shrink-0">
+              <span className="text-[var(--status-error)] text-base">!</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-base text-gray-300">
+              <p className="text-base text-foreground">
                 {this.props.name ? `${this.props.name} failed to load` : "Something went wrong"}
               </p>
-              <p className="text-sm text-gray-500 truncate mt-0.5">
+              <p className="text-sm text-muted-foreground truncate mt-0.5">
                 {this.state.error?.message || "An unexpected error occurred."}
               </p>
             </div>
             <button
               onClick={this.handleRetry}
-              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-sm text-gray-200 rounded-lg transition-colors shrink-0"
+              className="px-3 py-1.5 bg-muted hover:bg-[var(--surface-3)] text-sm text-foreground rounded-lg transition-colors shrink-0"
             >
               Retry
             </button>

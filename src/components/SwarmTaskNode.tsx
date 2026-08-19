@@ -54,9 +54,9 @@ const stateBorder: Record<string, string> = {
   running: "border-cyan-400/60",
   verifying: "border-primary/70",
   done: "border-primary/30",
-  failed: "border-[#ef4444]/60",
-  verify_rejected: "border-[#ef4444]/60",
-  cancelled: "border-[#f59e0b]/50",
+  failed: "border-(--status-error)/60",
+  verify_rejected: "border-(--status-error)/60",
+  cancelled: "border-(--status-warn)/50",
 };
 
 // 8-state glow/shadow map
@@ -90,9 +90,9 @@ const stateDot: Record<string, string> = {
   running: "bg-cyan-400",
   verifying: "bg-violet-400",
   done: "bg-primary/80",
-  failed: "bg-[#ef4444]",
-  verify_rejected: "bg-[#ef4444]",
-  cancelled: "bg-[#f59e0b]/70",
+  failed: "bg-(--status-error)",
+  verify_rejected: "bg-(--status-error)",
+  cancelled: "bg-(--status-warn)/70",
 };
 
 // 8-state icon map (Lucide icons, 14px h-3.5 w-3.5)
@@ -102,9 +102,9 @@ const stateIconColor: Record<string, string> = {
   running: "text-cyan-400",
   verifying: "text-violet-400",
   done: "text-primary/70",
-  failed: "text-[#ef4444]",
-  verify_rejected: "text-[#ef4444]",
-  cancelled: "text-[#f59e0b]/80",
+  failed: "text-(--status-error)",
+  verify_rejected: "text-(--status-error)",
+  cancelled: "text-(--status-warn)/80",
 };
 
 // 8-state label map (UI-SPEC Copywriting Contract + cancelled)
@@ -183,7 +183,7 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
       <Handle
         type="target"
         position={Position.Top}
-        className="!bg-gray-500 !w-2 !h-2 !border-background"
+        className="!bg-muted-foreground !w-2 !h-2 !border-background"
       />
 
       {/* Top row: state icon + subtask description */}
@@ -229,7 +229,7 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!bg-gray-500 !w-2 !h-2 !border-background"
+        className="!bg-muted-foreground !w-2 !h-2 !border-background"
       />
     </div>
   );

@@ -16,11 +16,11 @@ export default function RecentGitActivity() {
 
   if (commits.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+        <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
           Recent Git Activity
         </h2>
-        <p className="text-base text-gray-500 py-4 text-center">
+        <p className="text-base text-muted-foreground py-4 text-center">
           No git commits recorded yet
         </p>
       </div>
@@ -28,8 +28,8 @@ export default function RecentGitActivity() {
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+      <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
         Recent Git Activity
       </h2>
       <ScrollArea className="h-[400px] pr-4">
@@ -41,7 +41,7 @@ export default function RecentGitActivity() {
           return (
             <div
               key={c._id}
-              className="flex items-start gap-3 bg-gray-900/30 rounded-lg px-4 py-2.5"
+              className="flex items-start gap-3 bg-background/30 rounded-lg px-4 py-2.5"
             >
               <div
                 className={`mt-1 w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
@@ -57,15 +57,15 @@ export default function RecentGitActivity() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-200 truncate">{c.message}</p>
-                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                <p className="text-sm text-foreground truncate">{c.message}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                   <span className="font-mono">
                     {c.sha?.slice(0, 7) ?? "\u2014"}
                   </span>
                   <span>&middot;</span>
                   <span>{c.branch}</span>
                   <span>&middot;</span>
-                  <span className="text-gray-400">{c.author}</span>
+                  <span className="text-muted-foreground">{c.author}</span>
                   <span>&middot;</span>
                   <span>
                     {c.filesChanged} file{c.filesChanged !== 1 ? "s" : ""}

@@ -13,16 +13,16 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
 
   if (result === undefined) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <p className="text-sm text-gray-500 text-center py-2">Loading capabilities...</p>
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4">
+        <p className="text-sm text-muted-foreground text-center py-2">Loading capabilities...</p>
       </div>
     );
   }
 
   if (result === null) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <p className="text-sm text-gray-500 text-center py-2">No capabilities snapshot for this session</p>
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4">
+        <p className="text-sm text-muted-foreground text-center py-2">No capabilities snapshot for this session</p>
       </div>
     );
   }
@@ -43,17 +43,17 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
   const scannedDate = new Date(result.scannedAt * 1000).toLocaleString();
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl">
+    <div className="bg-card/50 border border-border/50 rounded-xl">
       {/* Collapsible header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-700/20 rounded-xl transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--surface-3)]/20 rounded-xl transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-base font-semibold text-gray-300">Session Capabilities</span>
-          <span className="text-sm text-gray-500">Scanned {scannedDate}</span>
+          <span className="text-base font-semibold text-foreground">Session Capabilities</span>
+          <span className="text-sm text-muted-foreground">Scanned {scannedDate}</span>
         </div>
-        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
 
       {expanded && (
@@ -92,7 +92,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                   >
                     {s.name}
                     {s.status && s.status !== "connected" && (
-                      <span className="ml-1 text-gray-500">({s.status})</span>
+                      <span className="ml-1 text-muted-foreground">({s.status})</span>
                     )}
                   </span>
                 ))}
@@ -193,8 +193,8 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-sm font-mono text-gray-300 mt-0.5 truncate" title={value}>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-sm font-mono text-foreground mt-0.5 truncate" title={value}>
         {value}
       </p>
     </div>
@@ -204,7 +204,7 @@ function Field({ label, value }: { label: string; value: string }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-sm font-medium text-gray-400 mb-1.5">{title}</p>
+      <p className="text-sm font-medium text-muted-foreground mb-1.5">{title}</p>
       {children}
     </div>
   );
@@ -216,12 +216,12 @@ function RawSnapshot({ data }: { data: Record<string, any> }) {
     <div>
       <button
         onClick={() => setShow(!show)}
-        className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         {show ? "Hide" : "Show"} raw snapshot
       </button>
       {show && (
-        <pre className="mt-2 p-3 bg-gray-900/60 rounded-lg text-sm text-gray-400 font-mono max-h-64 overflow-auto whitespace-pre-wrap break-all">
+        <pre className="mt-2 p-3 bg-background/60 rounded-lg text-sm text-muted-foreground font-mono max-h-64 overflow-auto whitespace-pre-wrap break-all">
           {JSON.stringify(data, null, 2)}
         </pre>
       )}

@@ -31,14 +31,14 @@ export default function PhaseProgressBars({ phases }: { phases: PhaseData[] }) {
 
   if (sorted.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 text-center text-gray-500 text-base">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4 text-center text-muted-foreground text-base">
         No phase data available
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4 space-y-4">
       <h3 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Phase Progress</h3>
       {sorted.map((p) => {
         const isComplete = p.total > 0 && p.completed === p.total;
@@ -49,16 +49,16 @@ export default function PhaseProgressBars({ phases }: { phases: PhaseData[] }) {
           <div key={p.phase}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className="text-base text-gray-200 font-medium">{p.phase}</span>
+                <span className="text-base text-foreground font-medium">{p.phase}</span>
                 {isComplete && (
                   <span className="text-green-400 text-sm">&#10003;</span>
                 )}
               </div>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {p.completed}/{p.total} ({p.avgProgress}%)
               </span>
             </div>
-            <div className="w-full bg-gray-700/50 rounded-full h-2 flex overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-2 flex overflow-hidden">
               {isComplete ? (
                 <div className="bg-green-500 h-2 rounded-full w-full" />
               ) : (

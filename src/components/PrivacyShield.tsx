@@ -25,7 +25,7 @@ export default function PrivacyShield() {
             ? "bg-red-600/20 text-red-400 hover:bg-red-600/30"
             : enabled
               ? "bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30"
-              : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+              : "text-muted-foreground hover:text-foreground hover:bg-[var(--surface-3)]"
       }`}
     >
       {enabled || level !== "off" ? (

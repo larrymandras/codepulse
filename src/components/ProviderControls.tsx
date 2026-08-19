@@ -100,7 +100,7 @@ function SortableProvider({
         className={`text-xs font-mono uppercase px-1.5 py-0.5 ${
           billing === "api"
             ? "bg-yellow-500/20 text-yellow-400"
-            : "bg-gray-700/50 text-gray-400"
+            : "bg-muted text-muted-foreground"
         }`}
       >
         {billing}
@@ -119,7 +119,7 @@ function SortableProvider({
         >
           <div
             className={`w-9 h-5 rounded-full transition-colors relative ${
-              enabled ? "bg-indigo-600" : "bg-gray-700"
+              enabled ? "bg-indigo-600" : "bg-muted"
             }`}
           >
             <div

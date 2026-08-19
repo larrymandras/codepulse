@@ -42,7 +42,7 @@ function severityBadgeClass(severity: string): string {
     case "LOW":
       return "bg-(--status-ok) text-(--foreground)";
     default:
-      return "bg-gray-700/40 text-(--muted-foreground)";
+      return "bg-muted text-(--muted-foreground)";
   }
 }
 
@@ -104,15 +104,15 @@ export function ScanResultsPanel({
         aria-expanded={expanded}
         aria-label={`Security findings for ${toolName}`}
       >
-        <ShieldAlert className="h-4 w-4 text-gray-500 shrink-0" />
+        <ShieldAlert className="h-4 w-4 text-(--muted-foreground) shrink-0" />
         <RiskLevelBadge severity={topSeverity} />
         <span className="text-xs text-(--muted-foreground)">
           {findings.length} finding{findings.length !== 1 ? "s" : ""}
         </span>
         {expanded ? (
-          <ChevronDown className="h-4 w-4 text-gray-500" />
+          <ChevronDown className="h-4 w-4 text-(--muted-foreground)" />
         ) : (
-          <ChevronRight className="h-4 w-4 text-gray-500" />
+          <ChevronRight className="h-4 w-4 text-(--muted-foreground)" />
         )}
       </button>
 

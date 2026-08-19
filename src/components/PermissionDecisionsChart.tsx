@@ -31,11 +31,11 @@ export default function PermissionDecisionsChart() {
 
   if (total === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+        <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
           Permission Decisions<InfoTooltip text="Tool permission decisions: accept vs reject ratio and breakdown by decision source" />
         </h2>
-        <p className="text-base text-gray-500 py-4 text-center">
+        <p className="text-base text-muted-foreground py-4 text-center">
           No permission decision data yet
         </p>
       </div>
@@ -50,9 +50,9 @@ export default function PermissionDecisionsChart() {
   const sourceData = Object.entries(bySource).map(([label, value]) => ({ label, value }));
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
-      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide">
+      <h2 className="text-base font-semibold text-foreground uppercase tracking-wide">
         Permission Decisions
       </h2>
         <Link to="/tools" className="text-primary text-xs font-mono tracking-widest uppercase hover:underline">View in Tools →</Link>
@@ -60,19 +60,19 @@ export default function PermissionDecisionsChart() {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-sm text-gray-400 mb-2 text-center">
+          <p className="text-sm text-muted-foreground mb-2 text-center">
             Accept vs Reject
           </p>
           <FlexBarChart data={decisionData} height={180} />
         </div>
 
         <div>
-          <p className="text-sm text-gray-400 mb-2 text-center">By Source</p>
+          <p className="text-sm text-muted-foreground mb-2 text-center">By Source</p>
           <FlexBarChart data={sourceData} height={180} />
         </div>
       </div>
 
-      <div className="mt-3 text-center text-sm text-gray-500">
+      <div className="mt-3 text-center text-sm text-muted-foreground">
         {total} total decisions &middot; {((acceptCount / total) * 100).toFixed(1)}% accepted
       </div>
     </div>

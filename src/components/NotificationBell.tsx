@@ -44,7 +44,7 @@ export default function NotificationBell() {
       <button
         onClick={() => setOpen(!open)}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-        className="relative p-1.5 text-gray-400 hover:text-gray-200 transition-colors"
+        className="relative p-1.5 text-muted-foreground hover:text-foreground transition-colors"
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
@@ -55,23 +55,23 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-popover border border-border rounded-xl shadow-xl z-50 overflow-hidden">
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="p-4 text-base text-gray-500 text-center">No notifications</p>
+              <p className="p-4 text-base text-muted-foreground text-center">No notifications</p>
             ) : (
               notifications.map((n: any) => (
                 <button
                   key={n._id}
                   onClick={() => markRead({ id: n._id })}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-800/50 transition-colors border-b border-gray-800 last:border-0"
+                  className="w-full text-left px-4 py-3 hover:bg-[var(--surface-3)]/50 transition-colors border-b border-border last:border-0"
                 >
                   <div className="flex items-start gap-2">
-                    <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${severityDot[n.severity] ?? "bg-gray-500"}`} />
+                    <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${severityDot[n.severity] ?? "bg-muted-foreground"}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-base text-gray-200 truncate">{n.title}</p>
-                      <p className="text-sm text-gray-400 truncate">{n.message}</p>
-                      <p className="text-sm text-gray-600 mt-0.5">{relativeTime(n.createdAt)}</p>
+                      <p className="text-base text-foreground truncate">{n.title}</p>
+                      <p className="text-sm text-muted-foreground truncate">{n.message}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{relativeTime(n.createdAt)}</p>
                     </div>
                   </div>
                 </button>
@@ -79,16 +79,16 @@ export default function NotificationBell() {
             )}
           </div>
           {notifications.length > 0 && (
-            <div className="flex items-center justify-between px-4 py-2 border-t border-gray-800 bg-gray-900">
+            <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-popover">
               <button
                 onClick={() => markAllRead({})}
-                className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Mark all read
               </button>
               <button
                 onClick={() => clearAll({})}
-                className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Clear all
               </button>

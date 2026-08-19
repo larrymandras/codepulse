@@ -22,26 +22,26 @@ export default function RateLimitGauges({ profiles }: RateLimitGaugesProps) {
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Rate Limit Usage</h2>
       {gauges.length === 0 ? (
-        <p className="text-base text-gray-500 py-6 text-center">
+        <p className="text-base text-muted-foreground py-6 text-center">
           No rate limit data available
         </p>
       ) : (
         <div className="space-y-3">
           {gauges.map(({ profileId, pct }) => (
             <div key={profileId} className="flex items-center gap-3">
-              <span className="text-sm text-gray-400 font-mono w-32 truncate">
+              <span className="text-sm text-muted-foreground font-mono w-32 truncate">
                 {profileId}
               </span>
-              <div className="flex-1 bg-gray-900/50 rounded-full h-3 overflow-hidden">
+              <div className="flex-1 bg-background/50 rounded-full h-3 overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${getBarColor(pct)}`}
                   style={{ width: `${Math.min(pct, 100)}%` }}
                 />
               </div>
-              <span className="text-sm text-gray-300 w-10 text-right font-semibold">
+              <span className="text-sm text-foreground w-10 text-right font-semibold">
                 {pct.toFixed(0)}%
               </span>
             </div>

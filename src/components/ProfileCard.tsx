@@ -82,7 +82,7 @@ export default function ProfileCard({
   const meta = PROFILE_META[profileId];
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <div className="flex items-center gap-3 mb-1">
         {meta ? (
           <div
@@ -93,16 +93,16 @@ export default function ProfileCard({
           </div>
         ) : (
           <span
-            className={`h-2 w-2 rounded-full flex-shrink-0 ${hasRecentActivity ? "bg-green-400" : "bg-gray-600"}`}
+            className={`h-2 w-2 rounded-full flex-shrink-0 ${hasRecentActivity ? "bg-green-400" : "bg-muted-foreground"}`}
             aria-hidden="true"
           />
         )}
         <div className="min-w-0">
-          <h3 className="text-base font-semibold text-gray-200 truncate">
+          <h3 className="text-base font-semibold text-foreground truncate">
             {meta?.name ?? profileId}
           </h3>
           {meta?.description && (
-            <p className="text-xs text-gray-500 truncate">{meta.description}</p>
+            <p className="text-xs text-muted-foreground truncate">{meta.description}</p>
           )}
         </div>
         {!meta && (
@@ -110,30 +110,30 @@ export default function ProfileCard({
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="bg-gray-900/50 rounded-lg p-2">
-          <p className="text-gray-500">Cost Today</p>
-          <p className="text-gray-200 font-semibold">${costToday.toFixed(4)}</p>
+        <div className="bg-background/50 rounded-lg p-2">
+          <p className="text-muted-foreground">Cost Today</p>
+          <p className="text-foreground font-semibold">${costToday.toFixed(4)}</p>
         </div>
-        <div className="bg-gray-900/50 rounded-lg p-2">
-          <p className="text-gray-500">Messages</p>
-          <p className="text-gray-200 font-semibold">{messageCount}</p>
+        <div className="bg-background/50 rounded-lg p-2">
+          <p className="text-muted-foreground">Messages</p>
+          <p className="text-foreground font-semibold">{messageCount}</p>
         </div>
-        <div className="bg-gray-900/50 rounded-lg p-2">
-          <p className="text-gray-500">Rate Limit</p>
-          <p className="text-gray-200 font-semibold">{rateLimitPct.toFixed(0)}%</p>
+        <div className="bg-background/50 rounded-lg p-2">
+          <p className="text-muted-foreground">Rate Limit</p>
+          <p className="text-foreground font-semibold">{rateLimitPct.toFixed(0)}%</p>
         </div>
-        <div className="bg-gray-900/50 rounded-lg p-2">
-          <p className="text-gray-500">Active Jobs</p>
-          <p className="text-gray-200 font-semibold">{activeJobCount}</p>
+        <div className="bg-background/50 rounded-lg p-2">
+          <p className="text-muted-foreground">Active Jobs</p>
+          <p className="text-foreground font-semibold">{activeJobCount}</p>
         </div>
       </div>
 
       {/* Extended info section */}
-      <div className="border-t border-gray-700/50 mt-3 pt-3 space-y-2 text-sm">
+      <div className="border-t border-border/50 mt-3 pt-3 space-y-2 text-sm">
         {/* Channel health */}
         {channels && channels.length > 0 ? (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-gray-500">Channels:</span>
+            <span className="text-muted-foreground">Channels:</span>
             {channels.map((ch) => {
               const isActive = ch.status === "active";
               return (
@@ -143,7 +143,7 @@ export default function ProfileCard({
                       isActive ? "bg-green-400" : "bg-red-400"
                     }`}
                   />
-                  <span className={isActive ? "text-gray-300" : "text-gray-500"}>
+                  <span className={isActive ? "text-foreground" : "text-muted-foreground"}>
                     {ch.type}
                   </span>
                 </span>
@@ -152,16 +152,16 @@ export default function ProfileCard({
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Channels:</span>
-            <span className="text-gray-600">none configured</span>
+            <span className="text-muted-foreground">Channels:</span>
+            <span className="text-muted-foreground">none configured</span>
           </div>
         )}
 
         {/* Agent count */}
         {agentCount !== undefined && (
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Agents:</span>
-            <span className="text-gray-300">
+            <span className="text-muted-foreground">Agents:</span>
+            <span className="text-foreground">
               {agentCount} agent{agentCount !== 1 ? "s" : ""}
               {runningAgentCount !== undefined && runningAgentCount > 0 && (
                 <span className="text-green-400 ml-1">
@@ -176,12 +176,12 @@ export default function ProfileCard({
         {budgetLimit > 0 && (
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-gray-500">Budget ({budgetPeriod})</span>
-              <span className="text-gray-300">
+              <span className="text-muted-foreground">Budget ({budgetPeriod})</span>
+              <span className="text-foreground">
                 ${budgetSpent.toFixed(2)} / ${budgetLimit.toFixed(2)}
               </span>
             </div>
-            <div className="h-1.5 bg-gray-900/50 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-background/50 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   budgetPct > 90

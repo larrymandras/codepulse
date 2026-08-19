@@ -2,11 +2,11 @@ const BADGE_STYLES: Record<string, { bg: string; text: string; label: string }> 
   native: { bg: "bg-emerald-500/10", text: "text-emerald-400", label: "Native" },
   bridge: { bg: "bg-blue-500/10", text: "text-blue-400", label: "Bridge" },
   cc: { bg: "bg-amber-500/10", text: "text-amber-400", label: "CC" },
-  catalog: { bg: "bg-gray-500/10", text: "text-gray-500", label: "Catalog" },
+  catalog: { bg: "bg-muted", text: "text-muted-foreground", label: "Catalog" },
   "claude-code": { bg: "bg-purple-500/10", text: "text-purple-400", label: "Claude Code" },
   "claude-code:plugin": { bg: "bg-purple-500/10", text: "text-purple-300", label: "Plugin" },
-  "claude-code:available": { bg: "bg-slate-500/10", text: "text-slate-400", label: "Dormant" },
-  unknown: { bg: "bg-gray-500/10", text: "text-gray-500", label: "Unknown" },
+  "claude-code:available": { bg: "bg-muted", text: "text-muted-foreground", label: "Dormant" },
+  unknown: { bg: "bg-muted", text: "text-muted-foreground", label: "Unknown" },
 };
 
 const PROJECT_STYLE = { bg: "bg-cyan-500/10", text: "text-cyan-400", label: "Project" };

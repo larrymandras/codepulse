@@ -21,11 +21,11 @@ export default function SupabasePanel() {
 
   const renderSection = (title: string, records: any[]) => (
     <div>
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
         {title}
       </h3>
       {records.length === 0 ? (
-        <p className="text-base text-gray-500 py-4 text-center">
+        <p className="text-base text-muted-foreground py-4 text-center">
           No health checks recorded
         </p>
       ) : (
@@ -33,10 +33,10 @@ export default function SupabasePanel() {
           {records.map((s: any) => (
             <div
               key={s._id}
-              className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-3"
+              className="flex items-center justify-between bg-background/50 rounded-lg px-4 py-3"
             >
               <div className="flex items-center gap-3">
-                <span className="text-base font-mono text-gray-200">
+                <span className="text-base font-mono text-foreground">
                   {s.service}
                 </span>
                 <span
@@ -45,7 +45,7 @@ export default function SupabasePanel() {
                   {s.status}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 {s.responseTimeMs != null && <span>{s.responseTimeMs}ms</span>}
                 <span>{formatTimestamp(s.checkedAt)}</span>
               </div>
@@ -57,7 +57,7 @@ export default function SupabasePanel() {
   );
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Supabase Health<InfoTooltip text="Supabase service health: database, auth, storage, realtime, and edge functions" />
       </h2>

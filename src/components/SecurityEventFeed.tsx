@@ -18,22 +18,22 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
   const acknowledgeEvent = useMutation(api.security.acknowledgeEvent);
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Security Event Feed<InfoTooltip text="Security events with severity, description, source, and acknowledge actions" /></h2>
       {events.length === 0 ? (
-        <p className="text-base text-gray-500 py-8 text-center">No security events recorded</p>
+        <p className="text-base text-muted-foreground py-8 text-center">No security events recorded</p>
       ) : (
         <div className="max-h-96 overflow-y-auto space-y-1">
           {events.map((e: any, i: number) => {
-            const style = severityStyles[e.severity] ?? { badge: "text-gray-400 bg-gray-400/10", icon: "?" };
+            const style = severityStyles[e.severity] ?? { badge: "text-muted-foreground bg-muted", icon: "?" };
             return (
               <div
                 key={e._id ?? i}
                 className={`flex items-center gap-3 px-2 py-1.5 rounded text-sm ${
-                  i % 2 === 0 ? "bg-gray-800/30" : ""
+                  i % 2 === 0 ? "bg-background/30" : ""
                 }`}
               >
-                <span className="text-gray-600 font-mono whitespace-nowrap">
+                <span className="text-muted-foreground font-mono whitespace-nowrap">
                   {formatTimestamp(e.timestamp)}
                 </span>
                 <span className={`px-1.5 py-0.5 rounded font-mono font-bold ${style.badge}`}>
@@ -42,9 +42,9 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
                 <span className={`px-2 py-0.5 rounded font-medium ${style.badge}`}>
                   {e.severity}
                 </span>
-                <span className="font-mono text-gray-400">{e.eventType}</span>
-                <span className="text-gray-300 truncate flex-1 min-w-0">{e.description}</span>
-                <span className="text-gray-500 whitespace-nowrap">{e.source}</span>
+                <span className="font-mono text-muted-foreground">{e.eventType}</span>
+                <span className="text-foreground truncate flex-1 min-w-0">{e.description}</span>
+                <span className="text-muted-foreground whitespace-nowrap">{e.source}</span>
                 {e._id && (
                   e.mitigated ? (
                     <span className="text-xs text-green-500/70 whitespace-nowrap">Reviewed</span>

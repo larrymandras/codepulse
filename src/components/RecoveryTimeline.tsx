@@ -14,7 +14,7 @@ export default function RecoveryTimeline({ events }: RecoveryTimelineProps) {
       failed: "text-red-400 bg-red-400/10",
       pending: "text-yellow-400 bg-yellow-400/10",
     };
-    return styles[outcome] ?? "text-gray-400 bg-gray-400/10";
+    return styles[outcome] ?? "text-muted-foreground bg-muted";
   };
 
   const actionIcon = (action: string) => {
@@ -28,13 +28,13 @@ export default function RecoveryTimeline({ events }: RecoveryTimelineProps) {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-5">
+      <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
         Recovery Timeline
       </h2>
 
       {events.length === 0 ? (
-        <p className="text-gray-500 text-base text-center py-4">
+        <p className="text-muted-foreground text-base text-center py-4">
           No recovery events recorded
         </p>
       ) : (
@@ -45,13 +45,13 @@ export default function RecoveryTimeline({ events }: RecoveryTimelineProps) {
               <div key={e._id}>
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : e._id)}
-                  className="w-full text-left bg-gray-900/30 hover:bg-gray-900/50 rounded-lg px-4 py-2.5 transition-colors"
+                  className="w-full text-left bg-background/30 hover:bg-background/50 rounded-lg px-4 py-2.5 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-500 font-mono shrink-0 w-20">
+                    <span className="text-sm text-muted-foreground font-mono shrink-0 w-20">
                       {formatTimestamp(e.timestamp)}
                     </span>
-                    <span className="text-base text-gray-200 font-mono truncate flex-1">
+                    <span className="text-base text-foreground font-mono truncate flex-1">
                       {e.component}
                     </span>
                     <span className="text-base shrink-0" title={e.action}>
@@ -62,21 +62,21 @@ export default function RecoveryTimeline({ events }: RecoveryTimelineProps) {
                     >
                       {e.outcome}
                     </span>
-                    <span className="text-gray-600 text-sm shrink-0">
+                    <span className="text-muted-foreground text-sm shrink-0">
                       {isExpanded ? "\u25B2" : "\u25BC"}
                     </span>
                   </div>
                 </button>
                 {isExpanded && (
-                  <div className="ml-4 border-l border-gray-700/50 pl-4 py-2 text-base space-y-1">
-                    <p className="text-gray-400">
-                      <span className="text-gray-500">Issue:</span> {e.issue}
+                  <div className="ml-4 border-l border-border/50 pl-4 py-2 text-base space-y-1">
+                    <p className="text-muted-foreground">
+                      <span className="text-muted-foreground">Issue:</span> {e.issue}
                     </p>
-                    <p className="text-gray-400">
-                      <span className="text-gray-500">Action:</span> {e.action}
+                    <p className="text-muted-foreground">
+                      <span className="text-muted-foreground">Action:</span> {e.action}
                     </p>
                     {e.details && (
-                      <pre className="text-sm text-gray-500 bg-gray-900/50 rounded p-2 overflow-x-auto">
+                      <pre className="text-sm text-muted-foreground bg-background/50 rounded p-2 overflow-x-auto">
                         {typeof e.details === "string"
                           ? e.details
                           : JSON.stringify(e.details, null, 2)}
