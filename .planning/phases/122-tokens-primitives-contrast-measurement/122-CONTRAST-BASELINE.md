@@ -255,6 +255,43 @@ different figure from a different measurement point again, and is neither more n
 BEFORE's total was; the 234 figure was retired as a comparison point in the BEFORE section and
 stays retired here.
 
+## READ THIS BEFORE QUOTING ANY NODE-LEVEL FIGURE (added 2026-08-19)
+
+**The raw node totals are not reproducible, and the raw node-level delta is inside the noise.**
+
+`DashboardLayout.tsx:607-620`'s `SYS:`/`LAT:` telemetry badge is gated on live Convex data arriving
+before the scan. It is a `color-contrast` violator, it renders on EVERY page, and its node count
+swings purely on data-arrival timing between independently-started `dev:noauth` sessions:
+
+| capture | color-contrast nodes | of which SYS/LAT badge | **excluding badge** |
+|---|---|---|---|
+| `a11y-before/` (frozen control) | 214 | 26 | **188** |
+| `a11y-after-preramp/` | 205 | 17 | **188** |
+| `a11y-after-prearia/` | 194 | 5 | **189** |
+| `a11y-after/` (current) | 205 | 15 | **190** |
+
+The badge alone accounts for a **21-node swing** (5 to 26) with no code change. Any raw node delta
+smaller than that is measuring scan timing, not the codebase.
+
+**Consequence — a correction.** The raw BEFORE→AFTER contrast delta reads `214 → 205` (−9) and was
+briefly described as an improvement. It is not. Excluding the badge the same delta is
+**188 → 190 (+2)** — flat, marginally worse, and well inside run-to-run variance either way. Phase
+122 did not measurably change the contrast node count, which is consistent with its scope: it never
+set out to.
+
+**What Phase 123 should plan against.** Use the **ex-badge** column. Across four independently
+captured sessions it reads 188 / 188 / 189 / 190 — stable to within ±1 node, i.e. reproducible in
+exactly the way the raw total is not. Excluding one known timing-gated element recovers
+determinism without mocking the backend or rewriting the harness.
+
+**Object-level totals are unaffected** by this confound and remain safe to quote: the badge changes
+how many NODES a `color-contrast` object carries, never whether the rule fires. `color-contrast`
+is 20 objects in every capture.
+
+**Do not "fix" this by re-running until the numbers agree.** The variance is real and will recur on
+every capture; the correct handling is to exclude the gated element and say so, or to seed the
+backend state before scanning.
+
 ## Delta (AFTER vs. BEFORE)
 
 Computed as **before − after**. A **positive** value means AFTER has fewer violations than BEFORE
