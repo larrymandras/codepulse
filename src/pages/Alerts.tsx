@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MetricCard from "../components/MetricCard";
 import { useGroupedAlerts, useAllAlertsPaginated, useAlertCounts } from "../hooks/useAlerts";
+import { useMetricState } from "../hooks/useMetricState";
 import AlertRulesEngine from "../components/AlertRulesEngine";
 import LoadMoreButton from "../components/LoadMoreButton";
 import { AlertLifecycleActions } from "../components/AlertLifecycleActions";
@@ -133,6 +134,11 @@ export default function Alerts() {
   const groupedAlerts = useGroupedAlerts();
   const { alerts: allAlerts, status: alertStatus, loadMore: loadMoreAlerts } = useAllAlertsPaginated();
   const counts = useAlertCounts();
+  // D-14: useAlertCounts() collapses `undefined` (loading) into a zeroed
+  // default shape, so a raw duplicate of the same query (same function +
+  // args, shared Convex client cache) recovers the loading signal.
+  const countsRaw = useQuery(api.alerts.countBySeverity);
+  const countsState = useMetricState(countsRaw, undefined, {}).state;
 
   const baseAlerts = showAll ? allAlerts : groupedAlerts;
   const filtered =
@@ -155,10 +161,10 @@ export default function Alerts() {
 
       {/* Severity Count Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Critical" value={counts.critical} numericValue={counts.critical} trend={counts.critical > 0 ? "down" : "neutral"} severity="critical" />
-        <MetricCard label="Error" value={counts.error} numericValue={counts.error} trend={counts.error > 0 ? "down" : "neutral"} severity="error" />
-        <MetricCard label="Warning" value={counts.warning} numericValue={counts.warning} trend={counts.warning > 0 ? "down" : "neutral"} severity="warning" />
-        <MetricCard label="Info" value={counts.info} numericValue={counts.info} trend="neutral" severity="info" />
+        <MetricCard label="Critical" value={counts.critical} numericValue={counts.critical} trend={counts.critical > 0 ? "down" : "neutral"} severity="critical" state={countsState} />
+        <MetricCard label="Error" value={counts.error} numericValue={counts.error} trend={counts.error > 0 ? "down" : "neutral"} severity="error" state={countsState} />
+        <MetricCard label="Warning" value={counts.warning} numericValue={counts.warning} trend={counts.warning > 0 ? "down" : "neutral"} severity="warning" state={countsState} />
+        <MetricCard label="Info" value={counts.info} numericValue={counts.info} trend="neutral" severity="info" state={countsState} />
       </div>
 
       {/* Filter Controls */}

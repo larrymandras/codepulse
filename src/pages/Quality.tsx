@@ -168,13 +168,21 @@ export default function Quality() {
         </div>
       ) : (
         <>
+          {/* state="ready" is justified by the `!hasAnyData` guard above --
+              this branch only renders once at least one persona's sparkline
+              holds real data. */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard label="Personas Judged" value={personasWithDataInRange} />
-            <MetricCard label="Sessions Judged (range)" value={sessionsJudgedInRange} />
+            <MetricCard label="Personas Judged" value={personasWithDataInRange} state="ready" />
+            <MetricCard
+              label="Sessions Judged (range)"
+              value={sessionsJudgedInRange}
+              state="ready"
+            />
             <MetricCard
               label="Active Regressions"
               value={activeRegressions}
               severity={activeRegressions > 0 ? "critical" : "default"}
+              state="ready"
             />
             <MetricCard
               label="Avg Overall Score"
@@ -182,6 +190,7 @@ export default function Quality() {
               numericValue={avgOverall}
               threshold={{ ok: 0.8, warn: 0.5, invertDirection: true }}
               format={(v) => `${Math.round(v * 100)}/100`}
+              state="ready"
             />
           </div>
 

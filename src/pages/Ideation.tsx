@@ -11,6 +11,7 @@ import { TaskCreateForm } from "../components/TaskCreateForm";
 import { findingToTaskDefaults } from "../lib/findingToTask";
 import type { NewTask } from "../types/kanban";
 import { PageHeader } from "@/components/PageHeader";
+import { useMetricState } from "../hooks/useMetricState";
 
 const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
 type SeverityFilter = (typeof SEVERITY_TABS)[number];
@@ -31,6 +32,9 @@ export default function Ideation() {
 
   const findings = useQuery(api.ideation.listFindings, { dismissed: false }) ?? [];
   const stats = useQuery(api.ideation.findingStats);
+  // D-14: stats is already raw (undefined while loading); one state shared
+  // across all 4 rendered instances of the single severity-cards JSX literal.
+  const statsState = useMetricState(stats, undefined, {}).state;
   const createTask = useMutation(api.tasks.create);
   const updateStatus = useMutation(api.ideation.updateFindingStatus);
   const linkTask = useMutation(api.ideation.linkTask);
@@ -140,6 +144,7 @@ export default function Ideation() {
               label={sev.charAt(0).toUpperCase() + sev.slice(1)}
               value={stats?.[sev] ?? 0}
               trend="neutral"
+              state={statsState}
             />
           ))}
         </div>

@@ -29,6 +29,8 @@ import { useCapabilitySummary } from "../hooks/useCapabilities";
 import { useGoalList } from "../hooks/useSwarmGraph";
 import { buildGalaxy } from "../lib/tool-galaxy";
 import { PageHeader } from "../components/PageHeader";
+import { useMetricState } from "../hooks/useMetricState";
+import type { MetricState } from "../lib/metricState";
 
 // ---------------------------------------------------------------------------
 // Sub-components — each tile is its own small component so the hook and
@@ -37,7 +39,7 @@ import { PageHeader } from "../components/PageHeader";
 
 function ToolGalaxyTile() {
   const navigate = useNavigate();
-  const { tools, mcpServers, edges, kits } = useToolGalaxySources();
+  const { tools, mcpServers, edges, kits, loading } = useToolGalaxySources();
 
   const stats = useMemo(
     () =>
@@ -53,43 +55,53 @@ function ToolGalaxyTile() {
     [tools, mcpServers, edges, kits]
   );
 
+  // D-14: useToolGalaxySources() exposes its own genuine `loading: boolean`.
   return (
     <MetricCard
       label="TOOL GALAXY"
       value={`${pluralize(stats.toolCount, "tool")} · ${pluralize(stats.orphanCount, "orphan")}`}
       onClick={() => navigate("/tool-galaxy")}
+      state={loading ? "loading" : "ready"}
     />
   );
 }
 
 function McpInventoryTile() {
   const navigate = useNavigate();
-  const { mcpServers } = useMcpHealthSources();
+  const { mcpServers, loading } = useMcpHealthSources();
 
   const serverCount = mcpServers.length;
   const errorCount = mcpServers.filter((s) => s.status === "error").length;
 
+  // D-14: useMcpHealthSources() exposes its own genuine `loading: boolean`.
   return (
     <MetricCard
       label="MCP INVENTORY"
       value={`${pluralize(serverCount, "server")} · ${pluralize(errorCount, "error")}`}
       onClick={() => navigate("/mcp-inventory")}
+      state={loading ? "loading" : "ready"}
     />
   );
 }
 
 function KgExplorerTile() {
   const navigate = useNavigate();
-  const { summary } = useKgSummary();
+  const { summary, loading } = useKgSummary();
 
   const entities = summary?.totalEntities ?? 0;
   const triples = summary?.currentTripleCount ?? 0;
+
+  // D-14: `summary === null` means the doc genuinely never arrived (matches
+  // KGSummaryCards.tsx's identical "No KG summary telemetry yet" semantics
+  // off the same underlying query).
+  const state: MetricState = loading ? "loading" : summary === null ? "empty" : "ready";
 
   return (
     <MetricCard
       label="KG EXPLORER"
       value={`${pluralize(entities, "entity", "entities")} · ${pluralize(triples, "triple")}`}
       onClick={() => navigate("/knowledge-graph")}
+      state={state}
     />
   );
 }
@@ -97,6 +109,7 @@ function KgExplorerTile() {
 function CapabilitiesTile() {
   const navigate = useNavigate();
   const summary = useCapabilitySummary();
+  const { state } = useMetricState(summary, undefined, {});
 
   const skills = summary?.skills ?? 0;
   const tools = summary?.tools ?? 0;
@@ -106,6 +119,7 @@ function CapabilitiesTile() {
       label="CAPABILITIES"
       value={`${pluralize(skills, "skill")} · ${pluralize(tools, "tool")}`}
       onClick={() => navigate("/capabilities")}
+      state={state}
     />
   );
 }
@@ -113,6 +127,7 @@ function CapabilitiesTile() {
 function MemoryGalaxyTile() {
   const navigate = useNavigate();
   const overview = useQuery(api.memory.overview);
+  const { state } = useMetricState(overview, undefined, {});
 
   const events = overview?.total ?? 0;
   const agents = overview ? Object.keys(overview.byAgent).length : 0;
@@ -122,6 +137,7 @@ function MemoryGalaxyTile() {
       label="3D MEMORY GALAXY"
       value={`${pluralize(events, "event")} · ${pluralize(agents, "agent")}`}
       onClick={() => navigate("/memory")}
+      state={state}
     />
   );
 }
@@ -129,12 +145,18 @@ function MemoryGalaxyTile() {
 function HiveSwarmTile() {
   const navigate = useNavigate();
   const goals = useGoalList();
+  // D-14: useGoalList() collapses `undefined` (loading) into `[]`, so a raw
+  // duplicate of the same query (same function + args, shared Convex
+  // client cache) recovers the loading signal.
+  const goalsRaw = useQuery(api.swarmTasks.listGoals);
+  const { state } = useMetricState(goalsRaw, undefined, {});
 
   return (
     <MetricCard
       label="HIVE / SWARM"
       value={`${pluralize(goals.length, "goal")}`}
       onClick={() => navigate("/hive")}
+      state={state}
     />
   );
 }

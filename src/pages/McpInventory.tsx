@@ -252,29 +252,36 @@ function McpInventoryBody() {
 
   return (
     <div className="space-y-6">
-      {/* Summary cards */}
+      {/* Summary cards. state="ready" is justified above: this component
+          early-returns its own loading UI (`if (loading) return ...`)
+          before this grid, so `stats` is always resolved by the time it
+          renders. */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <MetricCard label="MCP Servers" value={stats.serverCount} />
+        <MetricCard label="MCP Servers" value={stats.serverCount} state="ready" />
         <MetricCard
           label="Connected"
           value={stats.connectedServers}
           severity="info"
+          state="ready"
         />
         <MetricCard
           label="Errored"
           value={stats.erroredServers}
           severity={stats.erroredServers > 0 ? "error" : "default"}
+          state="ready"
         />
-        <MetricCard label="MCP Tools" value={stats.mcpToolCount} />
+        <MetricCard label="MCP Tools" value={stats.mcpToolCount} state="ready" />
         <MetricCard
           label="Unused Tools"
           value={stats.unusedTools}
           severity={stats.unusedTools > 0 ? "warning" : "default"}
+          state="ready"
         />
         <MetricCard
           label="Pruned"
           value={stats.disabledTools}
           severity={stats.disabledTools > 0 ? "warning" : "default"}
+          state="ready"
         />
       </div>
 

@@ -15,6 +15,7 @@ import {
   useVersionHistory,
 } from "../hooks/useSelfHealing";
 import { PageHeader } from "@/components/PageHeader";
+import { useMetricState } from "@/hooks/useMetricState";
 
 type SelfHealingEventPayload = {
   id?: string;
@@ -38,6 +39,10 @@ export default function SelfHealing() {
   const recoveries = useRecentRecoveries();
   const stats = useUptimeStats();
   const versions = useVersionHistory();
+  // D-14: useUptimeStats() already returns the raw useQuery result
+  // (undefined while loading); the WS overlay only adds to an already-
+  // resolved Convex count, never substitutes for it.
+  const statsState = useMetricState(stats, undefined, {}).state;
   const { subscribeEvent } = useAstridrWS();
   const { flashRef, triggerFlash } = useLiveFlash();
 
@@ -67,10 +72,14 @@ export default function SelfHealing() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Events" value={(stats?.total ?? 0) + wsEvents.length} />
-        <MetricCard label="Resolved" value={stats?.resolved ?? 0} trend="up" />
-        <MetricCard label="Failed" value={stats?.failed ?? 0} trend="down" />
-        <MetricCard label="Pending" value={stats?.pending ?? 0} />
+        <MetricCard
+          label="Total Events"
+          value={(stats?.total ?? 0) + wsEvents.length}
+          state={statsState}
+        />
+        <MetricCard label="Resolved" value={stats?.resolved ?? 0} trend="up" state={statsState} />
+        <MetricCard label="Failed" value={stats?.failed ?? 0} trend="down" state={statsState} />
+        <MetricCard label="Pending" value={stats?.pending ?? 0} state={statsState} />
       </div>
 
       {/* Component Health Grid */}

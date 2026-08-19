@@ -15,6 +15,7 @@ import SessionCapabilities from "../components/SessionCapabilities";
 import { TraceWaterfall } from "../components/TraceWaterfall";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { PageHeader } from "../components/PageHeader";
+import { useMetricState } from "../hooks/useMetricState";
 
 type Tab = "overview" | "timeline" | "files" | "bash" | "errors" | "trace";
 
@@ -42,7 +43,17 @@ export default function SessionDetail() {
   );
 
   const session = useQuery(api.sessions.getById, id ? { sessionId: id } : "skip");
-  const events = useQuery(api.events.listBySession, id ? { sessionId: id, limit: 200 } : "skip") ?? [];
+  // D-14: `session` is already raw (undefined while loading, null if the id
+  // doesn't resolve to a row per `.first()`). `events` collapses `undefined`
+  // to `[]`, so a raw duplicate of the same query recovers the loading
+  // signal, shared across the 3 events-derived cards below.
+  const sessionState = useMetricState(session, undefined, {}).state;
+  const eventsRaw = useQuery(
+    api.events.listBySession,
+    id ? { sessionId: id, limit: 200 } : "skip"
+  );
+  const events = eventsRaw ?? [];
+  const eventsState = useMetricState(eventsRaw, undefined, {}).state;
   const agents = useQuery(api.agents.topology, id ? { sessionId: id } : "skip") ?? [];
   const toolExecutions =
     useQuery(
@@ -98,10 +109,10 @@ export default function SessionDetail() {
           <SessionCapabilities sessionId={id} />
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard label="Events" value={session?.eventCount ?? 0} />
-            <MetricCard label="Tools Used" value={toolCount} />
-            <MetricCard label="Errors" value={errorCount} />
-            <MetricCard label="Files Touched" value={fileCount} />
+            <MetricCard label="Events" value={session?.eventCount ?? 0} state={sessionState} />
+            <MetricCard label="Tools Used" value={toolCount} state={eventsState} />
+            <MetricCard label="Errors" value={errorCount} state={eventsState} />
+            <MetricCard label="Files Touched" value={fileCount} state={eventsState} />
           </div>
 
           {/* Context Gauge + Gantt side by side on large screens */}

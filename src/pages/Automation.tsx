@@ -21,6 +21,7 @@ import {
   useRecentHeartbeats,
   useRecentJobs,
 } from "../hooks/useAutomation";
+import { useMetricState } from "../hooks/useMetricState";
 
 function relTime(epoch: number | null): string {
   if (!epoch) return "--";
@@ -45,6 +46,10 @@ function schedulesToCronJobs(): CronJob[] {
 
 export default function Automation() {
   const summary = useAutomationSummary();
+  // D-14: useAutomationSummary() already returns the raw useQuery result
+  // (undefined while loading, no `?? default` collapse) so its state is
+  // derived directly.
+  const summaryState = useMetricState(summary, undefined, {}).state;
   const executions = useRecentCronExecutions(200);
   const heartbeats = useRecentHeartbeats(30);
   const jobs = useRecentJobs(100);
@@ -90,18 +95,22 @@ export default function Automation() {
         }
       />
 
-      {/* Summary cards */}
+      {/* Summary cards. "Configured Schedules" is always ready -- it reads a
+          static imported module constant, not a query. The other three
+          share summaryState since they all derive from useAutomationSummary(). */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard label="Configured Schedules" value={CRON_SCHEDULES.length} />
-        <MetricCard label="Runs (1h)" value={summary?.totalRuns ?? 0} />
+        <MetricCard label="Configured Schedules" value={CRON_SCHEDULES.length} state="ready" />
+        <MetricCard label="Runs (1h)" value={summary?.totalRuns ?? 0} state={summaryState} />
         <MetricCard
           label="Failed (1h)"
           value={summary?.failed ?? 0}
           trend={summary?.failed ? "down" : undefined}
+          state={summaryState}
         />
         <MetricCard
           label="Avg Duration"
-          value={summary ? formatDurationMs(summary.avgDurationMs) : "—"}
+          value={formatDurationMs(summary?.avgDurationMs ?? 0)}
+          state={summaryState}
         />
       </div>
 

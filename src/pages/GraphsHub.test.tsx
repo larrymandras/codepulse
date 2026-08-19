@@ -87,11 +87,52 @@ import { useQuery } from "convex/react";
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * D-14 (122-14): each tile now declares an explicit MetricCard `state`, and
+ * MetricCard only omits the label text in the "loading" state (every other
+ * state — ready/empty/unavailable/error — still renders it). So the
+ * per-tile "resolved" fixtures below must return non-`undefined` values for
+ * every query these six tiles read, or every tile would render its loading
+ * skeleton (no label) instead of the content these tests assert on — which
+ * is exactly the T-122-14-A defect this plan exists to remove, not a
+ * regression to work around.
+ */
+function resolvedUseQuery(ref: unknown) {
+  switch (ref) {
+    case "registry:listAllTools":
+    case "registry:listMcpServers":
+    case "callGraphEdges:listEdges":
+    case "kits:listKits":
+    case "toolGovernance:listGovernance":
+    case "swarmTasks:listGoals":
+      return [];
+    case "kg:latestSummary":
+      return {
+        entitiesByType: {},
+        totalEntities: 0,
+        currentTripleCount: 0,
+        historicalTripleCount: 0,
+        contradictionCount: 0,
+        updatedAt: Date.now(),
+      };
+    case "registry:summary":
+      return { mcpServers: 0, plugins: 0, skills: 0, tools: 0, hooks: 0 };
+    case "memory:overview":
+      return { total: 0, byAgent: {}, byType: {} };
+    default:
+      return undefined;
+  }
+}
+
 describe("GraphsHub", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // By default: useQuery returns undefined (loading) for all hooks
-    vi.mocked(useQuery).mockReturnValue(undefined);
+    // By default: every query this page's six tiles read resolves to a real
+    // (if empty) value, so every tile renders its "ready"/"empty" content
+    // rather than a loading skeleton. Individual tests override this via
+    // `vi.mocked(useQuery).mockReturnValue(undefined)` where a loading case
+    // is what's under test.
+    vi.mocked(useQuery).mockImplementation((...args: unknown[]) => resolvedUseQuery(args[0]));
   });
 
   afterEach(() => {

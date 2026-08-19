@@ -18,6 +18,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import MetricCard from "@/components/MetricCard";
 import { FactsTable } from "@/components/FactsTable";
 import { PageHeader } from "@/components/PageHeader";
+import { useMetricState } from "@/hooks/useMetricState";
 
 type DreamingTab = "timeline" | "facts" | "cost" | "backfill";
 
@@ -40,6 +41,9 @@ export default function Dreaming() {
   const cycles = useQuery(api.dreaming.recentCycles, { limit: 50 });
   const facts = useQuery(api.dreaming.recentFacts, { limit: 100 });
   const costData = useQuery(api.dreaming.costSummary);
+  // D-14: costData is already raw (undefined while loading), shared across
+  // the 3 Cost-tab cards below.
+  const costState = useMetricState(costData, undefined, {}).state;
 
   const latestCycle = cycles?.[0];
 
@@ -177,6 +181,7 @@ export default function Dreaming() {
                     value={`$${(costData?.totalCostUsd ?? 0).toFixed(4)}`}
                     numericValue={costData?.totalCostUsd ?? 0}
                     format={(v) => `$${v.toFixed(4)}`}
+                    state={costState}
                   />
                 </GlassPanel>
                 <GlassPanel className="rounded-xl">
@@ -184,6 +189,7 @@ export default function Dreaming() {
                     label="Cycles Tracked"
                     value={costData?.totalCycles ?? 0}
                     numericValue={costData?.totalCycles ?? 0}
+                    state={costState}
                   />
                 </GlassPanel>
                 <GlassPanel className="rounded-xl">
@@ -191,6 +197,7 @@ export default function Dreaming() {
                     label="Cycles with Cost"
                     value={costData?.cyclesWithCost ?? 0}
                     numericValue={costData?.cyclesWithCost ?? 0}
+                    state={costState}
                   />
                 </GlassPanel>
               </div>
@@ -226,7 +233,7 @@ export default function Dreaming() {
                             <TableCell className="text-right tabular-nums text-base">
                               {cycle.costUsd != null
                                 ? `$${cycle.costUsd.toFixed(4)}`
-                                : "—"}
+                                : "n/a"}
                             </TableCell>
                             <TableCell className="text-right tabular-nums text-base">
                               {cycle.storedCount ?? 0}

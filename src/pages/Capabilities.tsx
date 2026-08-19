@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import OriginBadge from "../components/OriginBadge";
 import { Search } from "lucide-react";
 import MetricCard from "../components/MetricCard";
+import { useMetricState } from "../hooks/useMetricState";
+import type { MetricState } from "../lib/metricState";
 import McpServerPanel from "../components/McpServerPanel";
 import PluginPanel from "../components/PluginPanel";
 import DiscoveredToolsTable from "../components/DiscoveredToolsTable";
@@ -345,6 +349,28 @@ export default function Capabilities() {
   const { commands: catalogCommands, status: catalogStatus, error: catalogError } = useCommandCatalog();
   const { status: wsStatus } = useAstridrWS();
 
+  // D-14: useCapabilitySummary() already returns the raw useQuery result
+  // (undefined while loading), shared across the 5 summary?.X ?? 0 cards.
+  const summaryState = useMetricState(summary, undefined, {}).state;
+  // useCliTools()/useSlashCommands() collapse `undefined` (loading) into
+  // `[]`, so raw duplicates of the same queries (same function + args,
+  // shared Convex client cache) recover the loading signal.
+  const cliToolsRaw = useQuery(api.registry.listCliTools);
+  const cliToolsState = useMetricState(cliToolsRaw, undefined, {}).state;
+  const slashCommandsRaw = useQuery(api.registry.listSlashCommands);
+  const slashCommandsState = useMetricState(slashCommandsRaw, undefined, {}).state;
+  // useCommandCatalog() exposes its own genuine "loading"|"ready"|"error"
+  // local state machine (WebSocket-fed) -- mapped directly, no duplicate
+  // query needed.
+  const commandsState: MetricState =
+    catalogStatus === "loading"
+      ? "loading"
+      : catalogStatus === "error"
+        ? "error"
+        : catalogCommands.length === 0
+          ? "empty"
+          : "ready";
+
   const [search, setSearch] = useState("");
   const [tryCommand, setTryCommand] = useState<string | null>(null);
   const filter = search.toLowerCase().trim() || undefined;
@@ -386,14 +412,18 @@ export default function Capabilities() {
 
       {/* 1. Summary cards */}
       <div className="md:col-span-12 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        <MetricCard label="MCP Servers" value={summary?.mcpServers ?? 0} />
-        <MetricCard label="Plugins" value={summary?.plugins ?? 0} />
-        <MetricCard label="Skills" value={summary?.skills ?? 0} />
-        <MetricCard label="Tools" value={summary?.tools ?? 0} />
-        <MetricCard label="Hooks" value={summary?.hooks ?? 0} />
-        <MetricCard label="CLI Tools" value={cliTools.length} />
-        <MetricCard label="Slash Cmds" value={slashCommands.length} />
-        <MetricCard label="Commands" value={catalogStatus === "ready" ? catalogCommands.length : 0} />
+        <MetricCard label="MCP Servers" value={summary?.mcpServers ?? 0} state={summaryState} />
+        <MetricCard label="Plugins" value={summary?.plugins ?? 0} state={summaryState} />
+        <MetricCard label="Skills" value={summary?.skills ?? 0} state={summaryState} />
+        <MetricCard label="Tools" value={summary?.tools ?? 0} state={summaryState} />
+        <MetricCard label="Hooks" value={summary?.hooks ?? 0} state={summaryState} />
+        <MetricCard label="CLI Tools" value={cliTools.length} state={cliToolsState} />
+        <MetricCard label="Slash Cmds" value={slashCommands.length} state={slashCommandsState} />
+        <MetricCard
+          label="Commands"
+          value={catalogStatus === "ready" ? catalogCommands.length : 0}
+          state={commandsState}
+        />
       </div>
 
       {/* 2. Config Change Feed */}

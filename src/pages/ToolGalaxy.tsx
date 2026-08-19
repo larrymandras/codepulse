@@ -275,15 +275,18 @@ function GalaxyCanvas({
 
   const isEmpty = graph.nodes.length === 0;
 
+  // state="ready" is justified above: this component early-returns its own
+  // loading UI (`if (loading) return ...`) before this grid, so `graph.stats`
+  // is always resolved by the time it renders.
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <MetricCard label="Tools" value={graph.stats.toolCount} />
-        <MetricCard label="Agents" value={graph.stats.agentCount} />
-        <MetricCard label="MCP in Graph" value={graph.stats.serverCount} />
-        <MetricCard label="Kits" value={graph.stats.kitCount} />
-        <MetricCard label="Edges" value={graph.stats.edgeCount} />
-        <MetricCard label="Orphans" value={graph.stats.orphanCount} />
+        <MetricCard label="Tools" value={graph.stats.toolCount} state="ready" />
+        <MetricCard label="Agents" value={graph.stats.agentCount} state="ready" />
+        <MetricCard label="MCP in Graph" value={graph.stats.serverCount} state="ready" />
+        <MetricCard label="Kits" value={graph.stats.kitCount} state="ready" />
+        <MetricCard label="Edges" value={graph.stats.edgeCount} state="ready" />
+        <MetricCard label="Orphans" value={graph.stats.orphanCount} state="ready" />
       </div>
 
       {noTelemetry && (

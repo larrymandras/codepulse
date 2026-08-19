@@ -6,13 +6,21 @@ import TeamStatusCards from "../components/TeamStatusCards";
 import BuildActivityFeed from "../components/BuildActivityFeed";
 import ComponentTable from "../components/ComponentTable";
 import { PageHeader } from "../components/PageHeader";
+import { useMetricState } from "../hooks/useMetricState";
 
 export default function BuildProgress() {
-  const components = useQuery(api.build.phaseProgress) ?? [];
+  const componentsRaw = useQuery(api.build.phaseProgress);
+  const components = componentsRaw ?? [];
   const phases = useQuery(api.build.phaseOverview) ?? [];
   const activity = useQuery(api.build.recentActivity, { limit: 20 }) ?? [];
   const pipelines = useQuery(api.pipelines.listAll, {}) ?? [];
-  const activePipelines = useQuery(api.pipelines.listActive) ?? [];
+  const activePipelinesRaw = useQuery(api.pipelines.listActive);
+  const activePipelines = activePipelinesRaw ?? [];
+
+  // D-14: both counters below currently collapse `undefined` (loading) into
+  // `[]`, so state is derived from the raw (undefaulted) query results.
+  const componentsState = useMetricState(componentsRaw, undefined, {}).state;
+  const activePipelinesState = useMetricState(activePipelinesRaw, undefined, {}).state;
 
   const totalComponents = components.length;
   const completedCount = components.filter((c) => c.status === "completed").length;
@@ -24,13 +32,18 @@ export default function BuildProgress() {
       <div>
         <PageHeader title="Build Progress" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <MetricCard label="Total Components" value={totalComponents} />
+          <MetricCard label="Total Components" value={totalComponents} state={componentsState} />
           <MetricCard
             label="Completed"
             value={`${completedPct}%`}
             trend={completedPct >= 80 ? "up" : completedPct >= 40 ? "neutral" : "down"}
+            state={componentsState}
           />
-          <MetricCard label="Active Pipelines" value={activePipelines.length} />
+          <MetricCard
+            label="Active Pipelines"
+            value={activePipelines.length}
+            state={activePipelinesState}
+          />
         </div>
       </div>
 

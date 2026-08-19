@@ -622,7 +622,10 @@ export default function Memory() {
                 </div>
               ) : (
                 <>
-                  {/* Stats row */}
+                  {/* Stats row. state="ready" is justified by the ternary
+                      guard above: this branch only renders once
+                      preflightStats exists AND (totalRecords > 0 OR
+                      preflightData has entries) -- real data, not a guess. */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <GlassPanel className="rounded-xl">
                       <MetricCard
@@ -635,6 +638,7 @@ export default function Memory() {
                           warn: 40,
                           invertDirection: true,
                         }}
+                        state="ready"
                       />
                     </GlassPanel>
                     <GlassPanel className="rounded-xl">
@@ -644,6 +648,7 @@ export default function Memory() {
                         numericValue={preflightStats?.avgLatencyMs ?? 0}
                         format={(v) => `${v.toFixed(0)}ms`}
                         threshold={{ ok: 100, warn: 300 }}
+                        state="ready"
                       />
                     </GlassPanel>
                   </div>
