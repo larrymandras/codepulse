@@ -107,7 +107,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                 {tools.map((t: any, i: number) => (
                   <span
                     key={i}
-                    className="text-sm px-2 py-1 rounded bg-purple-400/10 text-purple-300 border border-purple-400/20"
+                    className="text-sm px-2 py-1 rounded bg-indigo-400/10 text-indigo-300 border border-indigo-400/20"
                   >
                     {typeof t === "string" ? t : t.name ?? t.toolName ?? JSON.stringify(t)}
                   </span>

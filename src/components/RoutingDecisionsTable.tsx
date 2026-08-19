@@ -40,7 +40,7 @@ export default function RoutingDecisionsTable() {
               onClick={() => setFallbackFilter(f)}
               className={`text-sm px-2 py-1 font-mono transition-colors ${
                 fallbackFilter === f
-                  ? "bg-purple-400/20 text-purple-300 border border-purple-500/40"
+                  ? "bg-primary/20 text-primary border border-primary/40"
                   : "bg-muted text-muted-foreground border border-border/30 hover:bg-[var(--surface-3)]"
               }`}
             >
@@ -69,7 +69,7 @@ export default function RoutingDecisionsTable() {
             onClick={() => setFallbackFilter(f)}
             className={`text-sm px-2 py-1 font-mono transition-colors ${
               fallbackFilter === f
-                ? "bg-purple-400/20 text-purple-300 border border-purple-500/40"
+                ? "bg-primary/20 text-primary border border-primary/40"
                 : "bg-muted text-muted-foreground border border-border/30 hover:bg-[var(--surface-3)]"
             }`}
           >

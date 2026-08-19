@@ -29,7 +29,7 @@ export default function QueenNode({ data }: { data: QueenNodeData }) {
         "border border-amber-500/60 rounded-xl px-2.5 py-2",
         "shadow-[0_0_20px_rgba(245,158,11,0.25)]",
         "w-[260px] min-h-[108px] flex flex-col justify-between overflow-hidden",
-        "transition-all duration-300 ease-in-out",
+        "transition-all duration-slow ease-house",
       ].join(" ")}
     >
       {/* No target Handle — Queen is the root, no incoming edges */}

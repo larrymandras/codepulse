@@ -3,8 +3,8 @@ const BADGE_STYLES: Record<string, { bg: string; text: string; label: string }> 
   bridge: { bg: "bg-blue-500/10", text: "text-blue-400", label: "Bridge" },
   cc: { bg: "bg-amber-500/10", text: "text-amber-400", label: "CC" },
   catalog: { bg: "bg-muted", text: "text-muted-foreground", label: "Catalog" },
-  "claude-code": { bg: "bg-purple-500/10", text: "text-purple-400", label: "Claude Code" },
-  "claude-code:plugin": { bg: "bg-purple-500/10", text: "text-purple-300", label: "Plugin" },
+  "claude-code": { bg: "bg-indigo-500/10", text: "text-indigo-400", label: "Claude Code" },
+  "claude-code:plugin": { bg: "bg-indigo-500/10", text: "text-indigo-300", label: "Plugin" },
   "claude-code:available": { bg: "bg-muted", text: "text-muted-foreground", label: "Dormant" },
   unknown: { bg: "bg-muted", text: "text-muted-foreground", label: "Unknown" },
 };

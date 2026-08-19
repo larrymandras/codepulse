@@ -65,7 +65,7 @@ function SubScoreBar({ label, weight, value }: SubScoreBarProps) {
         </div>
         <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden relative">
           <div
-            className="absolute top-0 left-0 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_currentColor]"
+            className="absolute top-0 left-0 h-full rounded-full transition-all duration-slow ease-house shadow-[0_0_10px_currentColor]"
             style={{ width: `${Math.min(value, 100)}%`, backgroundColor: barColor, color: barColor }}
           />
         </div>

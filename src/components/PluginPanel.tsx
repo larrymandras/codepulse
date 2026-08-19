@@ -62,7 +62,7 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
                       <span className="text-sm text-muted-foreground flex-shrink-0">v{p.version}</span>
                     )}
                     {category && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 flex-shrink-0">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
                         {category}
                       </span>
                     )}
