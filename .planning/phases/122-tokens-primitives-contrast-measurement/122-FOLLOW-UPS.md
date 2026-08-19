@@ -90,6 +90,22 @@ unlike shell globs.
 
 ---
 
+### B3. Forge's loading container is a roleless `div` with `aria-label`
+→ `.planning/todos/pending/forge-loading-div-aria-prohibited-attr.md`
+
+axe `aria-prohibited-attr`, **serious**, 4 objects / 4 nodes — one per theme, in every Forge cell of
+every capture. `src/components/forge/ForgeJobList.tsx:174`.
+
+**Pre-existing**: the same attribute sits at `001c1e73:...:170` in the pre-phase tree, and the rule
+measures exactly 4/4 in the frozen `a11y-before/` control and in every capture since. It has never
+moved.
+
+Raised here because an external adversarial review (Codex, 2026-08-19) called it a Phase 122 ship
+blocker. Refuted as a Phase 122 defect on the evidence above — but the defect itself is real, and it
+is the kind that falls between phases: **an ARIA failure inside a matrix everyone reads as "the
+contrast matrix"**. A11Y-02's criterion ("no wcag2a/wcag2aa violations") does cover it, but Phase
+123 is framed as contrast remediation throughout and a colour-only sweep will miss it.
+
 ## C. Known scope limits of the sweep and the ratchet
 
 These are not bugs — they are boundaries that must be *stated* rather than assumed closed, because
