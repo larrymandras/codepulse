@@ -19,7 +19,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { ChevronRight, AlertTriangle } from "lucide-react";
-import { useQuery } from "convex/react";
+import { useQuery, useConvexConnectionState } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useSystemResources } from "@/hooks/useSystemResources";
 import { useLlmMetrics } from "@/hooks/useLlmMetrics";
@@ -134,6 +134,13 @@ export default function VitalsRail({
   const sessions = useActiveSessions();
   const { events } = useRecentEvents(8);
   const recentSkills = useQuery(api.skillCategories.getRecentlyUsedSkills, { limit: 6 }) ?? [];
+  // Reactive Convex WebSocket connection state — a SUBSCRIPTION (re-renders on
+  // change), never the client accessor's one-shot connectionState() snapshot.
+  // See CORRECTION-2 in 122-12-PLAN.md: binding to the snapshot would swap a
+  // fabricated always-green dot for a stale one, the same defect wearing a
+  // different costume.
+  const convexConnectionState = useConvexConnectionState();
+  const convexConnected = convexConnectionState.isWebSocketConnected;
 
   const ramPct = sys?.ram ? (sys.ram.used / sys.ram.total) * 100 : undefined;
 
@@ -171,11 +178,11 @@ export default function VitalsRail({
   const mcpToolCount = mcpServers.reduce((n, s) => n + (s.toolCount ?? 0), 0);
 
   const statusDot = (status: string) => {
-    if (status === "running") return "bg-green-500";
+    if (status === "running") return "bg-(--status-ok)";
     if (status === "paused" || status === "restarting" || status === "unknown")
-      return "bg-yellow-500";
-    if (status === "exited") return "bg-gray-500";
-    return "bg-red-500";
+      return "bg-(--status-warn)";
+    if (status === "exited") return "bg-muted-foreground";
+    return "bg-(--status-error)";
   };
 
   return (
@@ -184,16 +191,16 @@ export default function VitalsRail({
       {alerts.length > 0 && (
         <Link
           to="/alerts"
-          className="group shrink-0 flex items-center justify-between rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5 hover:bg-red-500/15 transition-colors"
+          className="group shrink-0 flex items-center justify-between rounded-xl border border-(--status-error)/40 bg-(--status-error)/10 px-3.5 py-2.5 hover:bg-(--status-error)/15 transition-colors"
           title="Open Alerts"
         >
-          <span className="flex items-center gap-2 text-red-300">
+          <span className="flex items-center gap-2 text-(--status-error)">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span className="text-[13px] font-semibold">
               {alerts.length} active {alerts.length === 1 ? "alert" : "alerts"}
             </span>
           </span>
-          <ChevronRight className="w-4 h-4 text-red-300/60 group-hover:text-red-300 group-hover:translate-x-0.5 transition-all shrink-0" />
+          <ChevronRight className="w-4 h-4 text-(--status-error)/60 group-hover:text-(--status-error) group-hover:translate-x-0.5 transition-all shrink-0" />
         </Link>
       )}
 
@@ -245,12 +252,14 @@ export default function VitalsRail({
             <span className="flex items-center gap-3.5">
               <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
                 <span
-                  className={`w-2 h-2 rounded-full ${disconnected ? "bg-red-500" : "bg-green-500"}`}
+                  className={`w-2 h-2 rounded-full ${disconnected ? "bg-(--status-error)" : "bg-(--status-ok)"}`}
                 />
                 Ástríðr
               </span>
               <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span
+                  className={`w-2 h-2 rounded-full ${convexConnected ? "bg-(--status-ok)" : "bg-(--status-error)"}`}
+                />
                 Convex
               </span>
             </span>
