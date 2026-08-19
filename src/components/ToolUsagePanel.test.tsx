@@ -151,7 +151,11 @@ describe("ToolUsagePanel", () => {
     render(<ToolUsagePanel />);
 
     const label = screen.getByText("Success Rate");
-    const card = label.closest(".glow-card") as HTMLElement;
+    // MetricCard's outer wrapper stopped carrying `glow-card` when 122-13
+    // rewrote it to the six-state contract (D-13 strips glow-card
+    // entirely) -- `[data-testid="metric-card"]` is MetricCard's own
+    // stable test hook for its wrapper now.
+    const card = label.closest('[data-testid="metric-card"]') as HTMLElement;
     expect(within(card).getByText("n/a")).toBeInTheDocument();
     expect(within(card).queryByText("0%")).not.toBeInTheDocument();
   });
