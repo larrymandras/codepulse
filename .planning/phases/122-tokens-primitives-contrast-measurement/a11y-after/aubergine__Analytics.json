@@ -1,0 +1,835 @@
+{
+  "theme": "aubergine",
+  "page": "Analytics",
+  "path": "/analytics",
+  "url": "http://localhost:5181/analytics",
+  "capturedAt": "2026-08-19T20:29:16.354Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7d56a5",
+                "bgColor": "#181222",
+                "contrastRatio": 3.26,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "bold",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.26 (foreground color: #7d56a5, background color: #181222, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-xs uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]\">COMMAND</p>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .pt-4.pb-2.gap-2 > .drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.3\\)\\].text-primary\\/60.font-bold"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.26 (foreground color: #7d56a5, background color: #181222, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Chat</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"chat\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Live Run</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"live-run\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Inbox</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"inbox\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Tasks</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"tasks\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Config</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"config\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Skills</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"skills\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Galdr</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"galdr\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Bifröst</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"bifrost\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Studio</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"studio\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Reminders</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"reminders\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Doc Review</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"doc-comments\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Forge</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(1) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"forge\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7d56a5",
+                "bgColor": "#181222",
+                "contrastRatio": 3.26,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "bold",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.26 (foreground color: #7d56a5, background color: #181222, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-xs uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]\">GRAPHS</p>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(2) > .mb-2 > .pt-4.pb-2.gap-2 > .drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.3\\)\\].text-primary\\/60.font-bold"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.26 (foreground color: #7d56a5, background color: #181222, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Graphs Hub</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(2) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"graphs\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Loom</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(2) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"loom\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]\">Tool Galaxy</span>",
+          "target": [
+            ".transition-\\[width\\] > nav > div:nth-child(2) > .mb-2 > .space-y-\\[1px\\] > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"tool-galaxy\"] > .group-\\[\\.is-active\\]\\:drop-shadow-\\[0_0_5px_oklch\\(from_var\\(--primary\\)_l_c_h_\\/_0\\.4\\)\\]"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#181222",
+                "contrastRatio": 3.93,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<aside class=\"hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house\">",
+                  "target": [
+                    ".transition-\\[width\\]"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span>Settings</span>",
+          "target": [
+            ".transition-\\[width\\] > .border-t.border-border > .pt-2.px-2 > .text-muted-foreground\\/80.hover\\:text-primary[href$=\"settings\"] > span"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.93 (foreground color: #817264, background color: #181222, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7a54a1",
+                "bgColor": "#120d18",
+                "contrastRatio": 3.29,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<header class=\"min-h-14 flex-shrink-0 flex-wrap gap-y-1 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]\">",
+                  "target": [
+                    "header"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.29 (foreground color: #7a54a1, background color: #120d18, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"flex items-center gap-1.5\">",
+          "target": [
+            ".lg\\:flex > .gap-1\\.5.flex:nth-child(1)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #7a54a1, background color: #120d18, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7a54a1",
+                "bgColor": "#120d18",
+                "contrastRatio": 3.29,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<header class=\"min-h-14 flex-shrink-0 flex-wrap gap-y-1 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]\">",
+                  "target": [
+                    "header"
+                  ]
+                },
+                {
+                  "html": "<div class=\"flex h-screen overflow-hidden bg-background relative\">",
+                  "target": [
+                    ".h-screen"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.29 (foreground color: #7a54a1, background color: #120d18, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"flex items-center gap-1.5\">",
+          "target": [
+            ".lg\\:flex > .gap-1\\.5.flex:nth-child(2)"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.29 (foreground color: #7a54a1, background color: #120d18, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}
