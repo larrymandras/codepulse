@@ -66,7 +66,16 @@ this run.
 
 A11Y-01's locked matrix measures **5 of 47** source page files in `src/pages/` (**5/47 ≈ 10.6%**).
 
-Denominators re-derived live, same method as `122-CONTEXT.md`'s D-24 correction:
+**Re-derived a second time, at AFTER-measurement time (2026-08-19), rather than reused from plan
+122-01:** `ls src/pages/*.tsx | grep -v '\.test\.' | wc -l` → 42 (unchanged), `ls
+src/pages/*/*.tsx | grep -v '\.test\.' | wc -l` → 5 (unchanged), control glob including tests → 62
+(unchanged, still not used). No page files were added or removed between the BEFORE and AFTER
+captures, so the denominator, the 5 measured routes and the 42 unmeasured files enumerated below
+are unchanged and not repeated as a second list — Phase 123's success criterion is still scoped to
+exactly the 5 routes × 4 themes = 20 cells this matrix measured; the other 42 route files can hold
+a WCAG-AA violation invisible to that criterion regardless of what Phase 123 reports.
+
+Denominators originally derived live, same method as `122-CONTEXT.md`'s D-24 correction:
 - `ls src/pages/*.tsx | grep -v '\.test\.' | wc -l` → **42** (top-level pages)
 - `ls src/pages/*/*.tsx | grep -v '\.test\.' | wc -l` → **5** (`src/pages/hr/`; `src/pages/__tests__/`
   correctly excluded, it is a test directory)
@@ -145,20 +154,182 @@ themes-axis exclusion, orthogonal to the pages-axis sampling limit above -- even
 were measured, `amber` would still be absent because it is not a selectable theme, not because a
 page was skipped.
 
-## AFTER -- PENDING
+## AFTER (measured 2026-08-19, `dev:noauth` :5181, post-token-layer)
 
-Filled by plan **122-19**, after the token layer and the mechanical sweeps land.
+Measured identically to BEFORE:
+`A11Y_CAPTURE_DIR=.../a11y-after A11Y_MEASURE_ONLY=1 PW_BASE_URL=http://localhost:5181 npx playwright test e2e/theme-contrast.spec.ts`,
+issued from Git Bash against a freshly-started `dev:noauth`
+(`VITE_CLERK_PUBLISHABLE_KEY= npm run dev:noauth`), probed on both `localhost:5181` and
+`127.0.0.1:5181` (200/200) before the matrix ran. 20/20 cells measured, zero skipped. Wall-clock:
+**12.3s** (Playwright's own reported time; BEFORE's was 14.3s).
 
-## Delta -- PENDING
+Guard control re-run: `[cyan] Dashboard` against the gated `:5173` server reported Playwright
+status `skipped`, annotation verbatim: *"Clerk auth gate present — Dashboard never rendered, so a
+zero-violation result would measure the sign-in screen, not the page. Run against dev:noauth (see
+`npm run test:e2e:noauth:help`). Recorded as NOT verified, never as a pass."* — byte-identical text
+to BEFORE's control, proving the `fee96b5d` guard survived the token rewrite untouched.
 
-Filled by plan **122-19**. Read against this BEFORE table as the control.
+**Unit: axe VIOLATION OBJECTS**, same convention as BEFORE (one per distinct rule that fired on a
+page; a violation object can cover several DOM nodes).
 
-## Named-pair ratios -- PENDING
+### Violation objects per cell
 
-Filled by plan **122-18**: the D-22 rasterised `canvas`/`getImageData` probe for Forge `failed`
-(currently `bg-red-900/60 text-[var(--status-error)]`, measured at 3.92:1 against the page
-background per `120-DESIGN-REVIEW-HANDOFF.md`, re-measured against `--card` per D-06) and the
-`--status-ok`/`--primary` decouple (D-05), both measured against `--card` per D-06's instruction.
+| theme | Dashboard | LiveRun | Analytics | Forge | Graphs | row total |
+|---|---|---|---|---|---|---|
+| cyan | 2 | 1 | 1 | 2 | 2 | **8** |
+| emerald | 2 | 1 | 1 | 2 | 2 | **8** |
+| readable | 2 | 1 | 1 | 2 | 2 | **8** |
+| aubergine | 2 | 1 | 1 | 2 | 2 | **8** |
+| **column total** | **8** | **4** | **4** | **8** | **8** | **grand total: 32** |
+
+Grand total re-derived independently two ways — summing `violationCount` across the 20 committed
+`a11y-after/` JSON files (`32`), and summing the three rule buckets in the AFTER rule breakdown
+below (`20 + 4 + 8 = 32`) — both agree.
+
+### Affected elements (nodes), same cells, different unit
+
+| theme | Dashboard | LiveRun | Analytics | Forge | Graphs | row total |
+|---|---|---|---|---|---|---|
+| cyan | 10 | 4 | 3 | 4 | 10 | **31** |
+| emerald | 10 | 4 | 3 | 4 | 10 | **31** |
+| readable | 23 | 15 | 16 | 16 | 21 | **91** |
+| aubergine | 26 | 19 | 20 | 19 | 24 | **108** |
+| **column total** | **69** | **42** | **42** | **43** | **65** | **grand total: 261** |
+
+Grand total re-derived two ways: summing per-cell node counts above (`261`), and summing the AFTER
+rule breakdown's node column below (`205 + 4 + 52 = 261`) — both agree.
+
+## Rule breakdown (after)
+
+| rule id | impact | violation objects | affected nodes | what it is |
+|---|---|---|---|---|
+| `color-contrast` | serious | 20 | 205 | Same rule as BEFORE, same 20-cell footprint (fires in every cell). Object count unchanged (20 → 20); node count fell 214 → 205 (see Delta below). |
+| `aria-prohibited-attr` | serious | 4 | 4 | `[Forge]` only, all 4 themes. Unchanged from BEFORE (4 → 4 objects, 4 → 4 nodes) — the `<div aria-busy aria-label>` markup defect BEFORE flagged as unrelated to the colour/token work is still present, untouched by this phase. |
+| `aria-command-name` | serious | 8 | 52 | **NEW rule, absent from BEFORE (0 → 8 objects, 0 → 52 nodes).** Fires on `[Dashboard]` and `[Graphs]` in all 4 themes. Every flagged node is a `<div data-testid="metric-card" role="button" tabindex="0">` (`src/components/MetricCard.tsx:257-263`) with no `aria-label`/`aria-labelledby`/screen-reader-visible text on the clickable wrapper. Traced to `fde030a5 feat(122-13): rewrite MetricCard to the six-state contract` — this phase's own MetricCard rewrite, not a pre-existing defect surfacing under stricter measurement (BEFORE genuinely measured 0 for this rule, confirmed by re-reading the before-run's own JSON, not assumed). A markup/ARIA gap, not a colour issue. |
+
+Zero `critical`/`moderate`/`minor` violations in this run either; all three rules remain
+`impact: serious`.
+
+## The 234 figure, addressed again for AFTER
+
+The BEFORE section above already establishes that the 2026-08-10 234-node sample and BEFORE's
+`[cyan] Dashboard` cell (4 nodes) are the same violation, measured pre/post Phase 120 — this AFTER
+measurement does not re-litigate that. AFTER's grand total (32 objects / 261 nodes) is a different
+figure from a different measurement point again, and is neither more nor less "234" than BEFORE's
+total was; the 234 figure was retired as a comparison point in the BEFORE section and stays retired
+here.
+
+## Delta (AFTER vs. BEFORE)
+
+Computed as **before − after**. A **positive** value means AFTER has fewer violations than BEFORE
+(**improvement**); a **negative** value means AFTER has more (**regression**).
+
+### Per-cell delta, violation objects (before − after)
+
+| theme | Dashboard | LiveRun | Analytics | Forge | Graphs | row total |
+|---|---|---|---|---|---|---|
+| cyan | -1 | 0 | 0 | 0 | -1 | **-2** |
+| emerald | -1 | 0 | 0 | 0 | -1 | **-2** |
+| readable | -1 | 0 | 0 | 0 | -1 | **-2** |
+| aubergine | -1 | 0 | 0 | 0 | -1 | **-2** |
+| **column total** | **-4** | **0** | **0** | **0** | **-4** | **grand: -8** (24 → 32) |
+
+Uniform across all four themes because the object-level change comes entirely from
+`aria-command-name`, which fires identically on the same two pages in every theme regardless of
+palette.
+
+### Regressions (object-level), separated out
+
+**8 of 20 cells regressed** — `[Dashboard]` and `[Graphs]` in all 4 themes, each by exactly 1
+violation object. **Zero cells improved at the object level** (LiveRun/Analytics/Forge held flat
+in every theme; no cell's object count fell). 12 of 20 cells are unchanged.
+
+Every regressed cell's cause is the same single rule: **`aria-command-name`** — see the Rule
+breakdown above for the traced cause (`MetricCard.tsx`'s `role="button"` wrapper, introduced by
+`feat(122-13)`). No other rule contributed to any object-level regression.
+
+### Per-rule delta
+
+| rule id | objects before → after | Δ objects | nodes before → after | Δ nodes | direction |
+|---|---|---|---|---|---|
+| `color-contrast` | 20 → 20 | 0 | 214 → 205 | **+9** | improvement (nodes only; object count flat) |
+| `aria-prohibited-attr` | 4 → 4 | 0 | 4 → 4 | 0 | unchanged |
+| `aria-command-name` | 0 → 8 | **-8** | 0 → 52 | **-52** | regression (new rule) |
+
+(Δ columns use the same before − after convention: positive = improvement, negative = regression.)
+
+### Node-level delta, per cell (before − after)
+
+| theme | Dashboard | LiveRun | Analytics | Forge | Graphs |
+|---|---|---|---|---|---|
+| cyan | -6 | +1 | +1 | +1 | -6 |
+| emerald | -6 | +1 | +1 | +1 | -6 |
+| readable | -7 | +1 | 0 | 0 | -6 |
+| aubergine | -6 | 0 | **-1** | 0 | -6 |
+
+Node-level regressions beyond the object-level set above: **`[aubergine] Analytics`** — object
+count held flat (1 → 1) but its single `color-contrast` violation now covers one more DOM node
+(19 → 20 nodes, Δ -1). This is a node-count-only regression inside an already-violating cell/rule,
+not a new violation object; named here because a total or an object-level table alone would hide
+it — exactly the "a total can hide one cell worsening" case this document's discipline exists to
+surface. All other non-Dashboard/Graphs node deltas are ≤1 in either direction, consistent with
+`color-contrast`'s node count falling by 9 overall but unevenly across the 20 cells (see Rule
+breakdown above).
+
+## Named-pair ratios
+
+Rasterised **pixel measurements** (canvas `getImageData`, never a regex over a
+`getComputedStyle` string) — not axe results, and no computed colour string was parsed to
+produce any figure below. Source: plan 122-18's `e2e/theme-rendered-result.spec.ts` (D-27),
+cross-referenced against plan 122-10's `122-BADGE-LAW.md` §8. Both measured against `--card` per
+D-06's instruction, not the page background.
+
+### Forge `failed` badge vs. `--card` (D-06)
+
+Shipped pairing `bg-[var(--status-error-fill)] text-[var(--status-error-on-fill)]`, composited
+over `--card`:
+
+| theme | composited bg | fg | ratio | AA (≥4.5:1)? |
+|---|---|---|---|---|
+| cyan | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+| emerald | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+| readable | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+| aubergine | rgb(127,29,29) | rgb(255,255,255) | **10.020:1** | PASS |
+
+Identical across themes because the fill is opaque — `--card` never enters the composite
+(independently confirmed in 122-18 by matching the composited sample to the raw fill sample).
+
+Old pairing (`bg-red-900/60 text-[var(--status-error)]`), same rasteriser, composited over each
+theme's pre-phase `--card` (122-18, anchored on `PRE_PHASE_SHA` `2ddc80f5`):
+
+| theme | composited bg | fg | ratio | AA? |
+|---|---|---|---|---|
+| cyan | rgb(82,19,23) | rgb(239,68,68) | **3.811:1** | FAIL |
+| emerald | rgb(79,18,30) | rgb(239,68,68) | **3.881:1** | FAIL |
+| readable | rgb(87,25,30) | rgb(248,113,113) | 4.857:1 | at/above |
+| aubergine | rgb(88,21,30) | rgb(248,113,113) | 4.927:1 | at/above |
+
+`122-BADGE-LAW.md` §8's own control table reports 3.834:1 / 3.834:1 / 4.857:1 / 4.927:1 for the
+same pairing — the small cyan/emerald difference from the figures above is explained in both
+documents: `122-BADGE-LAW.md` measured the old pairing against the CURRENT already-tokenised
+`--card`, while 122-18 anchors on the pre-phase git SHA per D-27. Both independently confirm the
+same FAIL / FAIL / at-or-above / at-or-above pattern.
+
+### `--status-ok` vs. `--primary` separation (D-05)
+
+Euclidean sRGB-byte distance, threshold 30, from 122-18 §3:
+
+| theme | status-ok | primary | distance | passes (>30)? |
+|---|---|---|---|---|
+| cyan | rgb(52,211,153) | rgb(6,182,212) | **80.2** | yes |
+| emerald | rgb(34,211,238) | rgb(16,185,129) | **113.5** | yes |
+| readable | rgb(52,211,153) | rgb(94,234,212) | **76.0** | yes |
+| aubergine | rgb(52,211,153) | rgb(192,132,252) | **188.8** | yes |
+
+Pre-phase control (122-18 §3): cyan and emerald measured **0.0** distance (`--status-ok` and
+`--primary` were the literal same hex value) before this phase; readable and aubergine were
+already decoupled and stay decoupled. This is the automated half of D-05 — 122-18 notes the
+operator judgement at Task 3 step 7 is the other half, and does not depend on this figure.
 
 ## Method
 
