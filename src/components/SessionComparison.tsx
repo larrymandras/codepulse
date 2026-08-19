@@ -4,6 +4,7 @@ import { formatDuration } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
 import { useNavigate } from "react-router";
 import { ScrollArea } from "./ui/scroll-area";
+import LoadingState from "./LoadingState";
 import {
   Table,
   TableBody,
@@ -21,7 +22,7 @@ export default function SessionComparison() {
     return (
       <div className="bg-card/50 border border-border/50 rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
-        <p className="text-muted-foreground text-base animate-pulse">Loading...</p>
+        <LoadingState shape="table" rows={5} />
       </div>
     );
   }

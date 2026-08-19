@@ -39,6 +39,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 // on every page load. A static import here put the cropper in the entry chunk
 // for every visitor. Module-level lazy declaration, per CodeVaultGraph.tsx.
 const AvatarUploader = lazy(() => import("../components/AvatarUploader"));
+import LoadingState from "../components/LoadingState";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -333,7 +334,7 @@ function SidebarContent({
             <DialogTitle className="text-primary font-mono uppercase tracking-widest">Update Operator Avatar</DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            <Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Avatar Uploader...</div>}>
+            <Suspense fallback={<LoadingState shape="text" />}>
               <AvatarUploader
                 onUpload={handleAvatarUpload}
                 onCancel={() => setIsAvatarUploadOpen(false)}

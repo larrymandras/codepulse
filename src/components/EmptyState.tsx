@@ -75,6 +75,44 @@ export function EmptyState({
   );
 }
 
+export interface InlineMetricStateProps {
+  state: MetricState;
+  /** Overrides the shared module's default copy for this state (D-20). */
+  label?: string;
+  className?: string;
+}
+
+/**
+ * InlineMetricState — the CELL-scale renderer of the shared six-state
+ * vocabulary (D-19). `EmptyState` renders the vocabulary at panel/page
+ * scale and `MetricCard` at tile scale; a dense table row is neither — a
+ * full `EmptyState` panel per cell would be the wrong scale entirely, so
+ * this renders only the state's icon + tone + label inline, sized for a
+ * table cell. Same vocabulary, same tone tokens, same "never invent a copy
+ * string a call site could instead ask the shared module for" rule as its
+ * panel-scale sibling above (D-20 override still applies per-site via the
+ * `label` prop).
+ */
+export function InlineMetricState({ state, label, className }: InlineMetricStateProps) {
+  if (state === "loading") {
+    return <Skeleton className={cn("h-4 w-12 inline-block", className)} />;
+  }
+
+  const entry = METRIC_STATE_COPY[state];
+  const Icon = entry.icon;
+  const copy = label ?? entry.label;
+
+  return (
+    <span
+      className={cn("inline-flex items-center gap-1 text-sm", className)}
+      style={{ color: entry.tone }}
+    >
+      <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+      {copy}
+    </span>
+  );
+}
+
 function LoadingSkeleton({ shape }: { shape: EmptyStateLoadingShape }) {
   if (shape === "list") {
     return (

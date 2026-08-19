@@ -129,26 +129,38 @@ import App from './App';
 // race against module-cache state and fails intermittently on a different
 // route each run. The boundary's existence is instead asserted deterministically
 // against the source in the "App source shape" block below.
+//
+// 122-15: every route's Suspense fallback is now the same shared
+// `<LoadingState shape="page" />` skeleton (no more per-route "Loading
+// X..." text -- design law: never render the word "Loading"), so there is
+// no longer a per-route fallback STRING to assert against at runtime. The
+// `component` field (the lazy const's own name in App.tsx) replaces the old
+// `fallback` field and drives the source-shape check below instead.
 const CONVERTED_ROUTES: Array<{
   path: string;
-  fallback: string;
+  component: string;
   heading: string;
 }> = [
-  { path: '/', fallback: 'Loading Dashboard...', heading: 'Dashboard' },
-  { path: '/sessions/abc123', fallback: 'Loading Session Detail...', heading: 'Session Detail' },
-  { path: '/capabilities', fallback: 'Loading Capabilities...', heading: 'Capabilities Registry' },
-  { path: '/alerts', fallback: 'Loading Alerts...', heading: 'Alerts' },
-  { path: '/infrastructure', fallback: 'Loading Infrastructure...', heading: 'Infrastructure' },
-  { path: '/security', fallback: 'Loading Security...', heading: 'Security Dashboard' },
-  { path: '/self-healing', fallback: 'Loading Self-Healing...', heading: 'Self-Healing' },
-  { path: '/build', fallback: 'Loading Build Progress...', heading: 'Build Progress' },
-  { path: '/settings', fallback: 'Loading Settings...', heading: 'Settings' },
-  { path: '/memory', fallback: 'Loading Memory...', heading: 'Memory' },
-  { path: '/briefings', fallback: 'Loading Briefings...', heading: 'Briefings' },
-  { path: '/automation', fallback: 'Loading Automation...', heading: 'Automation' },
-  { path: '/executions', fallback: 'Loading Executions...', heading: 'Execution History' },
-  { path: '/ideation', fallback: 'Loading Ideation...', heading: 'Ideation' },
+  { path: '/', component: 'Dashboard', heading: 'Dashboard' },
+  { path: '/sessions/abc123', component: 'SessionDetail', heading: 'Session Detail' },
+  { path: '/capabilities', component: 'Capabilities', heading: 'Capabilities Registry' },
+  { path: '/alerts', component: 'Alerts', heading: 'Alerts' },
+  { path: '/infrastructure', component: 'Infrastructure', heading: 'Infrastructure' },
+  { path: '/security', component: 'Security', heading: 'Security Dashboard' },
+  { path: '/self-healing', component: 'SelfHealing', heading: 'Self-Healing' },
+  { path: '/build', component: 'BuildProgress', heading: 'Build Progress' },
+  { path: '/settings', component: 'Settings', heading: 'Settings' },
+  { path: '/memory', component: 'Memory', heading: 'Memory' },
+  { path: '/briefings', component: 'Briefings', heading: 'Briefings' },
+  { path: '/automation', component: 'Automation', heading: 'Automation' },
+  { path: '/executions', component: 'Executions', heading: 'Execution History' },
+  { path: '/ideation', component: 'Ideation', heading: 'Ideation' },
 ];
+
+// The shared skeleton's own testid (LoadingState.tsx's PageSkeleton) --
+// what a route's Suspense fallback renders while resolving, and what must
+// be gone once the real page has mounted.
+const PAGE_SKELETON_TESTID = 'loading-skeleton-page';
 
 // Each case really does transform and import a whole page tree on demand, which
 // under a loaded full-suite run comfortably exceeds testing-library's 1s default
@@ -158,7 +170,7 @@ const LAZY_ROUTE_WAIT_MS = 20_000;
 describe('App lazy routes (Phase 106 Plan 04, DEBT-03)', () => {
   it.each(CONVERTED_ROUTES)(
     'resolves $path past its lazy boundary and renders the page',
-    async ({ path, fallback, heading }) => {
+    async ({ path, heading }) => {
       window.history.pushState({}, '', path);
       render(<App />);
       expect(
@@ -169,7 +181,7 @@ describe('App lazy routes (Phase 106 Plan 04, DEBT-03)', () => {
         ),
       ).toBeInTheDocument();
       // A boundary that resolved is a boundary that is no longer showing.
-      expect(screen.queryByText(fallback)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(PAGE_SKELETON_TESTID)).not.toBeInTheDocument();
     },
     LAZY_ROUTE_WAIT_MS + 5_000,
   );
@@ -190,7 +202,7 @@ describe('App smoke test', () => {
     await waitFor(
       () =>
         expect(
-          screen.queryByText('Loading Dashboard...'),
+          screen.queryByTestId(PAGE_SKELETON_TESTID),
         ).not.toBeInTheDocument(),
       { timeout: LAZY_ROUTE_WAIT_MS },
     );
@@ -209,7 +221,7 @@ describe('App smoke test', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText('Loading Dashboard...'),
+      screen.queryByTestId(PAGE_SKELETON_TESTID),
     ).not.toBeInTheDocument();
   }, LAZY_ROUTE_WAIT_MS + 5_000);
 });
@@ -228,15 +240,22 @@ describe('App source shape (DEBT-03 regression guard)', () => {
     expect(staticPageImports).toEqual([]);
   });
 
-  it('wraps every converted route element in a Suspense boundary', () => {
+  it('wraps every converted route element in a Suspense boundary using the shared page-shaped skeleton', () => {
     // Deterministic counterpart to the runtime route tests: a lazy component
     // rendered without a Suspense ancestor throws at runtime, and the runtime
     // tests cannot observe the transient fallback reliably (see note above).
-    for (const { fallback } of CONVERTED_ROUTES) {
+    // 122-15: the fallback is now the shared `LoadingState` skeleton, not a
+    // per-route "Loading X..." string -- see design-law note above.
+    for (const { component } of CONVERTED_ROUTES) {
       expect(appSource).toContain(
-        `<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">${fallback}</div>}>`,
+        `<Suspense fallback={<LoadingState shape="page" />}><${component} /></Suspense>`,
       );
     }
+  });
+
+  it('imports LoadingState and renders no bare "Loading" text anywhere in its source', () => {
+    expect(appSource).toContain('import LoadingState from "./components/LoadingState";');
+    expect(appSource).not.toMatch(/>Loading/);
   });
 
   it('declares a lazy loader for every converted route', () => {

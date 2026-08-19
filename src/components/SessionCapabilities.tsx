@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { ChevronDown } from "lucide-react";
+import LoadingState from "./LoadingState";
 
 interface SessionCapabilitiesProps {
   sessionId: string;
@@ -14,7 +15,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
   if (result === undefined) {
     return (
       <div className="bg-card/50 border border-border/50 rounded-xl p-4">
-        <p className="text-sm text-muted-foreground text-center py-2">Loading capabilities...</p>
+        <LoadingState shape="text" />
       </div>
     );
   }

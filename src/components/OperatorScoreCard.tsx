@@ -2,6 +2,7 @@ import { memo } from "react";
 import { AnimatedNumber } from "./MetricCard";
 import Sparkline from "./Sparkline";
 import { GlassPanel } from "./GlassPanel";
+import LoadingState from "./LoadingState";
 import {
   useLatestOperatorScore,
   useOperatorScoreHistory,
@@ -89,10 +90,7 @@ function OperatorScoreCard() {
           <div className="w-3 h-3 rounded-full bg-muted animate-pulse" />
           <span className="text-base font-bold">Operator Score</span>
         </div>
-        <div className="text-5xl font-bold tabular-nums text-muted-foreground">
-          &mdash;
-        </div>
-        <p className="text-base text-muted-foreground mt-2">Loading...</p>
+        <LoadingState shape="metric" />
       </GlassPanel>
     );
   }

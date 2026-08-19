@@ -54,11 +54,12 @@ const mockLatest = useLatestOperatorScore as ReturnType<typeof vi.fn>;
 const mockHistory = useOperatorScoreHistory as ReturnType<typeof vi.fn>;
 
 describe("OperatorScoreCard", () => {
-  it("renders loading state when data is undefined", () => {
+  it("renders a content-shaped skeleton (not the word 'Loading') when data is undefined", () => {
     mockLatest.mockReturnValue(undefined);
     mockHistory.mockReturnValue([]);
     render(<OperatorScoreCard />);
-    expect(screen.getByText("Loading...")).toBeTruthy();
+    expect(screen.getByTestId("loading-skeleton-metric")).toBeTruthy();
+    expect(screen.queryByText(/Loading/i)).toBeNull();
   });
 
   it("renders empty state when latest is null", () => {

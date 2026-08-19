@@ -2,6 +2,7 @@ import { useQuery } from "convex/react";
 import { Link } from "react-router";
 import { api } from "../../convex/_generated/api";
 import { formatCost } from "../lib/formatters";
+import LoadingState from "./LoadingState";
 
 export default function CostForecastPanel() {
   const data = useQuery(api.forecasts.costForecast);
@@ -12,7 +13,14 @@ export default function CostForecastPanel() {
         <h2 className="text-sm font-normal uppercase tracking-wide text-muted-foreground">
           Cost Forecast
         </h2>
-        <p className="text-base text-muted-foreground text-center">Loading...</p>
+        {/* Loading shape mirrors the ready state's own 3-column stat grid
+            below, so the skeleton occupies the same footprint as the
+            content it replaces. */}
+        <div className="grid grid-cols-3 gap-4">
+          <LoadingState shape="metric" />
+          <LoadingState shape="metric" />
+          <LoadingState shape="metric" />
+        </div>
       </div>
     );
   }

@@ -31,10 +31,11 @@ const BASE_DATA = {
 };
 
 describe("CostForecastPanel", () => {
-  it("renders the loading state while the query is undefined", () => {
+  it("renders a content-shaped skeleton (not the word 'Loading') while the query is undefined", () => {
     vi.mocked(useQuery).mockReturnValue(undefined);
     renderPanel();
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getAllByTestId("loading-skeleton-metric").length).toBe(3);
+    expect(screen.queryByText(/Loading/i)).toBeNull();
   });
 
   it("renders the progress bar and a status label when a monthly budget is configured", () => {

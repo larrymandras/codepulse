@@ -5,6 +5,8 @@ import { useAgentDetail } from "../hooks/useAgentTopology";
 import { formatDuration } from "../lib/formatters";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
 import { MemorySourceBadge } from "../components/MemorySourceBadge";
+import LoadingState from "./LoadingState";
+import { InlineMetricState } from "./EmptyState";
 
 const eventTypeColors: Record<string, string> = {
   handoff: "text-muted-foreground bg-muted/10",
@@ -35,7 +37,7 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
   if (!detail) {
     return (
       <div className="bg-popover/90 border border-border/50 rounded-xl p-4 w-72">
-        <p className="text-muted-foreground text-base">Loading...</p>
+        <LoadingState shape="text" />
       </div>
     );
   }
@@ -45,7 +47,7 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
       ? formatDuration(detail.endedAt - detail.startedAt)
       : detail.startedAt
         ? formatDuration(Date.now() / 1000 - detail.startedAt)
-        : "—";
+        : null;
 
   const statusColor: Record<string, string> = {
     running: "text-green-400",
@@ -79,11 +81,15 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground uppercase">Duration</p>
-          <p className="text-sm text-foreground">{duration}</p>
+          <p className="text-sm text-foreground">
+            {duration ?? <InlineMetricState state="empty" label="duration unknown" />}
+          </p>
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground uppercase">Model</p>
-          <p className="text-sm text-foreground truncate">{detail.model ?? "—"}</p>
+          <p className="text-sm text-foreground truncate">
+            {detail.model ?? <InlineMetricState state="empty" label="not reported" />}
+          </p>
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground uppercase">Session Events</p>
