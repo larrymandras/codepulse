@@ -207,4 +207,35 @@ describe("MetricCard — six-state contract", () => {
       unmount();
     }
   });
+
+  // ── Accessible name for the clickable wrapper (122-22) ─────────────────────
+  //
+  // A clickable tile renders `role="button"`, which requires an accessible
+  // name. Name-from-content is unreliable here because the value slot renders
+  // a Skeleton or an InlineMetricState in four of the six states, so what the
+  // tile exposes varies with its data. Phase 122's own after-matrix measured
+  // the gap as 8 serious `aria-command-name` violations / 52 nodes across the
+  // 4x5 theme-page matrix (122-21-REMATRIX.md).
+  //
+  // Asserted through the ACCESSIBILITY TREE (`getByRole(..., { name })`), not
+  // by reading the attribute back — querying `aria-label` directly would pass
+  // even if the attribute never reached the element the role sits on.
+  it("gives a clickable tile an accessible name, in EVERY state", () => {
+    const states = Object.keys(METRIC_STATE_COPY) as MetricState[];
+    for (const state of states) {
+      const { unmount } = render(
+        <MetricCard label="Total Events" value="42" state={state} onClick={() => {}} />,
+      );
+      expect(
+        screen.getByRole("button", { name: "Total Events" }),
+        `state "${state}": clickable tile exposed no accessible name`,
+      ).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("CONTROL: a non-clickable tile exposes no button role at all", () => {
+    render(<MetricCard label="Total Events" value="42" state="ready" />);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
 });
