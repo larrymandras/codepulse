@@ -554,6 +554,49 @@ export function useAstridrChat() {
       activeSessionRef.current = null;
     });
 
+    // run.cancelled — the THIRD terminal frame, and it was unhandled.
+    //
+    // Phase 191 (HARD-04 live proof, 2026-08-19). The server emits
+    // `run.cancelled` whenever a turn is stopped rather than finished:
+    // astridr `agent/loop.py:1298` (reason="user_cancel", the pre-turn and
+    // per-round cancel checks) and `:1513` (reason="cancelled_during_provider_call",
+    // the mid-provider re-check). An emergency stop takes exactly these paths.
+    //
+    // The frame IS subscribed at the transport layer (AstridrWSContext.tsx:91),
+    // but this hook only ever consumed `run.completed` and `run.error`. So a
+    // cancelled turn delivered a frame that nothing consumed: `setStreaming(false)`
+    // never ran, `isStreamingRef.current` stayed true, and the send guard at the
+    // top of this file (`if (!text.trim() || isStreamingRef.current || ...) return false`)
+    // silently rejected every subsequent message. The chat was wedged with no
+    // user-facing recovery — observed live during the 191-06 e-stop proof, where
+    // the only way out was a full page reload.
+    //
+    // Same failure shape as the 189-B12 frame-filter bug: the far end behaves
+    // correctly, the server log looks clean, and the defect is visible only as an
+    // ABSENCE at the client.
+    const unsubCancelled = subscribeEvent("run.cancelled", (event) => {
+      const data = event.data as { session_id?: string; reason?: string } | undefined;
+      if (data?.session_id && data.session_id !== activeSessionRef.current) return;
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.streaming
+            ? {
+                ...msg,
+                content:
+                  msg.content +
+                  (msg.content ? "\n\n" : "") +
+                  (data?.reason === "cancelled_during_provider_call"
+                    ? "_Stopped mid-response._"
+                    : "_Stopped._"),
+                streaming: false,
+              }
+            : msg
+        )
+      );
+      setStreaming(false);
+      activeSessionRef.current = null;
+    });
+
     // vision.frame_request (server→client push): the pending frame request's
     // OWN id (in `request_id`) becomes `frame_request_id` on the reply — it is
     // NEVER reused as the reply's envelope `request_id` (sendCommand assigns
@@ -612,6 +655,7 @@ export function useAstridrChat() {
       unsubTts();
       unsubCompleted();
       unsubError();
+      unsubCancelled();
       unsubFrameRequest();
     };
   }, [subscribeEvent, sendCommand, playAudio, setStreaming]);

@@ -235,6 +235,70 @@ describe("useAstridrChat — run.tts sessionMatches trace (2026-07-31 live findi
     return entries[entries.length - 1]?.d ?? {};
   }
 
+  // ------------------------------------------------------------------
+  // run.cancelled — the third terminal frame (Phase 191, HARD-04).
+  //
+  // The server emits run.cancelled whenever a turn is STOPPED rather than
+  // finished (astridr agent/loop.py:1298 user_cancel, :1513
+  // cancelled_during_provider_call). An emergency stop takes exactly these
+  // paths. The frame was subscribed at the transport layer but consumed by
+  // nothing here, so isStreaming stayed true forever and the send guard
+  // rejected every later message — the chat wedged with no recovery but a
+  // page reload. Observed live during the 191-06 e-stop proof.
+  // ------------------------------------------------------------------
+
+  it("run.cancelled clears isStreaming so the input is not wedged forever", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("delegate something long");
+    });
+    expect(result.current.isStreaming).toBe(true);
+
+    act(() => {
+      getHandler("run.cancelled")?.({
+        data: { session_id: "sess-1", reason: "cancelled_during_provider_call" },
+      });
+    });
+
+    expect(result.current.isStreaming).toBe(false);
+  });
+
+  it("a message can be sent again after a cancelled turn", async () => {
+    // The USER-VISIBLE consequence, asserted directly rather than inferred
+    // from the isStreaming flag: a flag is a proxy, the send succeeding is the
+    // actual outcome that was broken.
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("first");
+    });
+    act(() => {
+      getHandler("run.cancelled")?.({ data: { session_id: "sess-1", reason: "user_cancel" } });
+    });
+
+    let sent = false;
+    await act(async () => {
+      sent = await result.current.sendMessage("second");
+    });
+    expect(sent).toBe(true);
+  });
+
+  it("run.cancelled for a DIFFERENT session does not clear the active turn", async () => {
+    // Control on the session filter. Without it, "cancelled clears streaming"
+    // would also be satisfied by a handler that clears unconditionally, which
+    // would let a foreign session kill this tab's live turn.
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("mine");
+    });
+    expect(result.current.isStreaming).toBe(true);
+
+    act(() => {
+      getHandler("run.cancelled")?.({ data: { session_id: "some-other-session", reason: "user_cancel" } });
+    });
+
+    expect(result.current.isStreaming).toBe(true);
+  });
+
   it("sessionMatches reads true when run.tts arrives AFTER run.completed already nulled activeSessionRef", async () => {
     const { result } = renderHook(() => useAstridrChat());
     await act(async () => {
