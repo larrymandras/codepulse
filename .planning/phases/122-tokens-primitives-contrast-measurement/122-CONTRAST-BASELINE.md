@@ -317,7 +317,7 @@ back to its exact BEFORE object count.** The `aria-command-name` regression 122-
 
 | rule id | objects before → after | Δ objects | nodes before → after | Δ nodes | direction |
 |---|---|---|---|---|---|
-| `color-contrast` | 20 → 20 | 0 | 214 → 205 | **+9** | improvement (nodes only; object count flat) |
+| `color-contrast` | 20 → 20 | 0 | 214 → 205 | **+9 raw — NOT an improvement** | **flat.** The raw +9 is inside the SYS/LAT badge confound (that badge alone swings 5–26 nodes on scan timing). Excluding it: 188 → 190, i.e. **−2**, marginally worse and within variance. See the determinism caveat above the Delta section and use the ex-badge figure. |
 | `aria-prohibited-attr` | 4 → 4 | 0 | 4 → 4 | 0 | unchanged |
 | `aria-command-name` | 0 → 0 | 0 | 0 → 0 | 0 | **no longer regressed — closed** (was -8 objects / -52 nodes at the prearia checkpoint; see isolation section below) |
 
