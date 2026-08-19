@@ -146,3 +146,105 @@ project's own standing note that it marks PARTIAL requirements Complete.
 - `dev:noauth` — confirmed stopped (post-kill probe `000`, no listener on 5181)
 
 ## Self-Check: PASSED
+
+## Operator Checkpoint Response (Task 3) -- 2026-08-19
+
+Recorded VERBATIM per this plan's `<action>` clause. Operator reply, unedited:
+
+> #3 4 items in the theme switcher
+> #4 one flat tone for the most part
+> #5 they look fine
+> #6 only the nav bar items highlight a color
+> #7 it says Bridge offline
+> #8 see screenshot
+> #9 see screenshots
+> #10 see screenshot, page looks like shit
+> #11 see screenshot, page looks like shit
+> #12 Hard for me to tell
+> #13 The pages needs some work
+
+**VERDICT: NOT APPROVED. The gate's blocking condition is tripped by #4.** Task 4 was NOT run and
+no requirement has been marked complete. Phase 122 stays open.
+
+### #4 -- THE BLOCKING FINDING: the surface ramp is perceptually flat
+
+The operator is correct and the automated spec is wrong. Measured from the authored hex in
+`src/index.css`, adjacent-surface step contrast:
+
+| theme | surface-0 -> 1 | 1 -> 2 | 2 -> 3 |
+|---|---|---|---|
+| cyan | 1.042:1 | 1.064:1 | 1.083:1 |
+| **emerald** | **1.032:1** | **1.034:1** | **1.048:1** |
+| amber | 1.057:1 | 1.066:1 | 1.092:1 |
+| readable | 1.089:1 | 1.067:1 | 1.109:1 |
+| aubergine | 1.060:1 | 1.042:1 | 1.069:1 |
+
+In byte terms cyan steps `rgb(5,6,10)` -> `rgb(11,13,18)`, about 6/255 in near-black. Emerald is
+flattest at `rgb(2,6,23)` -> `rgb(3,10,37)`. For reference, measured from their own published hex,
+shadcn's zinc ramp steps at 1.123 / 1.189 / 1.426 and GitHub dark at 1.094 / 1.137 / 1.247 -- so
+this ramp is roughly a third of the industry norm, and emerald is far below even that.
+
+**Why 122-18's rendered-result spec passed anyway.** `e2e/theme-rendered-result.spec.ts:269-270`:
+
+```js
+const keys = new Set(triples.map((t) => t!.join(",")));
+expect(keys.size, `${theme}: expected 4 distinct surface colours, got ${keys.size}`).toBe(4);
+```
+
+That asserts the four sampled colours are not BYTE-IDENTICAL. A one-point difference passes it.
+D-01 and this checkpoint's own step 2 require "three or four DISTINGUISHABLE depths" -- a
+perceptual property the test never measured. The same file already defines a `channelDistance`
+helper whose docstring promises a "threshold rationale stated at each call site"; the surface test
+does not use it. This is the phase's own recurring failure shape one level up: a probe that
+discriminates a property nobody cares about, reported as a pass.
+
+Routed back to **122-02** (which authored the ramp) and **122-18** (which authored the vacuous
+assertion), per this task's instruction to route rather than absorb into a later phase.
+
+### #7 -- D-05's human half is structurally unanswerable; closing on the automated measurement
+
+The WhatsApp bridge is offline, so `/channels/whatsapp` renders "Bridge Offline" and no
+`Connected` badge. This is the THIRD attempt at D-05's human judgement (122-03 step 4 named no
+location; 122-19 step 7 named one; the location is state-gated). Measured cause:
+`StatusBadge status="ok"` is rendered in exactly ONE non-test file app-wide,
+`src/pages/WhatsApp.tsx` (`:252` and `:494`), and both sites are gated on a live bridge -- a
+scarcity created partly by 122-10 flattening `succeeded`/`completed` to the quietest tier.
+Control: the same probe finds other statuses across `BlackboardPanel`, `ExecutionTable`,
+`IdeationRow`, `JobsPanel`, `RoomListItem`, so the single hit is real scarcity, not a broken
+matcher. **Operator decision 2026-08-19: close D-05 on 122-18's rasterised measurement and record
+the human half as structurally unanswerable.**
+
+### #6 -- D-11 partially answered
+
+"Only the nav bar items highlight a color" describes a COLOUR CHANGE, not motion. D-11 asks about
+pulse/spin/ease/fade/transition. Pending a check of whether that highlight carries a transition
+duration under `readable`, this is provisionally a pass -- but it is NOT recorded as a clean one.
+
+### #9 -- PASS, and better than asked
+
+The `/analytics` screenshots show the three genuinely-timing-out queries rendering honest
+`SectionErrorBoundary` fallbacks that name the failing Convex function and request ID with a Retry
+button, while `Token Distribution` on the same page renders real data ($70.1226, 81,582,023
+tokens) as the live control. No dash, no fabricated figure. This is exactly what D-19/D-20 asked
+for, verified against real server-side failures rather than injected ones.
+
+### #10, #11, #13 -- investigated, NOT phase-122 regressions
+
+"Page looks like shit" on `/forge` and `/analytics` was traced rather than accepted or dismissed:
+
+- The Forge selected-row solid green block is `bg-accent border-l-2 border-primary` at
+  `ForgeJobList.tsx:225`, byte-identical to the pre-phase blob at `001c1e73:221`, and `--accent`
+  under emerald is `#059669` in BOTH trees. Markup unchanged, token value unchanged.
+- `LlmProviderPanel.tsx`'s only phase-122 change is its panel wrapper,
+  `bg-gray-800/50` -> `bg-card/50` -- the opacity modifier is preserved, so no fill was
+  strengthened.
+- The clipped 280px Forge job column is the pre-existing defect already filed at
+  `.planning/todos/pending/forge-job-list-column-clips-card-rows.md`.
+
+These are real UI complaints and worth their own work, but they are not caused by this phase and
+must not be silently folded into it.
+
+### #12 -- delta not independently assessable by the operator
+
+"Hard for me to tell" is recorded as-is. The Delta section is complete and committed; no operator
+judgement on the direction was obtained, so none is claimed.
