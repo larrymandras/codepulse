@@ -55,10 +55,10 @@ function ProvenanceLink({ sourceEventId }: { sourceEventId?: string | null }) {
 }
 
 function fmtConfidence(c: number | null): string {
-  return c == null ? "—" : `${Math.round(c * 100)}%`;
+  return c == null ? "unscored" : `${Math.round(c * 100)}%`;
 }
 function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "unknown";
   const t = Date.parse(iso);
   return Number.isNaN(t) ? iso : new Date(t).toLocaleDateString();
 }

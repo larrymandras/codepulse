@@ -304,7 +304,7 @@ export default function ModelPricingAdmin() {
                       </Tooltip>
                     </TooltipProvider>
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-muted-foreground">n/a</span>
                   )}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{row.source}</TableCell>

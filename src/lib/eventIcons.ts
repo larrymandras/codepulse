@@ -80,7 +80,7 @@ export function getEventColor(eventType: string): string {
     Stop: "text-red-400",
     ToolUse: "text-blue-400",
     PostToolUse: "text-blue-400",
-    SubagentStart: "text-purple-400",
+    SubagentStart: "text-indigo-400",
     llm_call: "text-yellow-400",
     security_event: "text-red-500",
     sandbox_violation: "text-red-500",

@@ -10,6 +10,7 @@
 
 import { GlassPanel } from "@/components/GlassPanel";
 import { ForgeStatusBadge } from "./ForgeStatusBadge";
+import { InlineMetricState } from "@/components/EmptyState";
 import type { ForgeJobRow } from "@/hooks/useForge";
 
 interface ForgeMetadataPanelProps {
@@ -20,13 +21,13 @@ interface ForgeMetadataPanelProps {
 // Formatting helpers
 // ---------------------------------------------------------------------------
 
-function formatDateTime(iso: string | null): string {
-  if (!iso) return "—";
+function formatDateTime(iso: string | null): string | null {
+  if (!iso) return null;
   return new Date(iso).toLocaleString();
 }
 
-function formatNullableNumber(n: number | null): string {
-  if (n === null) return "—";
+function formatNullableNumber(n: number | null): string | null {
+  if (n === null) return null;
   return String(n);
 }
 
@@ -101,22 +102,22 @@ export function ForgeMetadataPanel({ job }: ForgeMetadataPanelProps) {
         <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           PID
         </dt>
-        <dd className="text-sm text-foreground">{formatNullableNumber(job.pid)}</dd>
+        <dd className="text-sm text-foreground">{formatNullableNumber(job.pid) ?? <InlineMetricState state="empty" label="not started" />}</dd>
 
         <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Exit Code
         </dt>
-        <dd className="text-sm text-foreground">{formatNullableNumber(job.exitCode)}</dd>
+        <dd className="text-sm text-foreground">{formatNullableNumber(job.exitCode) ?? <InlineMetricState state="empty" label="not finished" />}</dd>
 
         <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Started At
         </dt>
-        <dd className="text-sm text-foreground">{formatDateTime(job.startedAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.startedAt) ?? <InlineMetricState state="empty" label="not started" />}</dd>
 
         <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Finished At
         </dt>
-        <dd className="text-sm text-foreground">{formatDateTime(job.finishedAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.finishedAt) ?? <InlineMetricState state="empty" label="not finished" />}</dd>
 
         {/* ── Resources ── */}
         <GroupDivider label="Resources" />
@@ -152,12 +153,12 @@ export function ForgeMetadataPanel({ job }: ForgeMetadataPanelProps) {
         <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Created At
         </dt>
-        <dd className="text-sm text-foreground">{formatDateTime(job.createdAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.createdAt) ?? <InlineMetricState state="empty" label="unknown" />}</dd>
 
         <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Updated At
         </dt>
-        <dd className="text-sm text-foreground">{formatDateTime(job.updatedAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.updatedAt) ?? <InlineMetricState state="empty" label="unknown" />}</dd>
 
       </dl>
     </GlassPanel>

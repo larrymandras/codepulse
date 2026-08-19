@@ -121,7 +121,7 @@ export function GovernorDecisionLog() {
                 </Badge>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {row.spoke ? "—" : heldReasonCopy(row.heldReason)}
+                {row.spoke ? "n/a" : heldReasonCopy(row.heldReason)}
               </TableCell>
               <TableCell className="tabular-nums text-sm text-muted-foreground">
                 {new Date(row.timestamp * 1000).toLocaleTimeString()}

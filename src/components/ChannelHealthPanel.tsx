@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { useChannelHealth } from "../hooks/useChannelHealth";
+import { InlineMetricState } from "./EmptyState";
 
 const channelLabels: Record<string, string> = {
   telegram: "Telegram",
@@ -15,8 +16,8 @@ const statusConfig: Record<string, { dot: string; label: string }> = {
   down: { dot: "bg-red-500", label: "down" },
 };
 
-function formatRelativeTime(epochSec: number): string {
-  if (!epochSec) return "—";
+function formatRelativeTime(epochSec: number): string | null {
+  if (!epochSec) return null;
   const diff = Math.max(0, Date.now() / 1000 - epochSec);
   if (diff < 60) return `${Math.round(diff)}s ago`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
@@ -53,7 +54,7 @@ function ChannelHealthPanelInner() {
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <div>{Math.round(data.messagesLastHour)} msg/hr</div>
                   <div>{(data.avgResponseMs / 1000).toFixed(1)}s avg</div>
-                  <div>last: {formatRelativeTime(data.lastMessageAt)}</div>
+                  <div>last: {formatRelativeTime(data.lastMessageAt) ?? <InlineMetricState state="empty" label="no messages" />}</div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No data</p>
