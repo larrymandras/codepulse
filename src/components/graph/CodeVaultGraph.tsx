@@ -465,12 +465,12 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
 
   // ── Canvas className (Pitfall 6 — always explicit, fullscreen switch) ─────
   const canvasClass = fullscreen
-    ? "relative w-full h-[calc(100vh-48px)] overflow-hidden bg-[#09090b]"
-    : "relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]";
+    ? "relative w-full h-[calc(100vh-48px)] overflow-hidden bg-background"
+    : "relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-background";
 
   // ── Container wrapper (fixed overlay when fullscreen) ─────────────────────
   const containerClass = fullscreen
-    ? "fixed inset-0 z-50 bg-[#09090b] flex flex-col transition-all duration-300"
+    ? "fixed inset-0 z-50 bg-background flex flex-col transition-all duration-300"
     : "flex flex-col";
 
   // ── Filter chip helper ────────────────────────────────────────────────────
@@ -894,7 +894,7 @@ export function CodeVaultGraph() {
   // ── Empty state (null — no snapshot ingested yet, D-12) ──────────────────
   if (snapshot === null) {
     return (
-      <div className="h-[600px] flex flex-col items-center justify-center gap-3 border border-primary/20 rounded-[var(--radius)] bg-[#09090b]">
+      <div className="h-[600px] flex flex-col items-center justify-center gap-3 border border-primary/20 rounded-[var(--radius)] bg-background">
         <Network className="h-8 w-8 text-primary/40" />
         <p className="text-base font-mono text-muted-foreground">
           No graph snapshot received yet

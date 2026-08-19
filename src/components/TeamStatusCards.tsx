@@ -41,7 +41,7 @@ function deriveTeams(
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   active: { label: "Active", className: "bg-green-400/10 text-green-400" },
   completed: { label: "Completed", className: "bg-green-400/10 text-green-400" },
-  idle: { label: "Idle", className: "bg-gray-400/10 text-gray-400" },
+  idle: { label: "Idle", className: "bg-muted text-muted-foreground" },
 };
 
 interface TeamStatusCardsProps {
@@ -58,14 +58,14 @@ export default function TeamStatusCards({ components, pipelines }: TeamStatusCar
 
   if (teams.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 text-center text-gray-500 text-base">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4 text-center text-muted-foreground text-base">
         No team data available
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h3 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Build Teams</h3>
       <div className="space-y-3">
         {teams.map((team) => {
@@ -76,7 +76,7 @@ export default function TeamStatusCards({ components, pipelines }: TeamStatusCar
           return (
             <div
               key={team.name}
-              className="flex items-center gap-3 p-2 rounded-lg bg-gray-700/30"
+              className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
             >
               <AgentAvatar
                 avatar={{ name: team.name }}
@@ -85,7 +85,7 @@ export default function TeamStatusCards({ components, pipelines }: TeamStatusCar
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-base text-gray-200 font-medium truncate">
+                  <span className="text-base text-foreground font-medium truncate">
                     {team.name}
                   </span>
                   <span className={`text-sm px-1.5 py-0.5 rounded ${badge.className}`}>
@@ -103,7 +103,7 @@ export default function TeamStatusCards({ components, pipelines }: TeamStatusCar
                     </>
                   )}
                 </div>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   {team.taskCount} component{team.taskCount !== 1 ? "s" : ""}
                 </span>
               </div>

@@ -293,12 +293,12 @@ export const ForceGraphCanvas = forwardRef<
     <div
       className={
         className ??
-        "relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]"
+        "relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-background"
       }
       style={{ boxShadow: "var(--glow-lg)" }}
     >
       {backdrop && (
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#09090b] to-black opacity-80 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[var(--surface-3)] via-[#09090b] to-black opacity-80 pointer-events-none" />
       )}
       <ForceGraph2D
         ref={fgRef}

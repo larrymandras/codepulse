@@ -108,7 +108,7 @@ export function SkillVaultView({
 
   return (
     <div
-      className="relative w-full h-[calc(100vh-13rem)] min-h-[520px] overflow-hidden rounded-[var(--radius)] border border-primary/20 bg-[#09090b]"
+      className="relative w-full h-[calc(100vh-13rem)] min-h-[520px] overflow-hidden rounded-[var(--radius)] border border-primary/20 bg-background"
       style={{ boxShadow: "var(--glow-lg)" }}
     >
       {/* top-left: title + container focus chips */}

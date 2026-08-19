@@ -37,9 +37,9 @@ const TIER_RANK: Record<string, number> = {
 };
 
 const TIER_COLOR: Record<string, string> = {
-  command: "bg-purple-600",
-  domain: "bg-blue-600",
-  shared: "bg-gray-600",
+  command: "bg-purple-600 text-white",
+  domain: "bg-blue-600 text-white",
+  shared: "bg-muted text-muted-foreground",
 };
 
 // ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ function RosterNode({ data }: NodeProps<Node<RosterNodeData>>) {
       <div className="flex items-center gap-1.5">
         <Badge
           variant="secondary"
-          className={`text-[11px] px-1 py-0 text-white ${TIER_COLOR[data.tier] ?? "bg-gray-600"}`}
+          className={`text-[11px] px-1 py-0 ${TIER_COLOR[data.tier] ?? "bg-muted text-muted-foreground"}`}
         >
           {data.tier}
         </Badge>

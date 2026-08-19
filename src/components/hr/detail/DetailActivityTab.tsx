@@ -82,7 +82,7 @@ export function DetailActivityTab({ agentId }: DetailActivityTabProps) {
                 const other = isOutgoing ? event.toAgent : event.fromAgent;
                 const etClass =
                   eventTypeColors[event.eventType] ??
-                  "text-gray-400 bg-gray-700/30";
+                  "text-muted-foreground bg-muted";
 
                 return (
                   <div

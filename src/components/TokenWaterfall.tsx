@@ -60,15 +60,15 @@ export default function TokenWaterfall() {
 
   if (providerGroups.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card/50 border border-border/50 rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
-        <p className="text-gray-500 text-base">No data yet.</p>
+        <p className="text-muted-foreground text-base">No data yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card/50 border border-border/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
       <div className="space-y-3">
         {providerGroups.map(({ provider, models, totalTokens: provTotal }) => (
@@ -82,7 +82,7 @@ export default function TokenWaterfall() {
               <span className="text-sm font-semibold text-muted-foreground uppercase">
                 {PROVIDER_DISPLAY_NAMES[provider] ?? provider}
               </span>
-              <span className="text-xs text-gray-500 ml-auto">
+              <span className="text-xs text-muted-foreground ml-auto">
                 {provTotal.toLocaleString()} tokens
               </span>
             </div>
@@ -96,8 +96,8 @@ export default function TokenWaterfall() {
                 return (
                   <div key={model}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-mono text-gray-300">{model}</span>
-                      <span className="text-sm text-gray-500">{total.toLocaleString()} tokens</span>
+                      <span className="text-sm font-mono text-foreground">{model}</span>
+                      <span className="text-sm text-muted-foreground">{total.toLocaleString()} tokens</span>
                     </div>
                     <div className="flex h-4 rounded overflow-hidden gap-px">
                       <div
@@ -112,8 +112,8 @@ export default function TokenWaterfall() {
                       />
                     </div>
                     <div className="flex gap-3 mt-0.5">
-                      <span className="text-xs text-gray-500">In: {prompt.toLocaleString()}</span>
-                      <span className="text-xs text-gray-500">Out: {completion.toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">In: {prompt.toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">Out: {completion.toLocaleString()}</span>
                     </div>
                   </div>
                 );

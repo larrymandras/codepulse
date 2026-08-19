@@ -209,7 +209,7 @@ export default function ToolExecutionPanel() {
           ))}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-500">Sort:</span>
+          <span className="text-xs text-muted-foreground">Sort:</span>
           <PillButton
             active={sortMode === "time"}
             onClick={() => setSortMode("time")}
@@ -300,7 +300,7 @@ export default function ToolExecutionPanel() {
                   <div className="ml-5 mt-1 mb-1 p-2 bg-background/50 rounded-lg border border-border/30 text-sm font-mono tracking-wide space-y-1">
                     {!exec.success && exec.errorMessage && (
                       <div>
-                        <span className="text-gray-500 font-medium">
+                        <span className="text-muted-foreground font-medium">
                           Error:
                         </span>{" "}
                         <span className="text-red-300">
@@ -310,28 +310,28 @@ export default function ToolExecutionPanel() {
                     )}
                     {exec.decisionSource && (
                       <div>
-                        <span className="text-gray-500 font-medium">
+                        <span className="text-muted-foreground font-medium">
                           Decision source:
                         </span>{" "}
-                        <span className="text-gray-300">
+                        <span className="text-foreground">
                           {exec.decisionSource}
                         </span>
                       </div>
                     )}
                     <div>
-                      <span className="text-gray-500 font-medium">
+                      <span className="text-muted-foreground font-medium">
                         Session:
                       </span>{" "}
-                      <span className="text-gray-300 font-mono">
+                      <span className="text-foreground font-mono">
                         {exec.sessionId}
                       </span>
                     </div>
                     {exec.durationMs != null && (
                       <div>
-                        <span className="text-gray-500 font-medium">
+                        <span className="text-muted-foreground font-medium">
                           Duration:
                         </span>{" "}
-                        <span className="text-gray-300">
+                        <span className="text-foreground">
                           {exec.durationMs.toFixed(2)}ms
                         </span>
                       </div>

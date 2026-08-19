@@ -71,10 +71,10 @@ export function SkillKanbanView({ model, query }: { model: VaultModel; query: st
                 <button
                   key={s.id}
                   onClick={() => setSelected(s)}
-                  className="group flex w-full items-center gap-2 rounded-lg border border-white/8 bg-zinc-900/60 px-2.5 py-2 text-left transition-all hover:-translate-y-px hover:border-white/20 hover:bg-zinc-900"
+                  className="group flex w-full items-center gap-2 rounded-lg border border-white/8 bg-card/60 px-2.5 py-2 text-left transition-all hover:-translate-y-px hover:border-white/20 hover:bg-card"
                   style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.02)" }}
                 >
-                  <GripVertical className="h-3.5 w-3.5 shrink-0 text-zinc-600 group-hover:text-zinc-400" />
+                  <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground" />
                   <span
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: s.color, boxShadow: `0 0 5px ${s.color}88` }}

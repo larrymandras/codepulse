@@ -48,7 +48,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 const TIER_BADGE_COLOR: Record<string, string> = {
   command: "bg-purple-600 text-white",
   domain: "bg-blue-600 text-white",
-  shared: "bg-gray-600 text-white",
+  shared: "bg-muted text-muted-foreground",
 };
 
 // ---------------------------------------------------------------------------

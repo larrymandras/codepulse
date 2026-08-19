@@ -16,13 +16,13 @@ interface AgentCardProps {
 const TIER_BADGE_COLOR: Record<string, string> = {
   command: "bg-purple-600/20 text-purple-400 border border-purple-500/30",
   domain: "bg-blue-600/20 text-blue-400 border border-blue-500/30",
-  shared: "bg-gray-600/20 text-gray-400 border border-gray-500/30",
+  shared: "bg-muted text-muted-foreground border border-border",
 };
 
 const TIER_GLOW: Record<string, string> = {
   command: "from-purple-600/20",
   domain: "from-blue-600/20",
-  shared: "from-gray-600/20",
+  shared: "from-muted/20",
 };
 
 export function AgentCard({ agent, onClick }: AgentCardProps) {

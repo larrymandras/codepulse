@@ -320,7 +320,7 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(
         ref={containerRef}
         className={
           className ??
-          "relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]"
+          "relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-background"
         }
         style={{ boxShadow: "var(--glow-lg)" }}
       >
