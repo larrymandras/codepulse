@@ -24,6 +24,7 @@ import GatewayTasksPanel from "../components/GatewayTasksPanel";
 import LlmProviderPanel from "../components/LlmProviderPanel";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
+import { PageHeader } from "../components/PageHeader";
 import TotalEventsCard from "../components/analytics/TotalEventsCard";
 import LlmVolumeCards from "../components/analytics/LlmVolumeCards";
 import CacheHitRateCard from "../components/analytics/CacheHitRateCard";
@@ -50,9 +51,7 @@ import AdvisorStrategyPanel from "../components/analytics/AdvisorStrategyPanel";
 export default function Analytics() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between col-span-12 mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-      </div>
+      <PageHeader title="Analytics" className="col-span-12 mb-6" />
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
         {/* Unpriced Models Nudge — full-width, above the fold, no GlassPanel chrome (D-03) */}

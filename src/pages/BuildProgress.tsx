@@ -5,6 +5,7 @@ import PhaseProgressBars from "../components/PhaseProgressBars";
 import TeamStatusCards from "../components/TeamStatusCards";
 import BuildActivityFeed from "../components/BuildActivityFeed";
 import ComponentTable from "../components/ComponentTable";
+import { PageHeader } from "../components/PageHeader";
 
 export default function BuildProgress() {
   const components = useQuery(api.build.phaseProgress) ?? [];
@@ -21,7 +22,7 @@ export default function BuildProgress() {
     <div className="space-y-6">
       {/* Header + summary stats */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground mb-4">Build Progress</h1>
+        <PageHeader title="Build Progress" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <MetricCard label="Total Components" value={totalComponents} />
           <MetricCard

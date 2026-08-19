@@ -65,8 +65,12 @@ const REACT_SAFE_HOOKS = new Set([
  * - "SectionHeader" (`src/components/SectionHeader.tsx`) — renders a title string and a
  *   separator from props only. Grepped for `useQuery|usePaginatedQuery` 2026-08-18: 0 matches.
  *   Rendered bare twice, as section dividers ("Advanced Visualizations", "Agent Telemetry").
+ * - "PageHeader" (`src/components/PageHeader.tsx`) — renders title/eyebrow/subtitle/icon/actions
+ *   from props only (122-11, D-17's page-layer contract). Grepped for
+ *   `useQuery|usePaginatedQuery` 2026-08-19: 0 matches. Rendered bare once, as this page's own
+ *   title, replacing the hand-rolled `<h1>` it previously used in the same unwrapped position.
  */
-const PRESENTATIONAL_ALLOWLIST = new Set(["GlassPanel", "SectionHeader"]);
+const PRESENTATIONAL_ALLOWLIST = new Set(["GlassPanel", "SectionHeader", "PageHeader"]);
 
 interface ImportBinding {
   localName: string;
