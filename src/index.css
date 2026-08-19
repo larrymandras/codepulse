@@ -169,14 +169,23 @@
 
 .dark,
 [data-theme="cyan"] {
-  /* Borealis surface ramp (D-01/D-03) -- verbatim from
-     .claude/skills/sketch-findings-codepulse/sources/themes/default.css, no adjustment. */
+  /* Borealis surface ramp (D-01/D-03), RE-DERIVED 122-20 -- the verbatim
+     sketch-findings ramp measured perceptually FLAT (checkpoint 122-19:
+     adjacent-step contrast 1.042/1.064/1.083, operator: "one flat tone for
+     the most part"). --surface-0 held fixed (page ground); --surface-1/2/3/
+     hairline/hairline-strong re-derived in OKLCH holding this theme's own
+     hue+chroma constant (H=271.4deg, C=0.011 -- a near-neutral blue-black,
+     unchanged character) and stepping lightness to hit target adjacent
+     contrast ratios of 1.14/1.19/1.26/1.34/1.43 (within the 1.10-1.30
+     reference band from shadcn zinc/GitHub dark; hairline steps continue
+     widening past surface-3 so it stays visibly separated). See
+     122-20-RAMP-REDERIVATION.md for the full derivation and mutation proof. */
   --surface-0: #05060a;
-  --surface-1: #0b0d12;
-  --surface-2: #12151c;
-  --surface-3: #191d26;
-  --hairline: #1c2029;
-  --hairline-strong: #2a2f3b;
+  --surface-1: #16181d;
+  --surface-2: #25272d;
+  --surface-3: #35373d;
+  --hairline: #484a50;
+  --hairline-strong: #5f6168;
 
   --background: var(--surface-0); /* Deep, almost black violet */
   --foreground: #f8fafc;
@@ -250,16 +259,24 @@
 }
 
 [data-theme="emerald"] {
-  /* Borealis surface ramp (D-01/D-03) -- derived mechanically from --background:
-     #020617 (HSL H=228.6deg S=84%, L stepped +3pt/stop; surface-0 anchored to the
-     existing background so the page colour does not shift). See
-     122-RAMP-DERIVATION.md for the arithmetic. */
+  /* Borealis surface ramp (D-01/D-03), RE-DERIVED 122-20 -- 122-02's +3pt/stop
+     HSL derivation measured perceptually FLAT (checkpoint 122-19: adjacent-step
+     contrast 1.032/1.034/1.048, the flattest of all five themes). --surface-0
+     held fixed (page ground, #020617). --surface-1/2/3/hairline/hairline-strong
+     re-derived in OKLCH holding hue+chroma constant (H=264.7deg, C=0.041 --
+     the navy-leaning cast) and stepping lightness for adjacent contrast
+     1.14/1.19/1.26/1.34/1.43. NOTE: the prior HSL-fixed-saturation derivation
+     was tried first and rejected -- holding HSL S% fixed while raising L makes
+     near-black colours runaway into vivid saturation (hairline-strong came out
+     #294eec, a vivid royal blue, not "navy-leaning"); OKLCH chroma is an
+     absolute quantity so it does not have this defect. See
+     122-20-RAMP-REDERIVATION.md. */
   --surface-0: #020617;
-  --surface-1: #030a25;
-  --surface-2: #040d33;
-  --surface-3: #061141;
-  --hairline: #07154f;
-  --hairline-strong: #08185d;
+  --surface-1: #0f182b;
+  --surface-2: #1e273c;
+  --surface-3: #2d384d;
+  --hairline: #404b61;
+  --hairline-strong: #57627a;
 
   --background: var(--surface-0); /* Very dark slate */
   /* card/popover/border/input added here (D-01 Task 2) -- previously undeclared,
@@ -302,16 +319,20 @@
 }
 
 [data-theme="amber"] {
-  /* Borealis surface ramp (D-01/D-03/D-04) -- derived mechanically from
-     --background: #0a0a0a (true neutral gray, no hue; L stepped +3pt/stop). Full
-     token set per D-04 even though this theme is unexposed in ThemeSwitcher. See
-     122-RAMP-DERIVATION.md for the arithmetic. */
+  /* Borealis surface ramp (D-01/D-03/D-04), RE-DERIVED 122-20 -- 122-02's
+     +3pt/stop derivation measured perceptually FLAT (checkpoint 122-19:
+     adjacent-step contrast 1.057/1.066/1.092). --surface-0 held fixed
+     (#0a0a0a, true neutral gray, no hue -- C=0 throughout, unchanged
+     character). --surface-1/2/3/hairline/hairline-strong stepped in OKLCH
+     for adjacent contrast 1.14/1.19/1.26/1.34/1.43. Full token set per D-04
+     even though this theme is unexposed in ThemeSwitcher. See
+     122-20-RAMP-REDERIVATION.md for the full derivation. */
   --surface-0: #0a0a0a;
-  --surface-1: #121212;
-  --surface-2: #191919;
-  --surface-3: #212121;
-  --hairline: #292929;
-  --hairline-strong: #303030;
+  --surface-1: #1a1a1a;
+  --surface-2: #292929;
+  --surface-3: #393939;
+  --hairline: #4c4c4c;
+  --hairline-strong: #636363;
 
   --background: var(--surface-0); /* Almost black */
   /* card/popover/border/input added here (D-01 Task 2) -- previously undeclared,
@@ -348,17 +369,23 @@
 }
 
 [data-theme="readable"] {
-  /* Borealis surface ramp (D-01/D-03) -- HAND-TUNED, not stepped mechanically: this
-     is the WCAG-AA-constrained theme. surface-0/1/2 and hairline reuse the existing
-     background/card/popover/border verbatim; surface-3 and hairline-strong are
-     invented steps above surface-2/hairline. Contrast measured by rasterised probe,
-     not asserted -- see 122-RAMP-DERIVATION.md. */
+  /* Borealis surface ramp (D-01/D-03), RE-DERIVED 122-20 -- the 122-02
+     hand-tuned ramp (reusing background/card/popover/border verbatim) measured
+     perceptually FLAT (checkpoint 122-19: adjacent-step contrast
+     1.089/1.067/1.109 -- just barely clearing 1.10 on one step, well below on
+     the others). --surface-0 held fixed (#111318, the WCAG-AA-constrained
+     base). --surface-1/2/3/hairline/hairline-strong re-derived in OKLCH
+     holding hue+chroma constant (H=268.1deg, C=0.011 -- the lighter cool-slate
+     cast) and stepping lightness for adjacent contrast 1.14/1.19/1.26/1.34/
+     1.43. Foreground legibility re-measured after the change (13.549:1
+     against the new --surface-1, down from 14.189:1 but still far above AA
+     4.5:1 / AAA 7:1) -- see 122-20-RAMP-REDERIVATION.md. */
   --surface-0: #111318;
-  --surface-1: #181c24;
-  --surface-2: #1d2130;
-  --surface-3: #24293b;
-  --hairline: #2a3144;
-  --hairline-strong: #374059;
+  --surface-1: #1e2025;
+  --surface-2: #2b2d33;
+  --surface-3: #3a3d43;
+  --hairline: #4d5056;
+  --hairline-strong: #64676e;
 
   --background: var(--surface-0);
   --foreground: #e8eaf0;
@@ -433,18 +460,23 @@
 }
 
 [data-theme="aubergine"] {
-  /* Borealis surface ramp (D-01/D-03) -- HAND-TUNED, not stepped mechanically:
-     preserves the deliberate violet cast of the editorial palette. surface-0/1/2
-     and hairline reuse the existing background/card/popover/border verbatim;
-     surface-3 and hairline-strong are invented steps above surface-2/hairline.
-     Contrast measured by rasterised probe, not asserted -- see
-     122-RAMP-DERIVATION.md. */
+  /* Borealis surface ramp (D-01/D-03), RE-DERIVED 122-20 -- the 122-02
+     hand-tuned ramp (reusing background/card/popover/border verbatim) measured
+     perceptually FLAT (checkpoint 122-19: adjacent-step contrast
+     1.060/1.042/1.069). --surface-0 held fixed (#120d18, the editorial
+     violet-black base). --surface-1/2/3/hairline/hairline-strong re-derived
+     in OKLCH holding hue+chroma constant (H=304.8deg, C=0.024 -- the
+     deliberate violet cast, unchanged) and stepping lightness for adjacent
+     contrast 1.14/1.19/1.26/1.34/1.43. Foreground legibility re-measured
+     after the change (13.853:1 against the new --surface-1, down from
+     14.865:1 but still far above AA 4.5:1 / AAA 7:1) -- see
+     122-20-RAMP-REDERIVATION.md. */
   --surface-0: #120d18;
-  --surface-1: #1a1324;
-  --surface-2: #1e172a;
-  --surface-3: #251c34;
-  --hairline: #2e2040;
-  --hairline-strong: #3d2a54;
+  --surface-1: #201b27;
+  --surface-2: #2e2935;
+  --surface-3: #3e3946;
+  --hairline: #514b59;
+  --hairline-strong: #686270;
 
   --background: var(--surface-0);
   --foreground: #f0e8dc;
