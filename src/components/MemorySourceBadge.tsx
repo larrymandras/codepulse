@@ -9,7 +9,7 @@ interface MemorySourceBadgeProps {
 
 const SOURCE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   episodic: { bg: "bg-blue-100", text: "text-blue-700", label: "Episodic" },
-  mem0: { bg: "bg-purple-100", text: "text-purple-700", label: "mem0" },
+  mem0: { bg: "bg-[var(--astridr)]/10", text: "text-(--astridr)", label: "mem0" },
   hybrid: { bg: "bg-amber-100", text: "text-amber-700", label: "Hybrid" },
   solution: { bg: "bg-green-100", text: "text-green-700", label: "Solution" },
 };

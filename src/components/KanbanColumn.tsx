@@ -57,7 +57,7 @@ export function KanbanColumn({
   if (!showExpanded) {
     return (
       <div
-        className="w-10 flex-shrink-0 border border-(--border) bg-(--muted)/20 transition-[width] duration-200 ease-in-out cursor-pointer flex items-center justify-center"
+        className="w-10 flex-shrink-0 border border-(--border) bg-(--muted)/20 transition-[width] duration-normal ease-house cursor-pointer flex items-center justify-center"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -73,7 +73,7 @@ export function KanbanColumn({
 
   return (
     <div
-      className={`flex flex-col w-[260px] flex-shrink-0 bg-(--muted)/40 border transition-[width] duration-200 ease-in-out ${
+      className={`flex flex-col w-[260px] flex-shrink-0 bg-(--muted)/40 border transition-[width] duration-normal ease-house ${
         isOver
           ? "border-dashed border-(--primary) bg-(--accent)/30"
           : "border-(--border)"

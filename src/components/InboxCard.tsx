@@ -276,7 +276,7 @@ export function InboxCard({
 
   return (
     <div
-      className={`bg-(--card) border border-(--border) rounded p-4 transition-opacity duration-300 ${stripeClass(item)} ${cardOpacity} ${item.type !== "approval" ? "cursor-pointer" : ""}`}
+      className={`bg-(--card) border border-(--border) rounded p-4 transition-opacity duration-slow ease-house ${stripeClass(item)} ${cardOpacity} ${item.type !== "approval" ? "cursor-pointer" : ""}`}
       onClick={item.type !== "approval" ? handleCardClick : undefined}
     >
       {/* Header row */}

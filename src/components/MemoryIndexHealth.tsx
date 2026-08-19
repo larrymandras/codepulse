@@ -27,7 +27,7 @@ const typeColors = [
   "bg-emerald-500/20 text-emerald-400",
   "bg-amber-500/20 text-amber-400",
   "bg-pink-500/20 text-pink-400",
-  "bg-violet-500/20 text-violet-400",
+  "bg-muted text-muted-foreground",
   "bg-teal-500/20 text-teal-400",
   "bg-rose-500/20 text-rose-400",
 ];
