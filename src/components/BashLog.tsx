@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { formatTimestamp } from "../lib/formatters";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
+import { InlineMetricState } from "./EmptyState";
 
 interface BashLogProps {
   sessionId: string;
@@ -62,8 +63,8 @@ export default function BashLog({ sessionId }: BashLogProps) {
             <tbody>
               {filtered.map((cmd: any) => {
                 const id = cmd._id;
-                const command =
-                  cmd.payload?.command ?? cmd.payload?.description ?? "—";
+                const command: string | undefined =
+                  cmd.payload?.command ?? cmd.payload?.description;
                 const exitCode = cmd.payload?.exitCode;
                 const output = cmd.payload?.output ?? cmd.payload?.stdout;
                 const isExpanded = expanded.has(id);
@@ -79,7 +80,11 @@ export default function BashLog({ sessionId }: BashLogProps) {
                         className="text-left w-full"
                       >
                         <span className="font-mono text-foreground break-all">
-                          {mask(isExpanded ? command : command.slice(0, 120) + (command.length > 120 ? "..." : ""))}
+                          {command ? (
+                            mask(isExpanded ? command : command.slice(0, 120) + (command.length > 120 ? "..." : ""))
+                          ) : (
+                            <InlineMetricState state="empty" label="no command recorded" />
+                          )}
                         </span>
                       </button>
                       {isExpanded && output && (
@@ -98,7 +103,7 @@ export default function BashLog({ sessionId }: BashLogProps) {
                           {exitCode}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <InlineMetricState state="empty" label="no exit code" />
                       )}
                     </td>
                   </tr>

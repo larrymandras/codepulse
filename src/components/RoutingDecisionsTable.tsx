@@ -124,11 +124,14 @@ export default function RoutingDecisionsTable() {
                           FALLBACK
                         </span>
                       ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
+                        // A real, known boolean value (fallback was NOT
+                        // used) -- not an absence, so plain text rather
+                        // than a MetricState.
+                        <span className="text-sm text-muted-foreground">No</span>
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm tabular-nums text-muted-foreground">
-                      {d.finalScore?.toFixed(3) ?? "—"}
+                      {d.finalScore?.toFixed(3) ?? "n/a"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {timeStr}
@@ -140,13 +143,17 @@ export default function RoutingDecisionsTable() {
                         colSpan={6}
                         className="bg-background/30 px-4 py-2"
                       >
+                        {/* All four scores use "n/a", not a MetricState:
+                            a scoring dimension not computed for this
+                            provider is structurally inapplicable, matching
+                            the row-level Final Score cell above. */}
                         <div className="grid grid-cols-4 gap-2 text-sm text-muted-foreground font-mono tabular-nums">
-                          <span>Quota: {d.quotaScore?.toFixed(3) ?? "—"}</span>
+                          <span>Quota: {d.quotaScore?.toFixed(3) ?? "n/a"}</span>
                           <span>
-                            Latency: {d.latencyScore?.toFixed(3) ?? "—"}
+                            Latency: {d.latencyScore?.toFixed(3) ?? "n/a"}
                           </span>
-                          <span>Cost: {d.costScore?.toFixed(3) ?? "—"}</span>
-                          <span>Final: {d.finalScore?.toFixed(3) ?? "—"}</span>
+                          <span>Cost: {d.costScore?.toFixed(3) ?? "n/a"}</span>
+                          <span>Final: {d.finalScore?.toFixed(3) ?? "n/a"}</span>
                         </div>
                       </TableCell>
                     </TableRow>

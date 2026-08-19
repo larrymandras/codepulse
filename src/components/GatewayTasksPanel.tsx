@@ -2,6 +2,7 @@ import { useGatewayTasksPaginated } from "../hooks/useGatewayTasks";
 import { PROVIDER_DISPLAY_NAMES } from "../lib/providers";
 import LoadMoreButton from "./LoadMoreButton";
 import InfoTooltip from "./InfoTooltip";
+import { InlineMetricState } from "./EmptyState";
 import {
   Table,
   TableHeader,
@@ -81,9 +82,11 @@ export default function GatewayTasksPanel() {
                     </span>
                   </TableCell>
                   <TableCell className="font-mono tabular-nums text-sm">
-                    {t.durationSeconds != null
-                      ? `${t.durationSeconds.toFixed(2)}s`
-                      : "—"}
+                    {t.durationSeconds != null ? (
+                      `${t.durationSeconds.toFixed(2)}s`
+                    ) : (
+                      <InlineMetricState state="empty" label="not yet" />
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {timeStr}

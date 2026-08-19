@@ -39,7 +39,7 @@ describe("RunSummary", () => {
     expect(screen.getByText("completed")).toBeInTheDocument();
   });
 
-  it("shows dashes for token/cost during live run", () => {
+  it('shows "n/a" (not a dash) for token/cost fields not yet reported during a live run', () => {
     render(
       <RunSummary
         rounds={1}
@@ -48,8 +48,9 @@ describe("RunSummary", () => {
         blocks={[]}
       />
     );
-    const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBeGreaterThanOrEqual(3);
+    const naValues = screen.getAllByText("n/a");
+    expect(naValues.length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByText("—")).toBeNull();
   });
 
   it("renders tool usage from blocks", () => {

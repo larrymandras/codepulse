@@ -203,10 +203,14 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
               <TableBody>
                 {rows.map((row, i) => {
                   const isOpus = row.model.toLowerCase().includes("opus");
+                  // "n/a" (not a MetricState): a percentage of a cost that
+                  // was never computed for this row (see the "Unpriced"
+                  // badge two columns over) cannot apply, not merely
+                  // missing.
                   const pct =
                     billedTotal > 0 && row.billedUsd !== null
                       ? ((row.billedUsd / billedTotal) * 100).toFixed(1)
-                      : "—";
+                      : "n/a";
                   return (
                     <TableRow
                       key={`${row.provider}-${row.model}-${i}`}
@@ -241,7 +245,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
                       <TableCell
                         className={`text-sm tabular-nums px-1 py-1 ${isOpus ? OPUS_CELL_CLASS : ""}`}
                       >
-                        {pct}%
+                        {pct === "n/a" ? pct : `${pct}%`}
                       </TableCell>
                     </TableRow>
                   );

@@ -152,11 +152,14 @@ function StateIcon({ state }: { state: string }) {
 export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
   const state = data.state ?? "pending";
   const label = stateLabel[state] ?? state;
+  // Plain text, not the icon-bearing InlineMetricState: this is a real,
+  // known fact (nobody has claimed this task yet), and the node's fixed
+  // footprint must not shift to accommodate an icon.
   const agentDisplay = data.agentId
     ? data.agentId.slice(0, 12)
     : data.claimedBy
       ? data.claimedBy.slice(0, 12)
-      : "—";
+      : "unclaimed";
   const hasAgent = Boolean(data.agentId || data.claimedBy);
   const avatarStatus = stateAvatarStatus[state] ?? "idle";
 

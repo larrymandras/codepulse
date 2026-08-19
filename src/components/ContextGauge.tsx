@@ -88,13 +88,16 @@ export default function ContextGauge({ sessionId }: ContextGaugeProps) {
         ? `${(burnRate / 1000).toFixed(1)}k/min`
         : "stable";
 
-  // Format time to full
+  // Format time to full. "n/a" (not a MetricState) rather than an
+  // empty-state icon: time-to-full is only DEFINED when burn rate is
+  // positive -- a flat or negative burn rate makes it structurally
+  // inapplicable, not merely unmeasured.
   const ttfLabel =
     timeToFull != null
       ? timeToFull < 60
         ? `~${Math.round(timeToFull)}min`
         : `~${(timeToFull / 60).toFixed(1)}hr`
-      : "—";
+      : "n/a";
 
   return (
     <div className="bg-card/50 border border-border/50 rounded-xl p-4">

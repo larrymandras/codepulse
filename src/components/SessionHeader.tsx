@@ -1,5 +1,6 @@
 import { formatTimestamp, formatDuration, truncatePath } from "../lib/formatters";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
+import { InlineMetricState } from "./EmptyState";
 
 interface SessionHeaderProps {
   session: {
@@ -40,7 +41,11 @@ export default function SessionHeader({ session }: SessionHeaderProps) {
         <div>
           <p className="text-sm text-muted-foreground">CWD</p>
           <p className="text-base font-mono text-foreground mt-0.5" title={session.cwd ? maskFilePath(session.cwd) : undefined}>
-            {session.cwd ? truncatePath(maskFilePath(session.cwd)) : "—"}
+            {session.cwd ? (
+              truncatePath(maskFilePath(session.cwd))
+            ) : (
+              <InlineMetricState state="empty" label="not reported" />
+            )}
           </p>
         </div>
         <div>

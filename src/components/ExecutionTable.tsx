@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import StatusBadge from "./StatusBadge";
 import ReplayButton from "./ReplayButton";
 import CancelButton from "./CancelButton";
+import { InlineMetricState } from "./EmptyState";
 
 interface ExecutionRow {
   _id: string;
@@ -42,14 +43,17 @@ function formatTime(epochSeconds: number): string {
   return `${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")} ${d.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })}`;
 }
 
-function formatDuration(ms?: number): string {
-  if (ms == null) return "—";
+// null (rather than a placeholder string) lets each call site pick its own
+// honest label for "no value" through InlineMetricState -- "not recorded",
+// "not yet", etc. -- instead of every caller sharing one ambiguous dash.
+function formatDuration(ms?: number): string | null {
+  if (ms == null) return null;
   if (ms < 1000) return `${ms.toFixed(0)}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-function formatTs(epochSeconds?: number): string {
-  if (!epochSeconds) return "—";
+function formatTs(epochSeconds?: number): string | null {
+  if (!epochSeconds) return null;
   return new Date(epochSeconds * 1000).toLocaleString();
 }
 
@@ -153,7 +157,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
               {/* Channel */}
               <span className="text-sm text-muted-foreground truncate">
-                {row.channelId ?? "—"}
+                {row.channelId ?? <InlineMetricState state="empty" label="no channel" />}
               </span>
 
               {/* Profile */}
@@ -163,7 +167,9 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
               {/* Duration */}
               <span className="text-sm text-muted-foreground">
-                {formatDuration(row.durationMs)}
+                {formatDuration(row.durationMs) ?? (
+                  <InlineMetricState state="empty" label="not recorded" />
+                )}
               </span>
 
               {/* Status */}
@@ -176,7 +182,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                 {modeData?.mode ? (
                   <StatusBadge status={modeData.mode} />
                 ) : (
-                  <span className="text-sm text-muted-foreground">—</span>
+                  <InlineMetricState state="empty" label="no mode data" />
                 )}
                 {(modeData?.fillerCount ?? 0) > 0 && (
                   <span className="text-xs" style={{ color: "var(--status-warn)" }}>
@@ -188,9 +194,12 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                 )}
               </span>
 
-              {/* Rounds depth */}
+              {/* Rounds depth. "n/a" (not a MetricState): depth is only
+                  meaningful when mode data exists, and its absence is
+                  already explained by the Mode cell above showing "no mode
+                  data" in the same row. */}
               <span className="tabular-nums text-sm text-muted-foreground">
-                {modeData?.roundsDepth != null ? `${modeData.roundsDepth}r` : "—"}
+                {modeData?.roundsDepth != null ? `${modeData.roundsDepth}r` : "n/a"}
               </span>
 
               {/* Actions */}
@@ -246,15 +255,21 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-muted-foreground">Queued: </span>
-                    <span className="text-foreground">{formatTs(row.queuedAt)}</span>
+                    <span className="text-foreground">
+                      {formatTs(row.queuedAt) ?? <InlineMetricState state="empty" label="not yet" />}
+                    </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Started: </span>
-                    <span className="text-foreground">{formatTs(row.startedAt)}</span>
+                    <span className="text-foreground">
+                      {formatTs(row.startedAt) ?? <InlineMetricState state="empty" label="not yet" />}
+                    </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Completed: </span>
-                    <span className="text-foreground">{formatTs(row.completedAt)}</span>
+                    <span className="text-foreground">
+                      {formatTs(row.completedAt) ?? <InlineMetricState state="empty" label="not yet" />}
+                    </span>
                   </div>
                 </div>
 
@@ -277,7 +292,10 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                     {modeData.stalledAt != null && (
                       <div>
                         <span className="text-muted-foreground">Stalled at: </span>
-                        <span style={{ color: "var(--status-error)" }}>{formatTs(modeData.stalledAt)}</span>
+                        {/* modeData.stalledAt is non-null here (guarded above), so
+                            formatTs cannot return null on this path -- the "n/a"
+                            fallback only satisfies the shared helper's type. */}
+                        <span style={{ color: "var(--status-error)" }}>{formatTs(modeData.stalledAt) ?? "n/a"}</span>
                       </div>
                     )}
                   </div>

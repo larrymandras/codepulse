@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { GlassPanel } from "@/components/GlassPanel";
 import { StatusBadge } from "@/components/StatusBadge";
+import { InlineMetricState } from "@/components/EmptyState";
 
 export interface Fact {
   _id: string;
@@ -124,12 +125,18 @@ export function FactsTable({
                       )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-base">
-                      {fact.confidence != null
-                        ? `${(fact.confidence * 100).toFixed(0)}%`
-                        : "—"}
+                      {fact.confidence != null ? (
+                        `${(fact.confidence * 100).toFixed(0)}%`
+                      ) : (
+                        <InlineMetricState state="empty" label="unscored" />
+                      )}
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                      {fact.timestamp ? formatRelative(fact.timestamp) : "—"}
+                      {fact.timestamp ? (
+                        formatRelative(fact.timestamp)
+                      ) : (
+                        <InlineMetricState state="empty" label="unknown" />
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

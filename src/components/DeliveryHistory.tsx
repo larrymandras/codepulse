@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { SectionHeader } from "./SectionHeader";
+import { InlineMetricState } from "./EmptyState";
 import {
   Table,
   TableHeader,
@@ -77,16 +78,20 @@ export function DeliveryHistory() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-base">
-                      {log.subject ?? "—"}
+                      {log.subject ?? <InlineMetricState state="empty" label="no subject" />}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {log.recipient ?? "—"}
+                      {log.recipient ?? <InlineMetricState state="empty" label="no recipient" />}
                     </TableCell>
                     <TableCell className="tabular-nums text-sm text-muted-foreground">
                       {new Date(log.sentAt * 1000).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground truncate max-w-[300px]">
-                      {log.errorMessage ?? "—"}
+                      {/* "n/a", not an empty-state icon: when status is
+                          "success" (rendered in the Status column) the
+                          absence of an error message is a real fact -- no
+                          error occurred -- not a data gap. */}
+                      {log.errorMessage ?? "n/a"}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -128,17 +133,18 @@ export function DeliveryHistory() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-base capitalize">
-                      {log.action ?? "—"}
+                      {log.action ?? <InlineMetricState state="empty" label="no action" />}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {log.dedupKey ?? "—"}
+                      {log.dedupKey ?? <InlineMetricState state="empty" label="no dedup key" />}
                     </TableCell>
                     <TableCell className="text-sm">{log.ruleId}</TableCell>
                     <TableCell className="tabular-nums text-sm text-muted-foreground">
                       {new Date(log.sentAt * 1000).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground truncate max-w-[300px]">
-                      {log.errorMessage ?? "—"}
+                      {/* "n/a", same reasoning as the email tab's error column above. */}
+                      {log.errorMessage ?? "n/a"}
                     </TableCell>
                   </TableRow>
                 ))}
