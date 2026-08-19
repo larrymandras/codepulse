@@ -180,3 +180,13 @@ response, per T-122-18-A.
 ---
 *Phase: 122-tokens-primitives-contrast-measurement*
 *Completed: 2026-08-19*
+
+## Self-Check: PASSED
+
+- FOUND: `e2e/theme-rendered-result.spec.ts`
+- FOUND: `e2e/theme-reduced-motion.spec.ts`
+- FOUND: `.planning/phases/122-tokens-primitives-contrast-measurement/122-RENDERED-RESULT.md`
+- FOUND: `.planning/phases/122-tokens-primitives-contrast-measurement/122-18-SUMMARY.md`
+- FOUND commit: `a0d82823` (Task 1)
+- FOUND commit: `e53de762` (Task 2)
+- FOUND commit: `432ff26e` (this summary)
