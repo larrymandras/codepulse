@@ -68,12 +68,23 @@
  * (`sweep-ledgers/122-04..08-LEDGER.md`) that already proved each one discriminates against a
  * known-positive in this exact repo -- none are hand-re-derived here.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { execFileSync } from "node:child_process";
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import {
+  readFileSync,
+  existsSync,
+  readdirSync,
+  writeFileSync,
+  unlinkSync,
+} from "node:fs";
 import { join } from "node:path";
+import * as ts from "typescript";
 
 const REPO_ROOT = process.cwd();
+const PHASE_DIR = join(
+  REPO_ROOT,
+  ".planning/phases/122-tokens-primitives-contrast-measurement"
+);
 
 // ---------------------------------------------------------------------------
 // git grep helpers -- the sole population source for every bucket below.
@@ -427,5 +438,150 @@ describe("D-25 bucket: state honesty -- em-dash value-slot placeholders", () => 
   });
 });
 
-// D-26's mutation proofs (two mutations + negative control + the duration false-green proof) are
-// added by Task 2, in a follow-up commit -- see this file's git history and 122-17-SUMMARY.md.
+// ---------------------------------------------------------------------------
+// D-26: two mutation proofs plus a negative control. Mutations are held on disk only as long as
+// the single synchronous try/finally block around each write needs them -- never left behind, per
+// the precedent's disk-safety discipline and this file's own T-122-17-C mitigation. `git grep`
+// cannot see in-memory content across a multi-file corpus (unlike Analytics.structuralGuard's
+// single-file AST walk), so a temp fixture file is the mechanism this bucket's design genuinely
+// requires -- written inside `src/` (so it is a real corpus member), given a name that could never
+// collide with a real component, and deleted in `finally` even if the assertion inside throws.
+// ---------------------------------------------------------------------------
+
+const MUTATION_A_REL = "src/components/__ratchet-mutation-fixture-a.tsx";
+const MUTATION_A_ABS = join(REPO_ROOT, MUTATION_A_REL);
+const MUTATION_B_REL = "src/components/__ratchet-mutation-fixture-b-unlisted.tsx";
+const MUTATION_B_ABS = join(REPO_ROOT, MUTATION_B_REL);
+
+function assertSyntacticallyValid(source: string): void {
+  // Case C (validity precondition), asserted BEFORE the failure assertion in every mutation test
+  // below -- a syntactically invalid mutation produces a parse error that reads exactly like the
+  // guard firing, and a red from that proves nothing. Precedent:
+  // Analytics.structuralGuard.test.ts's identical use of ts.transpileModule.
+  const { diagnostics } = ts.transpileModule(source, {
+    fileName: "fixture.tsx",
+    reportDiagnostics: true,
+    compilerOptions: { jsx: ts.JsxEmit.Preserve },
+  });
+  expect(diagnostics ?? []).toEqual([]);
+}
+
+describe("D-26 mutation (a): reintroducing a fixed violation fails the ratchet", () => {
+  afterAll(() => {
+    if (existsSync(MUTATION_A_ABS)) unlinkSync(MUTATION_A_ABS);
+  });
+
+  it("reintroducing ActiveTimeChart.tsx's pre-122-04 bg-gray-800 as a temp fixture makes the palette bucket fail", () => {
+    const realSource = readFileSync(
+      join(REPO_ROOT, "src/components/ActiveTimeChart.tsx"),
+      "utf8"
+    );
+    // Proves there IS a real, converted site to regress -- 122-04-LEDGER.md records this file's
+    // bg-gray-800/50 -> bg-card/50 conversion.
+    expect(realSource).toContain("bg-card/50");
+    const mutated = realSource.replace("bg-card/50", "bg-gray-800/50");
+
+    assertSyntacticallyValid(mutated);
+
+    try {
+      writeFileSync(MUTATION_A_ABS, mutated, "utf8");
+      expect(paletteViolations()).toContain(MUTATION_A_REL);
+    } finally {
+      if (existsSync(MUTATION_A_ABS)) unlinkSync(MUTATION_A_ABS);
+    }
+  });
+});
+
+describe("D-26 mutation (b) -- the one that matters: a violation in a file on NO list also fails the ratchet", () => {
+  afterAll(() => {
+    if (existsSync(MUTATION_B_ABS)) unlinkSync(MUTATION_B_ABS);
+  });
+
+  it("the fixture path is provably absent from KNOWN_EXEMPT and from every sweep ledger", () => {
+    expect(KNOWN_EXEMPT[MUTATION_B_REL]).toBeUndefined();
+    const ledgerPaths = [
+      "sweep-ledgers/122-04-LEDGER.md",
+      "sweep-ledgers/122-05-LEDGER.md",
+      "sweep-ledgers/122-06-LEDGER.md",
+      "sweep-ledgers/122-07-LEDGER.md",
+      "sweep-ledgers/122-08-LEDGER.md",
+      "122-PAGEHEADER-ADOPTION.md",
+      "122-LOADING-LEDGER.md",
+      "122-LOADING-LEDGER-SUBTREES.md",
+      "122-STATE-HONESTY-LEDGER.md",
+    ];
+    for (const rel of ledgerPaths) {
+      const text = readFileSync(join(PHASE_DIR, rel), "utf8");
+      expect(text).not.toContain("ratchet-mutation-fixture-b-unlisted");
+    }
+  });
+
+  it("a synthetic violation in this never-mentioned file fails the ratchet -- an enumerated allowlist test would have passed it", () => {
+    const content =
+      'export function UnlistedFixture() {\n' +
+      '  return <div className="text-purple-400">unlisted</div>;\n' +
+      '}\n';
+
+    assertSyntacticallyValid(content);
+
+    try {
+      writeFileSync(MUTATION_B_ABS, content, "utf8");
+      expect(violetViolations()).toContain(MUTATION_B_REL);
+    } finally {
+      if (existsSync(MUTATION_B_ABS)) unlinkSync(MUTATION_B_ABS);
+    }
+  });
+});
+
+describe("D-26 negative control: the unmutated real corpus trips zero buckets", () => {
+  it("all six buckets are clean with no mutation fixture present (an analyzer that flags everything would fail this)", () => {
+    expect(existsSync(MUTATION_A_ABS)).toBe(false);
+    expect(existsSync(MUTATION_B_ABS)).toBe(false);
+    expect(paletteViolations()).toEqual([]);
+    expect(hexViolations()).toEqual([]);
+    expect(durationNegativeViolations()).toEqual([]);
+    expect(violetViolations()).toEqual([]);
+    expect(pageHeaderViolations()).toEqual([]);
+    expect(bareLoadingViolations()).toEqual([]);
+    expect(emDashViolations()).toEqual([]);
+  });
+});
+
+describe("D-26 duration false-green proof", () => {
+  it.skipIf(DIST_CSS === null)(
+    "stripping the @utility duration-* rules from the built-CSS input fails the positive half while the negative half still passes",
+    () => {
+      if (DIST_CSS === null) return; // narrowing for TS; skipIf already prevents this branch
+      expect(hasAllThreeDurationRules(DIST_CSS)).toBe(true); // real build: passes
+      const stripped = stripDurationUtilityRules(DIST_CSS);
+      expect(hasAllThreeDurationRules(stripped)).toBe(false); // simulated D-10-as-written false-green
+      // The negative half is corpus-grep-based and entirely unaffected by this in-memory CSS
+      // string mutation -- it must still pass, proving the two halves are independent checks.
+      expect(durationNegativeViolations()).toEqual([]);
+    }
+  );
+
+  if (DIST_CSS === null) {
+    // eslint-disable-next-line no-console
+    console.warn(`[D-26 duration false-green proof] SKIPPED: ${DIST_CSS_SKIP_REASON}`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Final disk-safety sweep (T-122-17-C): defensive only -- every mutation test above already
+// cleans up in try/finally and its own afterAll, so this should always find nothing. If it does
+// find something, that is itself the finding: report it rather than silently deleting and moving
+// on, since a leftover fixture in a shared checkout could otherwise be swept into another
+// session's commit.
+// ---------------------------------------------------------------------------
+
+afterAll(() => {
+  const leftovers = [MUTATION_A_ABS, MUTATION_B_ABS].filter((p) => existsSync(p));
+  if (leftovers.length > 0) {
+    for (const p of leftovers) unlinkSync(p);
+    throw new Error(
+      `tokenSweep.ratchet.test.ts: found and removed ${leftovers.length} leftover mutation ` +
+        `fixture(s) that should have been cleaned up by their own test: ${leftovers.join(", ")}`
+    );
+  }
+});
