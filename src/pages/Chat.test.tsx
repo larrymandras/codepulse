@@ -16,7 +16,7 @@
  */
 import React from "react";
 import type { ReactNode } from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, waitFor, screen, act, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 
@@ -31,6 +31,14 @@ const mockSendCommand = vi.fn().mockResolvedValue({ status: "ok" });
 
 /** Mutable status the mocked useAstridrChat() reads on each call. */
 let mockStatus: "connected" | "reconnecting" | "disconnected" = "connected";
+
+/**
+ * 192-04 (LIP-01): mutable TTS-playback flag the mocked useAstridrChat()
+ * reads on each call. Defaults false — the value every pre-existing spec in
+ * this file ran against — and is only flipped by the avatarState describe
+ * block at the bottom, which restores it in its own afterEach.
+ */
+let mockTtsIsPlaying = false;
 
 /**
  * Registered (eventType -> callback) pairs across every subscribeEvent()
@@ -62,7 +70,7 @@ vi.mock("@/hooks/useAstridrChat", () => ({
     setTtsEnabled: vi.fn(),
     playAudio: vi.fn(),
     stopAudio: vi.fn(),
-    ttsIsPlaying: false,
+    ttsIsPlaying: mockTtsIsPlaying,
     interrupt: vi.fn(() => ""),
     appendLocalAssistantMessage: mockAppendLocalAssistantMessage,
     correctAssistantMessage: mockCorrectAssistantMessage,
@@ -1124,5 +1132,92 @@ describe("Chat — composer submit reports a failed send (Defect 4)", () => {
       expect(box.value).toBe("");
     });
     expect(toast.error).not.toHaveBeenCalled();
+  });
+});
+
+// ─── 192-04 / LIP-01: audible TTS playback drives avatarState ────────────────
+//
+// The named cause (192-TRACE.md): avatarState could only yield "speaking" when
+// BOTH the mic toggle was on AND a live voice conversation was active, so
+// AvatarAura's mouth branch — gated on `state === "speaking"` — was never
+// entered while she spoke through TTS. A 56.6s live trace recorded
+// mouthDrawCount 0 across 1255 healthy renders.
+//
+// Why these specs and not the browser cadence guard: AvatarAura.browser.test.tsx
+// mounts the component directly with an explicit `state` prop, so it is
+// structurally blind to a defect in how the PAGE derives that prop. Reverting
+// the fix leaves it green (recorded verbatim in 192-MUTATION-PROOF.md). These
+// specs are the guard that actually covers the fixed line.
+//
+// avatarState is observed through VoiceStatusPanel, which Chat binds directly
+// to it (`state={avatarState}`) and which marks exactly the active chip with
+// CHIP_ACTIVE (`text-primary`). Command-center mode is the surface that mounts
+// that panel.
+const LS_LISTENING = "codepulse-astridr-listening";
+const VOICE_CHIP_STATES = [
+  "idle",
+  "listening",
+  "transcribing",
+  "processing",
+  "speaking",
+  "error-disabled",
+] as const;
+
+/**
+ * The set of chips VoiceStatusPanel marks active — i.e. what avatarState is.
+ * Returns the whole set rather than probing one chip, so a mutation that lit
+ * every chip could not pass.
+ */
+function activeVoiceChips(): string[] {
+  return VOICE_CHIP_STATES.filter((s) =>
+    screen.getByTestId(`voice-status-chip-${s}`).className.includes("text-primary")
+  );
+}
+
+describe("Chat — avatarState follows audible TTS playback (192-04, LIP-01)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    localStorage.removeItem(LS_COMMAND_CENTER);
+    localStorage.removeItem(LS_LISTENING);
+    mockTtsIsPlaying = false;
+  });
+
+  afterEach(() => {
+    mockTtsIsPlaying = false;
+    localStorage.removeItem(LS_LISTENING);
+  });
+
+  function mountCommandCenter() {
+    renderChat();
+    fireEvent.click(gridToggle());
+  }
+
+  it("mic OFF + typed turn + TTS playing resolves to speaking (Larry's exact live configuration)", () => {
+    localStorage.setItem(LS_LISTENING, "false");
+    mockTtsIsPlaying = true;
+
+    mountCommandCenter();
+
+    expect(activeVoiceChips()).toEqual(["speaking"]);
+  });
+
+  it("CONTROL: mic OFF + typed turn + TTS NOT playing still resolves to idle — the mic-off dimming stays a real, separate cue", () => {
+    localStorage.setItem(LS_LISTENING, "false");
+    mockTtsIsPlaying = false;
+
+    mountCommandCenter();
+
+    expect(activeVoiceChips()).toEqual(["idle"]);
+  });
+
+  it("mic ON + typed turn + TTS playing resolves to speaking — the half a just-turn-the-mic-on fix would have left open", () => {
+    localStorage.setItem(LS_LISTENING, "true");
+    mockTtsIsPlaying = true;
+
+    mountCommandCenter();
+
+    expect(activeVoiceChips()).toEqual(["speaking"]);
   });
 });
