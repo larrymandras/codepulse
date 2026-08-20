@@ -58,7 +58,13 @@ planner and the decision-coverage gate both read those files.
    That is a line-based filter over multi-line JSX — the element tag usually sits on a different
    line from the attribute, so it counts attributes, not defects. Do not plan against 254. The
    only trustworthy figure in that family is `aria-busy`, which appears in exactly **2 files**
-   (`src/components/forge/ForgeJobList.tsx` x2, `src/components/skills/SkillReviewDrawer.tsx` x1).
+   (~~`src/components/forge/ForgeJobList.tsx` x2~~, `src/components/skills/SkillReviewDrawer.tsx` x1).
+   **Corrected at plan time 2026-08-20:** 2 files is right, but the site count is **2, not 3**.
+   `ForgeJobList.tsx` has 2 textual matches and only **1** is an attribute — `:173`
+   `aria-busy="true"`; `:166` is a comment (`// Loading state — 3 skeleton rows with aria-busy`).
+   The other real site is `SkillReviewDrawer.tsx:93`. This is the same defect the paragraph above
+   is warning about, one level down: a text match is not an attribute. Any scan that defines this
+   family's floor must exclude comment lines, or it inherits a phantom third site.
 
 </premise_corrections>
 
@@ -104,7 +110,13 @@ move.
 
 - **D-01:** Ratio-gated class sweep, not an instance fix. Enumerate every
   `text-primary/NN` / `text-muted-foreground/NN` / `text-(--token)/NN` occurrence across `src/`
-  (re-derive the population at plan time; discussion measured 176 occurrences in 75 files),
+  (re-derive the population at plan time; discussion measured 176 occurrences in ~~75~~ **65**
+  files — **re-derived at plan time 2026-08-20, twice independently: 176 occurrences is correct
+  (86 `text-primary/NN` + 88 `text-muted-foreground/NN` + 2 `text-(--token)/NN`), the file count
+  is 65, not 75, of which exactly 1 is a test file (`JobsPanel.test.tsx`). Unit discipline: the
+  occurrence figure comes from `grep -roE … | wc -l`, the file figure from `grep -rlE … | wc -l`
+  — `grep -c` would have counted matching LINES and emitted a `path:0` row per file scanned.
+  Plan against 65**),
   measure each pairing against its actual composited background, and fix only those below
   threshold. Fixing only the ~5 elements axe flags was explicitly rejected: it is the
   instance-not-class shape, and ~170 siblings of the identical defect live on the 42 unmeasured
@@ -187,13 +199,44 @@ move.
 
 - **D-11:** Keep `test.skip()`, **fail the run on any skip**. The annotation at
   `e2e/theme-contrast.spec.ts:66-73` is what distinguishes "never rendered" from "rendered clean",
-  and that distinction stays in the report. Add a file-level skipped-cell counter plus an
-  `afterAll` that throws if it is non-zero: the cell still reads `skipped`, the **suite** fails,
+  and that distinction stays in the report. The cell still reads `skipped`, the **suite** fails,
   exit code is non-zero. This satisfies `ROADMAP.md:807`'s "fail (not skip)" literally and
   `REQUIREMENTS.md:68`'s "verify the guard still holds" simultaneously, losing no information.
   Converting the skip into a bare assertion was rejected: it makes a gated run indistinguishable
   from a genuinely violating one, and hands 20 unexplained red tests to anyone who runs the suite
   against the ordinary gated `:5173`.
+
+  **MECHANISM CORRECTED 2026-08-20 at plan time — the decision's goal is unchanged, the named
+  implementation was falsified.** This decision originally read "add a file-level skipped-cell
+  counter plus an `afterAll` that throws if it is non-zero". That mechanism **cannot** deliver
+  the property this decision exists to protect. Measured against this repo's own Playwright
+  **1.61.1** (`node_modules/.bin/playwright`, not a global install — the global one is a
+  different version and must not be used to settle this), with a 4-cell probe of 3 skipping
+  cells plus 1 genuinely-passing control:
+
+  | Mechanism | exit code | `stats.skipped` | gated cells' `result.status` | control cell |
+  |---|---|---|---|---|
+  | no guard (today's shipped behaviour) | **0** | 3 | `skipped` | — |
+  | module counter + `test.afterAll` throw | 1 | **0** | **`failed` x3** | `passed` |
+  | `globalTeardown` + `fs` side-channel | 1 | **3** | **`skipped` x3** | `passed` |
+
+  Playwright attributes a thrown hook error to the tests in that hook's scope, overwriting
+  `result.status`, so `afterAll` empties the `skipped` bucket entirely while still carrying a
+  `type: "skip"` annotation on each corrupted cell. **Both guarded mechanisms exit 1**, so a
+  superficial "does the suite go red?" check cannot tell them apart — the whole difference lives
+  in the status bucket, which is precisely the "never rendered" vs "rendered clean" vs
+  "violating" three-way distinction this decision is written to preserve. `afterAll` therefore
+  fails D-11 while appearing to satisfy it.
+
+  **Adopt instead:** a `globalTeardown` script that reads an `fs` side-channel log which each
+  worker appends to on its skip branch, and throws when the count is non-zero. This is also
+  required for a second, independent reason: `fullyParallel: true` puts cells in separate worker
+  **processes**, so a module-scope counter is per-process and cannot see sibling workers' skips
+  at all (the probe's `afterAll` counter read 1 per worker, never 3; the `globalTeardown`
+  aggregate correctly read 3). The log must be truncated at run start in the existing
+  `e2e/global-setup.ts`, or a stale log from a previous failing run fails the next clean one.
+  Regression signature to assert against, per `123-RESEARCH.md` Pitfall 2: **no test may carry
+  `"status": "failed"` while its annotations include `type: "skip"`.**
 
 - **D-12:** Prove the guard two ways. **Durable half:** an in-suite self-test that injects the
   sign-in screen deterministically (stub the auth state / render the gated shell), asserts the
