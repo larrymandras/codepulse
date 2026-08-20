@@ -1,0 +1,81 @@
+{
+  "theme": "readable",
+  "page": "HrOnboarding",
+  "path": "/hr/onboarding",
+  "url": "http://127.0.0.1:5181/hr/onboarding",
+  "capturedAt": "2026-08-20T19:08:12.809Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#ef4444",
+                "bgColor": "#2d1f25",
+                "contrastRatio": 4.18,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-base\">",
+                  "target": [
+                    ".p-3"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border borde...\" style=\"opacity: 1; transfor...\">",
+                  "target": [
+                    ".bg-card"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 4.18 (foreground color: #ef4444, background color: #2d1f25, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span>Failed to fetch</span>",
+          "target": [
+            ".p-3 > span"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.18 (foreground color: #ef4444, background color: #2d1f25, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

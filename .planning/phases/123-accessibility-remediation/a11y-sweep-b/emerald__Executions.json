@@ -1,0 +1,13 @@
+{
+  "theme": "emerald",
+  "page": "Executions",
+  "path": "/executions",
+  "url": "http://127.0.0.1:5181/executions",
+  "capturedAt": "2026-08-20T19:07:43.223Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

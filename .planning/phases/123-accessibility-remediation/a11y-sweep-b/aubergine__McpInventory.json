@@ -1,0 +1,195 @@
+{
+  "theme": "aubergine",
+  "page": "McpInventory",
+  "path": "/mcp-inventory",
+  "url": "http://127.0.0.1:5181/mcp-inventory",
+  "capturedAt": "2026-08-20T19:08:41.828Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#74675b",
+                "bgColor": "#1a1521",
+                "contrastRatio": 3.26,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"bg-card/60 backdrop-blur border border-border/50 rounded-xl overflow-hidden\" style=\"box-shadow: rgba(255, 255, 255, 0.02) 0px 0px 15px;\">",
+                  "target": [
+                    ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(1)"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"text-muted-foreground/70 hidden md:inline\">0 calls</span>",
+          "target": [
+            ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(1) > .px-4.hover\\:bg-accent\\/30.py-3 > .flex-shrink-0.gap-3.text-sm > .text-muted-foreground\\/70.md\\:inline.hidden"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#74675b",
+                "bgColor": "#1a1521",
+                "contrastRatio": 3.26,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"bg-card/60 backdrop-blur border border-border/50 rounded-xl overflow-hidden\" style=\"box-shadow: rgba(255, 255, 255, 0.02) 0px 0px 15px;\">",
+                  "target": [
+                    ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(2)"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"text-muted-foreground/70 hidden md:inline\">0 calls</span>",
+          "target": [
+            ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(2) > .px-4.hover\\:bg-accent\\/30.py-3 > .flex-shrink-0.gap-3.text-sm > .text-muted-foreground\\/70.md\\:inline.hidden"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#74675b",
+                "bgColor": "#1a1521",
+                "contrastRatio": 3.26,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"bg-card/60 backdrop-blur border border-border/50 rounded-xl overflow-hidden\" style=\"box-shadow: rgba(255, 255, 255, 0.02) 0px 0px 15px;\">",
+                  "target": [
+                    ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(3)"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"text-muted-foreground/70 hidden md:inline\">0 calls</span>",
+          "target": [
+            ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(3) > .px-4.hover\\:bg-accent\\/30.py-3 > .flex-shrink-0.gap-3.text-sm > .text-muted-foreground\\/70.md\\:inline.hidden"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#74675b",
+                "bgColor": "#1a1521",
+                "contrastRatio": 3.26,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"bg-card/60 backdrop-blur border border-border/50 rounded-xl overflow-hidden\" style=\"box-shadow: rgba(255, 255, 255, 0.02) 0px 0px 15px;\">",
+                  "target": [
+                    ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(4)"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"text-muted-foreground/70 hidden md:inline\">0 calls</span>",
+          "target": [
+            ".backdrop-blur.bg-card\\/60.rounded-xl:nth-child(4) > .px-4.hover\\:bg-accent\\/30.py-3 > .flex-shrink-0.gap-3.text-sm > .text-muted-foreground\\/70.md\\:inline.hidden"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.26 (foreground color: #74675b, background color: #1a1521, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

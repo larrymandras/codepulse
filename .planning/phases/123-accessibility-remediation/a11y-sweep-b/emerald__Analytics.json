@@ -1,0 +1,13 @@
+{
+  "theme": "emerald",
+  "page": "Analytics",
+  "path": "/analytics",
+  "url": "http://127.0.0.1:5181/analytics",
+  "capturedAt": "2026-08-20T19:07:33.166Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

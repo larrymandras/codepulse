@@ -1,0 +1,13 @@
+{
+  "theme": "emerald",
+  "page": "HrTeams",
+  "path": "/hr/teams",
+  "url": "http://127.0.0.1:5181/hr/teams",
+  "capturedAt": "2026-08-20T19:07:50.885Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

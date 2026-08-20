@@ -1,0 +1,13 @@
+{
+  "theme": "aubergine",
+  "page": "Graphs",
+  "path": "/graphs",
+  "url": "http://127.0.0.1:5181/graphs",
+  "capturedAt": "2026-08-20T19:08:15.718Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

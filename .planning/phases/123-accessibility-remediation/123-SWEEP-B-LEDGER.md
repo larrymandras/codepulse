@@ -241,3 +241,118 @@ hex literals (#RGB..#RRGGBBAA):     51   (grep -roE '#[0-9a-fA-F]{3,8}' <42 file
 ```
 
 Task 2 must reproduce these two counts unchanged after editing.
+
+---
+
+## Task 2 result (post-edit, confirmed)
+
+- Live occurrence count after editing: **47**, exactly matching `leave` (47). Arithmetic:
+  `111 (live_before) - 64 (changed) = 47 (live_after) = 47 (leave_count)`.
+- `bg-*/NN` + `border-*/NN` across the 42 files: **331** — unchanged.
+- Hex literals across the 42 files: **51** — unchanged.
+- Exhaustive per-occurrence diff of post-edit survivors against the leave list: **0 missing, 0
+  unexplained** — every surviving occurrence is a leave row, by exact `(file, line, class)` match,
+  not merely by class-string membership.
+- `npx tsc --noEmit`: clean.
+- `npm test`'s jsdom "unit" project (the project covering every file this task touches; the repo
+  also carries an uncommitted `vitest.config.ts`/`package.json` browser-mode chromium project from
+  a concurrent, unrelated session, present since before this plan's first tool call, whose
+  `src/test/setup.ts` import fails independent of this sweep): **346/346 test files, 4879/4879
+  tests, 0 failures.**
+
+## Task 3 result — post-sweep re-measurement (widened 188-cell matrix)
+
+Ran `A11Y_SCAN_ALL=1 A11Y_MEASURE_ONLY=1` against the shared `dev:noauth` server already serving
+5181 (reused, not restarted, per the plan). 188/188 cells captured (one cell, `readable__HrRoster`,
+hit the D-13 marker-timeout gate on the first pass — the same non-deterministic slow-cold-fetch
+behaviour the addendum already documented for `cyan__HrRoster` — and completed cleanly on a solo
+re-run, 13.3s). `A11Y_MEASURE_ONLY=1` makes every scanned cell throw
+`"assertions suppressed: this is a measurement, not a verification"` by design (D-14); Playwright's
+own "188 failed / 1 passed" summary is not a verdict and is not read as one.
+
+Counts parsed from `violations[].nodes.length` in each capture JSON — never grepped `"id"`.
+
+### Criterion cells (20: Dashboard, LiveRun, Analytics, Forge, Graphs × 4 themes)
+
+| Rule | Objects | Nodes |
+|---|---|---|
+| color-contrast | **0** | **0** |
+| aria-prohibited-attr | **0** | **0** |
+| ALL rules (must-differ control) | 1 | 1 |
+
+**Both criterion rules the plan gates on are clean: 0/0.** The lone ALL-rules hit (1 object/1 node)
+is `scrollable-region-focusable` on `[readable] LiveRun` only — an unrelated rule, not touched by
+this sweep, matching the class of theme-dependent scroll-overflow flakiness § 1 already documented
+for other routes (Ideation, Executions, HrCatalog). Named below, not absorbed into the criterion
+verdict, and does not affect it (criterion is scoped to the two named rules).
+
+### Full 188-cell aggregate (must-differ control, both criterion rules 0/0 confirmed via a live
+188/188 capture count, not an empty scan misread as clean)
+
+| Rule | Objects | Nodes |
+|---|---|---|
+| button-name | 35 | 387 |
+| color-contrast | 14 | 35 |
+| aria-input-field-name | 7 | 15 |
+| label | 8 | 12 |
+| select-name | 4 | 8 |
+| scrollable-region-focusable | 6 | 6 |
+| aria-valid-attr-value | 5 | 5 |
+| link-in-text-block | 4 | 4 |
+| **TOTAL** | **83** | **472** |
+
+Pre-sweep full-188 baseline (§ addendum "Consolidated 188-cell picture" + its own D-16 note):
+96 objects / 966 nodes ALL rules; color-contrast specifically 28 objects / 61 nodes. Post-sweep:
+83/472 ALL rules (-13 objects / -494 nodes — the huge node delta is `button-name`/`Ideation`
+churn, not this sweep's rule, see below); color-contrast 14/35 (**-14 objects / -26 nodes**,
+this sweep's own rule, consistent with fixing 64 sub-threshold occurrences across 30 files while
+D-01 explicitly leaves passing occurrences alone).
+
+### Named per-route deltas (no route's node count silently absorbed)
+
+Routes this sweep's 30 edited files own, decreased (improvements, consistent with the change list):
+
+| Route | Pre-sweep | Post-sweep | Files in this sweep |
+|---|---|---|---|
+| KnowledgeGraph | 8 obj / 12 nodes | 4 obj / 8 nodes | KnowledgeGraph.tsx (8 change rows) |
+| ToolGalaxy | 7 obj / 11 nodes | 4 obj / 8 nodes | ToolGalaxy.tsx (1 change row) |
+| Skills | 3 obj / 9 nodes | 3 obj / 3 nodes | Skills.tsx, several skills/* files |
+| HrCatalog | 2 obj / 6 nodes | 2 obj / 2 nodes | CatalogCard.tsx, Catalog.tsx |
+| HrOnboarding (addendum) | 2 obj / 4 nodes | 2 obj / 2 nodes | WizardShell.tsx, WizardStepper.tsx, ToolsStep.tsx |
+| HrRoster (addendum) | 6 obj / 14 nodes | 4 obj / 12 nodes | AgentCard.tsx, AgentDetailSheet.tsx, DetailConfigTab.tsx, Roster.tsx |
+| HrTeams (addendum) | 2 obj / 2 nodes | **0 / 0** | TeamCard.tsx, TeamEditor.tsx, Teams.tsx |
+
+Routes NOT in this sweep's file list, unchanged (control — proves the sweep did not touch
+unrelated surfaces): Alerts (4/260), Automation (4/48), ConfigPage (7/43), HrAgentAnalytics (8/16),
+Infrastructure (4/16 — explicitly out of scope, hardcoded-palette defect per the orchestrator),
+Briefings (4/8), Executions (2/8), Memory (4/8), HivePage (4/4), QualityDetail (4/4),
+SelfHealing (4/4), Settings (4/4), Tools (4/4), WorkspaceMap (4/4).
+
+**Named anomalies — reported, not absorbed:**
+
+1. **Ideation: 474 nodes (pre) → 0 (post), a huge favorable swing.** `Ideation.tsx` is not in this
+   sweep's file list. § 1 itself flagged this exact route as "Theme-unstable... consistent with a
+   live-data-dependent list... not adjudicated, re-measure before acting on the 474 figure alone."
+   This drop is that documented instability landing on its clean side, not an effect of this sweep.
+2. **Capabilities: 0 (pre) → 1 obj / 1 node (post), NEW.** `Capabilities.tsx` is not in this sweep's
+   file list. The one flagged node is `scrollable-region-focusable` on `[cyan] Capabilities` only
+   (`<div class="space-y-4 max-h-[480px] overflow-y-auto">`) — an unrelated rule, matching the same
+   scroll-overflow-at-scan-time flakiness class as the LiveRun finding above.
+3. **McpInventory: 3 obj / 3 nodes (pre) → 1 obj / 4 nodes (post) — node count went UP by one.**
+   Pre-sweep's 3/3 was entirely the now-fixed `:243` occurrence (`text-primary/70`, this sweep's
+   change list, axe-direct, now 0 on all 4 themes — confirmed clean). Post-sweep's 1 obj/4 nodes is
+   a genuinely **different** site, `McpInventory.tsx:184` (`text-muted-foreground/70`, "{calls}"
+   badge on `ServerPanel`) — a **leave-list** occurrence this sweep never touched, now flagging on
+   `[aubergine]` only with 4 matching nodes (4 server groups rendered on that scan). This was
+   classified `measured-passing` in `123-CONTRAST-RESULT.md` § 3, but `ServerPanel` is invoked
+   inside `servers.map((g, i) => <ServerPanel group={g} ... />)` at `McpInventory.tsx:318` — the
+   classification's "preceding 25 source lines" `.map(`-heuristic cannot see a `.map(` call made
+   from a *different function*, hundreds of lines below the component's own definition, so this
+   occurrence slipped through as falsely "measured-passing." This is D-17's ratchet catching a
+   real pre-existing classification gap, not a regression this sweep introduced — different site,
+   different theme, untouched by any of the 64 edits. Left as-is (still a `leave` row); named here
+   for the operator/a future plan to reconcile, not silently fixed outside the reconciled ledger.
+
+No other route's node count increased. The two rule families driving all three named items
+(`scrollable-region-focusable`, and the pre-existing `.map(`-indirection gap) are outside this
+sweep's `text-primary|muted-foreground/NN` scope.

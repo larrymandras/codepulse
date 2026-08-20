@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "LiveRun",
+  "path": "/live-run",
+  "url": "http://127.0.0.1:5181/live-run",
+  "capturedAt": "2026-08-20T19:07:12.505Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}
