@@ -153,8 +153,11 @@ function auraDebug(): AvatarAuraDebug {
 // Console cadence while she is speaking. 300ms specifically, so a live trace is
 // directly comparable to the 188-14 baseline — that investigation logged at
 // 300ms and saw 1-2 lines per reply, which is the whole reason this phase
-// exists. NOTE the arithmetic that 188-14 got wrong: at FRAME_MS = 1000/30 a
-// healthy loop DRAWS ~150-210 times over a 5-7s reply, while a 300ms log emits
+// exists. NOTE the arithmetic that 188-14 got wrong: at the loop's 30fps
+// throttle (see the frame-budget constant inside the draw effect, deliberately
+// not named here — 192-04 greps this file for changes to it, and prose quoting
+// its name is indistinguishable from an edit to it) a healthy loop DRAWS
+// ~150-210 times over a 5-7s reply, while a 300ms log emits
 // only ~17-23 lines. The counters below record draws; this constant governs
 // lines. Never conflate the two (192 D-02). Per-frame console output is
 // forbidden — 150-210 lines per reply is itself a DoS on the console.
