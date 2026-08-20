@@ -25,6 +25,10 @@ test-results/
 e2e/.a11y-skip-log.txt
 e2e/.a11y-selftest/
 
+# Phase 123 (D-02) isolation-harness measurement ledger — regenerated per
+# run, consumed by 123-07, never committed.
+e2e/.artifacts/
+
 # Design artifacts
 open-design/
 
