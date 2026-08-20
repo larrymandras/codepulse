@@ -179,7 +179,7 @@ export default function ForgePage() {
 
         {/* List panel — fixed ~280px on desktop; slide-in overlay on mobile (F8, D-11) */}
         <div
-          className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-background border-r border-border overflow-hidden transform transition-transform duration-normal ease-house md:static md:z-auto md:translate-x-0 md:w-[280px] md:shrink-0 md:bg-transparent ${
+          className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-background border-r border-border overflow-hidden transform transition-transform duration-normal ease-house md:static md:z-auto md:translate-x-0 md:w-[320px] lg:w-[400px] xl:w-[460px] md:shrink-0 md:bg-transparent ${
             listOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >

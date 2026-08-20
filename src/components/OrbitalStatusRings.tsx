@@ -38,7 +38,24 @@ const STATUS_COLORS: Record<NodeStatus, { ring: string; dot: string; glow: strin
   },
   unknown: {
     ring: "rgba(107,114,128,0.2)",
-    dot: "#6b7280",
+    // `dot` is not only a dot: :327 uses it as the TEXT colour of the ring
+    // summary tile ("3/4"). At #6b7280 that text measured 3.64:1 (aubergine),
+    // 3.87:1 (cyan) and 3.85:1 (emerald) against the tile background — below
+    // the 4.5:1 floor, 16 flagged nodes on /infrastructure.
+    //
+    // Only reachable when a ring's worstStatus() is `unknown`, so every
+    // earlier capture that ran while services reported healthy/down recorded
+    // a clean page. Same live-data-gated class as LiveRun and Ideation.
+    //
+    // #9ca3af measures 6.94 / 7.37 / 7.34:1 against those same backgrounds.
+    // Verified by computing #6b7280 first and reproducing axe's three figures
+    // exactly, so the formula is known to agree with the scanner before being
+    // trusted on the replacement. Still clearly muted beside the healthy green
+    // and down red, which is the state's whole visual job.
+    //
+    // `ring` and `glow` deliberately keep the darker grey: they are a halo and
+    // a box-shadow, never text, and fall under non-text contrast (1.4.11).
+    dot: "#9ca3af",
     glow: "0 0 6px rgba(107,114,128,0.3)",
   },
 };
