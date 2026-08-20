@@ -804,9 +804,27 @@ All 28 decisions D-01..D-28 covered; TOKEN-01..05 and A11Y-01 each mapped to at 
 **Success Criteria** (what must be TRUE):
 
   1. `e2e/theme-contrast.spec.ts` passes with zero `wcag2a`/`wcag2aa` violations against `dev:noauth`, across every theme × page cell A11Y-01 measured.
-  2. Deliberately raising the Clerk gate mid-run makes the **suite** fail — the individual cell still reports `skipped` (preserving the "never rendered" vs "rendered clean" distinction in the report), but a file-level skipped-cell counter plus an `afterAll` throw make the run exit non-zero — proving the vacuous-pass guard shipped in `fee96b5d` still holds after the token rewrite. *(Reconciled 2026-08-20 per the Stale Docs rule, from `123-CONTEXT.md` D-11 and premise correction 2: this line previously required the cell to "fail (not skip)", which contradicted `REQUIREMENTS.md`'s A11Y-03 statement that the skip **is** the shipped guard. D-11 satisfies both — the skip stays, the suite goes red. A run of 20 skipped cells exits 0 today, which is the actual defect.)*
+  2. Deliberately raising the Clerk gate mid-run makes the **suite** fail — the individual cell still reports `skipped` (preserving the "never rendered" vs "rendered clean" distinction in the report), but a `globalTeardown` script reading an `fs` side-channel log that each worker appends to on its skip branch make the run exit non-zero — proving the vacuous-pass guard shipped in `fee96b5d` still holds after the token rewrite. *(Reconciled 2026-08-20 per the Stale Docs rule, from `123-CONTEXT.md` D-11 and premise correction 2: this line previously required the cell to "fail (not skip)", which contradicted `REQUIREMENTS.md`'s A11Y-03 statement that the skip **is** the shipped guard. D-11 satisfies both — the skip stays, the suite goes red. A run of 20 skipped cells exits 0 today, which is the actual defect.)* *(MECHANISM CORRECTED 2026-08-20 at plan time. This line previously named "a file-level skipped-cell counter plus an `afterAll` throw". That mechanism was falsified against this repo's own Playwright 1.61.1: a thrown `test.afterAll` error is attributed to the tests in that hook's scope and OVERWRITES `result.status` from `skipped` to `failed`, leaving `stats.skipped: 0` while each corrupted cell still carries a `type: "skip"` annotation -- destroying the very three-way distinction (never rendered / rendered clean / violating) this criterion exists to preserve. `fullyParallel: true` independently defeats it: a module-scope counter is per worker PROCESS and cannot see sibling workers' skips. Both mechanisms exit 1, so exit code alone cannot tell them apart. See `123-CONTEXT.md` D-11's correction block and `123-RESEARCH.md` Pattern 2 for the measured comparison table.)*
 
-**Plans**: TBD
+**Plans**: 13 plans
+
+Plans:
+- [ ] `123-01-PLAN.md` — fail-on-skip via `globalTeardown` + `fs` side-channel, plus the durable gate-guard self-test carrying controls C1/C2/C7 (D-11, D-12)
+- [ ] `123-02-PLAN.md` — extract the rasterisation/WCAG primitives to `e2e/lib/contrast.ts`, add the D-03 font-metric threshold reader, build the pass-2 isolation spec with its sub-AA fixture (D-02, D-03; C3, C6)
+- [ ] `123-03-PLAN.md` — per-page content markers, 47-route widening, `A11Y_MEASURE_ONLY` made non-green, scanned-route-count assertion (D-13, D-14, D-16; C5)
+- [ ] `123-04-PLAN.md` — app-shell sweep: the 9 `text-*/NN` sites in `DashboardLayout.tsx` (184 of 209 measured nodes) and the SYS:/LAT: badge, ex-badge column retired (D-01, D-04, D-10, D-15)
+- [ ] `123-05-PLAN.md` — the two non-shell measured violators (`CodeVaultGraph.tsx:892`, `RunTimeline.tsx:81`, 6 nodes, both `animate-pulse`), cause established by a reduced-motion control (D-01, D-04)
+- [ ] `123-06-PLAN.md` — the 4 `aria-prohibited-attr` objects on `/forge`, the 2-site `aria-busy` floor, `PageHeader` adoption, and the `ForgePage.tsx` ratchet exemption removed in the same change (D-06, D-09)
+- [ ] `123-07-PLAN.md` — Tailwind scan root narrowed past build tooling; the shadow-`rgba()` and no-seventh-bucket boundaries written down (D-07, D-08, D-17)
+- [ ] `123-08-PLAN.md` — the 188-cell widened axe scan plus the 15-class isolation table; `123-CONTRAST-RESULT.md` classifies every `text-*/NN` occurrence and produces the remediation list (D-02, D-16; C5)
+- [ ] `123-09-PLAN.md` — blocking operator decision: widen A11Y-02's criterion to 188 cells, or hold at 20 and file a sized backlog (D-16; autonomous: false)
+- [ ] `123-10-PLAN.md` — the status-fill/foreground class: all 8 sites across 4 files measured and remedied per their own ratio, plus the re-seeding header comment (D-05)
+- [ ] `123-11-PLAN.md` — ratio-gated sweep, bucket B: 42 files in `src/components/*/` and `src/pages/` (D-01, D-04)
+- [ ] `123-12-PLAN.md` — ratio-gated sweep, bucket A: 22 top-level `src/components/` files, with the `JobsPanel.test.tsx` selector lockstep (D-01, D-04)
+- [ ] `123-13-PLAN.md` — the real gate run with assertions on, all seven controls recorded, D-18's blocking operator visual checkpoint and D-12's live gated-server evidence, requirement marks by hand (D-10, D-12, D-18; C6, C7; autonomous: false)
+
+Waves: 0 = `123-01`, `123-02` · 1 = `123-03`–`123-07` (5 parallel, zero file overlap) · 2 = `123-08` · 3 = `123-09` (checkpoint), `123-10` · 4 = `123-11`, `123-12` · 5 = `123-13` (checkpoint).
+All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/18 with `skipped: false`; mutation-proved by removing D-07's citation, which correctly reported 17/18 uncovered). A11Y-02 and A11Y-03 each mapped to plans. All 7 discriminating controls from `123-VALIDATION.md` have a task owner.
 **UI hint**: yes
 
 ---
