@@ -151,3 +151,81 @@ describe("AvatarAura — mouth-region motion (D-16 Tier 1)", () => {
     expect(secondArgs).toEqual(firstArgs);
   });
 });
+
+/**
+ * Regression guard for the 192-01 D-03 diagnostic surface.
+ *
+ * `mountCount` is incremented unconditionally once the canvas/ctx guards pass,
+ * but the reduced-motion branch used to `render(0); return;` — returning no
+ * cleanup, so React never ran one and `unmountCount` never moved. Every
+ * reduced-motion mount therefore left a permanent +1 mount/unmount imbalance,
+ * which is the exact signature the surface exists to detect (StrictMode
+ * double-invoke, parent-`key` churn). The instrument manufactured the evidence
+ * it was built to gather, and `reducedMotion` is a single overwritten boolean
+ * rather than a count, so the skew could not be netted back out by a reader.
+ *
+ * The animated-path case below is a CONTROL, not redundancy: it passed both
+ * before and after the fix. Without it, three failing reduced-motion
+ * assertions would be indistinguishable from a broken harness.
+ */
+describe("AvatarAura — draw-loop lifecycle counters (192-01 D-03)", () => {
+  let ctx: ReturnType<typeof makeCtx>;
+
+  beforeEach(() => {
+    ctx = makeCtx();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      ctx as unknown as RenderingContext,
+    );
+    // Capture-only rAF: this block never drives frames, it only cares that a
+    // cleanup runs. Returning a handle keeps the animated control realistic.
+    vi.stubGlobal("requestAnimationFrame", vi.fn(() => 1));
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    // The bag is a lazily-created window global shared across the whole file;
+    // clear it so these assertions are absolute counts, not deltas that some
+    // earlier test's mounts could mask.
+    delete window.__avatarAuraDebug;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    delete window.__avatarAuraDebug;
+  });
+
+  function counters() {
+    const d = window.__avatarAuraDebug;
+    return { mounts: d?.mountCount ?? 0, unmounts: d?.unmountCount ?? 0 };
+  }
+
+  it("counts an unmount for every mount under prefers-reduced-motion", () => {
+    stubMatchMedia(true);
+    const { unmount } = render(
+      <AvatarAura state="speaking" ttsAnalyser={null} />,
+    );
+    expect(counters()).toEqual({ mounts: 1, unmounts: 0 });
+
+    unmount();
+    expect(counters()).toEqual({ mounts: 1, unmounts: 1 });
+  });
+
+  it("stays balanced across repeated reduced-motion mount/unmount cycles", () => {
+    stubMatchMedia(true);
+    for (let i = 0; i < 3; i++) {
+      const { unmount } = render(
+        <AvatarAura state="idle" ttsAnalyser={null} />,
+      );
+      unmount();
+    }
+    const c = counters();
+    expect(c.mounts).toBe(3);
+    // The pre-fix failure mode: mounts climb, unmounts stay pinned at 0.
+    expect(c.unmounts).toBe(c.mounts);
+  });
+
+  it("control — the animated path was already balanced, so a failure above is the reduced-motion branch and not the harness", () => {
+    stubMatchMedia(false);
+    const { unmount } = render(<AvatarAura state="idle" ttsAnalyser={null} />);
+    unmount();
+    expect(counters()).toEqual({ mounts: 1, unmounts: 1 });
+  });
+});

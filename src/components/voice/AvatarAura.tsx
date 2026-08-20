@@ -456,7 +456,24 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
     // Reduced motion → one static frame, no loop at all.
     if (reduced) {
       render(0);
-      return;
+      // Still return a cleanup. `mountCount` was already incremented above,
+      // unconditionally, so returning bare here would leave every
+      // reduced-motion mount permanently unmatched by an unmount — and a
+      // growing mount/unmount imbalance is precisely the signature this
+      // surface exists to detect (StrictMode double-invoke, parent-`key`
+      // churn). The instrument would manufacture the evidence it is meant to
+      // gather. `reducedMotion` is a single overwritten boolean, not a count,
+      // so a reader cannot net the skew back out afterwards.
+      //
+      // Only the rAF cancellation is omitted, because this path never created
+      // a loop; the counter and the diagnostic line are identical to the
+      // animated cleanup below so the two paths stay comparable.
+      return () => {
+        dbg.unmountCount++;
+        console.log(
+          `[avatar-aura] draw-loop unmount #${dbg.unmountCount} rafTotal=${dbg.rafCount} renderTotal=${dbg.renderCount} mouthTotal=${dbg.mouthDrawCount}`,
+        );
+      };
     }
 
     const loop = (now: number) => {
