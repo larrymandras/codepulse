@@ -123,6 +123,11 @@ See `key-decisions` in frontmatter. In short: measure first, then pick the singl
 - Plans 123-11/123-12 (the opacity-modifier ratio-gated sweeps) are unaffected by this plan's changes — different defect class, different files.
 - 123-13 (operator closeout checkpoint) can now count this plan's todo (`warn-fill-foreground-pairing-sub-aa.md`) as closed and the new `ideationrow-text-white-raw-palette-class.md` as a filed, unscheduled backlog item.
 
+## Self-Check: PASSED
+
+All 8 created/modified files found on disk; all 3 commits (`4b210b27`, `f23f32df`, `4a47ac02`) found
+in `git log --oneline --all`; `git status --short` clean after the final tracking commit.
+
 ---
 *Phase: 123-accessibility-remediation*
 *Completed: 2026-08-20*
