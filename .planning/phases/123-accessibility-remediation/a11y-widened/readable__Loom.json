@@ -1,0 +1,13 @@
+{
+  "theme": "readable",
+  "page": "Loom",
+  "path": "/loom",
+  "url": "http://localhost:5181/loom",
+  "capturedAt": "2026-08-20T16:58:11.311Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

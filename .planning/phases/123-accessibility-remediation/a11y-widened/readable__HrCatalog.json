@@ -1,0 +1,167 @@
+{
+  "theme": "readable",
+  "page": "HrCatalog",
+  "path": "/hr/catalog",
+  "url": "http://localhost:5181/hr/catalog",
+  "capturedAt": "2026-08-20T16:58:17.576Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#717a8a",
+                "bgColor": "#171b22",
+                "contrastRatio": 3.98,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"bg-card border borde...\" style=\"opacity: 0; transfor...\">",
+                  "target": [
+                    ".bg-card"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.98 (foreground color: #717a8a, background color: #171b22, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-base font-mono tracking-widest text-muted-foreground/80 mt-1 uppercase\">Browse archetypes from the Astridhr catalog and start onboarding.</p>",
+          "target": [
+            ".mt-1"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.98 (foreground color: #717a8a, background color: #171b22, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#ef4444",
+                "bgColor": "#2d1f25",
+                "contrastRatio": 4.18,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-base\">",
+                  "target": [
+                    ".p-3"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border borde...\" style=\"opacity: 0; transfor...\">",
+                  "target": [
+                    ".bg-card"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 4.18 (foreground color: #ef4444, background color: #2d1f25, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span>Failed to fetch</span>",
+          "target": [
+            ".p-3 > span"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.18 (foreground color: #ef4444, background color: #2d1f25, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#727c8c",
+                "bgColor": "#1b252b",
+                "contrastRatio": 3.69,
+                "fontSize": "10.5pt (14px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"bg-primary/5 backdro...\">",
+                  "target": [
+                    ".backdrop-blur-sm"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border borde...\" style=\"opacity: 0; transfor...\">",
+                  "target": [
+                    ".bg-card"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.69 (foreground color: #727c8c, background color: #1b252b, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-sm font-mono tracking-widest uppercase text-muted-foreground/80 mt-2\">Start from scratch</p>",
+          "target": [
+            ".text-muted-foreground\\/80.mt-2"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.69 (foreground color: #727c8c, background color: #1b252b, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

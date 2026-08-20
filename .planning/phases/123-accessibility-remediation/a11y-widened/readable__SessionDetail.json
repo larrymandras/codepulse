@@ -1,0 +1,13 @@
+{
+  "theme": "readable",
+  "page": "SessionDetail",
+  "path": "/sessions/nonexistent",
+  "url": "http://localhost:5181/sessions/nonexistent",
+  "capturedAt": "2026-08-20T16:57:56.481Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "Dashboard",
+  "path": "/",
+  "url": "http://localhost:5181/",
+  "capturedAt": "2026-08-20T16:57:10.052Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

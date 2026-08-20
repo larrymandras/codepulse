@@ -1,0 +1,195 @@
+{
+  "theme": "aubergine",
+  "page": "Executions",
+  "path": "/executions",
+  "url": "http://localhost:5181/executions",
+  "capturedAt": "2026-08-20T16:58:32.657Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7c86ff",
+                "bgColor": "#2d2952",
+                "contrastRatio": 4.32,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+                  "target": [
+                    ".flex-wrap.gap-2:nth-child(1) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border border-border rounded-lg p-4\">",
+                  "target": [
+                    ".space-y-6 > .bg-card.rounded-lg.p-4:nth-child(3)"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+          "target": [
+            ".flex-wrap.gap-2:nth-child(1) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7c86ff",
+                "bgColor": "#2d2952",
+                "contrastRatio": 4.32,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+                  "target": [
+                    ".flex-wrap.gap-2:nth-child(2) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border border-border rounded-lg p-4\">",
+                  "target": [
+                    ".space-y-6 > .bg-card.rounded-lg.p-4:nth-child(3)"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+          "target": [
+            ".flex-wrap.gap-2:nth-child(2) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7c86ff",
+                "bgColor": "#2d2952",
+                "contrastRatio": 4.32,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+                  "target": [
+                    ".flex-wrap.gap-2:nth-child(3) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border border-border rounded-lg p-4\">",
+                  "target": [
+                    ".space-y-6 > .bg-card.rounded-lg.p-4:nth-child(3)"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+          "target": [
+            ".flex-wrap.gap-2:nth-child(3) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#7c86ff",
+                "bgColor": "#2d2952",
+                "contrastRatio": 4.32,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+                  "target": [
+                    ".flex-wrap.gap-2:nth-child(4) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border border-border rounded-lg p-4\">",
+                  "target": [
+                    ".space-y-6 > .bg-card.rounded-lg.p-4:nth-child(3)"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<button class=\"text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-indigo-500/20 text-indigo-400 border border-indigo-500/40\">All</button>",
+          "target": [
+            ".flex-wrap.gap-2:nth-child(4) > .bg-indigo-500\\/20.border-indigo-500\\/40.text-indigo-400"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.32 (foreground color: #7c86ff, background color: #2d2952, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

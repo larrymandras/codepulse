@@ -1,0 +1,13 @@
+{
+  "theme": "readable",
+  "page": "Ideation",
+  "path": "/ideation",
+  "url": "http://localhost:5181/ideation",
+  "capturedAt": "2026-08-20T16:58:04.331Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}
