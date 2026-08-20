@@ -1,14 +1,28 @@
 ---
 id: TODO-shadow-rgba-outside-sweep-buckets
-status: pending
+status: closed
 planted: 2026-08-19
 planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement) — surfaced by sweep slice C (122-06) and re-confirmed when the 122-17 ratchet was scoped
 trigger_when: Any future phase that claims the codebase is free of raw palette or violet colour, or that extends the token ratchet. Not urgent on its own — the surviving instances are deliberate and documented.
 scope: Small (decide a policy, then either add a fifth ratchet bucket or record the exclusion permanently)
 source: Measured 2026-08-19; src/components/SwarmTaskNode.tsx and the four bucket matchers in src/tokenSweep.ratchet.test.ts
-resolves_phase: null
-last_reviewed: 2026-08-19
+resolves_phase: 123
+last_reviewed: 2026-08-20
+closed: 2026-08-20
+closed_by: 123-07 (D-08/D-17)
 ---
+
+## Resolution (123-07, 2026-08-20)
+
+Option 2 chosen: recorded permanently rather than adding a fifth ratchet bucket (D-17 also
+declines the bucket, for its own reasons — a spelling-based bucket cannot see a sub-AA pairing
+written with no opacity modifier, and this phase found exactly that case live in
+`RunTimeline.tsx`). The population was re-derived live rather than carried over from this todo's
+claim, and is materially wider than the single `SwarmTaskNode.tsx` instance named here: 21
+non-black colour-identity `rgba(...)`-in-`shadow-[...]` occurrences across 12 files. Full
+population, the fixed-string-safe re-derivation command, and the explicit statement that
+deliberate-vs-oversight triage across those 12 files is intentionally NOT adjudicated by this plan
+are in `.planning/phases/123-accessibility-remediation/123-SWEEP-BOUNDARY.md` § 2.
 
 # Raw colour inside `shadow-[...]` is invisible to every sweep bucket and to the ratchet
 

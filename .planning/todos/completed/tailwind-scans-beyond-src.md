@@ -1,14 +1,27 @@
 ---
 id: TODO-tailwind-scans-beyond-src
-status: pending
+status: closed
 planted: 2026-08-19
 planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement) — found while chasing a phantom `.bg-gray-950/50` rule that survived the sweep in the built stylesheet
 trigger_when: Any phase that asserts the shipped CSS is free of a class, or that tightens the token ratchet's corpus scope. Also worth doing opportunistically — the fix is one directive.
 scope: Trivial (one `@source not` directive), plus a decision about what else Tailwind should not scan
 source: Measured 2026-08-19 against a clean `npm run build`; src/index.css:5 and scripts/migrate_tokens.py
-resolves_phase: null
-last_reviewed: 2026-08-19
+resolves_phase: 123
+last_reviewed: 2026-08-20
+closed: 2026-08-20
+closed_by: 123-07 (D-07)
 ---
+
+## Resolution (123-07, 2026-08-20)
+
+`src/index.css` now carries `@source not "../scripts";`, `@source not "../e2e";` and
+`@source not "../docs";` alongside the existing `.planning` exclusion — one directive per path;
+a single directive with multiple space-separated paths was tested and found to compile silently
+without excluding anything. `e2e/` and `docs/` both measured as real, additional leak sources
+beyond this todo's original `scripts/`-only scope. Full before/after evidence, the directive-shape
+finding, and one narrow named residual (`bg-gray-950/50` still compiles via a comment in
+`src/tokenSweep.ratchet.test.ts` that this plan is not permitted to edit) are in
+`.planning/phases/123-accessibility-remediation/123-SWEEP-BOUNDARY.md` § 1.
 
 # Tailwind scans `scripts/`, so build tooling leaks classes into the production stylesheet
 
