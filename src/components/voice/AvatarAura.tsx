@@ -67,6 +67,99 @@ const MOUTH_RY_GAIN = 1.1; // vertical radius amplitude response (weighted highe
 const MOUTH_ALPHA_BASE = 0.15;
 const MOUTH_ALPHA_GAIN = 0.5;
 
+// ─── Draw-loop diagnostic surface (Phase 192-01, D-03) ─────────────────────
+// PERMANENT and UNGATED, deliberately. This defect (Tier-1 mouth freezes after
+// one frame) has now been instrumented twice and both instruments were fully
+// reverted, so the third one ships. There is no debug flag on any of it: 190
+// D-05 ruled that a diagnostic which is off by default fails the first time it
+// matters, and rejected both a debug-const gate and a build-env gate. (Those
+// two mechanisms are named in 190-CONTEXT.md D-05, not spelled here: the
+// acceptance check for "this surface is ungated" is a grep for their names in
+// this file, and a comment mentioning them would fail that grep by describing
+// the exclusion it is documenting.)
+//
+// Three counts are kept SEPARATE on purpose — rAF callbacks, render() calls and
+// completed mouth draws — because that is what makes "loop stalled", "loop fine
+// / mouth inert" and "loop fine / draw issued but not landing" mutually
+// distinguishable from the counters alone.
+//
+// Cost discipline (this file's header rule): increments are integer `++` on an
+// already-allocated object. Only the *console* emission is throttled; nothing
+// here logs per frame.
+//
+// Disclosure: the bag holds integers, two booleans, two performance.now()
+// timestamps and one error MESSAGE string — never a stack, never analyser data,
+// never any session/profile/transcript value. Nothing in this component reads
+// the bag back to drive rendering, so a tampered counter cannot change what is
+// painted.
+declare global {
+  interface Window {
+    __avatarAuraDebug?: {
+      /** rAF callbacks entered (increments before the reschedule). */
+      rafCount: number;
+      /** render() invocations, from BOTH call sites (loop + reduced one-shot). */
+      renderCount: number;
+      /** Completed mouth-ellipse fills inside the `s === "speaking"` branch. */
+      mouthDrawCount: number;
+      /** loop() returned early on the FRAME_MS throttle gate. */
+      throttleSkipCount: number;
+      /** loop() returned early on the document.hidden gate. */
+      hiddenSkipCount: number;
+      /** Draw-loop effect bodies that got past the canvas/ctx guards. */
+      mountCount: number;
+      /** Draw-loop effect cleanups run. */
+      unmountCount: number;
+      /** render() threw at the loop call site. */
+      renderThrowCount: number;
+      /** Message only — never a stack, never user or audio content. */
+      lastRenderError: string | null;
+      /** true => no loop was ever created; zero draws is legitimate, not a bug. */
+      reducedMotion: boolean;
+      /** performance.now() of the first loop callback. */
+      firstFrameAt: number | null;
+      /** performance.now() of the most recent loop callback. */
+      lastFrameAt: number | null;
+    };
+  }
+}
+
+type AvatarAuraDebug = NonNullable<Window["__avatarAuraDebug"]>;
+
+const newAuraDebug = (): AvatarAuraDebug => ({
+  rafCount: 0,
+  renderCount: 0,
+  mouthDrawCount: 0,
+  throttleSkipCount: 0,
+  hiddenSkipCount: 0,
+  mountCount: 0,
+  unmountCount: 0,
+  renderThrowCount: 0,
+  lastRenderError: null,
+  reducedMotion: false,
+  firstFrameAt: null,
+  lastFrameAt: null,
+});
+
+/**
+ * The live counter bag, created on first use. Under SSR / a bare node import
+ * there is no `window`, so a detached throwaway is returned instead — the
+ * instrument can never be the reason an import throws.
+ */
+function auraDebug(): AvatarAuraDebug {
+  if (typeof window === "undefined") return newAuraDebug();
+  return (window.__avatarAuraDebug ??= newAuraDebug());
+}
+
+// Console cadence while she is speaking. 300ms specifically, so a live trace is
+// directly comparable to the 188-14 baseline — that investigation logged at
+// 300ms and saw 1-2 lines per reply, which is the whole reason this phase
+// exists. NOTE the arithmetic that 188-14 got wrong: at FRAME_MS = 1000/30 a
+// healthy loop DRAWS ~150-210 times over a 5-7s reply, while a 300ms log emits
+// only ~17-23 lines. The counters below record draws; this constant governs
+// lines. Never conflate the two (192 D-02). Per-frame console output is
+// forbidden — 150-210 lines per reply is itself a DoS on the console.
+const LOG_THROTTLE_MS = 300;
+
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -82,7 +175,13 @@ const mix = (
   Math.round(lerp(a[2], b[2], t)),
 ];
 
-/** RMS (0..1) of an analyser's time-domain data, or -1 if unreadable/flat. */
+/**
+ * RMS (0..1) of an analyser's time-domain data. Always a finite number >= 0:
+ * `buf.length` is a constant 128 and this returns the sqrt of a mean of
+ * squares, so there is no sentinel and no NaN path out of here. Callers tell
+ * "flat/silent" apart with the `lvl > 0.01` guard at the speaking branch below,
+ * not with a return value.
+ */
 function analyserLevel(analyser: AnalyserNode, buf: Uint8Array<ArrayBuffer>): number {
   analyser.getByteTimeDomainData(buf);
   let sum = 0;
@@ -183,6 +282,41 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
     const ttsBuf = new Uint8Array(new ArrayBuffer(128));
     const FRAME_MS = 1000 / 30;
 
+    // 192-01 D-03/D-04: bind the counter bag once per mount (a per-frame
+    // `typeof window` check would be pure waste). Counted only once the
+    // canvas/ctx guards above have passed, so a bailed-out mount is never
+    // recorded as a live one — the StrictMode-double-invoke and parent-`key`
+    // -churn hypotheses are read straight off mountCount/unmountCount.
+    const dbg = auraDebug();
+    dbg.mountCount++;
+    dbg.reducedMotion = reduced;
+    console.log(
+      `[avatar-aura] draw-loop mount #${dbg.mountCount} reducedMotion=${reduced}`,
+    );
+
+    // Per-reply trace state. All effect-scope, all reset by a remount — which
+    // is itself the signal, since a remount also bumps mountCount.
+    let lastLogAt = -Infinity;
+    let prevLoggedState: VoiceState = stateRef.current;
+    let speakingStartedAt: number | null = null;
+    const counterSnapshot = () => ({
+      raf: dbg.rafCount,
+      render: dbg.renderCount,
+      mouth: dbg.mouthDrawCount,
+      throttleSkip: dbg.throttleSkipCount,
+      hiddenSkip: dbg.hiddenSkipCount,
+    });
+    let speakingStartSnapshot = counterSnapshot();
+    // Deltas since speaking began, never absolute totals — totals accumulate
+    // across replies and make a live trace unreadable.
+    const sinceSpeakingStart = (now: number) =>
+      `+${Math.round(now - (speakingStartedAt ?? now))}ms` +
+      ` raf=${dbg.rafCount - speakingStartSnapshot.raf}` +
+      ` render=${dbg.renderCount - speakingStartSnapshot.render}` +
+      ` mouth=${dbg.mouthDrawCount - speakingStartSnapshot.mouth}` +
+      ` throttleSkip=${dbg.throttleSkipCount - speakingStartSnapshot.throttleSkip}` +
+      ` hiddenSkip=${dbg.hiddenSkipCount - speakingStartSnapshot.hiddenSkip}`;
+
     // Ember motes — sparks drifting up through the aura; density/brightness
     // scale with the live amplitude. Seeded once per mount.
     const motes = Array.from({ length: 18 }, () => ({
@@ -197,6 +331,7 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
     let lastDraw = -Infinity;
 
     const render = (t: number) => {
+      dbg.renderCount++;
       const w = canvas.width;
       const h = canvas.height;
       const s = stateRef.current;
@@ -307,6 +442,9 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
         ctx.fillStyle = `rgba(${r},${g},${b},${mouthAlpha})`;
         ctx.ellipse(mouthCx, mouthCy, mouthRx, mouthRy, 0, 0, Math.PI * 2);
         ctx.fill();
+        // After the fill, so this counts COMPLETED ellipse draws rather than
+        // entries into the branch (192-01 D-03).
+        dbg.mouthDrawCount++;
       }
 
       ctx.globalCompositeOperation = "source-over";
@@ -319,17 +457,78 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
     }
 
     const loop = (now: number) => {
+      // First statement, before the reschedule: rafCount is the count of
+      // callbacks the browser actually delivered. Compared against renderCount
+      // and mouthDrawCount it separates a dead chain from a live chain that
+      // draws nothing.
+      dbg.rafCount++;
+      const at = performance.now();
+      if (dbg.firstFrameAt === null) dbg.firstFrameAt = at;
+      dbg.lastFrameAt = at;
+
       raf = requestAnimationFrame(loop);
-      if (now - lastDraw < FRAME_MS) return; // throttle to ~30fps
+
+      // The trace sits HERE — above the throttle gate and above the hidden
+      // gate — on purpose. A trace that only fires when render() runs goes
+      // silent in exactly the failure mode it exists to diagnose.
+      const s = stateRef.current;
+      if (s === "speaking" && (prevLoggedState !== "speaking" || speakingStartedAt === null)) {
+        // `speakingStartedAt === null` also catches a mount that happens while
+        // she is already speaking, so elapsed is never measured from nothing.
+        speakingStartedAt = now;
+        speakingStartSnapshot = counterSnapshot();
+        lastLogAt = now; // start this reply's 300ms cadence from here
+        console.log(
+          `[avatar-aura] speaking start rafTotal=${dbg.rafCount} renderTotal=${dbg.renderCount} mouthTotal=${dbg.mouthDrawCount}`,
+        );
+      } else if (s === "speaking" && now - lastLogAt >= LOG_THROTTLE_MS) {
+        console.log(`[avatar-aura] speaking ${sinceSpeakingStart(now)}`);
+        lastLogAt = now;
+      } else if (s !== "speaking" && prevLoggedState === "speaking") {
+        console.log(
+          `[avatar-aura] reply summary ${sinceSpeakingStart(now)}` +
+            ` mounts=${dbg.mountCount} unmounts=${dbg.unmountCount} renderThrows=${dbg.renderThrowCount}`,
+        );
+        speakingStartedAt = null;
+      }
+      prevLoggedState = s;
+
+      if (now - lastDraw < FRAME_MS) {
+        dbg.throttleSkipCount++;
+        return; // throttle to ~30fps
+      }
       lastDraw = now;
-      if (typeof document !== "undefined" && document.hidden) return; // pause when hidden
+      if (typeof document !== "undefined" && document.hidden) {
+        dbg.hiddenSkipCount++;
+        return; // pause when hidden
+      }
       // fps-independent phase: express `now` as 60fps-equivalent frame count so
       // the sine multipliers keep their original visual speed.
-      render(now / 16.67);
+      //
+      // The rethrow is deliberate and behaviour-preserving: today an exception
+      // in render() escapes the rAF callback to the host's error handling, and
+      // 192 D-08's minimal-diff rule says this plan must not change that.
+      // Because the reschedule above already ran, a rethrow cannot kill the rAF
+      // chain — which is precisely the shape D-04 is hunting: a live chain
+      // producing zero draws.
+      try {
+        render(now / 16.67);
+      } catch (err) {
+        dbg.renderThrowCount++;
+        // Message ONLY on the window bag — never a stack, never any value
+        // derived from the analyser buffer or props (T-192-02).
+        dbg.lastRenderError = err instanceof Error ? err.message : String(err);
+        console.error(`[avatar-aura] render() threw: ${dbg.lastRenderError}`, err);
+        throw err;
+      }
     };
     raf = requestAnimationFrame(loop);
 
     return () => {
+      dbg.unmountCount++;
+      console.log(
+        `[avatar-aura] draw-loop unmount #${dbg.unmountCount} rafTotal=${dbg.rafCount} renderTotal=${dbg.renderCount} mouthTotal=${dbg.mouthDrawCount}`,
+      );
       if (raf) cancelAnimationFrame(raf);
     };
   }, []);
