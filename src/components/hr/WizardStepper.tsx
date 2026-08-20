@@ -45,7 +45,7 @@ export default function WizardStepper({
                       ? "text-foreground font-medium"
                       : completed
                         ? "text-muted-foreground"
-                        : "text-muted-foreground/60"
+                        : "text-muted-foreground"
                   }`}
                 >
                   {label}

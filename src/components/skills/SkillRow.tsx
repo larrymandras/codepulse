@@ -163,7 +163,7 @@ export function SkillRow({
         {desc ? (
           <div className="text-muted-foreground text-xs truncate">{desc}</div>
         ) : (
-          <div className="text-muted-foreground/30 text-xs italic">No description available</div>
+          <div className="text-muted-foreground text-xs italic">No description available</div>
         )}
       </div>
 

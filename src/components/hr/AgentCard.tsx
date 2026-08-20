@@ -100,7 +100,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
 
         {/* Telemetry / Description */}
         <div className="h-12 mt-3 mb-4 flex items-center justify-center w-full">
-           <p className="text-xs text-muted-foreground/80 font-mono leading-relaxed text-center line-clamp-2 uppercase tracking-wide group-hover:text-muted-foreground transition-colors">
+           <p className="text-xs text-muted-foreground font-mono leading-relaxed text-center line-clamp-2 uppercase tracking-wide group-hover:text-muted-foreground transition-colors">
              {agent.description || "Unassigned Agent Class // No telemetry available"}
            </p>
         </div>
@@ -116,7 +116,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
           
           <div className="flex items-center gap-3">
             {agent.budget_fraction > 0 && (
-              <span className="text-[11px] font-mono tracking-widest text-primary/60 flex items-center gap-1 uppercase">
+              <span className="text-[11px] font-mono tracking-widest text-primary flex items-center gap-1 uppercase">
                 <span className="w-1 h-1 rounded-full bg-primary/50" />
                 Alloc: {Math.round(agent.budget_fraction * 100)}%
               </span>

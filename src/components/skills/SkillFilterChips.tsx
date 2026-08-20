@@ -60,7 +60,7 @@ export function SkillFilterChips({ active, counts, onSelect }: SkillFilterChipsP
               />
             )}
             {label}
-            <span className={`text-[10px] tabular-nums ${isActive ? "text-primary/80" : "text-muted-foreground/70"}`}>
+            <span className={`text-[10px] tabular-nums ${isActive ? "text-primary" : "text-muted-foreground"}`}>
               {counts[id] ?? 0}
             </span>
           </button>

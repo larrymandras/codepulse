@@ -601,7 +601,7 @@ export function ReminderList({
             <h3 className="text-sm font-mono uppercase tracking-widest text-muted-foreground">
               Calendar
             </h3>
-            <span className="text-xs font-mono text-muted-foreground/70">
+            <span className="text-xs font-mono text-muted-foreground">
               {dayEvents!.length}
             </span>
           </div>
@@ -619,7 +619,7 @@ export function ReminderList({
               </li>
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground/70 px-1 pt-1.5">
+          <p className="text-xs text-muted-foreground px-1 pt-1.5">
             From Google — read-only here.
           </p>
         </section>

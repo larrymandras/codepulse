@@ -214,7 +214,7 @@ export function AgentDetailSheet({
                     <SheetTitle className="text-2xl font-bold font-mono tracking-widest text-foreground uppercase flex items-center gap-3 drop-shadow-md">
                       {agentDetail.name}
                     </SheetTitle>
-                    <SheetDescription className="text-sm font-mono tracking-[0.2em] uppercase text-muted-foreground/80 mt-2 text-center">
+                    <SheetDescription className="text-sm font-mono tracking-[0.2em] uppercase text-muted-foreground mt-2 text-center">
                       {agentDetail.description || agentDetail.id}
                     </SheetDescription>
                     

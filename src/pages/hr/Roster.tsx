@@ -114,9 +114,9 @@ export default function Roster() {
             icon={Users}
             actions={
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-3 text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
+                <div className="flex items-center gap-3 text-xs font-mono tracking-widest uppercase text-muted-foreground bg-muted/20 px-3 py-1 rounded border border-border/50">
                   <span className="flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5 text-primary/70" />
+                    <Users className="h-3.5 w-3.5 text-primary" />
                     {totalCount} total
                   </span>
                   <span className="text-[var(--status-ok)] font-bold drop-shadow-[var(--glow-xs)]">

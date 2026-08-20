@@ -93,7 +93,7 @@ export function SkillRecencyView({ model, query }: { model: VaultModel; query: s
             </div>
 
             {b.skills.length === 0 ? (
-              <div className="px-3 py-1 text-xs text-muted-foreground/50">no skills in this band</div>
+              <div className="px-3 py-1 text-xs text-muted-foreground">no skills in this band</div>
             ) : (
               b.skills.map((s) => {
                 const accent = CONTAINER_ACCENT[s.container];

@@ -84,7 +84,7 @@ function SortableMember({ agentId, agent, onRemove }: SortableMemberProps) {
       className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/60 backdrop-blur p-2.5 shadow-sm hover:border-primary/50 transition-colors group"
     >
       <button
-        className="cursor-grab text-muted-foreground/50 hover:text-primary transition-colors group-hover:text-muted-foreground"
+        className="cursor-grab text-muted-foreground hover:text-primary transition-colors group-hover:text-muted-foreground"
         {...attributes}
         {...listeners}
       >
@@ -109,7 +109,7 @@ function SortableMember({ agentId, agent, onRemove }: SortableMemberProps) {
         </Badge>
       )}
       <button
-        className="text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100"
+        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100"
         onClick={() => onRemove(agentId)}
       >
         <X className="h-4 w-4" />

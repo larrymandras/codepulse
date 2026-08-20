@@ -51,7 +51,7 @@ export default function Teams() {
             icon={UsersRound}
             actions={
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
+                <span className="text-xs font-mono tracking-widest uppercase text-muted-foreground bg-muted/20 px-3 py-1 rounded border border-border/50">
                   {teams.length} team{teams.length !== 1 ? "s" : ""}
                 </span>
                 <Button size="sm" onClick={() => navigate("/hr/teams/new")} className="font-mono text-xs uppercase tracking-widest shadow-[var(--glow-xs)] hover:shadow-[var(--glow-md)] transition-all">
@@ -74,7 +74,7 @@ export default function Teams() {
           {/* Empty state */}
           {!isLoading && teams.length === 0 && (
             <div className="flex flex-col items-center gap-4 py-12 text-center">
-              <UsersRound className="h-12 w-12 text-muted-foreground/50" />
+              <UsersRound className="h-12 w-12 text-muted-foreground" />
               <div>
                 <p className="text-base font-medium text-foreground">
                   No teams yet

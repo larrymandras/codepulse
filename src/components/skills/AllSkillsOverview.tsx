@@ -89,7 +89,7 @@ export function AllSkillsOverview({
         {list.length > PREVIEW_COUNT && (
           <button
             onClick={() => toggle(key)}
-            className="self-start mt-1 inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
+            className="self-start mt-1 inline-flex items-center gap-1 text-[11px] font-mono uppercase tracking-widest text-primary hover:text-primary transition-colors"
           >
             {isExpanded ? (
               <>

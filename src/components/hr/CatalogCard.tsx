@@ -84,7 +84,7 @@ export function BlankAgentCard({ onSelect }: BlankAgentCardProps) {
       </div>
       <div className="text-center">
         <h3 className="text-base font-bold font-mono tracking-wide text-foreground group-hover:text-primary transition-colors">Blank Agent</h3>
-        <p className="text-sm font-mono tracking-widest uppercase text-muted-foreground/80 mt-2">
+        <p className="text-sm font-mono tracking-widest uppercase text-muted-foreground mt-2">
           Start from scratch
         </p>
       </div>

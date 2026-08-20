@@ -39,7 +39,7 @@ export function IntakeSheet({ open, onOpenChange, feed }: IntakeSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-primary/70">
+          <SheetTitle className="text-xs font-mono font-bold uppercase tracking-[0.2em] text-primary">
             Intake
           </SheetTitle>
           <SheetDescription>

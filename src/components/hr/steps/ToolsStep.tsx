@@ -304,7 +304,7 @@ export default function ToolsStep() {
               </div>
               <button
                 onClick={addAutonomyRule}
-                className="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+                className="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary transition-colors"
               >
                 <Plus className="h-3 w-3" />
                 Add Rule
@@ -389,7 +389,7 @@ export default function ToolsStep() {
               </div>
               <button
                 onClick={addRhythm}
-                className="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+                className="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary transition-colors"
               >
                 <Plus className="h-3 w-3" />
                 Add Schedule

@@ -89,7 +89,7 @@ export function SkillEditPopover({
       </div>
       <div className="flex items-center justify-between">
         <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-          <Star className={`w-3.5 h-3.5 ${favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground/70"}`} />
+          <Star className={`w-3.5 h-3.5 ${favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
           Favorite
         </label>
         <button

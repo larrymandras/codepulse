@@ -33,7 +33,7 @@ const STATUS_CLASS: Record<string, string> = {
   acked: "bg-blue-500/25 border-b-2 border-blue-500",
   approved: "bg-emerald-500/25 border-b-2 border-emerald-500",
   resolved: "bg-emerald-500/10 border-b border-emerald-500/40",
-  stale: "line-through text-muted-foreground/60 decoration-zinc-500",
+  stale: "line-through text-muted-foreground decoration-zinc-500",
 };
 
 interface Props {

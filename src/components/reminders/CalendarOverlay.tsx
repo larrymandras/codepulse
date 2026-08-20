@@ -221,7 +221,7 @@ export function CalendarOverlay({
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
           <div
             key={i}
-            className="text-center text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70 pb-1"
+            className="text-center text-[11px] font-mono uppercase tracking-widest text-muted-foreground pb-1"
           >
             {d}
           </div>
@@ -334,7 +334,7 @@ export function CalendarOverlay({
                   </span>
                 ))}
                 {hiddenCount > 0 && (
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/70 pl-0.5">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground pl-0.5">
                     +{hiddenCount} more
                   </span>
                 )}

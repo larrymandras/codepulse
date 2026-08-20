@@ -21,7 +21,7 @@ export default function Catalog() {
         <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
         <div className="mb-6 flex flex-col items-start relative z-10">
           <PageHeader title="Agent Catalog" />
-          <p className="text-base font-mono tracking-widest text-muted-foreground/80 mt-1 uppercase">
+          <p className="text-base font-mono tracking-widest text-muted-foreground mt-1 uppercase">
             Browse archetypes from the Astridhr catalog and start onboarding.
           </p>
         </div>

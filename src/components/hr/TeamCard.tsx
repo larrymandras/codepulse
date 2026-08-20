@@ -35,7 +35,7 @@ export function TeamCard({ team, agents, onLaunch, onEdit }: TeamCardProps) {
             {team.name}
           </h3>
           {team.description && (
-            <p className="text-sm text-muted-foreground/80 font-mono line-clamp-2 mt-1">
+            <p className="text-sm text-muted-foreground font-mono line-clamp-2 mt-1">
               {team.description}
             </p>
           )}
@@ -59,7 +59,7 @@ export function TeamCard({ team, agents, onLaunch, onEdit }: TeamCardProps) {
       </div>
 
       {/* Usage stats */}
-      <div className="flex items-center gap-4 text-xs font-mono tracking-widest uppercase text-muted-foreground/60 bg-muted/20 rounded p-2 border border-border/30">
+      <div className="flex items-center gap-4 text-xs font-mono tracking-widest uppercase text-muted-foreground bg-muted/20 rounded p-2 border border-border/30">
         <span>{team.warRoomCount ?? 0} sessions</span>
         <span>•</span>
         <span>

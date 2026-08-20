@@ -240,7 +240,7 @@ function McpInventoryBody() {
   if (loading) {
     return (
       <div className="h-[400px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-        <div className="flex items-center gap-3 text-primary/70 font-mono text-base">
+        <div className="flex items-center gap-3 text-primary font-mono text-base">
           <RefreshCw className="h-4 w-4 animate-spin" />
           Loading MCP inventory...
         </div>

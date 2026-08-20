@@ -48,7 +48,7 @@ export function ScopeRail({
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
+      <h2 className="text-xs font-mono font-bold text-primary uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
         <span className="w-1.5 h-1.5 bg-primary rounded-full shadow-[var(--glow-xs)]" />
         Scope
       </h2>

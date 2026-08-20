@@ -79,7 +79,7 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
 
         <div className="flex items-center gap-2 ml-auto">
           {savedAt && (
-            <span className="text-xs font-mono tracking-widest text-primary/70 animate-in fade-in uppercase">
+            <span className="text-xs font-mono tracking-widest text-primary animate-in fade-in uppercase">
               Draft saved {savedAt}
             </span>
           )}

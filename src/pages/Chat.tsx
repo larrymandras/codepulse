@@ -730,7 +730,7 @@ export default function Chat() {
             onKeyDown={onKeyDown}
             disabled={disconnected}
             placeholder={disconnected ? "Reconnecting…" : "Type or speak to Ástríðr…"}
-            className="flex-1 resize-none max-h-32 rounded-xl bg-background border border-border px-3.5 py-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:shadow-[var(--glow-xs)]"
+            className="flex-1 resize-none max-h-32 rounded-xl bg-background border border-border px-3.5 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:shadow-[var(--glow-xs)]"
           />
           <button
             type="button"
@@ -743,7 +743,7 @@ export default function Chat() {
             <Send className="w-4 h-4" />
           </button>
         </div>
-        <p className="mt-2 font-mono text-[10px] tracking-[0.08em] text-muted-foreground/70 text-center">
+        <p className="mt-2 font-mono text-[10px] tracking-[0.08em] text-muted-foreground text-center">
           {listening
             ? "SAY “HEY ÁSTRÍÐR” TO START · “STOP” INTERRUPTS · “GOODBYE” ENDS"
             : "LISTENING OFF — NOTHING HOLDS THE MIC"}

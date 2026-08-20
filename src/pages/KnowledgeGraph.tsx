@@ -1537,7 +1537,7 @@ export default function KnowledgeGraph() {
             <div className="text-sm font-mono leading-relaxed">
               <p className="text-foreground">Could not reach the KG read API.</p>
               <p className="text-muted-foreground mt-0.5">{error}</p>
-              <p className="text-muted-foreground/70 mt-0.5">
+              <p className="text-muted-foreground text-xs mt-0.5">
                 The summary cards above still reflect the last pushed telemetry.
               </p>
             </div>
@@ -1550,7 +1550,7 @@ export default function KnowledgeGraph() {
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
             <div className="text-sm font-mono leading-relaxed">
               <p className="text-foreground">{diffError}</p>
-              <p className="text-muted-foreground/70 mt-0.5">
+              <p className="text-muted-foreground mt-0.5">
                 Check that Ástríðr is running and the date is within the stored snapshot range.
               </p>
             </div>
@@ -1709,7 +1709,7 @@ export default function KnowledgeGraph() {
               {/* Diff loading overlay — "Diffing knowledge graph…" animate-pulse */}
               {diffLoading && temporalSubMode === "diff" && (
                 <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-                  <p className="text-primary/70 font-mono text-base animate-pulse">
+                  <p className="text-primary font-mono text-base animate-pulse">
                     Diffing knowledge graph…
                   </p>
                 </div>
@@ -1737,7 +1737,7 @@ export default function KnowledgeGraph() {
                         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
                         <div className="text-sm font-mono leading-relaxed">
                           <p className="text-foreground">{anim.frameError}</p>
-                          <p className="text-muted-foreground/70 mt-0.5">
+                          <p className="text-muted-foreground mt-0.5">
                             Check that Ástríðr is running and the date is within the stored snapshot range.
                           </p>
                         </div>
@@ -1749,7 +1749,7 @@ export default function KnowledgeGraph() {
                       anim.currentGraph === null ? (
                         /* Loading first frame */
                         <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-                          <p className="text-primary/70 font-mono text-base animate-pulse">
+                          <p className="text-primary font-mono text-base animate-pulse">
                             Animating…
                           </p>
                         </div>
@@ -1803,13 +1803,13 @@ export default function KnowledgeGraph() {
               {!diffLoading && temporalSubMode !== "animate" && (
                 loading ? (
                   <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-                    <p className="text-primary/70 font-mono text-base animate-pulse">
+                    <p className="text-primary font-mono text-base animate-pulse">
                       Querying knowledge graph…
                     </p>
                   </div>
                 ) : activeGraph.nodes.length === 0 ? (
                   <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-background">
-                    <AlertTriangle className="h-6 w-6 text-primary/50" />
+                    <AlertTriangle className="h-6 w-6 text-primary" />
                     <p className="text-base text-muted-foreground font-mono">
                       {needsEntityName
                         ? "Search for an entity to view its ego graph."
@@ -1819,7 +1819,7 @@ export default function KnowledgeGraph() {
                             ? "No entities in the selected snapshot."
                             : "No entities match the current lens/filters."}
                     </p>
-                    <p className="text-sm text-muted-foreground/60 max-w-md">
+                    <p className="text-sm text-muted-foreground max-w-md">
                       {error
                         ? "The KG read API is unreachable — start Ástríðr or check VITE_ASTRIDR_API_URL/KEY."
                         : "Data appears once Ástríðr's KG is backfilled and the read API is reachable."}

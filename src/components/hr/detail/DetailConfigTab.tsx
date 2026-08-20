@@ -27,7 +27,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-primary/10 bg-primary/5 hover:bg-primary/10 transition-colors">
-      <p className="text-[11px] font-mono font-bold text-primary/70 uppercase tracking-widest">{label}</p>
+      <p className="text-[11px] font-mono font-bold text-primary uppercase tracking-widest">{label}</p>
       <div className="text-sm font-mono text-foreground/90 leading-relaxed">{children}</div>
     </div>
   );
@@ -107,7 +107,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
         <div className="absolute inset-0 pointer-events-none border border-primary/20 rounded-xl bg-primary/5" />
         <div className="grid grid-cols-2 gap-4 relative z-10 p-4">
           <div className="col-span-2">
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">
               ID
             </label>
             <p className="text-sm text-muted-foreground font-mono mt-1">
@@ -115,7 +115,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             </p>
           </div>
           <div className="col-span-2">
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">
               Name
             </label>
             <Input
@@ -125,7 +125,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             />
           </div>
           <div className="col-span-2">
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">
               Description
             </label>
             <Input
@@ -135,7 +135,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             />
           </div>
           <div>
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">
               Tier
             </label>
             <Select value={editTier} onValueChange={setEditTier}>
@@ -150,7 +150,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             </Select>
           </div>
           <div>
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">
               Budget Fraction
             </label>
             <Input
@@ -164,7 +164,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             />
           </div>
           <div>
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">
               Max Rounds
             </label>
             <Input
@@ -176,7 +176,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             />
           </div>
           <div className="col-span-2">
-            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary uppercase tracking-widest">
               Tools Enabled (comma-separated)
             </label>
             <Input
@@ -234,14 +234,14 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
         <SectionHeader title="Identity Core" />
         <div className="grid grid-cols-2 gap-3">
           <Field label="ID">
-            <span className="text-primary/80">{agentDetail.id}</span>
+            <span className="text-foreground">{agentDetail.id}</span>
           </Field>
           <Field label="Name">
             <span className="text-foreground">{agentDetail.name}</span>
           </Field>
           <div className="col-span-2">
             <Field label="Description">
-              {agentDetail.description || <span className="text-muted-foreground/50 italic">No description</span>}
+              {agentDetail.description || <span className="text-muted-foreground italic">No description</span>}
             </Field>
           </div>
           <Field label="Tier">
@@ -259,7 +259,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
                 ))}
               </div>
             ) : (
-              <span className="text-muted-foreground/50">\u2014</span>
+              <span className="text-muted-foreground">\u2014</span>
             )}
           </Field>
           <div className="col-span-2">
@@ -273,7 +273,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
                   ))}
                 </div>
               ) : (
-                <span className="text-muted-foreground/50">\u2014</span>
+                <span className="text-muted-foreground">\u2014</span>
               )}
             </Field>
           </div>
@@ -295,7 +295,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
                   ))}
                 </div>
               ) : (
-                <span className="text-muted-foreground/50">No tools configured</span>
+                <span className="text-muted-foreground">No tools configured</span>
               )}
             </Field>
           </div>
@@ -308,7 +308,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             <span className="text-lg font-bold text-primary">
               {agentDetail.budget_fraction > 0
                 ? `${Math.round(agentDetail.budget_fraction * 100)}%`
-                : <span className="text-base font-normal text-muted-foreground/50">\u2014</span>}
+                : <span className="text-base font-normal text-muted-foreground">\u2014</span>}
             </span>
           </Field>
         </div>

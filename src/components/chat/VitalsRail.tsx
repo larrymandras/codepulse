@@ -202,7 +202,7 @@ export default function VitalsRail({
               {alerts.length} active {alerts.length === 1 ? "alert" : "alerts"}
             </span>
           </span>
-          <ChevronRight className="w-4 h-4 text-(--status-error)/60 group-hover:text-(--status-error) group-hover:translate-x-0.5 transition-all shrink-0" />
+          <ChevronRight className="w-4 h-4 text-(--status-error) group-hover:text-(--status-error) group-hover:translate-x-0.5 transition-all shrink-0" />
         </Link>
       )}
 
@@ -226,7 +226,7 @@ export default function VitalsRail({
                 {mcpToolCount} tools
               </span>
             </span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
           </Link>
 
           <Link
@@ -243,7 +243,7 @@ export default function VitalsRail({
                 <span className="text-muted-foreground font-normal"> active</span>
               </span>
             </span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
           </Link>
 
           <Link
@@ -265,7 +265,7 @@ export default function VitalsRail({
                 Convex
               </span>
             </span>
-            <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
           </Link>
         </div>
       </Card>
@@ -399,7 +399,7 @@ export default function VitalsRail({
                   <span className="font-mono text-[9px] text-muted-foreground tabular-nums">
                     ×{s.useCount}
                   </span>
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </span>
               </Link>
             ))}
