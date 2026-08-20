@@ -79,12 +79,25 @@ if (typeof window !== 'undefined' && typeof AudioWorkletNode === 'undefined') {
 
 // Patch AudioContext.prototype.audioWorklet.addModule to resolve immediately.
 // Guards with instanceof check so it only applies when AudioContext exists.
+//
+// The read itself must be guarded, not just the existence check. In a REAL
+// browser (the `browser` project in vitest.config.ts) `audioWorklet` is an
+// instance-only getter, so touching it on the PROTOTYPE throws
+// `TypeError: Illegal invocation` — which aborts this whole setup file and
+// therefore every test in that project, before a single spec runs. jsdom
+// defines no such getter, so the unguarded read was invisible until browser
+// mode arrived. There is nothing to patch in a real browser anyway: the real
+// addModule already exists.
 if (typeof AudioContext !== 'undefined') {
   const proto = AudioContext.prototype as unknown as {
     audioWorklet?: { addModule?: (url: string) => Promise<void> };
   };
-  if (proto.audioWorklet && !proto.audioWorklet.addModule) {
-    proto.audioWorklet.addModule = vi.fn(() => Promise.resolve());
+  try {
+    if (proto.audioWorklet && !proto.audioWorklet.addModule) {
+      proto.audioWorklet.addModule = vi.fn(() => Promise.resolve());
+    }
+  } catch {
+    // Real-browser getter refused a prototype-level read. Nothing to stub.
   }
 }
 

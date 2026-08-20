@@ -1,17 +1,30 @@
 /**
  * AvatarAura.test.tsx — Phase 188 Plan 06 (D-16 Tier-1 lipsync)
  *
- * Canvas-context spy coverage of the mouth-region draw call added to
- * AvatarAura's render(t) loop. Stubs HTMLCanvasElement.prototype.getContext
- * with a recorder object so assertions land on 2D-CONTEXT CALL ARGUMENTS
- * (ellipse/beginPath/fill), never on pixels.
+ * THIS FILE GUARDS BRANCH LOGIC ONLY. IT IS NOT A CADENCE OR ANIMATION GUARD.
  *
- * requestAnimationFrame is stubbed to CAPTURE the loop callback rather than
- * auto-invoke it (auto-invoking recursively would either infinite-loop or,
- * bounded naively, unwind LIFO and corrupt the `now`-vs-`lastDraw` throttle
- * ordering the component relies on). The test drives frames deterministically
- * via a manual tick() helper that calls the captured callback with a strictly
- * increasing timestamp each time.
+ * It stubs requestAnimationFrame to CAPTURE the loop callback and then
+ * hand-drives it from tick() below, so the browser's frame clock is never
+ * involved and every assertion here is about WHICH branch ran, never about how
+ * often. Concretely: these tests pass identically whether the loop draws once
+ * or two hundred times, which is exactly how LIP-01 (mouth opens once, then
+ * freezes for the rest of the reply) stayed green here from 2026-08-04 onward.
+ * Do not add a draw-count or timing assertion to this file — jsdom cannot
+ * honestly see either. Cadence is guarded in AvatarAura.browser.test.tsx,
+ * which runs in real headless Chromium against the real rAF (Phase 192-02).
+ *
+ * What this file legitimately proves: the mouth ellipse is drawn while
+ * speaking, absent while idle and while listening, and static under
+ * prefers-reduced-motion.
+ *
+ * Mechanics: canvas-context spy coverage of the mouth-region draw call in
+ * AvatarAura's render(t). Stubs HTMLCanvasElement.prototype.getContext with a
+ * recorder object so assertions land on 2D-CONTEXT CALL ARGUMENTS
+ * (ellipse/beginPath/fill), never on pixels. rAF is captured rather than
+ * auto-invoked because auto-invoking recursively would either infinite-loop
+ * or, bounded naively, unwind LIFO and corrupt the `now`-vs-`lastDraw`
+ * throttle ordering the component relies on; tick() advances it
+ * deterministically with a strictly increasing timestamp each time.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
@@ -68,7 +81,7 @@ function makeFakeAnalyser(loud: boolean): AnalyserNode {
   } as unknown as AnalyserNode;
 }
 
-describe("AvatarAura — mouth-region motion (D-16 Tier 1)", () => {
+describe("AvatarAura — mouth-region branch logic, jsdom (D-16 Tier 1)", () => {
   let ctx: ReturnType<typeof makeCtx>;
   let rafCb: FrameRequestCallback | null;
   let t: number;
