@@ -1,0 +1,81 @@
+{
+  "theme": "aubergine",
+  "page": "HrTeams",
+  "path": "/hr/teams",
+  "url": "http://localhost:5181/hr/teams",
+  "capturedAt": "2026-08-20T17:36:37.743Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#817264",
+                "bgColor": "#1a1325",
+                "contrastRatio": 3.88,
+                "fontSize": "9.0pt (12px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<span class=\"text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50\">0 teams</span>",
+                  "target": [
+                    ".text-muted-foreground\\/80"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card border borde...\" style=\"opacity: 1; transfor...\">",
+                  "target": [
+                    ".bg-card"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.88 (foreground color: #817264, background color: #1a1325, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<span class=\"text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50\">0 teams</span>",
+          "target": [
+            ".text-muted-foreground\\/80"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.88 (foreground color: #817264, background color: #1a1325, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

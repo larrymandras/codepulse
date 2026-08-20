@@ -1,0 +1,13 @@
+{
+  "theme": "aubergine",
+  "page": "DocComments",
+  "path": "/doc-comments",
+  "url": "http://localhost:5181/doc-comments",
+  "capturedAt": "2026-08-20T17:36:34.890Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

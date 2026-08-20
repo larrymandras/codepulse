@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "WarRoom",
+  "path": "/war-room",
+  "url": "http://localhost:5181/war-room",
+  "capturedAt": "2026-08-20T17:36:21.520Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}
