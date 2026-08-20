@@ -9,12 +9,16 @@ import { readFileSync, existsSync } from "node:fs";
  * so a module-scope counter cannot see skips recorded by sibling workers.
  * That rejected hook mechanism also corrupts the status of whichever test
  * happens to run last in its scope — Playwright attributes a thrown hook
- * error to the tests in that hook's scope and overwrites `result.status`,
- * flipping a skipped cell to `"failed"` while it still carries a
- * `type: "skip"` annotation. globalTeardown runs exactly once
- * in the main process after every worker exits and reads an `fs`-based log
- * that every worker appended to, so it aggregates correctly AND leaves every
- * cell's own `result.status: "skipped"` untouched. Verified this session
+ * error to that test's own `result.status`, overwriting whatever its real
+ * outcome would have been. Which cell that is depends on declaration order
+ * and is not always a skip cell: `e2e/a11y-gate-guard.spec.ts` (Task 2)
+ * measured a genuinely-passing control cell flip from `"passed"` to
+ * `"failed"` this way, with no skip annotation at all — an even harder
+ * failure to diagnose than a corrupted skip cell would be, since nothing on
+ * the corrupted test hints at why it failed. globalTeardown runs exactly
+ * once in the main process after every worker exits and reads an `fs`-based
+ * log that every worker appended to, so it aggregates correctly AND leaves
+ * every cell's own `result.status` untouched. Verified this session
  * (123-RESEARCH.md § Pattern 2) against this repo's real Playwright install:
  * exit 1, `stats.skipped` intact, zero cells misreported as `"failed"`.
  *
