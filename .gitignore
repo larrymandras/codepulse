@@ -20,6 +20,11 @@ tmp_skills.json
 playwright-report/
 test-results/
 
+# Phase 123 (A11Y-03) fail-on-skip side-channel + self-test fixture scratch —
+# both regenerated per run, never committed.
+e2e/.a11y-skip-log.txt
+e2e/.a11y-selftest/
+
 # Design artifacts
 open-design/
 

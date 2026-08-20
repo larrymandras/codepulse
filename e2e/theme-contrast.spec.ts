@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 
 // Phase 122 (A11Y-01) env switches, both no-ops when unset -- default
 // behaviour (neither var set) is byte-for-byte what this spec did before:
@@ -61,6 +61,14 @@ for (const theme of THEMES) {
       await expect(signInText.or(appShellNav).first()).toBeVisible({ timeout: 15000 });
 
       if (await signInText.count()) {
+        // D-11: append to the fail-on-skip side-channel BEFORE test.skip() --
+        // test.skip() throws, so anything after it never runs. Read and
+        // aggregated across all worker processes by
+        // e2e/theme-contrast.global-teardown.ts, which fails the whole suite
+        // if this file is non-empty. The annotation and skipped status below
+        // are deliberately unchanged: the cell still reads "skipped", only
+        // the suite's exit code changes.
+        appendFileSync("e2e/.a11y-skip-log.txt", `${theme}__${pg.name}\n`);
         test.skip(
           true,
           `Clerk auth gate present — ${pg.name} never rendered, so a zero-violation result would ` +

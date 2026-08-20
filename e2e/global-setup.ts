@@ -1,6 +1,7 @@
 import { clerkSetup } from "@clerk/testing/playwright";
 import dotenv from "dotenv";
 import path from "node:path";
+import { existsSync, unlinkSync } from "node:fs";
 
 /**
  * Playwright global setup — fetches a Clerk Testing Token once per run.
@@ -23,6 +24,14 @@ import path from "node:path";
  */
 
 export default async function globalSetup() {
+  // D-11: truncate the contrast matrix's skip-log FIRST, before anything that
+  // can throw (the CLERK_SECRET_KEY check below) or short-circuit this
+  // function. A stale log left over from a previous failing run would
+  // otherwise fail the next clean run, and a machine with no .env.local
+  // would never reach a truncation placed after the throw below.
+  const skipLogPath = "e2e/.a11y-skip-log.txt";
+  if (existsSync(skipLogPath)) unlinkSync(skipLogPath);
+
   // .env.local is gitignored and holds CLERK_SECRET_KEY. Loaded here rather
   // than relying on the ambient shell so `npx playwright test` behaves the same
   // whether it is run from a terminal that happens to have exported it or not.

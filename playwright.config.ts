@@ -20,6 +20,11 @@ export default defineConfig({
   // specs can sign in at all — Clerk's bot detection challenges scripted
   // sign-ins without it.
   globalSetup: './e2e/global-setup.ts',
+  // D-11: fail the run on any contrast-matrix cell that hits the Clerk-gate
+  // skip branch, without corrupting per-cell result.status. See
+  // e2e/theme-contrast.global-teardown.ts for why this is a globalTeardown
+  // and not a test.afterAll.
+  globalTeardown: './e2e/theme-contrast.global-teardown.ts',
   use: {
     baseURL: process.env.PW_BASE_URL || 'http://localhost:5173',
     trace: 'on-first-retry',
