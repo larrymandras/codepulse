@@ -798,13 +798,13 @@ All 28 decisions D-01..D-28 covered; TOKEN-01..05 and A11Y-01 each mapped to at 
 
 ### Phase 123: Accessibility Remediation
 
-**Goal**: Every contrast violation Phase 122 measured is fixed, and the automated suite is proven unable to report green against a page it never rendered.
+**Goal**: Every WCAG-AA violation Phase 122 measured is fixed, and the automated suite is proven unable to report green against a page it never rendered. *(Corrected 2026-08-20 per the Stale Docs rule, from `123-CONTEXT.md`'s premise correction 1: this line read "Every contrast violation", but A11Y-02's criterion is `expect(results.violations).toEqual([])` at `e2e/theme-contrast.spec.ts:107`, and 4 of the 24 measured objects are `aria-prohibited-attr`, not contrast — a colour-only sweep cannot satisfy criterion 1. Predicted by `122-FOLLOW-UPS.md` B3.)*
 **Depends on**: Phase 122 — needs A11Y-01's measured scope (which theme × page cells actually violate) before remediation can be sized or planned; sequenced immediately after the token phase, not at the end, so the palette is never touched twice.
 **Requirements**: A11Y-02, A11Y-03
 **Success Criteria** (what must be TRUE):
 
   1. `e2e/theme-contrast.spec.ts` passes with zero `wcag2a`/`wcag2aa` violations against `dev:noauth`, across every theme × page cell A11Y-01 measured.
-  2. Deliberately raising the Clerk gate mid-run makes the suite fail (not skip) on the page it can no longer reach — proving the vacuous-pass guard shipped in `fee96b5d` still holds after the token rewrite.
+  2. Deliberately raising the Clerk gate mid-run makes the **suite** fail — the individual cell still reports `skipped` (preserving the "never rendered" vs "rendered clean" distinction in the report), but a file-level skipped-cell counter plus an `afterAll` throw make the run exit non-zero — proving the vacuous-pass guard shipped in `fee96b5d` still holds after the token rewrite. *(Reconciled 2026-08-20 per the Stale Docs rule, from `123-CONTEXT.md` D-11 and premise correction 2: this line previously required the cell to "fail (not skip)", which contradicted `REQUIREMENTS.md`'s A11Y-03 statement that the skip **is** the shipped guard. D-11 satisfies both — the skip stays, the suite goes red. A run of 20 skipped cells exits 0 today, which is the actual defect.)*
 
 **Plans**: TBD
 **UI hint**: yes
