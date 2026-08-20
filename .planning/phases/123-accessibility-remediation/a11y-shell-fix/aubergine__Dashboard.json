@@ -1,0 +1,13 @@
+{
+  "theme": "aubergine",
+  "page": "Dashboard",
+  "path": "/",
+  "url": "http://localhost:5181/",
+  "capturedAt": "2026-08-20T15:07:14.219Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}
