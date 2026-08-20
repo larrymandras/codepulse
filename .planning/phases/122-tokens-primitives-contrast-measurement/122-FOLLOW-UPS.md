@@ -36,7 +36,13 @@ Text-contrast cost measured, nothing crossed AA: foreground vs card 18.58->16.97
 14.19->13.55 (readable), 14.86->13.85 (aubergine); muted-foreground vs card 7.58->6.93,
 5.44->5.20, 5.40->5.04.
 
-**Still not done until the operator re-confirms on a running server.**
+**CONFIRMED 2026-08-20 by the operator on a running server (`npm run dev`, `localhost:5173`).**
+Cycled all 4 themes (cyan/emerald/aubergine/readable), confirmed background/card/popover read as
+distinguishable layers in each, confirmed exactly 4 themes listed in the switcher. Operator's own
+words: *"I guess they look fine, I see 4 themes to choose from. Let's just close this out and move
+on, I am going to redesign some of the themes anyway."* Read as approval to close, not as a
+statement that the ramp is beyond further work — the operator plans to revisit theme design
+separately, outside this phase's scope.
 
 ### A2. The rendered-result spec's distinctness assertion is vacuous *(in progress, plan 122-20)*
 
@@ -61,6 +67,18 @@ already justified. This was the only vacuous instance.
 They must be **re-run** once the ramp lands, or the delta describes a stylesheet that no longer
 ships. The frozen `a11y-before/` capture stays as-is — it is the control and must not be
 regenerated.
+
+**RESOLVED 2026-08-19 by plan 122-21** (re-captured against the ramp, old capture preserved at
+`a11y-after-preramp/`) **and again by plan 122-22** (re-captured a second time after
+`156d5116 fix(122-22)` closed the `aria-command-name` regression 122-21 had measured; old capture
+preserved at `a11y-after-prearia/`). Current `a11y-after/` grand total: **24 violation objects /
+209 nodes** — an exact object-level match to `a11y-before/`'s 24, with fewer nodes than BEFORE, not
+more. Two adversarial reviews (Codex) additionally caught and corrected a node-level noise source
+(the `DashboardLayout.tsx` `SYS:`/`LAT:` header badge, scan-timing-gated, not code-caused) —
+`122-CONTRAST-BASELINE.md` now carries an ex-badge column so Phase 123 plans against the stable
+figure (188/188/189/190 across four independent captures) rather than the noisy raw one.
+
+**All three items in section A are now closed.** Phase 122's remaining work is Task 4 below.
 
 ---
 
