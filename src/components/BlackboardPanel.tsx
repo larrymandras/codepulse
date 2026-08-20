@@ -114,7 +114,7 @@ export default function BlackboardPanel({ goalId, completedGoal = false, onSelec
                     ? cloneElement(stateIcon.running as React.ReactElement<{ className?: string }>, {
                         className: "h-3.5 w-3.5 text-(--status-ok)",
                       })
-                    : stateIcon[task.state] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    : stateIcon[task.state] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 }
                 primary={task.subtask}
                 secondary={task.claimedBy}

@@ -222,7 +222,7 @@ export default function AgentTopology() {
             >
               {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot.replace("bg-green-400", "bg-primary").replace("bg-yellow-400", "bg-yellow-500").replace("bg-red-400", "bg-destructive")}`} />}
               {f.label}
-              <span className="text-primary/70 text-[11px] opacity-80">({f.count})</span>
+              <span className="text-primary text-[11px] opacity-80">({f.count})</span>
             </button>
           ))}
         </div>
@@ -231,7 +231,7 @@ export default function AgentTopology() {
       {/* Legend */}
       <div className="flex items-center gap-4 mb-4 flex-wrap font-mono uppercase tracking-widest">
         <span className="text-[11px] text-muted-foreground">Edges:</span>
-        <span className="flex items-center gap-1.5 text-[11px] text-primary/80">
+        <span className="flex items-center gap-1.5 text-[11px] text-primary">
           <span className="w-4 h-0.5 bg-primary/60 rounded" /> parent→child
         </span>
         {Object.entries(COORDINATION_COLORS).map(([type, color]) => (

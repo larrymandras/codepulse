@@ -169,7 +169,7 @@ describe("JobsPanel", () => {
     // colour would leave every other assertion in this test green while
     // directly violating D-08.
     expect(
-      container.querySelectorAll('[class*="text-muted-foreground/50"]').length
+      container.querySelectorAll('svg.lucide-clock').length
     ).toBe(1);
   });
 
@@ -190,7 +190,7 @@ describe("JobsPanel", () => {
     // code-review WR-02: the positive half — "running" must render the muted
     // Clock fallback, not merely fail to render a live-looking one.
     expect(
-      container.querySelectorAll('[class*="text-muted-foreground/50"]').length
+      container.querySelectorAll('svg.lucide-clock').length
     ).toBe(1);
   });
 
@@ -207,7 +207,7 @@ describe("JobsPanel", () => {
     const { container } = render(<JobsPanel />);
 
     expect(
-      container.querySelectorAll('[class*="text-muted-foreground/50"]').length
+      container.querySelectorAll('svg.lucide-clock').length
     ).toBe(0);
   });
 });

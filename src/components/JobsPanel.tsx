@@ -93,7 +93,7 @@ export default function JobsPanel({ onSelectJob }: JobsPanelProps) {
                 key={job.jobId}
                 wrapPrimary
                 onClick={onSelectJob ? () => onSelectJob(job) : undefined}
-                icon={stateIcon[job.status] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                icon={stateIcon[job.status] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
                 primary={job.taskSnippet}
                 secondary={
                   job.status === "failed" && job.error

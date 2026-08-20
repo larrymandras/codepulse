@@ -81,11 +81,11 @@ export default function DockerPanel() {
               )}
               <div className="grid grid-cols-2 gap-2 text-xs uppercase font-mono tracking-widest text-muted-foreground pt-2 border-t border-border/30 mt-2">
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-primary/70">CPU</span>
+                  <span className="text-primary">CPU</span>
                   <span className="text-foreground">{c.cpuPercent?.toFixed(1) ?? "N/A"}%</span>
                 </span>
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-primary/70">Mem</span>
+                  <span className="text-primary">Mem</span>
                   <span className="text-foreground">{c.memoryMb?.toFixed(0) ?? "N/A"} MB</span>
                 </span>
               </div>

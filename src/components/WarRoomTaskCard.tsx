@@ -63,7 +63,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
         className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-background/80 to-transparent rounded-l-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <svg width="10" height="18" viewBox="0 0 6 14" fill="currentColor" className="text-primary/50 group-hover:text-primary transition-colors">
+        <svg width="10" height="18" viewBox="0 0 6 14" fill="currentColor" className="text-primary group-hover:text-primary transition-colors">
           <circle cx="1" cy="1" r="1" /><circle cx="5" cy="1" r="1" />
           <circle cx="1" cy="5" r="1" /><circle cx="5" cy="5" r="1" />
           <circle cx="1" cy="9" r="1" /><circle cx="5" cy="9" r="1" />
@@ -89,7 +89,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
 
         {/* Row 2: description snippet */}
         {task.description && (
-          <p className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1 font-mono">
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mt-1 font-mono">
             {task.description}
           </p>
         )}
@@ -102,7 +102,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
             </Badge>
           )}
           {task.dueAt && (
-            <span className="text-xs font-mono text-muted-foreground/60 ml-auto tracking-widest uppercase">
+            <span className="text-xs font-mono text-muted-foreground ml-auto tracking-widest uppercase">
               {new Date(task.dueAt * 1000).toLocaleDateString()}
             </span>
           )}

@@ -263,7 +263,7 @@ export default function ToolExecutionPanel() {
                           {exec.toolName}
                         </span>
                         {exec.durationMs != null && (
-                          <span className="text-[11px] text-primary/60 font-mono">
+                          <span className="text-[11px] text-primary font-mono">
                             {exec.durationMs.toFixed(0)}ms
                           </span>
                         )}

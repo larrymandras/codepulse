@@ -228,7 +228,7 @@ export default function ModelPricingAdmin() {
             {unpriced.models.map((m) => (
               <li key={`${m.provider}::${m.model}`} className="flex items-center justify-between text-sm">
                 <span className="tabular-nums text-muted-foreground">
-                  {m.model} <span className="text-muted-foreground/70">({m.provider})</span>
+                  {m.model} <span className="text-muted-foreground text-xs">({m.provider})</span>
                 </span>
                 <Button
                   variant="ghost"

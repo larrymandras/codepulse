@@ -105,7 +105,7 @@ export default function OnboardingGuide() {
             disabled={isFirst}
             className={`px-4 py-2 text-base rounded-lg transition-colors ${
               isFirst
-                ? "text-muted-foreground/50 cursor-not-allowed"
+                ? "text-muted-foreground cursor-not-allowed"
                 : "text-foreground hover:bg-accent"
             }`}
           >

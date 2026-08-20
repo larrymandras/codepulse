@@ -62,11 +62,11 @@ export function WarRoomKanbanColumn({
         <div className="flex flex-col">
           <span className="text-base font-bold text-foreground font-mono tracking-wide">{agent.agentName}</span>
           {agent.role && (
-            <span className="text-sm text-muted-foreground/80 font-mono tracking-widest mt-0.5 uppercase">
+            <span className="text-sm text-muted-foreground font-mono tracking-widest mt-0.5 uppercase">
               {agent.role}
             </span>
           )}
-          <span className="text-xs text-primary/70 uppercase font-mono tracking-widest mt-1 flex items-center gap-1.5">
+          <span className="text-xs text-primary uppercase font-mono tracking-widest mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary shadow-[var(--glow-xs)]" />
             Online
           </span>

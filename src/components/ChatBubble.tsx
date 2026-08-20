@@ -204,7 +204,7 @@ export function ChatBubble({
           </p>
         </div>
         {time && (
-          <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground/80 mt-1 px-1">
+          <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground mt-1 px-1">
             {time}
           </span>
         )}
@@ -225,7 +225,7 @@ export function ChatBubble({
           ÁSTRÍÐR
         </span>
         {time && (
-          <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground/80">
+          <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground">
             · {time}
           </span>
         )}

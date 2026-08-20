@@ -99,7 +99,7 @@ export default function EventFeed() {
                     i < newCount && newCount > 0 ? "activity-entry-new" : ""
                   }`}
                 >
-                  <span className="text-muted-foreground/50 shrink-0 mt-0.5">
+                  <span className="text-muted-foreground shrink-0 mt-0.5">
                   {formatTimestamp(event.timestamp)}
                 </span>
                 <span className={`shrink-0 w-4 text-center ${eventColor}`}>

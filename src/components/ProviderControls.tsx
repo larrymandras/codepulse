@@ -75,7 +75,7 @@ function SortableProvider({
       }`}
     >
       <button
-        className="cursor-grab text-muted-foreground/50 hover:text-primary transition-colors"
+        className="cursor-grab text-muted-foreground hover:text-primary transition-colors"
         aria-label={`Drag to reorder ${PROVIDER_DISPLAY_NAMES[provider] ?? provider}`}
         {...attributes}
         {...listeners}
