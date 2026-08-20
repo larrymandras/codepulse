@@ -3,6 +3,26 @@
    contains example strings like `shadow-[var(--glow-*)]` that Tailwind would
    otherwise emit as invalid CSS (Lightning CSS warns on the `*`/`|`/`...`). */
 @source not "../.planning";
+/* D-07 (Phase 123 plan 07): Tailwind's default scan root is the whole repo
+   minus these exclusions -- non-application text was compiling utility
+   classes into the production stylesheet even after every real usage was
+   swept out of `src/`. Each of the three below was proven empirically with
+   a build-time canary (a class placed ONLY in that directory, confirmed
+   present in dist/assets/*.css, then confirmed absent once excluded) --
+   not assumed from directory purpose. Tailwind v4.3.2 requires one
+   directive per path; a single directive carrying multiple space-separated
+   paths compiles without error but silently excludes nothing.
+   scripts/migrate_tokens.py holds ~58 Tailwind class names as Python dict
+   keys (a one-time migration tool, not shipped code).
+   e2e/*.spec.ts hardcodes literal class strings (e.g.
+   contrast-isolation.spec.ts's CLASS_MATRIX) to assert against classes this
+   phase is sweeping out of src/ -- once swept, those strings would be the
+   only thing still compiling them into production CSS.
+   docs/superpowers/plans/*.md holds ~211 palette-shaped class-name
+   occurrences in historical planning prose, never intended as usage. */
+@source not "../scripts";
+@source not "../e2e";
+@source not "../docs";
 /* D-10 correction: force-generate the three duration utilities plus ease-house
    regardless of whether a scanned component file's content contains them yet.
    Measured 2026-08-18: a plain @theme declaration alone leaves --duration-*
