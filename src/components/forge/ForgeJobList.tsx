@@ -170,6 +170,7 @@ export function ForgeJobList({
         {toolbar}
         <div
           className="flex flex-col gap-2 p-3"
+          role="status"
           aria-busy="true"
           aria-label="Loading jobs"
         >

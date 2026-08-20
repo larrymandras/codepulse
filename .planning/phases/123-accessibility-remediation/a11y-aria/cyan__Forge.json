@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "Forge",
+  "path": "/forge",
+  "url": "http://localhost:5181/forge",
+  "capturedAt": "2026-08-20T15:54:36.959Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}
