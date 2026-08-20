@@ -206,19 +206,6 @@ const KNOWN_EXEMPT: Record<string, ExemptEntry[]> = {
       checkedOn: "2026-08-18",
     },
   ],
-  "src/pages/ForgePage.tsx": [
-    {
-      bucket: "pageheader",
-      reason:
-        "Hand-rolls the identical shape PageHeader produces (its own comment says so) and is " +
-        "convertible -- deferred, NOT a design exemption. A straight substitution would double " +
-        "the vertical spacing above the master-detail body since PageHeader bakes in mb-4 and " +
-        "ForgePage's current header carries none. Filed as a todo with the exact conversion for " +
-        "a future plan to carry, rather than left silently unconverted.",
-      ledger: "122-PAGEHEADER-ADOPTION.md, Named exemption register, row 2 (ForgePage.tsx:151)",
-      checkedOn: "2026-08-18",
-    },
-  ],
 };
 
 function isExempt(file: string, bucket: Bucket): boolean {

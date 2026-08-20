@@ -31,6 +31,7 @@ import { ForgeJobList } from "@/components/forge/ForgeJobList";
 import { ForgeJobDetail } from "@/components/forge/ForgeJobDetail";
 import { ForgeLaunchModal } from "@/components/forge/ForgeLaunchModal";
 import { GlassPanel } from "@/components/GlassPanel";
+import { PageHeader } from "@/components/PageHeader";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -146,19 +147,25 @@ export default function ForgePage() {
       {/* W2 — only probe Clerk when configured; otherwise isAuthenticated stays false */}
       {CLERK_KEY && <ClerkAuthProbe onChange={setIsAuthenticated} />}
 
-      {/* Page header — standard CodePulse pattern (BuildProgress.tsx:24) */}
-      <div className="flex items-center justify-between shrink-0">
-        <h1 className="text-2xl font-bold text-foreground">Forge</h1>
-        {/* Mobile-only toggle to reveal the job list overlay (F8) */}
-        <button
-          type="button"
-          onClick={() => setListOpen(true)}
-          aria-label="Show job list"
-          className="md:hidden flex items-center justify-center size-11 rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <PanelLeft className="h-5 w-5" />
-        </button>
-      </div>
+      {/* Page header — PageHeader adoption (D-09). mb-0 beats the baked-in
+          mb-4 via cn()/twMerge; the parent's space-y-4 already supplies the
+          gap above the master-detail body, so this is by-construction, not
+          measured -- see D-18's operator checkpoint (123-13). */}
+      <PageHeader
+        title="Forge"
+        className="mb-0 shrink-0"
+        actions={
+          // Mobile-only toggle to reveal the job list overlay (F8)
+          <button
+            type="button"
+            onClick={() => setListOpen(true)}
+            aria-label="Show job list"
+            className="md:hidden flex items-center justify-center size-11 rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </button>
+        }
+      />
 
       {/* Master-detail body — GlassPanel wraps the list+detail row (D-11) */}
       <GlassPanel className="flex-1 flex overflow-hidden min-h-0">
