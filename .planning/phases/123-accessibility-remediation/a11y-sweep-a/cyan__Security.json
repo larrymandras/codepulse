@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "Security",
+  "path": "/security",
+  "url": "http://localhost:5181/security",
+  "capturedAt": "2026-08-20T19:40:41.545Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

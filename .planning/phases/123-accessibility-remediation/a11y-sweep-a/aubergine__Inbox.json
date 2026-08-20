@@ -1,0 +1,13 @@
+{
+  "theme": "aubergine",
+  "page": "Inbox",
+  "path": "/inbox",
+  "url": "http://localhost:5181/inbox",
+  "capturedAt": "2026-08-20T19:42:12.029Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

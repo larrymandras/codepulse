@@ -1,0 +1,13 @@
+{
+  "theme": "aubergine",
+  "page": "Bifrost",
+  "path": "/bifrost",
+  "url": "http://localhost:5181/bifrost",
+  "capturedAt": "2026-08-20T19:42:10.758Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

@@ -263,3 +263,88 @@ the test's own comments. See Task 2 for the mutation proof.
 | src/components/JobsPanel.test.tsx:193 | `text-muted-foreground/50` | selector, asserts `.toBe(1)` | re-target to `svg.lucide-clock` |
 | src/components/JobsPanel.test.tsx:200 | `text-primary/80` | explanatory comment | unchanged — `:34` is a leave row |
 | src/components/JobsPanel.test.tsx:210 | `text-muted-foreground/50` | selector, asserts `.toBe(0)` | re-target to `svg.lucide-clock` |
+
+## Task 3: post-sweep re-measurement (2026-08-20)
+
+**Both buckets present.** Plan 123-11 (bucket B) landed and committed before this run started; the
+working tree for this scan contains bucket A's 18 edits AND bucket B's 64 edits together. This run
+measures the combined effect of both sweeps, not bucket A in isolation — stated per the plan's own
+instruction rather than attributed to bucket A alone.
+
+Server: reused the already-running `dev:noauth` on `127.0.0.1:5181` (probed 200 before the run, no
+second server started).
+
+```
+Command: A11Y_SCAN_ALL=1 A11Y_MEASURE_ONLY=1 \
+  A11Y_CAPTURE_DIR=.planning/phases/123-accessibility-remediation/a11y-sweep-a/ \
+  PW_BASE_URL=http://localhost:5181 \
+  node_modules/.bin/playwright test e2e/theme-contrast.spec.ts --reporter=line
+Runtime: 1.8m. 1 test passed (the spec's own C5 self-check).
+```
+
+**Capture count asserted before any zero was recorded as a result:**
+`ls .../a11y-sweep-a/*.json | wc -l` -> **188**. Distinct routes ->  **47**. Both match the full
+matrix exactly (not 62, not a partial scan) — this is the same must-differ acceptance check
+123-08/123-11 used.
+
+All counts below parsed from `violations[].nodes.length`, never by grepping `"id"`.
+
+### Criterion cells (20: Dashboard, LiveRun, Analytics, Forge, Graphs x 4 themes)
+
+**color-contrast: 0 objects / 0 nodes. aria-prohibited-attr: 0 objects / 0 nodes. Both clean.**
+
+### Full 188-cell color-contrast
+
+**14 objects / 36 nodes**, down from the pre-sweep addendum's 28 objects / 61 nodes (both sweeps
+combined). This is 1 node above `123-11-SUMMARY.md`'s own reported post-bucket-B figure of
+"14 objects / 35 nodes" — traced to a single already-known, already-named item (below), not to any
+of bucket A's 18 edits.
+
+### Per-route comparison against `123-CONTRAST-RESULT.md` (original pre-sweep baseline) and the
+### addendum (for the 12 routes that baseline never measured)
+
+No route bucket A touched (Dashboard, HivePage, LiveRun, Chat, Settings, Tasks) shows any
+color-contrast in this run — all 0/0, consistent with the ledger's `change` rows actually having
+been fixed, and with `123-CONTRAST-RESULT-ADDENDUM.md`'s Chat/Settings/Tasks figures (already 0
+color-contrast there before this plan ran). `KnowledgeGraph 8->4 obj (12->8 nodes)`,
+`ToolGalaxy 7->4 obj (11->8 nodes)`, `Skills 3->3 obj (9->3 nodes)`, `HrCatalog 2->1 obj (6->1
+nodes)`, `HrOnboarding (addendum 2/4)->2/2`, `HrRoster (addendum 6/14)->4/12` all continue
+bucket B's already-reported downward trend (no bucket-A file touches any of these routes either).
+
+**Five routes show a node-count increase over their prior baseline. Every one of the five is a
+non-color-contrast rule, on a route no file in either bucket's `files_modified` list renders, and
+four of the five match an already-documented flaky-rule class:**
+
+| Route | Rule | Prior | Now | Note |
+|---|---|---|---|---|
+| Capabilities | `scrollable-region-focusable` | 0/0 | 1/1 (cyan only) | **Already named in `123-11-SUMMARY.md`** ("same scroll-overflow flakiness class as the LiveRun finding"). Persists unchanged; not new, not caused by this plan. |
+| HivePage | `scrollable-region-focusable` | 4/4 (button-name only) | 6/6 (+2, cyan+emerald) | Same scroll-overflow flakiness class as Capabilities/LiveRun above — a scrollable-container axe rule, unrelated to any text-color class. HivePage's `button-name` count (4/4) is unchanged; only the unrelated scroll rule is new. |
+| Bifrost | `aria-prohibited-attr` | 0/0 | 1/1 (cyan only) | Not a bucket-A/B route (no file either bucket touched renders here); single-theme, matches the theme-unstable pattern Section 1 already documented for Ideation/Executions/HrCatalog. |
+| Executions | `scrollable-region-focusable` (new) + `color-contrast` (unchanged 2/8) | 2/8 (color-contrast only) | 2/8 (cc, unchanged) + 1/1 (scroll, cyan) = 3/9 | The color-contrast count is byte-identical to Section 1's original theme-unstable figure — no regression there. Only the added scroll rule is new, same class as above. |
+| Memory | `select-name` (unchanged 4/8) + `color-contrast` (new) + `scrollable-region-focusable` (new) | 4/8 (select-name only) | 4/8 (unchanged) + 1/2 cc (cyan) + 1/1 scroll (cyan) = 6/11 | **The one genuinely new color-contrast finding.** Detail below. |
+
+**Memory's new color-contrast finding, inspected directly (not assumed):** two badges,
+`<span class="opacity-70">18</span>` on `.bg-sky-500/20` and `<span class="opacity-70">979</span>`
+on `.bg-emerald-500/20`, both flagged only on the `cyan` theme (contrastRatio 4.01 and 4.36 against
+a 4.5:1 threshold). This is Tailwind's `opacity-NN` utility applied to a `bg-*-500/20` stat badge
+— a completely different class shape from this sweep's `text-primary|muted-foreground/NN` pattern
+(never one of the 165 tracked occurrences in `123-CONTRAST-RESULT.md` § 3), on a route
+(`Memory.tsx`) neither bucket A nor bucket B's `files_modified` list includes, showing
+apparently-live numeric data (`18`, `979`) consistent with the same "live-data-dependent,
+timing-race, theme-unstable" pattern Section 1 already named for Ideation/Executions/HrCatalog.
+Named here for visibility; out of this plan's scope to fix (different pattern, different files,
+not gated by A11Y-02's criterion set).
+
+**McpInventory (the +1-node source of the 35->36 delta from `123-11-SUMMARY.md`):** 1 object / 4
+nodes, all on `[readable]` this run (123-11 saw 4 nodes on `[aubergine]`). Same untouched
+leave-list site (`McpInventory.tsx:184`, not a bucket-A or bucket-B file) 123-11-SUMMARY already
+identified as a `.map()`-indirection classification gap in `123-CONTRAST-RESULT.md` — the theme
+that trips it differs run-to-run, consistent with a live server-count-dependent render, not a
+regression from this plan's 18 edits.
+
+**No color-contrast increase on any route either bucket's edits touch.** The only new
+color-contrast finding (Memory) is a different class pattern on an untouched file; the only
+color-contrast count that moved on an untouched-but-previously-flagged route (McpInventory) moved
+by a theme reassignment of the same node count, not a genuine increase, and was already reported
+by 123-11 as a pre-existing gap.
+

@@ -1,0 +1,13 @@
+{
+  "theme": "aubergine",
+  "page": "Studio",
+  "path": "/studio",
+  "url": "http://localhost:5181/studio",
+  "capturedAt": "2026-08-20T19:42:12.525Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

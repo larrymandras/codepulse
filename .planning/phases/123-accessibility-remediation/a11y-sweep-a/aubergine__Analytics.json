@@ -1,0 +1,13 @@
+{
+  "theme": "aubergine",
+  "page": "Analytics",
+  "path": "/analytics",
+  "url": "http://localhost:5181/analytics",
+  "capturedAt": "2026-08-20T19:42:00.178Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

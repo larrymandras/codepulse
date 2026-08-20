@@ -1,0 +1,13 @@
+{
+  "theme": "emerald",
+  "page": "InsightsChat",
+  "path": "/insights",
+  "url": "http://localhost:5181/insights",
+  "capturedAt": "2026-08-20T19:41:39.525Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

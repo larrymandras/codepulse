@@ -1,0 +1,58 @@
+{
+  "theme": "cyan",
+  "page": "Bifrost",
+  "path": "/bifrost",
+  "url": "http://localhost:5181/bifrost",
+  "capturedAt": "2026-08-20T19:41:08.951Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "aria-prohibited-attr",
+      "impact": "serious",
+      "tags": [
+        "cat.aria",
+        "wcag2a",
+        "wcag412",
+        "EN-301-549",
+        "EN-9.4.1.2",
+        "RGAAv4",
+        "RGAA-7.1.1"
+      ],
+      "description": "Ensure ARIA attributes are not prohibited for an element's role",
+      "help": "Elements must only use permitted ARIA attributes",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/aria-prohibited-attr?application=playwright",
+      "nodes": [
+        {
+          "any": [],
+          "all": [],
+          "none": [
+            {
+              "id": "aria-prohibited-attr",
+              "data": {
+                "role": null,
+                "nodeName": "span",
+                "messageKey": "noRoleSingular",
+                "prohibited": [
+                  "aria-label"
+                ]
+              },
+              "relatedNodes": [],
+              "impact": "serious",
+              "message": "aria-label attribute cannot be used on a span with no valid role attribute."
+            }
+          ],
+          "impact": "serious",
+          "html": "<span data-testid=\"bifrost-dot-up\" aria-label=\"Service running\" class=\"inline-block h-2 w-2 shrink-0 rounded-full\" style=\"background-color: var(--status-ok);\"></span>",
+          "target": [
+            ".inline-block"
+          ],
+          "failureSummary": "Fix all of the following:\n  aria-label attribute cannot be used on a span with no valid role attribute."
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

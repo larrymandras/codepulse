@@ -1,0 +1,13 @@
+{
+  "theme": "readable",
+  "page": "Dreaming",
+  "path": "/dreaming",
+  "url": "http://localhost:5181/dreaming",
+  "capturedAt": "2026-08-20T19:41:53.799Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

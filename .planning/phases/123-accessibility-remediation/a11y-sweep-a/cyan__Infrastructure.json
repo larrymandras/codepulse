@@ -1,0 +1,219 @@
+{
+  "theme": "cyan",
+  "page": "Infrastructure",
+  "path": "/infrastructure",
+  "url": "http://localhost:5181/infrastructure",
+  "capturedAt": "2026-08-20T19:40:42.249Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "color-contrast",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2aa",
+        "wcag143",
+        "TTv5",
+        "TT13.c",
+        "EN-301-549",
+        "EN-9.1.4.3",
+        "ACT",
+        "RGAAv4",
+        "RGAA-3.2.1"
+      ],
+      "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#6b7280",
+                "bgColor": "#111216",
+                "contrastRatio": 3.87,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"text-center py-2 rounded-lg\" style=\"background-color: rgba(107, 114, 128, 0.03); border: 1px solid rgba(107, 114, 128, 0.125);\"><p class=\"text-xs text-muted-foreground\">Convex</p><p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/1</p></div>",
+                  "target": [
+                    ".text-center.rounded-lg.py-2:nth-child(1)"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card/50 border border-border/50 rounded-xl p-4\">",
+                  "target": [
+                    ".md\\:col-span-12:nth-child(2) > .bg-card\\/50.rounded-xl.border-border\\/50"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/1</p>",
+          "target": [
+            ".text-center.rounded-lg.py-2:nth-child(1) > .font-semibold.text-base"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#6b7280",
+                "bgColor": "#111216",
+                "contrastRatio": 3.87,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"text-center py-2 rounded-lg\" style=\"background-color: rgba(107, 114, 128, 0.03); border: 1px solid rgba(107, 114, 128, 0.125);\"><p class=\"text-xs text-muted-foreground\">Docker</p><p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/1</p></div>",
+                  "target": [
+                    ".text-center.rounded-lg.py-2:nth-child(2)"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card/50 border border-border/50 rounded-xl p-4\">",
+                  "target": [
+                    ".md\\:col-span-12:nth-child(2) > .bg-card\\/50.rounded-xl.border-border\\/50"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/1</p>",
+          "target": [
+            ".text-center.rounded-lg.py-2:nth-child(2) > .font-semibold.text-base"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#6b7280",
+                "bgColor": "#111216",
+                "contrastRatio": 3.87,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"text-center py-2 rounded-lg\" style=\"background-color: rgba(107, 114, 128, 0.03); border: 1px solid rgba(107, 114, 128, 0.125);\"><p class=\"text-xs text-muted-foreground\">Supabase</p><p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/1</p></div>",
+                  "target": [
+                    ".text-center.rounded-lg.py-2:nth-child(3)"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card/50 border border-border/50 rounded-xl p-4\">",
+                  "target": [
+                    ".md\\:col-span-12:nth-child(2) > .bg-card\\/50.rounded-xl.border-border\\/50"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/1</p>",
+          "target": [
+            ".text-center.rounded-lg.py-2:nth-child(3) > .font-semibold.text-base"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+        },
+        {
+          "any": [
+            {
+              "id": "color-contrast",
+              "data": {
+                "fgColor": "#6b7280",
+                "bgColor": "#111216",
+                "contrastRatio": 3.87,
+                "fontSize": "12.0pt (16px)",
+                "fontWeight": "normal",
+                "messageKey": null,
+                "expectedContrastRatio": "4.5:1"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<div class=\"text-center py-2 rounded-lg\" style=\"background-color: rgba(107, 114, 128, 0.03); border: 1px solid rgba(107, 114, 128, 0.125);\"><p class=\"text-xs text-muted-foreground\">Integrations</p><p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/4</p></div>",
+                  "target": [
+                    ".text-center.rounded-lg.py-2:nth-child(4)"
+                  ]
+                },
+                {
+                  "html": "<div class=\"bg-card/50 border border-border/50 rounded-xl p-4\">",
+                  "target": [
+                    ".md\\:col-span-12:nth-child(2) > .bg-card\\/50.rounded-xl.border-border\\/50"
+                  ]
+                },
+                {
+                  "html": "<main class=\"flex-1 overflow-y-auto bg-background p-6\">",
+                  "target": [
+                    "main"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<p class=\"text-base font-semibold\" style=\"color: rgb(107, 114, 128);\">0/4</p>",
+          "target": [
+            ".text-center.rounded-lg.py-2:nth-child(4) > .font-semibold.text-base"
+          ],
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.87 (foreground color: #6b7280, background color: #111216, font size: 12.0pt (16px), font weight: normal). Expected contrast ratio of 4.5:1"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "theme": "readable",
+  "page": "BuildProgress",
+  "path": "/build",
+  "url": "http://localhost:5181/build",
+  "capturedAt": "2026-08-20T19:41:48.195Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

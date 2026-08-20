@@ -1,0 +1,80 @@
+{
+  "theme": "readable",
+  "page": "Tools",
+  "path": "/tools",
+  "url": "http://localhost:5181/tools",
+  "capturedAt": "2026-08-20T19:41:47.034Z",
+  "violationCount": 1,
+  "violations": [
+    {
+      "id": "link-in-text-block",
+      "impact": "serious",
+      "tags": [
+        "cat.color",
+        "wcag2a",
+        "wcag141",
+        "TTv5",
+        "TT13.a",
+        "EN-301-549",
+        "EN-9.1.4.1",
+        "RGAAv4",
+        "RGAA-10.6.1"
+      ],
+      "description": "Ensure links are distinguished from surrounding text in a way that does not rely on color",
+      "help": "Links must be distinguishable without relying on color",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-in-text-block?application=playwright",
+      "nodes": [
+        {
+          "any": [
+            {
+              "id": "link-in-text-block",
+              "data": {
+                "messageKey": "fgContrast",
+                "contrastRatio": 2.12,
+                "requiredContrastRatio": 3,
+                "nodeColor": "#5eead4",
+                "parentColor": "#8892a4"
+              },
+              "relatedNodes": [
+                {
+                  "html": "<p class=\"text-sm text-muted-foreground mt-1\">",
+                  "target": [
+                    ".mt-1"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "The link has insufficient color contrast of 2.12:1 with the surrounding text. (Minimum contrast is 3:1, link text: #5eead4, surrounding text: #8892a4)"
+            },
+            {
+              "id": "link-in-text-block-style",
+              "data": null,
+              "relatedNodes": [
+                {
+                  "html": "<p class=\"text-sm text-muted-foreground mt-1\">",
+                  "target": [
+                    ".mt-1"
+                  ]
+                }
+              ],
+              "impact": "serious",
+              "message": "The link has no styling (such as underline) to distinguish it from the surrounding text"
+            }
+          ],
+          "all": [],
+          "none": [],
+          "impact": "serious",
+          "html": "<a class=\"text-primary hover:underline\" href=\"/\" data-discover=\"true\">Dashboard → Active Sessions</a>",
+          "target": [
+            ".hover\\:underline"
+          ],
+          "failureSummary": "Fix any of the following:\n  The link has insufficient color contrast of 2.12:1 with the surrounding text. (Minimum contrast is 3:1, link text: #5eead4, surrounding text: #8892a4)\n  The link has no styling (such as underline) to distinguish it from the surrounding text"
+        }
+      ]
+    }
+  ],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

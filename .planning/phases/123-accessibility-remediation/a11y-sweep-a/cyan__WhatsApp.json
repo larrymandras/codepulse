@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "WhatsApp",
+  "path": "/channels/whatsapp",
+  "url": "http://localhost:5181/channels/whatsapp",
+  "capturedAt": "2026-08-20T19:41:15.858Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

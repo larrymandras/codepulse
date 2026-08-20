@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "Galdr",
+  "path": "/galdr",
+  "url": "http://localhost:5181/galdr",
+  "capturedAt": "2026-08-20T19:41:09.937Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}

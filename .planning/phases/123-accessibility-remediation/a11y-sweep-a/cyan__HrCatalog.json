@@ -1,0 +1,13 @@
+{
+  "theme": "cyan",
+  "page": "HrCatalog",
+  "path": "/hr/catalog",
+  "url": "http://localhost:5181/hr/catalog",
+  "capturedAt": "2026-08-20T19:41:17.923Z",
+  "violationCount": 0,
+  "violations": [],
+  "axeVersion": {
+    "name": "axe-core",
+    "version": "4.12.1"
+  }
+}
