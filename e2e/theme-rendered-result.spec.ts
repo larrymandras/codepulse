@@ -1,5 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 import { execSync } from "node:child_process";
+import {
+  SENTINEL,
+  type RGB,
+  sampleColor,
+  compositeSample,
+  paintedColorOfClass,
+  getThemeTokenText,
+  relativeLuminance,
+  contrastRatio,
+  channelDistance,
+} from "./lib/contrast";
 
 /**
  * D-27 (122-18): the rendered result, not the source. Every other gate in
@@ -12,9 +23,10 @@ import { execSync } from "node:child_process";
  * `oklch()`/`oklab()`. A number-extraction regex over a computed colour
  * string reads the HUE ANGLE as a channel — Phase 120's withdrawn
  * measurement's tell was an impossible `rgb(0,0,262)`. Every colour claim in
- * this file goes through `sampleColor`/`compositeSample`, which hand the raw
- * string straight to `canvas.fillStyle` (a real browser colour parser) and
- * read back true sRGB bytes via `getImageData`. Reading a computed string
+ * this file goes through `sampleColor`/`compositeSample` (moved to
+ * `./lib/contrast` in 123-02), which hand the raw string straight to
+ * `canvas.fillStyle` (a real browser colour parser) and read back true sRGB
+ * bytes via `getImageData`. Reading a computed string
  * (`getComputedStyle(...).color`) to hand to the sampler is fine and done
  * throughout this file; running a NUMBER-EXTRACTING REGEX over one is the
  * forbidden thing, and this file does not do that anywhere.
@@ -31,8 +43,6 @@ const THEMES = ["cyan", "emerald", "readable", "aubergine"] as const;
 // in ThemeSwitcher and is NOT in this matrix -- an unreachable theme cannot
 // be measured against a rendered page, and e2e/theme-contrast.spec.ts's own
 // 4-theme matrix already sets this precedent.
-
-const SENTINEL = "#ff00ff";
 
 // The commit immediately before the FIRST src/index.css edit of this phase
 // (feat(122-02) a4b02d56 is the first; its parent is this SHA). Anchored on
@@ -59,8 +69,6 @@ const TAILWIND_STATIC = {
   "indigo-400": "oklch(67.3% 0.182 276.935)",
 } as const;
 
-type RGB = [number, number, number];
-
 /** Record of every sample taken, so the "no channel outside 0-255" check
  *  and the printed-raw-values discipline both have one place to draw from.
  *  Module-scope state is only meaningful within a SINGLE worker process --
@@ -73,118 +81,6 @@ const allSamples: { label: string; rgb: RGB }[] = [];
 function record(label: string, rgb: RGB | null): RGB | null {
   if (rgb) allSamples.push({ label, rgb });
   return rgb;
-}
-
-/**
- * Sentinel-guarded rasterised sampler (122-RESEARCH.md's verified pattern).
- * Hands `cssColorString` directly to canvas.fillStyle -- the browser's real
- * colour parser, immune to the oklch-as-regex trap because nothing here
- * extracts numbers from a string with a regex.
- */
-async function sampleColor(page: Page, cssColorString: string): Promise<RGB | null> {
-  return page.evaluate(
-    ({ color, SENTINEL }) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = 1;
-      const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = SENTINEL;
-      ctx.fillStyle = color; // unparseable input silently leaves fillStyle at SENTINEL
-      if (ctx.fillStyle.toLowerCase() === SENTINEL) return null;
-      ctx.fillRect(0, 0, 1, 1);
-      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-      return [r, g, b] as [number, number, number];
-    },
-    { color: cssColorString, SENTINEL },
-  );
-}
-
-/**
- * Composites `topColor` (which may carry alpha) over `bottomColor` on the
- * same 1x1 canvas via two sequential fillRect calls -- real browser
- * "source-over" alpha compositing, the same method 122-BADGE-LAW.md §8 used
- * to measure the translucent old Forge `failed` pairing. Each fillStyle
- * assignment is sentinel-guarded independently.
- */
-async function compositeSample(page: Page, bottomColor: string, topColor: string): Promise<RGB | null> {
-  return page.evaluate(
-    ({ bottom, top, SENTINEL }) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = 1;
-      const ctx = canvas.getContext("2d")!;
-      ctx.fillStyle = SENTINEL;
-      ctx.fillStyle = bottom;
-      if (ctx.fillStyle.toLowerCase() === SENTINEL) return null;
-      ctx.fillRect(0, 0, 1, 1);
-      ctx.fillStyle = SENTINEL;
-      ctx.fillStyle = top;
-      if (ctx.fillStyle.toLowerCase() === SENTINEL) return null;
-      ctx.fillRect(0, 0, 1, 1);
-      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-      return [r, g, b] as [number, number, number];
-    },
-    { bottom: bottomColor, top: topColor, SENTINEL },
-  );
-}
-
-/**
- * Injects a throwaway element carrying `className` into the live page,
- * reads its computed `color` or `backgroundColor`, then removes it. This is
- * how a token's REAL rendered resolution is measured without depending on
- * live Convex data existing for a given badge/chip to appear on screen --
- * the class string is real, shipped source (Tailwind's Vite plugin scans
- * all of src/ regardless of what's currently mounted, per this repo's own
- * `@source not "../.planning"` directive), so the synthetic element paints
- * through the exact same compiled CSS rule a real one would.
- */
-async function paintedColorOfClass(
-  page: Page,
-  className: string,
-  prop: "color" | "backgroundColor",
-): Promise<string> {
-  return page.evaluate(
-    ({ className, prop }) => {
-      const el = document.createElement("div");
-      el.className = className;
-      document.body.appendChild(el);
-      const cs = getComputedStyle(el);
-      const value = prop === "color" ? cs.color : cs.backgroundColor;
-      document.body.removeChild(el);
-      return value;
-    },
-    { className, prop },
-  );
-}
-
-/** Resolved value of a CSS custom property on <html>, read as declared text
- *  (NOT resolved through getComputedStyle on an element, since a property
- *  that itself aliases another var() would return the literal "var(...)"
- *  string via getPropertyValue -- every token consumed here is declared as
- *  a direct literal, verified against src/index.css before use). */
-async function getThemeTokenText(page: Page, token: string): Promise<string> {
-  return page.evaluate((t) => getComputedStyle(document.documentElement).getPropertyValue(t).trim(), token);
-}
-
-function relativeLuminance([r, g, b]: RGB): number {
-  const [R, G, B] = [r, g, b].map((c) => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
-}
-
-function contrastRatio(fg: RGB, bg: RGB): number {
-  const L1 = relativeLuminance(fg);
-  const L2 = relativeLuminance(bg);
-  const [lighter, darker] = L1 > L2 ? [L1, L2] : [L2, L1];
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-/** Euclidean distance in sRGB byte space. Not a WCAG figure -- this answers
- *  "are these two rendered colours visibly the same swatch or not", which is
- *  what D-27's surface-distinctness and status-ok/primary-separation checks
- *  need. Threshold rationale is stated at each call site. */
-function channelDistance(a: RGB, b: RGB): number {
-  return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2);
 }
 
 /**
