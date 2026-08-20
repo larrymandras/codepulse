@@ -27,7 +27,7 @@ interface IdeationRowProps {
 const SEVERITY_CLASSES: Record<string, string> = {
   critical: "bg-(--status-error) text-white",
   high: "bg-(--status-error)/70 text-white",
-  medium: "bg-(--status-warn) text-(--foreground)",
+  medium: "bg-(--status-warn) text-(--primary-foreground)",
   low: "bg-(--status-ok) text-white",
 };
 

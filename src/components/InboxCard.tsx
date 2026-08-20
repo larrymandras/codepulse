@@ -94,9 +94,9 @@ type RiskLevel = "high" | "medium" | "low";
 
 function RiskBadge({ level }: { level: RiskLevel }) {
   const styles: Record<RiskLevel, string> = {
-    high: "bg-(--status-error) text-(--foreground)",
-    medium: "bg-(--status-warn) text-(--foreground)",
-    low: "bg-(--status-ok) text-(--foreground)",
+    high: "bg-(--status-error) text-(--primary-foreground)",
+    medium: "bg-(--status-warn) text-(--primary-foreground)",
+    low: "bg-(--status-ok) text-(--primary-foreground)",
   };
   const labels: Record<RiskLevel, string> = {
     high: "High Risk",

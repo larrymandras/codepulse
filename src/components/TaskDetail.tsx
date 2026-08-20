@@ -64,7 +64,7 @@ export function TaskDetail({ task, open, onClose, onMove }: TaskDetailProps) {
           <div className="flex items-center gap-2">
             <span className="text-(--muted-foreground) w-24 flex-shrink-0">Priority</span>
             <span
-              className={`text-xs font-semibold px-1.5 py-0.5 rounded-sm text-(--foreground) uppercase ${PRIORITY_COLORS[task.priority]}`}
+              className={`text-xs font-semibold px-1.5 py-0.5 rounded-sm text-(--primary-foreground) uppercase ${PRIORITY_COLORS[task.priority]}`}
             >
               {task.priority}
             </span>

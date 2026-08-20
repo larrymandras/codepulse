@@ -7,10 +7,13 @@
  * Each finding shows: severity badge, category label, description,
  * optional suggestedFix, and a dismiss button.
  *
- * Severity badge colors per UI-SPEC scan color rules:
- *   HIGH   → bg-(--status-error)  text-(--foreground)
- *   MEDIUM → bg-(--status-warn)   text-(--foreground)
- *   LOW    → bg-(--status-ok)     text-(--foreground)
+ * Severity badge colors per UI-SPEC scan color rules (123-10, D-05: measured
+ * via e2e/contrast-isolation.spec.ts's status-fill matrix -- text-(--foreground)
+ * on any of these fills rasterises to ~1.4-1.8:1, far below AA; text-(--primary-
+ * foreground) clears 4.5:1 against all three in every theme):
+ *   HIGH   → bg-(--status-error)  text-(--primary-foreground)
+ *   MEDIUM → bg-(--status-warn)   text-(--primary-foreground)
+ *   LOW    → bg-(--status-ok)     text-(--primary-foreground)
  *   SAFE   → text-(--muted-foreground) plain text "Clean"
  */
 
@@ -36,11 +39,11 @@ interface ScanResultsPanelProps {
 function severityBadgeClass(severity: string): string {
   switch (severity.toUpperCase()) {
     case "HIGH":
-      return "bg-(--status-error) text-(--foreground)";
+      return "bg-(--status-error) text-(--primary-foreground)";
     case "MEDIUM":
-      return "bg-(--status-warn) text-(--foreground)";
+      return "bg-(--status-warn) text-(--primary-foreground)";
     case "LOW":
-      return "bg-(--status-ok) text-(--foreground)";
+      return "bg-(--status-ok) text-(--primary-foreground)";
     default:
       return "bg-muted text-(--muted-foreground)";
   }
