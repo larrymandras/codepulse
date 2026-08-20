@@ -1,13 +1,15 @@
 ---
 id: TODO-forgepage-pageheader-adoption
-status: pending
+status: closed
 planted: 2026-08-19
 planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement), plan 122-11 (PageHeader page-layer contract, D-17/D-18)
 trigger_when: The next plan that touches src/pages/ForgePage.tsx's header region, or a dedicated small plan in v15.0. Not urgent -- the page renders correctly today via its hand-rolled h1; this is a consistency gap, not a defect.
 scope: Small (one file, header block only -- src/pages/ForgePage.tsx:150-159)
 source: .planning/phases/122-tokens-primitives-contrast-measurement/122-11-PLAN.md Task 3; investigated during 122-11 execution 2026-08-19
 resolves_phase: null
-last_reviewed: 2026-08-19
+last_reviewed: 2026-08-20
+closed: 2026-08-20
+closed_by: Phase 123 plan 123-06 Task 2 (D-09) -- ForgePage.tsx:154 now renders <PageHeader title="Forge" className="mb-0 shrink-0" actions={...}/>; KNOWN_EXEMPT entry deleted from tokenSweep.ratchet.test.ts, mutation-proven. Verified live 2026-08-20 while opening Phase 124; the todo had been completed but never moved out of pending/.
 ---
 
 # ForgePage.tsx hand-rolls the page title instead of using PageHeader
