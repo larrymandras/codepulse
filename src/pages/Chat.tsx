@@ -329,6 +329,7 @@ export default function Chat() {
     handleApprove,
     handleReject,
     ttsAnalyser,
+    ttsIsPlaying,
   } = chat;
   const { sendCommand, subscribeEvent } = useAstridrWS();
 
@@ -627,15 +628,24 @@ export default function Chat() {
   };
 
   // ── State → presentation ────────────────────────────────────────────────
-  // Avatar reacts to the REAL voice state; a typed turn still gets the
-  // thinking shimmer; mic off pins it calm (and dims it below).
-  const avatarState: VoiceState = !listening
-    ? "idle"
-    : voice.conversationActive
-      ? voice.voiceState
-      : isStreaming
-        ? "processing"
-        : "idle";
+  // Audible playback wins (192-04, LIP-01): while TTS is actually playing she
+  // is "speaking" regardless of the mic toggle or conversation state. Without
+  // that first arm this expression could never yield "speaking" outside a live
+  // voice conversation — the mic toggle persists as false and a typed turn
+  // leaves conversationActive false — so AvatarAura's mouth branch was never
+  // entered even though she was audibly talking.
+  // Otherwise unchanged: the avatar reacts to the REAL voice state, a typed
+  // turn still gets the thinking shimmer, and mic off pins it calm (and dims
+  // it below — the dim stays a separate input-state cue).
+  const avatarState: VoiceState = ttsIsPlaying
+    ? "speaking"
+    : !listening
+      ? "idle"
+      : voice.conversationActive
+        ? voice.voiceState
+        : isStreaming
+          ? "processing"
+          : "idle";
 
   const stateLabel = !listening
     ? "Listening off — typing only"
