@@ -189,7 +189,27 @@ export function ForgeJobList({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {toolbar}
-      <ScrollArea className="flex-1">
+      {/*
+        Radix's ScrollArea wraps viewport children in a `display: table` div,
+        which sizes to the CONTENT's natural width rather than the viewport's.
+        Inside /forge's fixed `w-[280px]` list panel that made every job row
+        render ~2897px wide and get clipped mid-glyph by the panel's
+        `overflow-hidden` — job titles, the workspace badge and the agent name
+        were all sliced off. Measured before this fix: viewport clientWidth 279
+        vs scrollWidth 2897.
+
+        The consequence worth knowing: the row markup's own `min-w-0`,
+        `truncate` and `flex-wrap` below were INERT, because a table-sized
+        parent applies no width pressure for them to respond to. They start
+        working again only once the wrapper is a block box.
+
+        Forced to `block` + full width HERE rather than in
+        `components/ui/scroll-area.tsx`: the table display is Radix's
+        deliberate design for horizontally-scrolling consumers, so changing the
+        shared primitive would alter every ScrollArea in the app. This list
+        scrolls vertically only.
+      */}
+      <ScrollArea className="flex-1 [&>[data-slot=scroll-area-viewport]>div]:!block [&>[data-slot=scroll-area-viewport]>div]:!w-full">
         {/* Pending rows — D-10/D-11; announced for screen readers */}
         {pending.length > 0 && (
           <div className="flex flex-col" aria-live="polite">
@@ -225,7 +245,24 @@ export function ForgeJobList({
                   className={`w-full text-left flex items-start gap-2 px-3 py-3 min-h-[72px] border-b border-border transition-colors hover:bg-accent/50 ${
                     isSelected ? "bg-accent border-l-2 border-primary" : ""
                   }`}
-                  aria-selected={isSelected}
+                  // `aria-current`, not `aria-selected`: this is a plain
+                  // <button>, and `aria-selected` is only permitted on roles
+                  // that support it (option/tab/row/gridcell/treeitem), so it
+                  // raised axe `aria-allowed-attr` — 28 nodes, one per row.
+                  //
+                  // It went unseen until now because it is live-data gated:
+                  // with no jobs there are no buttons and nothing to flag, so
+                  // every earlier capture of /forge that ran before the Convex
+                  // query resolved recorded a clean page. 123-06-SUMMARY.md's
+                  // "aria-selected ... never fired" is falsified by this, and
+                  // is corrected in 123-CLOSEOUT.md rather than left standing.
+                  //
+                  // Making the list a real listbox/option pair was rejected:
+                  // options are not interactive containers, and these rows are
+                  // buttons with their own click semantics. `aria-current` is
+                  // allowed on any element and is the correct idiom for
+                  // "this is the active item in a master-detail set".
+                  aria-current={isSelected ? "true" : undefined}
                   aria-label={`Job ${job.id}: ${job.agent} — ${job.prompt ?? "(no prompt)"}`}
                 >
                   {/* Agent icon */}
