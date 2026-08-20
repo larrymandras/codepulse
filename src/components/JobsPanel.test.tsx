@@ -210,4 +210,61 @@ describe("JobsPanel", () => {
       container.querySelectorAll('svg.lucide-clock').length
     ).toBe(0);
   });
+
+  // ── WCAG 2.1.1 / axe `scrollable-region-focusable` (Phase 123 closeout) ────
+  //
+  // The mission list scrolls (`overflow-y-auto max-h-[280px]`), so it must be
+  // reachable by keyboard or its overflowed rows are unavailable to anyone not
+  // using a pointer.
+  //
+  // These assertions live HERE, at the unit level, deliberately. The e2e
+  // criterion gate could not verify this reliably: axe's rule only fires once
+  // the LIVE `useSubagentJobs()` subscription happens to return enough rows to
+  // overflow, so the gate failed on roughly half of runs and passed on the
+  // rest against IDENTICAL code — and when the live table was short, a
+  // deliberately un-fixed build passed 20/20 too. A probe that returns the same
+  // answer whether or not the defect is present proves nothing. The mock below
+  // removes the live-data dependency entirely, so this guard is deterministic
+  // and fires on the attributes axe actually checks.
+  describe("mission list is keyboard-reachable", () => {
+    function renderWithRows() {
+      mockUseSubagentJobs.mockReturnValue([
+        makeRow("j1", "completed", 300),
+        makeRow("j2", "failed", 120),
+        makeRow("j3", "cancelled", 60),
+      ]);
+      return render(<JobsPanel />);
+    }
+
+    it("exposes the scrollable region to keyboard users", () => {
+      const { container } = renderWithRows();
+      const region = container.querySelector<HTMLElement>(".overflow-y-auto");
+
+      expect(region).not.toBeNull();
+      expect(region).toHaveAttribute("tabindex", "0");
+    });
+
+    it("gives that region an accessible name via the existing heading, not a bare aria-label", () => {
+      const { container } = renderWithRows();
+      const region = container.querySelector<HTMLElement>(".overflow-y-auto");
+
+      // role first: `aria-label`/`aria-labelledby` on a role-less div is what
+      // raised `aria-prohibited-attr` on /forge (fixed in 123-06). Naming by
+      // reference also avoids duplicating the heading's text.
+      expect(region).toHaveAttribute("role", "region");
+      const labelledBy = region?.getAttribute("aria-labelledby");
+      expect(labelledBy).toBeTruthy();
+
+      const heading = container.querySelector(`#${labelledBy}`);
+      expect(heading).not.toBeNull();
+      expect(heading?.textContent?.trim()).toBe("MISSION HISTORY");
+    });
+
+    it("control — the empty state renders no scrollable region at all, so the assertions above are about the list and not the panel wrapper", () => {
+      mockUseSubagentJobs.mockReturnValue([]);
+      const { container } = render(<JobsPanel />);
+
+      expect(container.querySelector(".overflow-y-auto")).toBeNull();
+    });
+  });
 });

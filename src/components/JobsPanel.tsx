@@ -68,7 +68,10 @@ export default function JobsPanel({ onSelectJob }: JobsPanelProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-mono uppercase tracking-widest text-primary flex items-center gap-2">
+        <h2
+          id="mission-history-heading"
+          className="text-xs font-mono uppercase tracking-widest text-primary flex items-center gap-2"
+        >
           MISSION HISTORY
         </h2>
         <Badge variant="outline" className="text-xs font-mono">
@@ -85,7 +88,27 @@ export default function JobsPanel({ onSelectJob }: JobsPanelProps) {
           </p>
         </div>
       ) : (
-        <div className="overflow-y-auto max-h-[280px]">
+        // WCAG 2.1.1 / axe `scrollable-region-focusable`: a region that scrolls
+        // must be reachable by keyboard, or its overflowed content is simply
+        // unavailable to anyone not using a pointer. `tabIndex={0}` is the fix.
+        //
+        // This was NOT caught by the phase's earlier passes because the rule
+        // only fires once the live `useSubagentJobs()` subscription returns
+        // enough rows to actually overflow `max-h-[280px]` — so the criterion
+        // gate failed on roughly half of runs and passed on the rest, against
+        // identical code. The defect was constant; only its detection varied.
+        //
+        // `role="region"` + `aria-labelledby` rather than a bare `aria-label`:
+        // aria-label on a role-less div is what raised `aria-prohibited-attr`
+        // on /forge (fixed in 123-06), and a focusable region with no
+        // accessible name is a worse experience than an unfocusable one.
+        // Pointing at the existing <h2> avoids duplicating its text.
+        <div
+          className="overflow-y-auto max-h-[280px]"
+          tabIndex={0}
+          role="region"
+          aria-labelledby="mission-history-heading"
+        >
           {jobs.map((job) => {
             const elapsed = formatElapsed(job);
             return (
