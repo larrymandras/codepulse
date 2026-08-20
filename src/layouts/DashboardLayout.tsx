@@ -88,7 +88,7 @@ function NavGroup({
       {!collapsed && (
         <div className="px-3 pt-4 pb-2 flex items-center gap-2">
           <span className="w-1 h-1 rounded-full bg-primary/50" />
-          <p className="text-xs uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]">
+          <p className="text-xs uppercase tracking-widest text-primary font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]">
             {label}
           </p>
         </div>
@@ -108,13 +108,13 @@ function NavGroup({
                 title={collapsed ? `${item.label} (coming soon)` : undefined}
                 className={`group flex items-center ${
                   collapsed ? "justify-center px-2" : "gap-3 px-3"
-                } py-2 text-sm font-mono tracking-wider text-muted-foreground/40 cursor-not-allowed select-none`}
+                } py-2 text-sm font-mono tracking-wider text-muted-foreground cursor-not-allowed select-none opacity-50`}
               >
                 <IconComponent className="h-4 w-4 shrink-0" />
                 {!collapsed && (
                   <span className="flex-1 flex items-center justify-between gap-2">
                     {item.label}
-                    <span className="text-[10px] uppercase tracking-widest text-primary/40 border border-primary/20 px-1 py-px rounded-sm">
+                    <span className="text-[10px] uppercase tracking-widest text-primary border border-primary/20 px-1 py-px rounded-sm">
                       soon
                     </span>
                   </span>
@@ -145,7 +145,7 @@ function NavGroup({
                 `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                   isActive
                     ? "is-active text-primary bg-primary/10"
-                    : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5"
+                    : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                 }`
               }
             >
@@ -250,7 +250,7 @@ function SidebarContent({
                         120-SHELL-EVIDENCE.md for Phase 124. */}
                     <h1 className="text-base font-bold text-foreground font-mono tracking-wider shadow-primary">CodePulse</h1>
                   </div>
-                  <div className="text-[11px] text-primary/80 uppercase font-mono tracking-wider mt-0.5 flex items-start gap-1.5 leading-tight">
+                  <div className="text-[11px] text-primary uppercase font-mono tracking-wider mt-0.5 flex items-start gap-1.5 leading-tight">
                     <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary shadow-[var(--glow-md)] mt-0.5" />
                     <span className="break-words">Operator: Larry Mandras</span>
                   </div>
@@ -284,7 +284,7 @@ function SidebarContent({
                   `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                     isActive
                       ? "is-active text-primary bg-primary/10"
-                      : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5"
+                      : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                   }`
                 }
               >
@@ -604,16 +604,16 @@ export default function DashboardLayout() {
               </div>
               
               {(showSys || showLat) && (
-                <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-primary/60 pl-2 border-l border-primary/20">
+                <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-primary pl-2 border-l border-primary/20">
                   {showSys && (
                     <span className="flex items-center gap-1.5">
-                      <Cpu className="w-3 h-3 text-primary/80" />
+                      <Cpu className="w-3 h-3 text-primary" />
                       SYS: <span className="text-primary font-bold">{Math.round(systemResources!.cpu!)}%</span>
                     </span>
                   )}
                   {showLat && (
                     <span className="flex items-center gap-1.5">
-                      <Server className="w-3 h-3 text-primary/80" />
+                      <Server className="w-3 h-3 text-primary" />
                       LAT: <span className="text-primary font-bold">{headerLatencyMs}ms</span>
                     </span>
                   )}
