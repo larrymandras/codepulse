@@ -39,14 +39,14 @@ progress:
   # completed_phases STAYS 0 — all seven plans executed, but Phase 120 is not verified,
   # so the phase is not complete. percent is by PHASE (0 of 6), not by plan.
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   #
   # total_plans 7 -> 14 RE-DERIVED FROM DISK 2026-08-18 after Phase 121 was planned, not
   # incremented: `ls .planning/phases/*/[0-9]*-[0-9][0-9]-PLAN.md | wc -l` = 14 (120-01..120-07,
   # 121-01..121-07). completed_plans STAYS 7 -- the plan-level SUMMARY.md count on disk is still 7
   # (all Phase 120); nothing in 121 has executed. percent is by PHASE (1 of 6), so it does not move.
   total_plans: 33
-  completed_plans: 32
+  completed_plans: 33
   #
   # completed_phases 1 -> 2 and completed_plans 7 -> 14 RE-DERIVED FROM DISK 2026-08-18 at
   # Phase 121's close, not incremented. completed_plans: `ls .planning/phases/*/[0-9]*-[0-9][0-9]-SUMMARY.md
@@ -56,7 +56,21 @@ progress:
   # `gsd-sdk phase.complete` was NOT run: it marks PARTIAL requirements Complete, wipes the
   # stopped_at narrative, leaves completed_phases at 0 while declaring the phase done, and
   # ticks the ROADMAP checkbox without touching the Progress row.
-  percent: 33
+  #
+  # completed_plans 32 -> 33 and completed_phases 2 -> 3 RE-DERIVED FROM DISK 2026-08-20 at Phase
+  # 122's requirements-closure, not incremented. completed_plans: `ls .planning/phases/*/[0-9]*-
+  # [0-9][0-9]-SUMMARY.md | wc -l` = 33 = `ls .../.../[0-9]*-[0-9][0-9]-PLAN.md | wc -l` (33) --
+  # every planned plan now has a summary (122-19-SUMMARY.md exists). completed_phases moved from 2
+  # to 3 to agree with gsd-state-coherence.ps1's own ground-truth count (ROADMAP.md phases marked
+  # Complete: 120, 121, 122 = 3), NOT because a 122-VERIFICATION.md exists -- IT DOES NOT, unlike
+  # 120/121. This is a deliberate deviation from the 120/121 precedent's completion criterion
+  # (VERIFICATION.md status:passed), made because 122-19-PLAN.md itself scoped this phase's closure
+  # as an operator checkpoint + a REQUIREMENTS.md hand-edit with no separate verify-phase step, and
+  # because gsd-state-coherence.ps1 counts ROADMAP checkboxes, not VERIFICATION.md files, as ground
+  # truth -- REFUSED with a mismatch (STATE said 2, ROADMAP counted 3) until this counter was moved
+  # to match. percent is by PHASE (3 of 6) = 50, NOT by plan (33/33 would read 100 and be wrong --
+  # 3 phases of v15.0 are unstarted).
+  percent: 50
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -76,7 +90,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 122 -- Tokens, Primitives & Contrast Measurement (EXECUTING, 8 of 19 plans complete across 9 waves. D-28 approved 2026-08-19. WAVE 3 COMPLETE: all five slices (36+21+34+30+22 = 143 files) return 0 under every bucket matcher; full suite 4772 passed / 0 failed, unchanged from baseline. CORPUS-WIDE re-derivation found 6 survivors outside the 143: five are owned by later plans (122-10 x2, 122-12/14, 122-13/14), and TWO are owned by NO plan -- src/lib/eventIcons.ts:95 and index.html:18's <body>. Next: wave 4 = 122-09..122-12); Phase 121 (Analytics Query Resilience) COMPLETE, verified passed
+**Current focus:** Phase 122 -- Tokens, Primitives & Contrast Measurement COMPLETE (2026-08-20, 19/19 plans + 3 gap closures, requirements closed by hand, TOKEN-05 PARTIAL). Phase 123 -- Accessibility Remediation NOT YET STARTED (no CONTEXT.md/PLAN.md exist); its scope is already fully specified by `122-CONTRAST-BASELINE.md` and `122-FOLLOW-UPS.md` sections B-E. Phase 121 (Analytics Query Resilience) COMPLETE, verified passed
 
 **Phase 109 — per-agent-engine-ui: COMPLETE (10/10, 2026-08-10), VERIFIED `passed` (3/3 must-haves).** All three requirements — ENGINE-03, ENGINE-04, TELE-02 — carry a dated operator sign-off earned against the running stack, never inferred from a green suite. Final live-probe scoreboard A–H: all pass. The operator-attended live gate (109-09) found one real defect that the green suite, a code review and an earlier verification pass had all missed — `useProfileSwap.ts` never reset `unmountedRef` on remount, so React StrictMode latched it and the per-profile swap outcome machine never left `pending` on dev builds (pending suffix never cleared, no toast ever fired; production unaffected). 109-10 fixed it with a regression guard spanning the StrictMode mount→cleanup→remount boundary — proven RED first, and independently mutation-tested by the verifier — then re-verified Probe D live on `:5173` (all four legs, label flip 626 ms AFTER the ack). 109-10 also added `profiles.removeConfig`, closing a real gap: `profileConfigs` rows could be created and never deleted. Evidence: `phases/109-per-agent-engine-ui/109-LIVE-EVIDENCE.md`; verification: `109-VERIFICATION.md`.
 
@@ -94,9 +108,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 122
-Plan: 18 of 19 complete (122-01..122-18); 122-19 PARTIAL -- tasks 1-2 landed (20/20 after-cells captured, per-cell delta computed, all three PENDING stubs in 122-CONTRAST-BASELINE.md filled, frozen a11y-before/ untouched and verified), task 3 is the BLOCKING operator checkpoint awaiting reply, task 4 (hand-edit REQUIREMENTS.md; gsd-sdk phase.complete FORBIDDEN) must not run until then
-Status: Executing
+Phase: 122 COMPLETE (19 of 19 plans + 3 gap closures: 122-20, 122-21, 122-22). Next phase: 123 (Accessibility Remediation), not yet discussed/planned.
+Plan: 122-19's task 3 (operator checkpoint) initially NOT APPROVED ("one flat tone for the most part"), resolved by 122-20/21/22; operator re-confirmed 2026-08-20. Task 4 (hand-edit REQUIREMENTS.md) completed the same day -- gsd-sdk phase.complete was NOT run.
+Status: Executing (milestone v15.0 continues; Phase 122 itself is done)
 Last activity: 2026-08-20 -- Phase 122 REQUIREMENTS CLOSED. Operator confirmed the re-derived ramp live on localhost:5173 (all 4 themes, layered surfaces distinguishable) and approved closing. TOKEN-01/02/03/04 and A11Y-01 marked Complete in REQUIREMENTS.md by hand (each re-verified live this session, not assumed); TOKEN-05 marked PARTIAL (ForgePage.tsx PageHeader gap, filed as a todo, not silent). No 122-VERIFICATION.md exists -- ROADMAP Progress row set to Complete per 122-19-PLAN.md's own closure design (checkpoint + hand-edit, no separate verify-phase step scoped), gap named rather than glossed over. NEXT: operator's call -- /gsd-verify-phase 122 for formal verification, or straight to Phase 123 (Accessibility Remediation), which 122-CONTRAST-BASELINE.md/122-FOLLOW-UPS.md already fully scope.
 
 ## Deferred Items
