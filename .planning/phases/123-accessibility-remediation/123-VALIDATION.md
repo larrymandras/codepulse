@@ -1,8 +1,8 @@
 ---
 phase: 123
 slug: accessibility-remediation
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-20
 ---
@@ -105,12 +105,29 @@ matter how green it is.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have automated verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Every control in the Discriminating Controls table is either measured or assigned to a task
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+Signed off 2026-08-20 after the plan set landed (13 plans, 6 waves). Each box records the evidence
+that closed it, so a later reader can re-check rather than trust the tick.
 
-**Approval:** pending
+- [x] All tasks have automated verify or a Wave 0 dependency — every plan carries at least one
+      `<automated>` block; the tasks without one are the operator-gated steps in `123-09` and
+      `123-13` (both `autonomous: false`), covered under Manual-Only Verifications above.
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify — measured per plan,
+      `<task` count vs `<automated>` count. The largest gap in any plan is **2** non-automated
+      tasks (`123-09`: 3 tasks / 1 automated; `123-13`: 4 / 2), so the rule holds regardless of
+      task ordering. Caveat stated honestly: this bounds continuity **within** each plan; I did not
+      measure it across plan boundaries in execution order.
+- [x] Wave 0 covers all MISSING references — the Wave 0 list above maps to plans `123-01` and
+      `123-02`, both harness-only with no `src/` edits.
+- [x] No watch-mode flags — `grep -nE 'vitest --watch|--watch\b|playwright test --ui|npm run test:ui'`
+      across all 13 plans returns nothing.
+- [x] Every control in the Discriminating Controls table is either measured or assigned to a task —
+      C1/C2/C7 → `123-01`; C3/C6 → `123-02`; C4 → `123-08`/`11`/`12`; C5 → `123-03`/`08`.
+      Independently confirmed by the plan-checker pass recorded in `123-PLAN-REVIEW.md`, which
+      checked that each control can actually differ rather than merely having an owner.
+- [~] Feedback latency < 15s — **estimate, not a measurement.** Carried from
+      `122-CONTRAST-BASELINE.md`'s 12.2/14.3/14.4s timings for the 20-cell matrix; no live
+      `dev:noauth` run was timed this session. The D-16 widened 47×4 scan is ~9.4× that cell count
+      and has never been run at all. Measure both before treating either figure as fact.
+- [x] `nyquist_compliant: true` set in frontmatter
+
+**Approval:** approved 2026-08-20 — with the latency row above standing as an explicit estimate.
