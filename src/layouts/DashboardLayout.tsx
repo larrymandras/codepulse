@@ -98,42 +98,6 @@ function NavGroup({
         {items.map((item) => {
           const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
 
-          // Placeholder: not-yet-built route. Render as a disabled, non-link
-          // entry with a "SOON" affordance instead of a NavLink (no 404).
-          if (item.placeholder || !item.to) {
-            const placeholderInner = (
-              <div
-                key={`ph-${item.group}-${item.label}`}
-                aria-disabled="true"
-                title={collapsed ? `${item.label} (coming soon)` : undefined}
-                className={`group flex items-center ${
-                  collapsed ? "justify-center px-2" : "gap-3 px-3"
-                } py-2 text-sm font-mono tracking-wider text-muted-foreground cursor-not-allowed select-none opacity-50`}
-              >
-                <IconComponent className="h-4 w-4 shrink-0" />
-                {!collapsed && (
-                  <span className="flex-1 flex items-center justify-between gap-2">
-                    {item.label}
-                    <span className="text-[10px] uppercase tracking-widest text-primary border border-primary/20 px-1 py-px rounded-sm">
-                      soon
-                    </span>
-                  </span>
-                )}
-              </div>
-            );
-            if (collapsed) {
-              return (
-                <Tooltip key={`ph-${item.group}-${item.label}`}>
-                  <TooltipTrigger asChild>{placeholderInner}</TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-muted-foreground">
-                    {item.label} — soon
-                  </TooltipContent>
-                </Tooltip>
-              );
-            }
-            return placeholderInner;
-          }
-
           const link = (
             <NavLink
               key={item.to}

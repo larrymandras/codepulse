@@ -104,15 +104,20 @@ export const iconComponents: Record<string, React.ElementType> = {
   images: Images,   // Phase 118 — Studio page
 };
 
-// A nav item is either a real route (has `to`) or a placeholder label for a
-// not-yet-built route (`placeholder: true`, no live `to`). Placeholders render
-// as disabled "soon" entries and are EXCLUDED from the flat navItems export.
+// Every nav item is a real route. A `placeholder?: boolean` capability used to
+// exist here for not-yet-built routes, rendered as disabled "soon" entries by
+// DashboardLayout — but ZERO items ever set it, so the branch was dead code.
+// Removed at Phase 123's closeout (D-18): the disabled style it carried used an
+// `opacity-50` treatment that was chosen forward-looking and never measured for
+// contrast, so it was an unverified accessibility decision that would have
+// shipped the moment anyone added the first placeholder. Dead code carrying an
+// unmeasured a11y decision is worse than no code. Re-add deliberately, with a
+// measured disabled style, if "soon" entries are ever wanted.
 export interface NavItem {
-  to?: string;
+  to: string;
   label: string;
   icon: string;
   group: string;
-  placeholder?: boolean;
 }
 
 export interface NavGroupConfig {
@@ -120,9 +125,11 @@ export interface NavGroupConfig {
   items: NavItem[];
 }
 
-// Phase 71 IA refactor — 6 clusters. No existing `to` path changed; new phase
-// routes are registered as placeholder labels only (Settings stays in the
-// footer UserMenu, not a nav cluster).
+// Phase 71 IA refactor — 6 clusters. No existing `to` path changed. (This
+// comment used to add "new phase routes are registered as placeholder labels
+// only"; that was already untrue — no item ever set `placeholder` — and the
+// capability itself was removed at Phase 123's closeout. Settings still lives
+// in the footer UserMenu rather than a nav cluster.)
 export const navGroups: NavGroupConfig[] = [
   {
     group: "COMMAND",
@@ -204,14 +211,15 @@ export const navGroups: NavGroupConfig[] = [
   },
 ];
 
-// Flat list of REAL routes (placeholders excluded, deduped by `to`) for
-// CommandPalette and any other consumer of the nav registry.
+// Flat list of routes (deduped by `to`) for CommandPalette and any other
+// consumer of the nav registry. The former `item.placeholder || !item.to`
+// skip is gone with the placeholder capability; `to` is now required, so
+// TypeScript enforces what that guard used to check at runtime.
 export const navItems = (() => {
   const seen = new Set<string>();
   const flat: NavItem[] = [];
   for (const grp of navGroups) {
     for (const item of grp.items) {
-      if (item.placeholder || !item.to) continue;
       if (seen.has(item.to)) continue;
       seen.add(item.to);
       flat.push(item);
