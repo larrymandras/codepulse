@@ -78,7 +78,7 @@ export function RunTimeline({ blocks, streaming = false }: RunTimelineProps) {
   if (showThinking) {
     return (
       <div
-        className={`text-(--muted-foreground) text-base ${
+        className={`text-foreground text-base ${
           reducedMotion ? "" : "animate-pulse"
         }`}
       >

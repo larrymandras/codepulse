@@ -675,7 +675,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
               fallback={
                 <div className={canvasClass}>
                   <div className="flex h-full items-center justify-center">
-                    <p className="text-primary/70 font-mono text-base animate-pulse">
+                    <p className="text-foreground font-mono text-base animate-pulse">
                       Loading 3D render…
                     </p>
                   </div>
@@ -888,7 +888,7 @@ export function CodeVaultGraph() {
   if (snapshot === undefined) {
     return (
       <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-        <p className="text-primary/70 font-mono text-base animate-pulse">
+        <p className="text-foreground font-mono text-base animate-pulse">
           Loading graph snapshot…
         </p>
       </div>
