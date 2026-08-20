@@ -157,10 +157,19 @@ function auraDebug(): AvatarAuraDebug {
 // throttle (see the frame-budget constant inside the draw effect, deliberately
 // not named here — 192-04 greps this file for changes to it, and prose quoting
 // its name is indistinguishable from an edit to it) a healthy loop DRAWS
-// ~150-210 times over a 5-7s reply, while a 300ms log emits
+// ~110-155 times over a 5-7s reply, while a 300ms log emits
 // only ~17-23 lines. The counters below record draws; this constant governs
 // lines. Never conflate the two (192 D-02). Per-frame console output is
-// forbidden — 150-210 lines per reply is itself a DoS on the console.
+// forbidden — 110-155 lines per reply is itself a DoS on the console.
+//
+// The band above was ~150-210 until 2026-08-20 (Phase 192 close, D-17). That
+// figure was DERIVED from the nominal 30/s throttle and never measured, and it
+// runs ~35% high: rAF delivers ~16.96ms frames, so a >=33.33ms gate costs two
+// to three frames, not two. Two independent measurements agree on ~22/s — 113
+// render() per 5000ms in headless Chromium, and 1255 per 56628.6ms in the live
+// app. A perfectly healthy loop reads as marginally SLOW against the old
+// figure, which is the exact false positive the 188-14 investigation burned
+// time on. Do not restore it.
 const LOG_THROTTLE_MS = 300;
 
 const prefersReducedMotion = () =>
