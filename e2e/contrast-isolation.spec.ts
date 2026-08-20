@@ -79,6 +79,29 @@ const CLASS_MATRIX: ClassSpec[] = [
   { className: "text-(--status-error)/60", surfaces: DEFAULT_SURFACES },
 ];
 
+// Task 1 (123-10) -- the 8-site status-fill defect class. Measures three
+// candidate foregrounds (the current defective `--foreground`, StatusBadge's
+// warn remedy `--primary-foreground`, and StatusBadge's error remedy
+// `--status-error-on-fill`) against the four status-fill background tokens,
+// so Task 2 can read each of the 8 sites' remedy off a MEASURED table rather
+// than pattern-matching the warn control across sites it does not transfer
+// to -- StatusBadge has no `ok` entry and its error remedy uses a different
+// token pair (`--status-error-fill`/`--status-error-on-fill`), not
+// `--primary-foreground`. Plain 4.5:1 -- neither side carries a Tailwind
+// opacity modifier, so no alpha-compositing step is needed here.
+const STATUS_FILL_FOREGROUNDS = [
+  "--foreground",
+  "--primary-foreground",
+  "--status-error-on-fill",
+] as const;
+
+const STATUS_FILL_BACKGROUNDS = [
+  "--status-error",
+  "--status-warn",
+  "--status-ok",
+  "--status-error-fill",
+] as const;
+
 // C6's two probed classes and the file they both live in (DashboardLayout.tsx
 // :91 and :148 -- the two sites STATE.md's scope narrative attributes 184 of
 // 205 contrast nodes to).
@@ -96,6 +119,9 @@ type LedgerRow = {
   ratio: number;
   fg: [number, number, number];
   bg: [number, number, number];
+  // Task 1 (123-10) -- tags the status-fill rows so the ledger can separate
+  // them from the opacity-modifier rows above. Undefined on every other row.
+  family?: "status-fill";
 };
 
 async function gotoWithTheme(page: Page, theme: string) {
@@ -131,6 +157,29 @@ async function measureClassOnSurface(
   if (!compositedFg) return null;
 
   return { ratio: contrastRatio(compositedFg, surfaceRGB), fg: compositedFg, bg: surfaceRGB };
+}
+
+/**
+ * Measures a status-fill foreground/background TOKEN pairing (Task 1,
+ * 123-10) -- both sides are plain `bg-(--token)`/`text-(--token)` classes
+ * with no Tailwind opacity modifier, so this samples each side's painted
+ * colour independently and computes the ratio directly; `compositeSample`'s
+ * alpha-compositing step is unnecessary here (neither side is translucent).
+ */
+async function measureStatusFillPairing(
+  page: Page,
+  fgToken: string,
+  bgToken: string,
+): Promise<{ ratio: number; fg: [number, number, number]; bg: [number, number, number] } | null> {
+  const bgText = await paintedColorOfClass(page, `bg-(${bgToken})`, "backgroundColor");
+  const bgRGB = await sampleColor(page, bgText);
+  if (!bgRGB) return null;
+
+  const fgText = await paintedColorOfClass(page, `text-(${fgToken})`, "color");
+  const fgRGB = await sampleColor(page, fgText);
+  if (!fgRGB) return null;
+
+  return { ratio: contrastRatio(fgRGB, bgRGB), fg: fgRGB, bg: bgRGB };
 }
 
 /**
@@ -247,6 +296,29 @@ test.describe("D-02 pass-2 isolation matrix", () => {
         }
       }
 
+      // Task 1 (123-10) status-fill matrix -- tagged family: "status-fill" so
+      // the ledger can separate it from the opacity-modifier rows above.
+      for (const fgToken of STATUS_FILL_FOREGROUNDS) {
+        for (const bgToken of STATUS_FILL_BACKGROUNDS) {
+          const measured = await measureStatusFillPairing(page, fgToken, bgToken);
+          expect(
+            measured,
+            `${theme}: ${fgToken} on ${bgToken} must be a parseable measurement`,
+          ).not.toBeNull();
+          rows.push({
+            pass: "isolation",
+            theme,
+            className: `text-(${fgToken})`,
+            surface: bgToken,
+            threshold: FLAT_THRESHOLD,
+            ratio: measured!.ratio,
+            fg: measured!.fg,
+            bg: measured!.bg,
+            family: "status-fill",
+          });
+        }
+      }
+
       // C6 before-control: anchor each probed class to PRE_123_SHA via a
       // real git-extraction, then measure it live (valid for as long as
       // this class hasn't been touched by a sweep plan since that SHA --
@@ -273,7 +345,10 @@ test.describe("D-02 pass-2 isolation matrix", () => {
       }
     }
 
-    const expectedIsolationRows = THEMES.length * CLASS_MATRIX.reduce((n, s) => n + s.surfaces.length, 0);
+    const expectedStatusFillRows =
+      THEMES.length * STATUS_FILL_FOREGROUNDS.length * STATUS_FILL_BACKGROUNDS.length;
+    const expectedIsolationRows =
+      THEMES.length * CLASS_MATRIX.reduce((n, s) => n + s.surfaces.length, 0) + expectedStatusFillRows;
     const expectedBeforeRows = THEMES.length * C6_PROBES.length;
     console.log(
       `[D-02 pass-2] wrote ${rows.length} rows ` +
@@ -291,6 +366,42 @@ test.describe("D-02 pass-2 isolation matrix", () => {
     expect(rows.filter((r) => r.pass === "isolation-before").length).toBe(expectedBeforeRows);
     expect(rows.length).toBeGreaterThanOrEqual(60);
     expect(rows.every((r) => r.pass === "isolation" || r.pass === "isolation-before")).toBe(true);
+
+    // Calibration (Task 1, 123-10): the known-defective pairing must
+    // reproduce StatusBadge's recorded ~1.4-1.8:1 in every theme, and the
+    // known-good pairing must clear 4.5:1 in every theme -- one must-fail
+    // and one must-pass, so a harness that flags everything and a harness
+    // that flags nothing both fail here before any verdict from this table
+    // is trusted. The error/ok pairings are deliberately NOT asserted here
+    // -- that is Task 2's job, reading the answer off the written JSON.
+    const defectiveRows = rows.filter(
+      (r) => r.family === "status-fill" && r.className === "text-(--foreground)" && r.surface === "--status-warn",
+    );
+    expect(defectiveRows.length).toBe(THEMES.length);
+    for (const r of defectiveRows) {
+      console.log(
+        `[status-fill calibration][${r.theme}] --foreground on --status-warn: ratio=${r.ratio.toFixed(2)}:1 (StatusBadge recorded ~1.4-1.8:1)`,
+      );
+      expect(
+        r.ratio,
+        `${r.theme}: --foreground on --status-warn measured ${r.ratio.toFixed(2)}:1, expected BELOW ${FLAT_THRESHOLD} to reproduce StatusBadge's recorded figure`,
+      ).toBeLessThan(FLAT_THRESHOLD);
+    }
+
+    const goodRows = rows.filter(
+      (r) =>
+        r.family === "status-fill" && r.className === "text-(--primary-foreground)" && r.surface === "--status-warn",
+    );
+    expect(goodRows.length).toBe(THEMES.length);
+    for (const r of goodRows) {
+      console.log(
+        `[status-fill calibration][${r.theme}] --primary-foreground on --status-warn: ratio=${r.ratio.toFixed(2)}:1`,
+      );
+      expect(
+        r.ratio,
+        `${r.theme}: --primary-foreground on --status-warn measured ${r.ratio.toFixed(2)}:1, expected ABOVE ${FLAT_THRESHOLD}`,
+      ).toBeGreaterThan(FLAT_THRESHOLD);
+    }
 
     mkdirSync("e2e/.artifacts", { recursive: true });
     writeFileSync("e2e/.artifacts/123-isolation-pass2.json", JSON.stringify(rows, null, 2));
