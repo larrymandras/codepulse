@@ -840,7 +840,18 @@ All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/1
   2. The 232px sidebar shows 4 collapsible domains (Command / Observe / Agents / System) with count badges and a 2px active rail.
   3. A route-list diff taken before and after the regroup is identical — the `navRegistry.ts` change is presentation-only; no URL moves.
 
-**Plans**: TBD
+**Plans**: 11 plans in 9 waves
+- [ ] 124-01-PLAN.md — Criterion-3 route-set golden fixture + 3-case mutation proof (wave 1)
+- [ ] 124-02-PLAN.md — useAlertCounts() honesty fix and its two callers (D-12, wave 1)
+- [ ] 124-03-PLAN.md — bound alerts.countBySeverity's unbounded .collect() (D-13, wave 1)
+- [ ] 124-04-PLAN.md — navGroups regroup to 4 domains + Analytics rename + cmdk measurement (wave 2)
+- [ ] 124-05-PLAN.md — 232px sidebar, collapsible domains, eyebrow header, active rail (wave 3)
+- [ ] 124-06-PLAN.md — Inbox/Alerts count badges + per-subscription error boundaries (wave 4)
+- [ ] 124-07-PLAN.md — header overflow menu and the four relocated controls (wave 5)
+- [ ] 124-08-PLAN.md — system chip: Nominal / Attention / Critical / Offline (wave 6)
+- [ ] 124-09-PLAN.md — breadcrumb, pill deletion, SYS/LAT relocation, 420px command bar (wave 7)
+- [ ] 124-10-PLAN.md — geometry gates: D-06 header height, 232px at 900px, rail, E-Stop, a11y (wave 8)
+- [ ] 124-11-PLAN.md — operator visual checkpoint (blocking, wave 9)
 **UI hint**: yes
 
 ---
