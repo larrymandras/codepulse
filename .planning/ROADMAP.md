@@ -685,6 +685,7 @@ Plans:
 - [x] **Phase 124 — Shell & Information Architecture** — the 3-zone header (56px, measured — see the amended criterion 1) and the 232px sidebar's 4-domain regroup, a pure `navRegistry.ts` change with no route changes
 - [ ] **Phase 125 — Signature Layers** — the aurora Signal Horizon, the Pulse ECG canvas hero, and a one-surface trial of Ástríðr's serif voice
 - [ ] **Phase 126 — Page Body and Convex Read Defect Sweep** — the six defects Phase 124's shell surfaced but did not cause: three Convex reads sharing one deploy, two page-body layout faults, and one geometry spec that measures a cold page
+- [ ] **Phase 127 — Ack-Aware Retention Janitors** — bound `inbox` and `ideationFindings`, the last two tables the coverage gate could not enrol in `RETENTION_DAYS`, with janitors keyed on the operator's own acknowledgement rather than on calendar age
 
 **Execution order:** 120 → 121 → 122 → 123 → 124 → 125, sequential. 120 is first because it is the cheapest work and removes the decoration that would otherwise confound Phase 122's A11Y-01 contrast measurement. 121 must land at or before 122 — 122 carries TOKEN-04's six-state tile contract, and a tile cannot render an honest `unavailable` state while a single `useQuery` throw still blanks `/analytics`; 121 has no code dependency on 120 and could run in parallel, but is sequenced second to keep the milestone linear. 123 (A11Y remediation) is sequenced immediately after 122, not at the end, per the standing rule that redoing contrast work after the palette is frozen means touching all 5 themes twice. 124 depends on 122's surface/hairline tokens. 125 depends on both 122 (the tokens the Signal Horizon and ECG hero read via `getComputedStyle`) and 124 (the shell the Signal Horizon renders on top of).
 
@@ -697,6 +698,7 @@ Plans:
 | 124. Shell & Information Architecture | v15.0 | 11/11 | Complete | 2026-08-21 | VERIFIED (`124-VERIFICATION.md`): criteria 2 and 3 MET; **criterion 1 NOT MET AS WRITTEN** (56px shipped, not 48px) and AMENDED above by operator ruling on 124-10's measurement -- recorded as a ruled deviation, never rounded up to a pass. Criterion 3 is the strongest result: 124-01 captured a 44-entry GOLDEN_ROUTE_SET fixture in wave 1, BEFORE 124-04's regroup, mutation-proven on add/remove/rename-`to` plus a label-only negative control (which matters because D-05 deliberately renames two labels without touching their `to`, so a cardinality-only test would have passed the exact defect class it exists to catch). Route set independently re-derived by the orchestrator: 44 `to:` literals pre-regroup, 44 post, `diff` empty. Code review `124-REVIEW.md` (`9ca7750c`): 0 Critical, 1 Warning, 1 Info. **WR-01 OPEN** -- `inbox.listHeldUnacked` (`convex/inbox.ts:206-214`) is an unbounded `.collect()` that 124-06 newly placed on an every-route client subscription (`DashboardLayout.tsx:137`), the identical risk class 124-03 bounded for `alerts.countBySeverity` in this same phase; contained by its own `SectionErrorBoundary` (degrades to a dimmed dot) and only 46 live rows, so Warning not Critical. The naive fix is wrong: `convex/inboxIngest.ts:174` also consumes it server-side for `focus_digest.py` and needs the true unbounded set, so the remedy is a SEPARATE bounded query, not a cap on the shared one. Batched to the follow-up phase by operator ruling so its deploy pairs with the other Convex fixes. Operator checkpoint (`124-CHECKPOINT.md`, 348 lines, verbatim): items 2-7 passed live, item 8's five moved routes all confirmed loading at their original addresses with correct domain breadcrumbs (Automation `System / Automation`, Tool Galaxy `System / Tool Galaxy`, Briefings `Agents / Briefings`, Config `System / Config`, Workspace Map `Observe / Workspace Map`) -- the last three supplied after `124-VERIFICATION.md` returned `human_needed` on exactly that gap, resolved in `124-HUMAN-UAT.md`. FIVE DEFECTS FOUND AND DEFERRED, none caused by this phase (each proven by `git log --grep="(124-" -- <file>` returning 0): the Alert Rules Engine's overlapping rows, the Automation page's three unresolved stat cards plus twelve "Invalid expression" rows, Tool Galaxy's `graphSnapshots:getProjectGraph` system-operations timeout, `/inbox` under-counting held items (badge 46 vs page 9 -- the page reads through `listAll`'s 200-row cap at `convex/inbox.ts:173,187`, so the BADGE is the honest figure and the phase merely made a months-old undercount visible), and a 4px sidebar horizontal overflow (`nav` clientWidth 231 / scrollWidth 235, measured live; cause is `<Separator className="my-2 mx-3" />` at `:463` carrying `w-full`, introduced by `269458ac` in Phase 71). A SIXTH item is carried for the follow-up: `e2e/polish-geometry.spec.ts` measures zone min-content on a COLD page, and `SystemChip`/`BrainHeaderBadge` render `null` until Convex resolves, so it undercounts zone 3 -- the verifier's cold pass read 375px 268 vs 327 available, i.e. UNDER budget, pointing the opposite way from the settled 366.2; pass/fail is unaffected (the assertion is `culprits.length === 0`, not the sum) but the recorded sums are undercounts. Gates re-run live by three independent parties, not copied: `tsc --noEmit` exit 0; `npm test` 350 files/4938 tests, 0 failures (one earlier run showed 1 failure -- `EmailDigestConfig.test.tsx`, a 5s `testTimeout` on a dynamic `import()` that takes 8ms in isolation, traced to CPU contention with a concurrent session and NOT to this phase, which never touched that Phase 70 file); `e2e/polish-geometry.spec.ts` 10/10; `e2e/theme-contrast.spec.ts` 21/21 with 0 a11y violations across all 20 criterion cells. Executed sequentially on the main tree (`workflow.use_worktrees=false`) alongside an active concurrent Phase 193 session; every commit's `git show --stat` was read and no cross-session sweep-in occurred. STATE.md/ROADMAP.md/REQUIREMENTS.md updated BY HAND: `state.begin-phase` was run once at dispatch and deleted 152 lines to insert 7 (the documented clobber), recovered via `git checkout HEAD --` plus asserted single-occurrence replaces, `gsd-state-coherence.ps1` OK; `phase.complete` deliberately NOT run, per this project's standing note that it writes a false green over partial requirements. |
 | 125. Signature Layers | v15.0 | 0/0 | Not started | - | |
 | 126. Page Body and Convex Read Defect Sweep | v15.0 | 0/0 | Not started | - | Created 2026-08-21 by `gsd-sdk query phase.add`, which wrote ONLY the detail section — no checklist entry and no row here. Both added by hand, per the standing note that a phase missing from the checklist makes every counter derived from it structurally wrong. Scope is the seven todos filed at `ec48907e`; five of the six defects are PRE-EXISTING, each proven not-124's by `git log --grep="(124-" -- <file>` returning 0 rather than asserted. |
+| 127. Ack-Aware Retention Janitors | v15.0 | 0/0 | Not started | - | Created 2026-08-21 BY HAND in all three places (checklist, this row, detail section) — `phase.add` was deliberately NOT used, per the note on the 126 row that it writes only the detail section and leaves every counter derived from the checklist structurally wrong. Context at `127-CONTEXT.md`. Design by Codex, corrected against live measurement: its `inbox` carve-out exempted `itemType="alert"` (zero live rows, exists only in a stale comment) and NOT `held`, which `focus_digest.py` consumes — implementing as designed would have broken the focus digest silently. Ready for `/gsd-plan-phase 127`. |
 
 ## Phase Details
 
@@ -903,6 +905,36 @@ All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/1
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 126 to break down)
+
+---
+
+### Phase 127: Ack-Aware Retention Janitors
+
+**Goal**: Bound the last two tables the Phase 126 coverage gate could not enrol in `RETENTION_DAYS`, using janitors keyed on the operator's own acknowledgement rather than on calendar age.
+
+**Depends on**: Phase 126's coverage gate (`convex/retentionCoverage.ts` + `retentionCoverage.test.ts`), which is already shipped and is what identified these two. No dependency on 125. Can run before or after 126; it touches the WRITE/retention side of `inbox`, while 126 owns the READ side — see the scope boundary below.
+
+**Requirements**: TBD — derive at planning time from `127-CONTEXT.md`'s D-01..D-11.
+
+**Success Criteria** (what must be TRUE):
+
+  1. `inbox` and `ideationFindings` both appear in `COVERAGE_BOUNDED_BY_CRON` with a mechanism that `retentionCoverage.test.ts:130-142` confirms is registered on a LIVE (non-commented) cron.
+  2. No `itemType="held"` inbox row is ever auto-acked or deleted by the janitor — asserted by a test that pairs it with a same-age `card` row that IS acted on, in the same batch.
+  3. An open row, however old, is never deleted in the same invocation that deletes a closed row of the same age — and the test proving it is shown to FAIL when the auto-close step is disabled.
+  4. The first backlog-draining run is observed in `docker logs convex-backend` with no crash-loop, not merely reported green by the cron's own log line.
+
+**Scope**: two new internal mutations (`inbox.autoCloseAndPrune`, `ideation.autoCloseAndPrune`), three index changes, two cron registrations, and the coverage move. Full design, with every decision and its rationale, in `.planning/phases/127-ack-aware-retention-janitors/127-CONTEXT.md`.
+
+**The measurement that shapes it** (live, 2026-08-21): `ideationFindings` is 100% undismissed (0 of 470 dismissed) and `inbox` is 83.7% unacked. A janitor keyed only on acknowledgement would delete ZERO rows from the first table forever and reach 16% of the second. The never-acknowledged set IS the table; bounding it via auto-close is the phase.
+
+**Two standing cautions for whoever plans this:**
+- **Do not cap `inbox.listHeldUnacked`.** It is Phase 126's item, and the roadmap caution on that phase applies unchanged: `convex/inboxIngest.ts:174` consumes it server-side for `focus_digest.py` and needs the true unbounded set. This phase reduces that read's severity by shrinking the table; it must not close it.
+- **`ideationFindings`' proposed 180d window cannot fire yet.** The oldest row is 94 days old (verified), so auto-dismiss matches nothing for ~86 more days. That is inert-by-design, not broken — but the janitor must log that it ran and matched nothing, so the two are distinguishable. Shortening the window is an open planning decision.
+
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 127 to break down)
 
 ---
 
