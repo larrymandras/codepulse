@@ -48,6 +48,13 @@ vi.mock("../../../convex/_generated/api", () => ({
     systemResources: { current: "systemResources:current" },
     avatars: { getImageUrl: "avatars:getImageUrl" },
     notifications: { latestUnread: "notifications:latestUnread" },
+    // Phase 124 Plan 06 (D-10/D-12/D-13): the two sidebar count badges'
+    // backing queries. Without these entries `api.inbox`/`api.alerts` are
+    // `undefined` and InboxCountBadge/AlertsCountBadge throw on module
+    // access before ever reaching the D-12 undefined-guard — every badge
+    // test would fail with a TypeError, not a useful assertion.
+    inbox: { listHeldUnacked: "inbox:listHeldUnacked" },
+    alerts: { countBySeverity: "alerts:countBySeverity" },
   },
 }));
 
@@ -295,5 +302,100 @@ describe("DashboardLayout Sidebar (UI-04, Phase 124 SHELL-02)", () => {
 
     // Both instances share the lifted state — neither is left stale.
     expect(screen.queryAllByText("Chat").length).toBe(0);
+  });
+});
+
+describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 06)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useAstridrWS).mockReset();
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+  });
+
+  // Dispatches on the reference string, mirroring the telemetry describe
+  // block's mockImplementation shape above. `alertsThrows` simulates a
+  // genuine useQuery failure (D-13's "query threw" state) rather than a
+  // resolved-but-empty result.
+  function mockBadgeQueries(opts: {
+    inbox?: unknown;
+    alerts?: unknown;
+    alertsThrows?: boolean;
+  }) {
+    vi.mocked(useQuery).mockImplementation(((ref: unknown) => {
+      if (ref === "inbox:listHeldUnacked") return opts.inbox;
+      if (ref === "alerts:countBySeverity") {
+        if (opts.alertsThrows) throw new Error("simulated countBySeverity failure");
+        return opts.alerts;
+      }
+      return undefined;
+    }) as typeof useQuery);
+  }
+
+  it("renders no Inbox badge while the query is unresolved (D-12 state 1)", () => {
+    mockBadgeQueries({ inbox: undefined });
+    renderLayout();
+    expect(screen.queryByLabelText(/unread in Inbox/)).not.toBeInTheDocument();
+  });
+
+  it("renders no Inbox badge when the resolved count is 0 — never a visible zero (D-12 state 3)", () => {
+    mockBadgeQueries({ inbox: [] });
+    renderLayout();
+    expect(screen.queryByLabelText(/unread in Inbox/)).not.toBeInTheDocument();
+  });
+
+  it("renders the Inbox count with a domain-naming aria-label when > 0 (D-12 state 2)", () => {
+    mockBadgeQueries({ inbox: [{ _id: "1" }, { _id: "2" }, { _id: "3" }] });
+    renderLayout();
+    // Desktop <aside> and the mobile drawer <aside> both mount SidebarContent
+    // (same shared-instance shape asserted elsewhere in this file), so every
+    // badge query returns two matches, not one.
+    const badges = screen.getAllByLabelText("3 unread in Inbox");
+    expect(badges.length).toBe(2);
+    for (const badge of badges) expect(badge).toHaveTextContent("3");
+  });
+
+  it("renders the Alerts total with a domain-naming aria-label when > 0 (D-12 state 2)", () => {
+    mockBadgeQueries({
+      alerts: { info: 1, warning: 2, error: 0, critical: 0, truncated: false },
+    });
+    renderLayout();
+    const badges = screen.getAllByLabelText("3 unacknowledged alerts");
+    expect(badges.length).toBe(2);
+    for (const badge of badges) expect(badge).toHaveTextContent("3");
+  });
+
+  it("renders a truncated Alerts count as {n}+ with an 'at least' accessible label, never a complete-looking integer", () => {
+    mockBadgeQueries({
+      alerts: { info: 0, warning: 0, error: 5, critical: 0, truncated: true },
+    });
+    renderLayout();
+    const badges = screen.getAllByLabelText("at least 5 unacknowledged alerts");
+    expect(badges.length).toBe(2);
+    for (const badge of badges) expect(badge).toHaveTextContent("5+");
+  });
+
+  it("contains an Alerts-query throw: renders the fallback dot, never a number, and leaves the rest of the sidebar intact (D-13)", () => {
+    mockBadgeQueries({ alertsThrows: true });
+    renderLayout();
+
+    // The fallback: a dimmed dot with the Copywriting Contract's exact
+    // accessible label — no number rendered anywhere for Alerts.
+    expect(screen.getAllByLabelText("Alerts count unavailable").length).toBe(2);
+    expect(screen.queryByLabelText(/unacknowledged alerts$/)).not.toBeInTheDocument();
+
+    // Containment control: a known-present, unrelated sidebar element still
+    // renders. Without this, the test cannot distinguish "the boundary
+    // contained the throw" from "the whole tree failed to mount silently" —
+    // see the boundary-removed proof in 124-06-SUMMARY.md, which shows this
+    // exact assertion turn red when the two SectionErrorBoundary wrappers
+    // are removed.
+    expect(screen.getAllByText("Command").length).toBeGreaterThan(0);
   });
 });
