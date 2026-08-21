@@ -63,7 +63,18 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             const to = item.to;
             const Icon = iconComponents[item.icon] ?? LayoutDashboard;
             return (
-              <CommandItem key={to} onSelect={() => select(() => navigate(to))}>
+              <CommandItem
+                key={to}
+                // Phase 124 D-05: measured live (124-04-SUMMARY.md) that two
+                // Pages entries sharing a label ("Analytics", pre-rename)
+                // collided on cmdk's derived-from-text fallback — both
+                // resolved to the identical cmdk selection key. The rename to
+                // "Agent Analytics" already resolves THIS instance, but an
+                // explicit value prop guards against any future duplicate
+                // label, matching the Links group's defence at :87-89.
+                value={`${item.label} ${to}`}
+                onSelect={() => select(() => navigate(to))}
+              >
                 <Icon className="mr-2 h-4 w-4" />
                 {item.label}
               </CommandItem>
