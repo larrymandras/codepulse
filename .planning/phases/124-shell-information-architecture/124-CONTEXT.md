@@ -113,9 +113,25 @@ Horizon (SIGNAL-01, Phase 125). 124 builds the header the horizon will later att
 
 - **D-10: Count badges on Inbox and Alerts only.**
   The two that mean *"something is waiting for you"*. Both have real backing
-  (`convex/inbox.ts:168 listByProfile`, `convex/alerts.ts:109 countBySeverity`). Rejected: adding
+  (`convex/inbox.ts:216 listHeldUnacked`, `convex/alerts.ts:109 countBySeverity`). Rejected: adding
   Tasks and Forge, whose counts are *activity* rather than demands on the operator — and badges
   on everything is how count badges stop meaning anything.
+  [Amended 2026-08-21, during Phase 124 pattern-mapping. The original citation was
+  `convex/inbox.ts:168 listByProfile`, which is unusable here on two independent counts, both
+  measured live this pass. (1) `listByProfile` **requires a `profileId`** and the shell has none —
+  `grep -cF profileId src/layouts/DashboardLayout.tsx` returns 0 (control: `useQuery` returns 3),
+  and `src/pages/Inbox.tsx:9-11` documents deliberately avoiding a per-profile read for exactly
+  this reason. (2) The naive alternative `listAll().length` is capped at
+  `DEFAULT_LIST_ALL_LIMIT = 200` (`convex/inbox.ts:173`), so it would render a permanently frozen
+  `200`. A live read of the self-hosted backend found **2,777 inbox rows, 1,827 of them unacked**
+  (`card` 1,351 · `notification` 404 · `held` 46 · `signal` 26), so an honest all-unacked badge
+  would read `1827` in a 232px sidebar — not a calm badge under any reading of this milestone.
+  **Larry ruled: the badge counts unacked `held` rows only (46 live).** `held` literally means
+  blocked-and-waiting-on-the-operator, which is D-10's stated intent; `inbox.listHeldUnacked`
+  (`convex/inbox.ts:216-219`) is an already-public query, index-scoped on `by_itemType`, and
+  explicitly NOT subject to the 200 cap (see its docstring at `:196-201`). No new backend, so
+  D-11's rejection of net-new Convex queries still holds. **D-10's intent is unchanged — only the
+  function to call.**]
 
 - **D-11: The system chip is composed client-side; no new backend.**
   **There is no health aggregate to read.** `convex/health.ts` exports only `detectStaleSessions`
@@ -132,6 +148,20 @@ Horizon (SIGNAL-01, Phase 125). 124 builds the header the horizon will later att
   badge *appearing* is itself the signal. Query error → a dimmed neutral dot with an accessible
   label. A `0` that actually means "not loaded yet" is precisely the fabricated-confidence defect
   POLISH-04 exists to prevent, and 122's TOKEN-04 six-state law already forbids it elsewhere.
+  [Amended 2026-08-21, during Phase 124 pattern-mapping: **the existing `useAlertCounts()` hook
+  defeats this decision by construction and must be FIXED, not bypassed.**
+  `src/hooks/useAlerts.ts:16-18` reads
+  `useQuery(api.alerts.countBySeverity) ?? { info: 0, warning: 0, error: 0, critical: 0 }` —
+  collapsing "still loading" into a fabricated zero before any caller can see `undefined`.
+  `src/pages/Alerts.tsx:137-140` already works around this at the call site by issuing a raw
+  duplicate `useQuery` "to recover the loading signal", so the shell would have been the THIRD
+  site working around one hook. **Larry ruled: fix the hook.** Change `useAlertCounts()` to return
+  the raw `undefined` and update its two real callers — `src/components/AlertBanner.tsx:5`
+  (which currently does `counts.critical + counts.error` with no guard and so needs touching
+  regardless) and `src/pages/Alerts.tsx:136` (whose now-redundant duplicate-query workaround
+  should be collapsed) — plus the mock in `src/components/__tests__/AlertBanner.test.tsx:6`.
+  This is a deliberate, ruled scope addition reaching outside the shell files; it removes the
+  defect class instead of adding a third instance of it.]
 
 - **D-13: Every shell subscription gets its own boundary AND the unbounded query gets bounded.**
   Both halves are required. Phase 121 established that a `useQuery` throw unmounts the React
@@ -299,8 +329,12 @@ Settings is deliberately absent from this table — it stays footer-pinned (D-04
   mobile drawer `:509-520`, footer-pinned Settings `:238-262`, collapse state `:353-359`/`:495`.
 - `src/components/CommandPalette.tsx:59-70` — the other `navRegistry` consumer; D-05's rider.
 - `src/components/PageHeader.tsx` — **do not modify.** The page layer, per 122 D-17.
-- `convex/alerts.ts:109` (`countBySeverity`), `convex/inbox.ts:168` (`listByProfile`),
+- `convex/alerts.ts:109` (`countBySeverity`), `convex/inbox.ts:216` (`listHeldUnacked` — see the
+  2026-08-21 amendment on D-10; `listByProfile` at `:168` was the original citation and is
+  unusable from the shell, which has no `profileId`),
   `convex/health.ts` (no public query — the finding behind D-11).
+- `src/hooks/useAlerts.ts:16-18` (`useAlertCounts`) — **must be fixed, not worked around**; see
+  the 2026-08-21 amendment on D-12.
 
 </canonical_refs>
 

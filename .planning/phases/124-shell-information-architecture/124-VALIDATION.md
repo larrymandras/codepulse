@@ -61,6 +61,9 @@ attach each row to the task that delivers it.
 | SHELL-02 | **Route-list diff before/after is identical (Criterion 3)** | unit | `npx vitest run src/lib/__tests__/navRegistry.routes.test.ts` | ❌ W0 |
 | SHELL-02 | D-05's cmdk value-collision repro, before AND after the Analytics label rename | unit | `npx vitest run src/components/__tests__/CommandPalette.test.tsx` | ✅ extend |
 | SHELL-01/02 | `alerts.countBySeverity` `.collect()` is bounded (D-13) | unit (Convex) | Assertion on read bound, modelled on a sibling index-bounded query (`inbox.listByProfile`, `convex/inbox.ts:168`) | ❌ W0 — planner locates the sibling test as template |
+| SHELL-01/02 | `useAlertCounts()` returns `undefined` while loading, never a zeroed shape (amended D-12) | unit | `npx vitest run src/components/__tests__/AlertBanner.test.tsx` | ✅ extend — mock at `:6` must be updated |
+| SHELL-01/02 | `AlertBanner` renders nothing (not a fabricated "0 alerts") while counts are loading | unit | `npx vitest run src/components/__tests__/AlertBanner.test.tsx` | ❌ W0 — new case; `AlertBanner.tsx:5-10` has no loading guard today |
+| SHELL-02 | Inbox badge reads `inbox.listHeldUnacked`, **not** `listByProfile` or `listAll` (amended D-10) | unit | `npx vitest run src/layouts/__tests__/DashboardLayout.test.tsx` | ✅ extend |
 
 *Status legend: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

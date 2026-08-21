@@ -195,8 +195,15 @@ only describes the *Signal Horizon's* offline visual — dashed neutral — whic
 concern, not this chip's copy).
 
 **Count badge numbers are not copy** — they render the raw integer from `alerts.countBySeverity`
-(summed) or `inbox.listByProfile`'s length; never a rounded, truncated, or "99+" formatted value
-unless the plan discovers a real overflow case worth handling (not observed in this research pass).
+(summed) or `inbox.listHeldUnacked`'s length; never a rounded, truncated, or "99+" formatted value
+unless the plan discovers a real overflow case worth handling.
+[Amended 2026-08-21: the original text cited `inbox.listByProfile` and noted no overflow case was
+observed. Pattern-mapping found one. `listByProfile` needs a `profileId` the shell does not have,
+and `listAll().length` is capped at 200 (`convex/inbox.ts:173`) — a live read found 2,777 rows,
+1,827 unacked, which would render `1827` or a frozen `200`. Per the amended D-10, the Inbox badge
+counts unacked `held` rows via `inbox.listHeldUnacked` (`convex/inbox.ts:216`), which is
+index-scoped, uncapped, and measured at 46 live — comfortably inside the raw-integer rule, so no
+truncation or "99+" treatment is needed.]
 
 ---
 
@@ -386,8 +393,13 @@ unchanged — POLISH-06's finding about *where* the clip happens is independent 
   does not specify per-severity coloring. The planner may adopt the neutral-only treatment instead
   if simpler; either satisfies D-10 and D-12.
 - Data source: `alerts.countBySeverity` (`convex/alerts.ts:109`, unbounded `.collect()` today —
-  **must be bounded or index-scoped in this phase**, D-13) and `inbox.listByProfile`
-  (`convex/inbox.ts:168`, index-bounded by `profileId` already — not flagged by D-13, left as-is).
+  **must be bounded or index-scoped in this phase**, D-13) and `inbox.listHeldUnacked`
+  (`convex/inbox.ts:216`, index-scoped on `by_itemType` and not subject to `listAll`'s 200 cap —
+  not flagged by D-13, left as-is). [Amended 2026-08-21: originally cited `inbox.listByProfile`
+  (`:168`); see the amended D-10 in `124-CONTEXT.md` — the shell has no `profileId`.]
+- Alerts badge data must NOT come from the `useAlertCounts()` hook, which fabricates a zero while
+  loading. Per the amended D-12, that hook is being fixed in this phase; the badge reads the
+  corrected hook (or `useQuery(api.alerts.countBySeverity)` directly), never a zeroed default.
 
 ### Error boundaries (D-13) — both halves required
 

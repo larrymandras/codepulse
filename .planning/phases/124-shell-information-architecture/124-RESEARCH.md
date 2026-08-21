@@ -1,5 +1,14 @@
 # Phase 124: Shell & Information Architecture - Research
 
+> **AMENDED 2026-08-21 (post-research, during pattern-mapping).** This document's original
+> references to `inbox.listByProfile` as the Inbox count badge's backing query were wrong and
+> have been corrected in place to `inbox.listHeldUnacked` (`convex/inbox.ts:216`). The shell has
+> no `profileId`, and `listAll().length` is capped at 200 while the live table holds 2,777 rows
+> (1,827 unacked). See the amended D-10 and D-12 in `124-CONTEXT.md` for the full finding and
+> Larry's rulings. References to `listByProfile` as an *example of an index-bounded query*
+> (the Validation Architecture test-template row, and the Sources list) are accurate as written
+> and are deliberately left unchanged.
+
 **Researched:** 2026-08-21
 **Domain:** React Router app-shell chrome rewrite (header + sidebar), presentation-only, no route
 changes.
@@ -43,7 +52,7 @@ polyfill recipe) for the two new interactions this phase introduces.
 | Header 3-zone layout (breadcrumb/command bar/right zone) | Browser / Client (React component, `DashboardLayout.tsx`) | — | Pure client-rendered chrome; no server round-trip |
 | Sidebar 4-domain regroup, per-domain collapse | Browser / Client (`navRegistry.ts` + `DashboardLayout.tsx`) | — | Static config + client state (`localStorage`) |
 | System chip state (Nominal/Attention/Critical/Offline) | Browser / Client (derived) | API / Backend (`alerts.countBySeverity` query, existing) | D-11: composed client-side from an EXISTING public query + `useConvexConnectionState()`; no new backend |
-| Count badges (Inbox, Alerts) | Browser / Client (derived) | API / Backend (`inbox.listByProfile`, `alerts.countBySeverity`, both existing) | Same two existing queries D-10 reuses; D-13 requires the Alerts one be read-bounded |
+| Count badges (Inbox, Alerts) | Browser / Client (derived) | API / Backend (`inbox.listHeldUnacked`, `alerts.countBySeverity`, both existing) | Same two existing queries D-10 reuses; D-13 requires the Alerts one be read-bounded |
 | Breadcrumb trail | Browser / Client (derived from `navRegistry.ts` + route `handle`/hook for 6 param routes) | Browser / Client (React Router `useMatches`/route config) | Pure derivation, no backend involvement |
 | Route table (URL → component) | Browser / Client (`src/App.tsx`, React Router) | — | Explicitly UNCHANGED by this phase — the whole point of criterion 3 |
 
@@ -89,7 +98,7 @@ DashboardLayout.tsx (unchanged mount point, rewritten internals)
         |       |       +--> per-domain Collapsible (NEW) -- localStorage["codepulse-nav-domains"]
         |       |       +--> whole-sidebar rail collapse (EXISTING) -- overrides per-domain, unchanged
         |       |       +--> StatusBadge / Badge count pills (NEW) <-- alerts.countBySeverity,
-        |       |             inbox.listByProfile (both EXISTING queries, D-13 bounds one)
+        |       |             inbox.listHeldUnacked (both EXISTING queries, D-13 bounds one)
         |       |
         |       +--> footer-pinned Settings NavLink (EXISTING, unmoved -- D-04)
         |
@@ -583,7 +592,7 @@ their `to` values — the test must tell those two kinds of change apart).
 **Skipped by scope, not by config absence.** This phase touches no authentication, session,
 input-validation, or cryptography surface — it is a client-side presentation regroup reading two
 already-public, already-unauthenticated Convex queries (`alerts.countBySeverity`,
-`inbox.listByProfile`) that every other page in the app already reads without new exposure. Per
+`inbox.listHeldUnacked`) that every other page in the app already reads without new exposure. Per
 this project's own `CLAUDE.md` standing note (Self-Hosted Convex — Operational Rules, SEED-008),
 the tailnet is the auth boundary for this backend, not per-function gating — a decision this phase
 neither depends on nor changes. No ASVS category applies beyond what the existing pages already
