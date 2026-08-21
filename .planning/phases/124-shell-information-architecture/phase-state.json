@@ -1,0 +1,86 @@
+{
+  "phase": 124,
+  "phaseName": "shell-information-architecture",
+  "created": "2026-08-21T17:54:51.351Z",
+  "history": [
+    {
+      "timestamp": "2026-08-21T17:54:51.351Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-21T17:54:51.351Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "124-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "124-DISCUSSION-LOG.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "124-UI-SPEC.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "124-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 11,
+      "files": [
+        "124-01-PLAN.md",
+        "124-02-PLAN.md",
+        "124-03-PLAN.md",
+        "124-04-PLAN.md",
+        "124-05-PLAN.md",
+        "124-06-PLAN.md",
+        "124-07-PLAN.md",
+        "124-08-PLAN.md",
+        "124-09-PLAN.md",
+        "124-10-PLAN.md",
+        "124-11-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 11,
+      "files": [
+        "124-01-SUMMARY.md",
+        "124-02-SUMMARY.md",
+        "124-03-SUMMARY.md",
+        "124-04-SUMMARY.md",
+        "124-05-SUMMARY.md",
+        "124-06-SUMMARY.md",
+        "124-07-SUMMARY.md",
+        "124-08-SUMMARY.md",
+        "124-09-SUMMARY.md",
+        "124-10-SUMMARY.md",
+        "124-11-SUMMARY.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "124-VALIDATION.md"
+      ]
+    }
+  }
+}
