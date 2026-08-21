@@ -60,6 +60,7 @@ import {
   Settings,
   X,
   Menu,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   Search,
@@ -71,71 +72,108 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+
+// Phase 124 (SHELL-02, D-15): one localStorage key holding four per-domain
+// open/closed booleans, keyed by the lowercase domain name from navGroups.
+// Mirrors the sidebarCollapsed try/catch idiom below (kept the simpler
+// init+on-toggle-write shape — no storage/custom-event listener, since no
+// other surface reads this key, unlike codepulse-crt). The key string is
+// repeated literally at the read and write call sites (not hoisted to a
+// shared constant) to match that existing idiom exactly.
+const DEFAULT_DOMAIN_OPEN_STATE: Record<string, boolean> = {
+  command: true,
+  observe: true,
+  agents: true,
+  system: true,
+};
 
 function NavGroup({
   label,
   items,
   onNavClick,
   collapsed,
+  open,
+  onOpenChange,
 }: {
   label: string;
   items: NavItem[];
   onNavClick?: () => void;
   collapsed?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
+  const itemList = (
+    <div className="space-y-[1px]">
+      {items.map((item) => {
+        const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
+
+        const link = (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            onClick={onNavClick}
+            aria-label={collapsed ? item.label : undefined}
+            className={({ isActive }) =>
+              `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
+                isActive
+                  ? "is-active text-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+              }`
+            }
+          >
+            <IconComponent
+              className="h-4 w-4 shrink-0 transition-all duration-slow ease-house group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]"
+            />
+            {!collapsed && (
+              <span className="group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]">
+                {item.label}
+              </span>
+            )}
+          </NavLink>
+        );
+        if (collapsed) {
+          return (
+            <Tooltip key={item.to}>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[var(--glow-sm)]">
+                {item.label}
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+        return link;
+      })}
+    </div>
+  );
+
+  // D-14: at 48px the rail overrides per-domain state — headers render as
+  // the existing icon-divider shape and every item renders regardless of
+  // its domain's boolean. The boolean itself is untouched (held in memory
+  // and localStorage), so restoring the rail restores whatever state was
+  // already there.
+  if (collapsed) {
+    return (
+      <div className="mb-2">
+        <div className="pt-3" />
+        {itemList}
+      </div>
+    );
+  }
+
   return (
     <div className="mb-2">
-      {!collapsed && (
-        <div className="px-3 pt-4 pb-2 flex items-center gap-2">
-          <span className="w-1 h-1 rounded-full bg-primary/50" />
-          <p className="text-xs uppercase tracking-widest text-primary font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]">
+      <Collapsible open={open} onOpenChange={onOpenChange}>
+        <CollapsibleTrigger className="group w-full flex items-center justify-between px-3 pt-4 pb-2">
+          <span className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]">
+            <span className="w-1 h-1 rounded-full bg-primary/50" />
             {label}
-          </p>
-        </div>
-      )}
-      {collapsed && <div className="pt-3" />}
-      <div className="space-y-[1px]">
-        {items.map((item) => {
-          const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
-
-          const link = (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              onClick={onNavClick}
-              aria-label={collapsed ? item.label : undefined}
-              className={({ isActive }) =>
-                `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
-                  isActive
-                    ? "is-active text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-                }`
-              }
-            >
-              <IconComponent
-                className="h-4 w-4 shrink-0 transition-all duration-slow ease-house group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]"
-              />
-              {!collapsed && (
-                <span className="group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]">
-                  {item.label}
-                </span>
-              )}
-            </NavLink>
-          );
-          if (collapsed) {
-            return (
-              <Tooltip key={item.to}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[var(--glow-sm)]">
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-          return link;
-        })}
-      </div>
+          </span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-normal ease-house group-data-[state=closed]:-rotate-90" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>{itemList}</CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
@@ -144,10 +182,14 @@ function SidebarContent({
   onNavClick,
   collapsed,
   onToggleCollapse,
+  domainOpen,
+  onDomainOpenChange,
 }: {
   onNavClick?: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  domainOpen: Record<string, boolean>;
+  onDomainOpenChange: (domainKey: string, open: boolean) => void;
 }) {
   const convexState = useConvexConnectionState();
   const isConnected = convexState.isWebSocketConnected;
@@ -225,14 +267,25 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Navigation — Phase 71 IA: 6 clusters from navGroups config */}
+      {/* Navigation — Phase 124 SHELL-02: 4 domains from navGroups config, each an
+          independently collapsible section (D-14/D-15). */}
       <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
-        {navGroups.map((grp, i) => (
-          <div key={grp.group}>
-            {i > 0 && <Separator className="my-2 mx-3" />}
-            <NavGroup label={grp.group} items={grp.items} onNavClick={onNavClick} collapsed={collapsed} />
-          </div>
-        ))}
+        {navGroups.map((grp, i) => {
+          const domainKey = grp.group.toLowerCase();
+          return (
+            <div key={grp.group}>
+              {i > 0 && <Separator className="my-2 mx-3" />}
+              <NavGroup
+                label={grp.group}
+                items={grp.items}
+                onNavClick={onNavClick}
+                collapsed={collapsed}
+                open={domainOpen[domainKey] ?? true}
+                onOpenChange={(next) => onDomainOpenChange(domainKey, next)}
+              />
+            </div>
+          );
+        })}
       </nav>
 
       {/* Footer-pinned Settings (not a nav cluster) + Collapse Toggle + Status */}
@@ -358,6 +411,27 @@ export default function DashboardLayout() {
     }
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Phase 124 (D-14/D-15): per-domain collapse state, lifted here (rather than
+  // read independently inside each SidebarContent instance) so the desktop
+  // <aside> and the mobile drawer <aside> — both mounted simultaneously —
+  // never disagree about which domains are open. A toggle in either instance
+  // updates this single object and both re-render from it.
+  const [domainOpen, setDomainOpen] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("codepulse-nav-domains") ?? JSON.stringify(DEFAULT_DOMAIN_OPEN_STATE),
+      );
+    } catch {
+      return DEFAULT_DOMAIN_OPEN_STATE;
+    }
+  });
+
+  const handleDomainOpenChange = (domainKey: string, open: boolean) => {
+    const next = { ...domainOpen, [domainKey]: open };
+    setDomainOpen(next);
+    localStorage.setItem("codepulse-nav-domains", JSON.stringify(next));
+  };
 
   const [crtEnabled, setCrtEnabled] = useState(() => {
     try {
@@ -486,7 +560,7 @@ export default function DashboardLayout() {
       </div>
       
       {/* Sidebar Navigation */}
-      <aside className={`hidden md:flex ${sidebarCollapsed ? "w-[48px]" : "w-60"} flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house`}>
+      <aside className={`hidden md:flex ${sidebarCollapsed ? "w-[48px]" : "w-[232px]"} flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-normal ease-house`}>
         <SidebarContent
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => {
@@ -494,6 +568,8 @@ export default function DashboardLayout() {
             setSidebarCollapsed(next);
             localStorage.setItem("codepulse-sidebar-collapsed", JSON.stringify(next));
           }}
+          domainOpen={domainOpen}
+          onDomainOpenChange={handleDomainOpenChange}
         />
       </aside>
 
@@ -507,7 +583,7 @@ export default function DashboardLayout() {
 
       {/* Mobile Sidebar Panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-60 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex flex-col transform transition-transform duration-normal ease-house md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-[232px] bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex flex-col transform transition-transform duration-normal ease-house md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -521,7 +597,11 @@ export default function DashboardLayout() {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <SidebarContent onNavClick={() => setSidebarOpen(false)} />
+        <SidebarContent
+          onNavClick={() => setSidebarOpen(false)}
+          domainOpen={domainOpen}
+          onDomainOpenChange={handleDomainOpenChange}
+        />
       </aside>
 
       {/* Main Content */}
