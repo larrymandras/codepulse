@@ -119,6 +119,10 @@ declare global {
       firstFrameAt: number | null;
       /** performance.now() of the most recent loop callback. */
       lastFrameAt: number | null;
+      /** Raw analyserLevel() reading this render; -1 when no analyser is attached (or not speaking). */
+      lvl: number;
+      /** Post-easing amplitude that becomes `level`, driving the mouth/bloom/rings. */
+      smoothed: number;
     };
   }
 }
@@ -138,6 +142,8 @@ const newAuraDebug = (): AvatarAuraDebug => ({
   reducedMotion: false,
   firstFrameAt: null,
   lastFrameAt: null,
+  lvl: -1,
+  smoothed: 0,
 });
 
 /**
@@ -352,12 +358,16 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       // ── Determine target amplitude for this state ──
       let target = 0;
       let herTint = 0; // 0 = cyan (me), 1 = emerald (her)
+      // Hoisted to render scope (193-01 D-07): the speaking branch is the only
+      // one that assigns a real reading, but writing dbg.lvl unconditionally
+      // below is what makes "never taken" distinguishable from "taken and -1".
+      let lvl = -1;
       if (s === "listening" || s === "transcribing") {
         target = 0.28 + 0.16 * Math.sin(t * 0.06) + 0.06 * Math.sin(t * 0.17);
       } else if (s === "speaking") {
         herTint = 1;
         const a = ttsAnalyserRef.current;
-        const lvl = a ? analyserLevel(a, ttsBuf) : -1;
+        lvl = a ? analyserLevel(a, ttsBuf) : -1;
         target =
           lvl > 0.01
             ? Math.min(1, lvl * 5)
@@ -371,6 +381,11 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       const k = target > smoothed ? 0.45 : 0.14;
       smoothed = reduced ? 0.25 : lerp(smoothed, target, k);
       const level = smoothed;
+      // 193-01 D-07: permanent debug surface, written every render in every
+      // state. Two scalar overwrites, no allocation — matches this file's
+      // per-frame cost discipline (see the block comment above).
+      dbg.lvl = lvl;
+      dbg.smoothed = smoothed;
 
       const [r, g, b] = mix([cr, cg, cb], EMERALD, herTint * 0.55);
 
