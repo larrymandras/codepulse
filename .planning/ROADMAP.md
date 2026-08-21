@@ -871,7 +871,23 @@ All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/1
   2. The Dashboard's synthetic "SYSTEM LOAD" bar is replaced by a Pulse ECG canvas hero driven by real events over a 60s window, reading its colours from tokens via `getComputedStyle` — one component, no Recharts, entry-chunk budget holds.
   3. Ástríðr's serif voice is live on exactly one surface (Briefings or Insights), and its evaluation is recorded before any app-wide font commit is even proposed.
 
-**Plans**: TBD
+**Plans**: 13 plans
+
+Plans:
+- [ ] 125-01-PLAN.md — CSS foundation: aurora + voice tokens, the event_type -> hue map, the entry-chunk ratchet
+- [ ] 125-02-PLAN.md — Bounded 60s `runtime_events` window query for the ECG backfill
+- [ ] 125-03-PLAN.md — astridr-repo: `estop_state` emitter, on-connect snapshot push, `run.blocks` single-emission fix
+- [ ] 125-04-PLAN.md — Signal Horizon: aurora/state CSS and the fail-closed state machine, stub-verified
+- [ ] 125-05-PLAN.md — Serif voice trial: Instrument Serif italic on Briefings only
+- [ ] 125-06-PLAN.md — Pulse ECG canvas render layer: gated rAF trace and the two empty states
+- [ ] 125-07-PLAN.md — Operator: deploy the window query to the self-hosted Convex backend
+- [ ] 125-08-PLAN.md — Signal Horizon: event packets, coalescing, and shell integration
+- [ ] 125-09-PLAN.md — Pulse ECG data layer: trace backfill, the D-17 live-only numeral, the D-19 guard
+- [ ] 125-10-PLAN.md — Operator: serif verdict checkpoint and `125-SERIF-TRIAL.md`
+- [ ] 125-11-PLAN.md — Dashboard hero swap (D-09) and the entry-chunk ratchet on a complete build
+- [ ] 125-12-PLAN.md — Operator: the ONE astridr rebuild, with a before/after wire probe
+- [ ] 125-13-PLAN.md — Operator: live end-to-end E-Stop and ECG verification
+
 **UI hint**: yes
 
 ### Phase 126: Page Body and Convex Read Defect Sweep
