@@ -379,3 +379,12 @@ actually rest on.
 ---
 *Phase: 124-shell-information-architecture*
 *Completed: 2026-08-21*
+
+## Self-Check: PASSED
+
+All modified files confirmed present on disk (`e2e/polish-geometry.spec.ts`,
+`src/layouts/DashboardLayout.tsx`, `src/components/EStopButton.tsx`, this SUMMARY). All four
+commits (`a6a0c5db`, `e2c28ff2`, `af688549`, `8d5722c6`) confirmed present in `git log --oneline
+--all`. `git status --short` after the SUMMARY commit shows a clean working tree — no untracked or
+modified files left behind, including the throwaway coverage probe (created and deleted inside the
+same task, never staged).
