@@ -944,9 +944,10 @@ export default function DashboardLayout() {
                     constraint on this plan is that the menu's control count
                     does not change. The same two booleans still gate them
                     exactly as before: a null systemResources.cpu or a disconnected WS
-                    renders no row at all, never a "—", never a "0" (that
-                    real-or-hidden contract is Phase 96's and this phase does
-                    not reopen it). Data typography role: 12px (text-xs),
+                    renders no row at all, never a placeholder dash, never a
+                    fabricated zero (that real-or-hidden contract is Phase
+                    96's and this phase does not reopen it). Data typography
+                    role: 12px (text-xs),
                     JetBrains Mono (font-mono), font-semibold, tabular-nums —
                     supersedes their prior font-bold (700), outside this
                     phase's two-weight budget. */}
