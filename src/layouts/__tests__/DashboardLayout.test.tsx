@@ -75,9 +75,21 @@ vi.mock("../../components/ErrorBoundary", () => ({
 }));
 vi.mock("../../components/OnboardingGuide", () => ({ default: () => null }));
 vi.mock("../../components/UserMenu", () => ({ default: () => null }));
-vi.mock("../../components/PrivacyShield", () => ({ default: () => null }));
-vi.mock("../../components/ThemeSwitcher", () => ({ ThemeSwitcher: () => null }));
-vi.mock("../../components/AmbientAudioPlayer", () => ({ default: () => null }));
+// Phase 124 Plan 07 (Task 3): these three previously stubbed to a bare null
+// render, which cannot be distinguished from "the control is not mounted" —
+// a probe that returns the same result whether the overflow-menu relocation
+// works or not.
+// Give each an identifiable data-testid so the menu's before/after-open
+// assertions below actually measure something.
+vi.mock("../../components/PrivacyShield", () => ({
+  default: () => <div data-testid="stub-privacy-shield" />,
+}));
+vi.mock("../../components/ThemeSwitcher", () => ({
+  ThemeSwitcher: () => <div data-testid="stub-theme-switcher" />,
+}));
+vi.mock("../../components/AmbientAudioPlayer", () => ({
+  default: () => <div data-testid="stub-ambient-audio" />,
+}));
 vi.mock("../../hooks/useAudioEvents", () => ({ useAudioEvents: () => {} }));
 vi.mock("../../components/NotificationBell", () => ({ default: () => null }));
 vi.mock("../../hooks/useNotificationToasts", () => ({ useNotificationToasts: () => {} }));
@@ -397,5 +409,73 @@ describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 0
     // exact assertion turn red when the two SectionErrorBoundary wrappers
     // are removed.
     expect(screen.getAllByText("Command").length).toBeGreaterThan(0);
+  });
+});
+
+describe("DashboardLayout header overflow menu (D-07, Phase 124 Plan 07)", () => {
+  beforeEach(() => {
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useAstridrWS).mockReset();
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+  });
+
+  // Radix's DropdownMenuTrigger opens on pointerdown (not click) — same
+  // convention as RunTargetChooser.test.tsx / SkillLifecycleMenu.test.tsx.
+  function openOverflowMenu() {
+    fireEvent.pointerDown(screen.getByLabelText("More options"), {
+      button: 0,
+      ctrlKey: false,
+    });
+  }
+
+  it('the "More options" trigger renders with an accessible name on every render', () => {
+    renderLayout();
+    expect(screen.getByLabelText("More options")).toBeInTheDocument();
+  });
+
+  it("none of the four relocated controls is in the document before the menu opens", () => {
+    renderLayout();
+    expect(screen.queryByTestId("stub-theme-switcher")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("stub-privacy-shield")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("stub-ambient-audio")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/CRT effect/)).not.toBeInTheDocument();
+  });
+
+  it("opening the trigger reveals exactly the four relocated controls, and no Help item exists", async () => {
+    renderLayout();
+    openOverflowMenu();
+
+    expect(await screen.findByTestId("stub-theme-switcher")).toBeInTheDocument();
+    expect(screen.getByTestId("stub-privacy-shield")).toBeInTheDocument();
+    expect(screen.getByTestId("stub-ambient-audio")).toBeInTheDocument();
+    expect(screen.getByLabelText(/CRT effect/)).toBeInTheDocument();
+
+    // D-07 (amended 2026-08-21): Help is deferred, not built — assert its
+    // absence explicitly so a future "restoration" fails loudly.
+    expect(screen.queryByText(/\bhelp\b/i)).not.toBeInTheDocument();
+  });
+
+  it("the six visible right-zone items are still in the document without opening the menu", () => {
+    renderLayout();
+    // EStopButton/NotificationBell/UserMenu are pre-existing bare-null-render
+    // stubs in this suite, unrelated to Task 3's relocation work (the plan
+    // names only PrivacyShield/ThemeSwitcher/AmbientAudioPlayer for a
+    // testid upgrade), so they render nothing to assert against either way.
+    // BrainHeaderBadge itself throws under this suite's minimal api mock
+    // (it needs useBrainCatalogue/useResolvedBrain query refs this file
+    // never mocked — a pre-existing gap unrelated to D-07) and its
+    // SectionErrorBoundary catches that with a "{name} failed to load"
+    // fallback — which still proves the *slot* stayed in the visible row
+    // rather than being pulled into the menu, even though its real content
+    // can't render here.
+    expect(screen.getByLabelText("More options")).toBeInTheDocument();
+    expect(screen.getByText("Active Brain failed to load")).toBeInTheDocument();
   });
 });
