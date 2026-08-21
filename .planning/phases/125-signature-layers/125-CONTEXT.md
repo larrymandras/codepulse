@@ -207,6 +207,64 @@ the three ROADMAP success criteria rest on mechanisms that do not exist yet.**
   keep clean with one observer who knows exactly what changed); adding a rendered-size and
   contrast measurement (more machinery than a question about how her voice should feel needs).
 
+### Decisions added at planning time (2026-08-21), from 125-RESEARCH.md findings
+
+These three were taken by Larry after `125-RESEARCH.md` measured facts that CONTEXT.md and
+UI-SPEC.md could not have known when they were written. Each answers a sub-question the
+prior artifacts left open — none reverses D-01..D-16.
+
+- **D-17: The Pulse ECG's 40px numeral counts LIVE-WS events over the trailing 60s. The
+  Convex backfill draws the trace but does NOT feed the count.** Research established that
+  `run.*` and `chat.response` — exactly the event types D-06 colours Ástríðr-violet — are
+  emitted through `ConvexHandler.send_live()` (`astridr-repo/astridr/engine/telemetry.py:395-408`),
+  which by its own docstring "Does NOT send to Convex HTTP endpoint". So the Convex backfill
+  can contain **zero** violet blips by construction, and no dedup mechanism closes that gap.
+  Counting only what arrives on the socket makes the numeral exact over one coherent event
+  universe that includes violet, and it dissolves the entire backfill↔live identity problem
+  that `125-UI-SPEC.md:216-241` spends three paths trying to solve.
+  **This SUPERSEDES the UI-SPEC's path (a)/(b)/(c) choice for the numeral** — none of the
+  three is taken. UI-SPEC's Reconciliation sequence still governs the TRACE (the backfill
+  still draws the trailing 60s of machine-family events); it no longer governs the count.
+  **The cost, which must be honoured, not hidden:** for the first 60s after mount the window
+  is not yet full. The numeral must render in the `unavailable`/degraded state already
+  defined in UI-SPEC's Empty-window states table until it fills — never a partial count
+  presented as a complete one. That is the same honesty bar D-12 exists to meet.
+  Rejected: UI-SPEC path (a) — a client-generated `event_id` threaded into both transports
+  plus a new `runtime_events` schema field; it rides the same Docker rebuild `estop_state`
+  already needs, but adds a self-hosted Convex schema deploy AND still misses every pre-mount
+  violet event, so it buys exactness only over the machine family. Path (b) — time-partitioned
+  watermark merge; research strengthened it (WS and Convex carry the *same* producer float,
+  `telemetry.py:214`/`:501`, so there is no clock-skew question for buffered events) but its
+  watermark boundary is an identity problem no offset measurement resolves, and it still has
+  zero violet backfill coverage. Path (c) — ship no numeral; safest, but surrenders the
+  Dashboard's only headline number, which is the whole reason D-12 exists.
+
+- **D-18: The D-10 ratchet's allowance is +2% over the measured baseline.** Baseline measured
+  twice, deterministic, at repo HEAD before any 125 code: entry JS `dist/assets/index-CyAqQtIE.js`
+  = **583,049 bytes**; entry CSS `dist/assets/index-MiRtUUCk.css` = **237,359 bytes**. A
+  percentage rather than a fixed byte figure so ordinary dependency drift does not fail the
+  ratchet for reasons unrelated to this phase. **State the estimate honestly in the plan:** the
+  Signal Horizon does not exist yet, so 2% (≈11.7 KB on JS) is chosen as drift-tolerant, not
+  as a measured fit to a known component size.
+  Rejected: a fixed +15 KB raw allowance (a stricter whole-bundle guard, but it fails on
+  unrelated dependency bumps and someone ends up re-baselining it); +5 KB (highest signal if
+  it passes, likeliest to block execution on a legitimate implementation and become a ratchet
+  nobody trusts).
+
+- **D-19: Fix `run.blocks`'s double WS emission upstream in `astridr-repo`, AND keep a
+  client-side dedup guard.** `astridr/agent/loop.py:1761-1772` emits `run.blocks` twice for one
+  logical tool-call turn — once via `_emit_run_event()` → `send_live()` and once via the
+  buffered `.send()` path, which also fans out over WS — and the two call sites can carry
+  **different `session_id`s** (`loop.py:606-624`'s override vs. `session.id` verbatim). Under
+  D-17 the numeral is live-WS-only, so this double-delivery would overcount every tool-call
+  turn by one. The upstream fix rides the same `docker compose up --build` that `estop_state`
+  (D-01) already requires, so it costs no additional operator event. The client guard stays
+  regardless so CodePulse is not silently dependent on a specific Ástríðr build being deployed.
+  Rejected: client-side only plus a filed todo (leaves a known correctness defect live
+  upstream, and a "fix it later" footnote is deferred work in a transparency costume);
+  upstream only (cleanest data model, but the count then breaks against any Ástríðr build
+  predating the fix, with nothing to notice it).
+
 ### Claude's Discretion
 
 None — every question in this discussion was answered explicitly. No "you decide" options
