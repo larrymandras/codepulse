@@ -67,7 +67,15 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Search,
+  Ellipsis,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "../components/ui/scroll-area";
 import {
   Tooltip,
@@ -813,18 +821,41 @@ export default function DashboardLayout() {
           <TooltipProvider delayDuration={300}>
           <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10">
             <EStopButton />
-            <div className="w-px h-4 bg-primary/20 mx-1" />
             <SectionErrorBoundary name="Active Brain">
               <BrainHeaderBadge />
             </SectionErrorBoundary>
             <NotificationBell />
-            <PrivacyShield />
-            <Suspense fallback={<div className="w-9 h-9" aria-hidden="true" />}>
-              <ThemeSwitcher />
-            </Suspense>
-            <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
-            <AmbientAudioPlayer />
-            <div className="w-px h-4 bg-primary/20 mx-1" />
+            {/* Phase 124 (D-07, amended 2026-08-21): the four settings-shaped
+                controls — theme, privacy, CRT, ambient audio — relocate here.
+                Each keeps its own internal state/localStorage untouched; only
+                the mount location moves. `size-8` (2rem = 32px) on the
+                ghost/icon Button gives the trigger a 32x32px hit area — the
+                two other icon-only controls in this file (hamburger, mobile
+                close-X) measure 24x24 and do not meet that target; this is a
+                new control, not a citation from them. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="More options">
+                  <Ellipsis className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <Suspense fallback={<div className="w-9 h-9" aria-hidden="true" />}>
+                    <ThemeSwitcher />
+                  </Suspense>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <PrivacyShield />
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <AmbientAudioPlayer />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <UserMenu />
           </div>
           </TooltipProvider>
