@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense, type ReactNode } from "react";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useLocation } from "react-router";
 import { useConvexConnectionState } from "convex/react";
 import AlertBanner from "../components/AlertBanner";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -56,6 +56,9 @@ import { GlobalSwapProvider } from "@/contexts/GlobalSwapContext";
 // CommandPalette can import it too without a DashboardLayout ↔ CommandPalette
 // import cycle (WR-02, phase 96 review).
 import { navGroups, iconComponents, type NavItem } from "@/lib/navRegistry";
+// Phase 124 Plan 09 (SHELL-01, D-16): registry-derived breadcrumb, zone 1's
+// replacement for the deleted "Astridr Runtime Telemetry" pill.
+import { getBreadcrumbTrail } from "@/lib/breadcrumbs";
 import {
   LayoutDashboard,
   Cpu,
@@ -75,6 +78,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "../components/ui/scroll-area";
 import {
@@ -688,6 +693,12 @@ export default function DashboardLayout() {
 
   const showLat = wsStatus === "connected" && headerLatencyMs != null;
 
+  // Phase 124 Plan 09 (D-16): zone 1's breadcrumb, replacing the deleted
+  // telemetry pill. Empty trail (unmapped/unmatched path) renders nothing —
+  // never a guessed segment (breadcrumbs.ts's own contract).
+  const location = useLocation();
+  const breadcrumbTrail = getBreadcrumbTrail(location.pathname);
+
   // Voice lives on the Ástríðr presence page (/chat) — the wake-word engine,
   // mic toggle, and strict mode all moved there (2026-07-20). The shell is
   // voice-free; the palette is text-only.
@@ -769,12 +780,14 @@ export default function DashboardLayout() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Close button */}
+        {/* Close button. 32x32px hit area (D-09/UI-SPEC Accessibility Contract):
+            was p-1 (4px) + h-4 icon (16px) = 24x24; p-2 (8px each side) + the
+            same 16px icon = 32x32. aria-label and click behavior unchanged. */}
         <div className="absolute top-3 right-3">
           <button
             onClick={() => setSidebarOpen(false)}
             aria-label="Close sidebar"
-            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -812,43 +825,57 @@ export default function DashboardLayout() {
         */}
         <header className="min-h-14 flex-shrink-0 flex-wrap gap-y-1 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center gap-4">
-            {/* Hamburger button - mobile only */}
+            {/* Hamburger button - mobile only. 32x32px hit area (D-09/UI-SPEC
+                Accessibility Contract): was p-1 (4px) + h-4 icon (16px) = 24x24,
+                below the 32x32 WCAG 2.2 target with zero margin. p-2 (8px each
+                side) + the same 16px icon = 32x32; -ml-2 (was -ml-1) keeps the
+                icon's left edge visually aligned with the increased padding.
+                aria-label and click behavior are unchanged. */}
             <button
               onClick={() => setSidebarOpen(true)}
               aria-label="Open sidebar menu"
-              className="p-1 -ml-1 text-muted-foreground hover:text-foreground transition-colors md:hidden"
+              className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors md:hidden"
             >
               <Menu className="h-4 w-4" />
             </button>
-            
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-primary/10 border border-primary/20 shadow-[var(--glow-xs)]">
-                <span className="w-2 h-2 rounded-full bg-primary shadow-[var(--glow-md)]" />
-                <span className="text-xs font-mono tracking-widest text-primary uppercase">
-                  Astridr Runtime Telemetry
-                </span>
-              </div>
-              
-              {(showSys || showLat) && (
-                <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-primary pl-2 border-l border-primary/20">
-                  {showSys && (
-                    <span className="flex items-center gap-1.5">
-                      <Cpu className="w-3 h-3 text-primary" />
-                      SYS: <span className="text-primary font-bold">{Math.round(systemResources!.cpu!)}%</span>
-                    </span>
-                  )}
-                  {showLat && (
-                    <span className="flex items-center gap-1.5">
-                      <Server className="w-3 h-3 text-primary" />
-                      LAT: <span className="text-primary font-bold">{headerLatencyMs}ms</span>
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+
+            {/* Zone 1 breadcrumb (D-16), >=md only — the hamburger above
+                replaces it below md (D-09). Occupies the slot the deleted
+                "Astridr Runtime Telemetry" pill used to hold (D-08: the pill
+                was a decorative pulse dot + cyan-as-wallpaper, both already
+                banned by POLISH-01). An empty trail (unmapped/unmatched path)
+                renders nothing — no placeholder, no dash. */}
+            {breadcrumbTrail.length > 0 && (
+              <nav aria-label="Breadcrumb" className="hidden md:flex">
+                <ol className="flex items-center gap-1.5">
+                  {breadcrumbTrail.map((segment, i) => {
+                    const isLast = i === breadcrumbTrail.length - 1;
+                    return (
+                      <li key={i} className="flex items-center gap-1.5">
+                        {i > 0 && (
+                          <span aria-hidden="true" className="text-muted-foreground">
+                            /
+                          </span>
+                        )}
+                        <span
+                          aria-current={isLast ? "page" : undefined}
+                          className={
+                            isLast
+                              ? "text-sm font-semibold text-foreground"
+                              : "text-sm font-normal text-muted-foreground"
+                          }
+                        >
+                          {segment}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </nav>
+            )}
           </div>
 
-          <div className="flex-1 max-w-sm mx-4 hidden md:flex">
+          <div className="flex-1 max-w-[420px] mx-4 hidden md:flex">
             <button
               onClick={() => setPaletteOpen(true)}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground bg-muted/40 hover:bg-muted/60 hover:text-foreground rounded-md border border-border/50 transition-colors"
@@ -883,10 +910,11 @@ export default function DashboardLayout() {
                 controls — theme, privacy, CRT, ambient audio — relocate here.
                 Each keeps its own internal state/localStorage untouched; only
                 the mount location moves. `size-8` (2rem = 32px) on the
-                ghost/icon Button gives the trigger a 32x32px hit area — the
-                two other icon-only controls in this file (hamburger, mobile
-                close-X) measure 24x24 and do not meet that target; this is a
-                new control, not a citation from them. */}
+                ghost/icon Button gives the trigger a 32x32px hit area. Plan
+                124-09 brought the hamburger and mobile close-X up to the same
+                32x32 target (they measured 24x24 when this comment was
+                written), so all three icon-only controls in this file now
+                clear it. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="More options">
@@ -908,6 +936,45 @@ export default function DashboardLayout() {
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <AmbientAudioPlayer />
                 </DropdownMenuItem>
+                {/* Phase 124 Plan 09 (D-08): SYS/LAT relocate here rather than
+                    being deleted — they are real data (Phase 96 F3/D-04), not
+                    decoration. DropdownMenuLabel (not DropdownMenuItem) keeps
+                    them non-interactive read-only figures rather than a fifth
+                    and sixth control in this menu — the load-bearing-facts
+                    constraint on this plan is that the menu's control count
+                    does not change. The same two booleans still gate them
+                    exactly as before: a null systemResources.cpu or a disconnected WS
+                    renders no row at all, never a "—", never a "0" (that
+                    real-or-hidden contract is Phase 96's and this phase does
+                    not reopen it). Data typography role: 12px (text-xs),
+                    JetBrains Mono (font-mono), font-semibold, tabular-nums —
+                    supersedes their prior font-bold (700), outside this
+                    phase's two-weight budget. */}
+                {(showSys || showLat) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="flex flex-col gap-1.5 font-normal">
+                      {showSys && (
+                        <span className="flex items-center gap-1.5 text-xs font-mono text-primary">
+                          <Cpu className="w-3 h-3 text-primary" />
+                          SYS:{" "}
+                          <span className="text-primary font-semibold tabular-nums">
+                            {Math.round(systemResources!.cpu!)}%
+                          </span>
+                        </span>
+                      )}
+                      {showLat && (
+                        <span className="flex items-center gap-1.5 text-xs font-mono text-primary">
+                          <Server className="w-3 h-3 text-primary" />
+                          LAT:{" "}
+                          <span className="text-primary font-semibold tabular-nums">
+                            {headerLatencyMs}ms
+                          </span>
+                        </span>
+                      )}
+                    </DropdownMenuLabel>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <UserMenu />
