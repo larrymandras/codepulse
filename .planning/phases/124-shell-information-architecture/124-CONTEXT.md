@@ -86,7 +86,8 @@ Horizon (SIGNAL-01, Phase 125). 124 builds the header the horizon will later att
   privacy shield, theme switcher, CRT toggle, ambient audio, user menu
   (`DashboardLayout.tsx:602-618`).
   **Stays visible:** brain badge, system chip, notification bell, E-STOP, `⋯`, user menu.
-  **Moves into `⋯`:** theme, privacy, ambient audio, CRT, help.
+  **Moves into `⋯`:** theme, privacy, ambient audio, CRT.
+  [Amended 2026-08-21, during Phase 124 UI-SPEC verification: "help" struck from the `⋯` list above. No Help control exists anywhere in the app today (`grep -niE "help|circlehelp" src/layouts/DashboardLayout.tsx` returns zero matches); building one is net-new UI outside a presentation-only regroup and is deferred pending its own scoping (what it opens -- a shortcuts sheet, docs, a tour -- is unanswered).]
   Rationale: active brain and unread alerts are live state worth a glance, and the user menu is
   the Settings entry point that D-04 just declined to move into the nav. Rejected: the strict
   sketch reading (chip + E-STOP + `⋯` only), which buries all three one click deep; and folding

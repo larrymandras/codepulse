@@ -50,16 +50,23 @@ Declared values (must be multiples of 4):
 Exceptions (all locked upstream, not introduced by this phase):
 - **Command bar max-width 420px** (sketch §7) — not a multiple of 4/8. This is design law from the
   approved sketch, not a new deviation; carry it verbatim.
-- **Sidebar width 232px** (SHELL-02, `DashboardLayout.test.tsx:194`'s target value) — is a clean
-  multiple of 8 (29 × 8), no exception needed, noted only because it changes from today's 240px.
-- **E-Stop `min-width: 96px`** (sketch §7) — clean multiple of 8, already implemented as
-  `shrink-0` + `whitespace-nowrap` at `EStopButton.tsx:98` (no explicit `min-width` utility present
+- **Sidebar width 232px** (SHELL-02, `src/layouts/__tests__/DashboardLayout.test.tsx:194`'s target
+  value) — is a clean multiple of 8 (29 × 8), no exception needed, noted only because it changes
+  from today's 240px.
+- **E-Stop `min-width: 96px`** (sketch §7) — clean multiple of 8. `shrink-0` is already present at
+  `EStopButton.tsx:98` and `whitespace-nowrap` at `:101` (no explicit `min-width` utility exists
   today; the planner should verify 96px is actually reached at the narrowest viewport rather than
-  assuming the existing `shrink-0` guarantees it — see Header Contract).
-- Icon-only controls (hamburger, `⋯` trigger, rail-collapse toggle) should hit at least a 32×32px
-  hit area (already the case for existing `p-1.5` icon buttons in this file) — flagged because
-  WCAG 2.2's 24×24px minimum target size is a carry-forward accessibility concern from 122/123, not
-  a new requirement invented here.
+  assuming these two utilities guarantee it — see Header Contract).
+- **Icon-only control hit areas — correction, not an inherited property.** This document originally
+  claimed 32×32px was "already the case" for icon buttons in this file, citing `p-1.5`. That citation
+  was wrong: the only `p-1.5` button in `DashboardLayout.tsx` (`:338`, the CRT toggle) is not
+  icon-only — it carries a visible "CRT" text label, so it isn't a hit-area example either way. The
+  two real icon-only controls measure **24×24px**: the hamburger (`:554-560`, `p-1` + `h-4 w-4` icon
+  = 4+16+4) and the mobile close-X (`:516-522`, same `p-1` + `h-4 w-4` shape). That clears WCAG 2.2's
+  24×24px minimum target size with zero margin — it does **not** meet a 32×32px target. This phase
+  **should** move icon-only controls (the hamburger, the close-X, and the new `⋯` trigger) to a
+  32×32px hit area, but the planner must treat that as a real check to perform against all three,
+  not a property to inherit from existing code.
 
 ---
 
@@ -68,38 +75,60 @@ Exceptions (all locked upstream, not introduced by this phase):
 | Role | Size | Weight | Line Height | Font |
 |------|------|--------|-------------|------|
 | Body | 14px (`text-sm`) | 400 | 1.5 | Geist |
-| Label (sidebar nav item) | 13px | 500 | 1.4 | Geist, **sentence case** |
-| Eyebrow (domain group header) | 11px | 700 | 1.2 | JetBrains Mono, **uppercase**, `letter-spacing: 0.08em` |
+| Label (sidebar nav item) | 13px | 400 | 1.4 | Geist, **sentence case** |
+| Eyebrow (domain group header) | 11px | 600 | 1.2 | JetBrains Mono, **uppercase**, `letter-spacing: 0.08em` |
 | Heading (breadcrumb active segment) | 14px | 600 | 1.3 | Geist |
-| Data (SYS/LAT figures, badge counts) | 12px (`text-xs`) | 700 (`font-bold`) | 1.2 | JetBrains Mono, `tabular-nums` |
+| Data (SYS/LAT figures, badge counts) | 12px (`text-xs`) | 600 (`font-semibold`) | 1.2 | JetBrains Mono, `tabular-nums` |
 | Display | not used | — | — | — (Phase 125's 40px hero numerals; out of scope here) |
+
+**Weight budget: exactly two weights, 400 and 600.** This is a correction from this document's
+first draft, which declared four weights (400/500/600/700) — Phase 124's own invention, since the
+sketch findings pin no weight for any role this phase uses
+(`references/shell-and-dashboard.md:15-19` names sizes and roles only; the one weight it does pin,
+300 for the 40px hero numeral, belongs to Phase 125's out-of-scope Display role). The user ruled:
+collapse to 400 + 600.
+
+**Consequence: the nav Label has no weight step over Body (both 400).** An active nav item is
+distinguished from an inactive one by the **2px `--primary` left rail + 6% tint background**
+(D-14, and the "Active item styling" entry in the Sidebar Contract below) — **not** by weight. Do
+not reach for `font-medium` on the active item to recover a distinction the table no longer has;
+the rail and tint already carry it.
 
 **This table supersedes two live patterns at `DashboardLayout.tsx`, per pre-validated sketch
 design law, not a new call:**
 - `NavGroup`'s nav-item label (`DashboardLayout.tsx:109`, currently `text-sm font-mono
-  tracking-wider`) → sentence-case Geist per sketch §3 ("Geist sentence case for ALL UI
-  labels/nav/buttons — mono removed from chrome") and §8 ("sentence-case 13px items"). This is a
+  tracking-wider`) → sentence-case Geist, weight 400, per sketch §3 ("Geist sentence case for ALL
+  UI labels/nav/buttons — mono removed from chrome") and §8 ("sentence-case 13px items"). This is a
   direct instance of the kill list's "uppercase mono nav labels" entry.
 - The domain group header (`DashboardLayout.tsx:91`, currently `text-xs uppercase tracking-widest
-  text-primary font-mono font-bold` **plus** a `drop-shadow(...)` text-glow) → the eyebrow role
-  above, colored `--muted-foreground` (not `--primary`), **with the drop-shadow glow removed**.
-  Rationale: design law reserves exactly one uppercase style (the eyebrow) and colors it dim, not
-  accent — cyan's usage budget is cut ~80% and is "never wallpaper" (design_direction), and a glow
-  on every one of 4 always-visible group headers is the same shape as the kill list's "per-nav-item
-  glow" and "nav glow" entries, just applied to the header row instead of the item row. This is a
-  natural consequence of SHELL-02 rewriting `navGroups` rendering in this phase, not scope creep.
+  text-primary font-mono font-bold` **plus** a `drop-shadow(...)` text-glow — this citation
+  describes the code as it exists today, unmodified by this phase yet) → the eyebrow role above
+  (weight 600, i.e. `font-semibold` not `font-bold`), colored `--muted-foreground` (not
+  `--primary`), **with the drop-shadow glow removed**. Rationale: design law reserves exactly one
+  uppercase style (the eyebrow) and colors it dim, not accent — cyan's usage budget is cut ~80% and
+  is "never wallpaper" (design_direction), and a glow on every one of 4 always-visible group headers
+  is the same shape as the kill list's "per-nav-item glow" and "nav glow" entries, just applied to
+  the header row instead of the item row. This is a natural consequence of SHELL-02 rewriting
+  `navGroups` rendering in this phase, not scope creep.
 
 **Exception, explicitly locked, not touched by the table above:** E-Stop's label keeps **mono
 type** (`specifics` in `124-CONTEXT.md`: "E-STOP keeps mono type... never wraps"). This is a
-deliberate carve-out from "mono removed from chrome" for exactly this one control.
+deliberate carve-out from "mono removed from chrome" for exactly this one control. E-Stop's own
+weight (`font-medium`, `EStopButton.tsx:98`) is pre-existing, unmodified by this phase, and outside
+this table's two-weight budget by construction — the budget governs *new* chrome this phase builds,
+not an unmodified pre-existing control.
 
 **No new typography tokens are required.** `--ink` / `--ink-dim` / `--ink-data` from the sketch's
 source theme file (`sources/themes/default.css`) are **not yet ported** into the live
 `src/index.css` — verified by reading the file in full, no `--ink*` custom property exists in any
-theme block. This phase does not need them: `--foreground` (heading/active), `--muted-foreground`
-(eyebrow/dim), and `--primary` (data figures already use `text-primary font-bold` at
-`DashboardLayout.tsx:575/581`, unchanged) cover every role this phase's chrome touches. Do not
-port `--ink-*` speculatively here — if Phase 125's Pulse ECG hero needs them, that phase names them.
+theme block. This phase does not need them: `--foreground` (heading/active) and `--muted-foreground`
+(eyebrow/dim) cover the color roles this phase's chrome touches. `--primary` also already carries the
+SYS/LAT figures' color at `DashboardLayout.tsx:575/581` (unchanged by this phase) — that citation is
+about **color**, not weight: those spans are currently `font-bold` (700) in the live code, which this
+phase's Data role (600/`font-semibold`) supersedes only if/when SYS/LAT relocates into a
+Data-role-styled slot per the Header Contract below; until relocated, their existing weight is simply
+untouched, not "kept at 700 deliberately". Do not port `--ink-*` speculatively here — if Phase 125's
+Pulse ECG hero needs them, that phase names them.
 
 ---
 
@@ -214,12 +243,22 @@ E-Stop first (right-to-left: the most drastic action closest to the edge is a co
 convention, and it avoids reordering more of the existing JSX than necessary) — flagged as the
 planner's call, not re-locking an already-decided item.
 
-**Moves into `⋯` (D-07):** theme switcher, privacy shield, ambient audio, CRT toggle, help. Use
-`DropdownMenu` (`src/components/ui/dropdown-menu.tsx`) — icon-only trigger (Lucide `MoreHorizontal`
-or `Ellipsis`), `aria-label="More options"` (icon-only, no visible text). Each existing control
-(`ThemeSwitcher`, `PrivacyShield`, `AmbientAudioPlayer`, `CrtToggle`) is composed *inside* a
-`DropdownMenuItem`/`DropdownMenuContent`, not reimplemented — they keep their own internal state and
-`localStorage` persistence unchanged; only their mount location moves.
+**Moves into `⋯` (D-07, amended 2026-08-21):** theme switcher, privacy shield, ambient audio, CRT
+toggle. **"Help" is deferred, not included.** The original D-07 text and sketch §7
+(`references/shell-and-dashboard.md:27`, "⋯ overflow (theme/privacy/audio/CRT/help live there)")
+both named a Help entry — but no Help control exists anywhere in the app today (`grep -niE
+"help|circlehelp" src/layouts/DashboardLayout.tsx` returns zero matches; control: the same search
+for `ThemeSwitcher` returns 4 matches in the same file, so the probe discriminates). Building one is
+net-new UI outside a presentation-only regroup, and its shape (a shortcuts sheet, a docs link, a
+guided tour) is unscoped. The user ruled to defer it pending its own scoping; `124-CONTEXT.md` D-07
+is amended in place to record this. This phase's `⋯` menu therefore holds exactly the four existing
+controls named above.
+
+Use `DropdownMenu` (`src/components/ui/dropdown-menu.tsx`) — icon-only trigger (Lucide
+`MoreHorizontal` or `Ellipsis`), `aria-label="More options"` (icon-only, no visible text). Each
+existing control (`ThemeSwitcher`, `PrivacyShield`, `AmbientAudioPlayer`, `CrtToggle`) is composed
+*inside* a `DropdownMenuItem`/`DropdownMenuContent`, not reimplemented — they keep their own
+internal state and `localStorage` persistence unchanged; only their mount location moves.
 
 **System chip (new, D-11) — composes `StatusBadge`, does not hand-roll a new component:**
 
@@ -244,8 +283,9 @@ occupies its former space.
 **Relocated, not deleted (D-08):** SYS/LAT (`:570-585`). This document defers their exact new home
 to the plan per `124-CONTEXT.md`'s own Deferred Ideas section (`⋯` menu vs. Dashboard instrument
 cluster) — both are compatible with this contract: if placed in `⋯`, render as a `DropdownMenuItem`
-pair using the existing `text-xs font-mono` data styling (Typography table's "Data" role); if
-deferred to Phase 125's Dashboard work, this phase's `⋯` menu simply doesn't gain them.
+pair using the existing `text-xs font-mono` data styling (Typography table's "Data" role — 12px,
+`font-semibold`); if deferred to Phase 125's Dashboard work, this phase's `⋯` menu simply doesn't
+gain them.
 
 ### Header height — MEASUREMENT-GATED, not a fixed number (D-06)
 
@@ -308,6 +348,8 @@ unchanged — POLISH-06's finding about *where* the clip happens is independent 
   above), per the sketch's "Active nav rail" CSS pattern. This supersedes the current `is-active
   text-primary bg-primary/10` class (`:111`) only insofar as the *rail* is new geometry (a
   `::before` pseudo-element per the sketch pattern) — the color source (`--primary`) is unchanged.
+  Per the Typography section above, this rail + tint is now the *only* signal distinguishing an
+  active item from an inactive one — weight is identical (400) on both.
 
 ### Count badges (D-10, D-12)
 
@@ -357,9 +399,10 @@ param routes named in D-16.
 
 ### Width assertion (D-17)
 
-`DashboardLayout.test.tsx:194`'s `test.todo("sidebar width is 240px (w-60) when expanded")` becomes
-a real assertion at **232px**. Separately (not the same check): re-run POLISH-06's 900px
-Settings/sidebar geometry probe at the new 232px width rather than inferring 8px narrower is safe.
+`src/layouts/__tests__/DashboardLayout.test.tsx:194`'s `test.todo("sidebar width is 240px (w-60)
+when expanded")` becomes a real assertion at **232px**. Separately (not the same check): re-run
+POLISH-06's 900px Settings/sidebar geometry probe at the new 232px width rather than inferring 8px
+narrower is safe.
 
 ---
 
@@ -401,6 +444,9 @@ pair, a color-only status signal, or an unlabelled icon-only control.
   underneath it.
 - **Every icon-only header/sidebar control** (hamburger, `⋯`, rail toggle, avatar) already carries
   `aria-label` in the current code — this phase must not add a new icon-only control without one.
+- **Icon-only hit areas** — per the Spacing Scale correction above, the hamburger and mobile close-X
+  measure 24×24px today, and the new `⋯` trigger should target 32×32px; verify all three rather than
+  assuming any of them already clears it.
 - **Criterion routes must stay at 0 axe violations** (`123-CLOSEOUT.md`'s 20-cell criterion
   matrix) — this phase's chrome renders on every route, so a regression here is app-wide, not
   page-scoped. The a11y-02 widened-scan backlog (96 objects, 42 routes) is explicitly out of this
@@ -451,6 +497,9 @@ orchestrator can confirm or override rather than silently inheriting an unstated
    six exact strings, leaving that to the plan since it depends on what each detail record's
    display name field actually is (not verified here — would require reading each of the six
    page components).
+6. **Help entry in `⋯` is deferred, not built** — see the amended D-07 note in the Header Contract
+   above. No default to proceed on here since there is nothing to build; recorded so a future phase
+   doesn't silently reinvent the scoping question (what it opens — sheet, docs, tour — unanswered).
 
 ---
 
