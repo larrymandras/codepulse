@@ -219,6 +219,41 @@ describe("AvatarAura — real-browser draw cadence (LIP-01 guard)", () => {
       // authoring time), tracking only whether `level` itself is varying.
       expect((rxMax - rxMin) / rxMin).toBeGreaterThan(0.05);
       expect((ryMax - ryMin) / ryMin).toBeGreaterThan(0.05);
+
+      // ── The two assertions above are NECESSARY BUT NOT SUFFICIENT, and were
+      // vacuous on their own until 2026-08-21. Their original comment claimed
+      // the relative margin "cancels `base` entirely" — it does not. It cancels
+      // base only if base is CONSTANT, and in this browser-mode harness the
+      // container resizes mid-run, so both spreads are satisfied by base drift
+      // with `level` hard-frozen. Measured, with `const level = smoothed`
+      // mutated to `const level = 0.5`:
+      //
+      //   frozen : rxSpread 1.4069767441860466, rySpread 1.4069767441860468,
+      //            3 distinct radii across 35 draws  -> STILL PASSED
+      //   healthy: rxSpread 2.0240, rySpread 2.3680,
+      //            36 distinct radii across 36 draws
+      //
+      // Two signals separate those columns, and both are asserted below.
+      //
+      // (1) ry/rx is base-free FOR REAL. Since
+      //         rx = base * 0.16 * (1 + level * 0.6)
+      //         ry = base * 0.08 * (1 + level * 1.1)
+      //     the ratio is 0.5 * (1 + level*1.1) / (1 + level*0.6) — `base`
+      //     divides out algebraically, and the ratio is monotonic in `level`.
+      //     A resize therefore cannot move it; only `level` can. With level
+      //     frozen this spread is exactly 0.
+      const ratios = mouthCalls.map(
+        (args) => (args[3] as number) / (args[2] as number),
+      );
+      const ratioMin = Math.min(...ratios);
+      const ratioMax = Math.max(...ratios);
+      expect((ratioMax - ratioMin) / ratioMin).toBeGreaterThan(0.02);
+
+      // (2) A frozen `level` collapses the radii onto the handful of discrete
+      //     sizes the container passed through (3 of 35 when measured); a live
+      //     one produces a fresh value essentially every draw (36 of 36).
+      //     Half the draws is far above the frozen case and far below healthy.
+      expect(new Set(rys).size).toBeGreaterThan(mouthCalls.length / 2);
     } finally {
       ellipseSpy.mockRestore();
     }
