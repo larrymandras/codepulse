@@ -95,7 +95,7 @@ export function EStopButton() {
         disabled={!isConnected}
         title={isConnected ? "Emergency Stop — halt all agents" : "Not connected to Ástríðr"}
         aria-label="Emergency Stop"
-        className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+        className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 min-w-24"
       >
         <OctagonX className="h-4 w-4 shrink-0" />
         <span className="whitespace-nowrap">E-Stop</span>
