@@ -38,7 +38,7 @@ progress:
   # `ls .planning/phases/*/[0-9]*-[0-9][0-9]-SUMMARY.md | wc -l` = 7 (120-01..120-07).
   # completed_phases STAYS 0 — all seven plans executed, but Phase 120 is not verified,
   # so the phase is not complete. percent is by PHASE (0 of 6), not by plan.
-  total_phases: 6
+  total_phases: 7
   # completed_phases 3 -> 4 and percent 50 -> 67 RE-DERIVED FROM ROADMAP GROUND TRUTH
   # 2026-08-20 at Phase 123's close, not incremented: milestone v15.0 phases marked
   # Complete = 120, 121, 122, 123 = 4 of 6; percent is by PHASE (4/6 = 67), never by plan.
@@ -156,7 +156,7 @@ progress:
   # stripping this whole counter-comment history and the giant stopped_at narrative down to a bare
   # 6-line replacement. Reverted via `git checkout HEAD -- .planning/STATE.md` (empty diff
   # confirmed) and this counter was moved by hand instead.
-  percent: 83
+  percent: 71
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -279,6 +279,7 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 
 ### Roadmap Evolution
 
+- Phase 126 added (2026-08-21): Page Body and Convex Read Defect Sweep -- the six defects Phase 124's shell surfaced but did not cause, plus the geometry-spec evidence defect found while verifying it. Scope is the seven todos filed at ec48907e. NOTE: `gsd-sdk query phase.add` wrote ONLY the detail section -- no milestone checklist line and no Progress-table row -- so both were added by hand. That exact omission is the documented root cause of this project's checklist-derived counter drift, so it is recorded rather than quietly patched. Judged by `git diff` (34 insertions, 0 deletions, progress rows 6 -> 7), never by the verb's payload, which reported only phase_number/slug/directory and said nothing about what it had failed to write.
 - Phase 96 added (2026-07-13): UI deep-dive cleanup — IA restructure (dissolve CONSOLE cluster), command palette nav drift, fake header telemetry, hardcoded trust signals, orphaned pages, header/layout consistency. Full audit findings in `.planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/FINDINGS.md`.
 - v11.0 roadmap created (2026-07-17): 4 phases (97-100) derived from the 22 v11.0 requirements. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is renumbered to Phase 98 — the daemon-executor + real-intake foundation (INTAKE-01..04, DAEMON-01/03/04) was sequenced first as Phase 97 per the dependency analysis (nothing mutates the host without the daemon executor existing). Phase 99 (Launch/Dispatch) is independent of the daemon work (rides existing chat/Forge/Ástríðr channels) and can run in parallel with 97/98. Phase 100 (Control-Surface UX) depends on both 98 and 99 and is sequenced last.
 - Phase 102 added: Address tech debt: reminders dead code + astridr comment cleanup
