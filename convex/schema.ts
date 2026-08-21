@@ -290,7 +290,12 @@ export default defineSchema({
     updatedAt: v.float64(),
   })
     .index("by_containerId", ["containerId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    // pollHealth reads only rows already past its stale threshold. Without this
+    // index it scanned the whole table, which put every freshly-reporting row
+    // into its OCC read set and let any concurrent recordStatus write fail the
+    // cron (see convex/docker.ts pollHealth and convex/crons.ts).
+    .index("by_updatedAt", ["updatedAt"]),
 
   supabaseHealth: defineTable({
     projectRef: v.optional(v.string()),

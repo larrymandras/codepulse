@@ -90,21 +90,47 @@ export const reconcile = mutation({
   },
 });
 
+/**
+ * Ceiling on rows pollHealth pulls in one transaction.
+ *
+ * This bounds the write set, not the read set — the by_updatedAt range already
+ * keeps the read set to genuinely-stale rows (normally zero). It exists so a
+ * large backlog of long-dead containers can never build a single oversized
+ * transaction. Truncation is reported in the return value rather than silently
+ * swallowed; a persistently `truncated: true` result means the backlog is
+ * growing faster than one run can drain it.
+ */
+export const POLL_HEALTH_MAX_ROWS = 200;
+
 export const pollHealth = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now() / 1000;
     const staleThreshold = now - 300; // 5 minutes
+    const removeThreshold = now - 86400; // 24 hours
 
-    // Mark containers as "exited" if they haven't been updated recently
+    // Read ONLY rows already past the stale threshold, via the by_updatedAt
+    // index range.
+    //
+    // This previously did `.order("desc").take(50)`, an unindexed scan that
+    // pulled the ENTIRE table into this mutation's OCC read set — including
+    // every freshly-reporting container, i.e. exactly the rows `recordStatus`
+    // rewrites on each poll cycle. A single concurrent status write therefore
+    // invalidated the whole scan, the mutation failed "on every subsequent
+    // retry", and the failed cron then retried on its own backoff — the
+    // ingest-starving retry storm documented in convex/crons.ts (2026-07-14).
+    // Measured live 2026-08-21: 37 cron System errors + 85 OCC conflicts in 90
+    // minutes against a 19-row table.
+    //
+    // removeThreshold (24h ago) is strictly earlier than staleThreshold (5min
+    // ago), so this single range covers both branches below.
     const containers = await ctx.db
       .query("dockerContainers")
-      .order("desc")
-      .take(50);
+      .withIndex("by_updatedAt", (q) => q.lt("updatedAt", staleThreshold))
+      .take(POLL_HEALTH_MAX_ROWS);
 
     let staleCount = 0;
     let removedCount = 0;
-    const removeThreshold = now - 86400; // 24 hours
 
     for (const c of containers) {
       if (c.updatedAt < staleThreshold && c.status === "running") {
@@ -123,6 +149,12 @@ export const pollHealth = internalMutation({
       }
     }
 
-    return { status: "ok", checked: containers.length, markedStale: staleCount, removed: removedCount };
+    return {
+      status: "ok",
+      checked: containers.length,
+      markedStale: staleCount,
+      removed: removedCount,
+      truncated: containers.length === POLL_HEALTH_MAX_ROWS,
+    };
   },
 });
