@@ -116,21 +116,15 @@ function NavGroup({
             onClick={onNavClick}
             aria-label={collapsed ? item.label : undefined}
             className={({ isActive }) =>
-              `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
+              `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-[13px] leading-[1.4] font-normal transition-all relative overflow-hidden ${
                 isActive
-                  ? "is-active text-primary bg-primary/10"
+                  ? "is-active text-foreground bg-[color-mix(in_oklab,var(--primary)_6%,transparent)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[2px] before:bg-(--primary)"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`
             }
           >
-            <IconComponent
-              className="h-4 w-4 shrink-0 transition-all duration-slow ease-house group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]"
-            />
-            {!collapsed && (
-              <span className="group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]">
-                {item.label}
-              </span>
-            )}
+            <IconComponent className="h-4 w-4 shrink-0 transition-all duration-slow ease-house" />
+            {!collapsed && <span>{item.label}</span>}
           </NavLink>
         );
         if (collapsed) {
@@ -166,8 +160,7 @@ function NavGroup({
     <div className="mb-2">
       <Collapsible open={open} onOpenChange={onOpenChange}>
         <CollapsibleTrigger className="group w-full flex items-center justify-between px-3 pt-4 pb-2">
-          <span className="flex items-center gap-2 text-xs uppercase tracking-widest text-primary font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]">
-            <span className="w-1 h-1 rounded-full bg-primary/50" />
+          <span className="text-[11px] font-mono font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             {label}
           </span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-normal ease-house group-data-[state=closed]:-rotate-90" />
