@@ -19,7 +19,7 @@
  */
 
 import { describe, test, it, expect, vi, beforeAll, beforeEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 
 // Radix Collapsible measures internally and jsdom doesn't provide
@@ -116,12 +116,32 @@ function renderLayout(initialEntries: string[] = ["/"]) {
   );
 }
 
+// Radix's DropdownMenuTrigger opens on pointerdown (not click) — same
+// convention as RunTargetChooser.test.tsx / SkillLifecycleMenu.test.tsx.
+// Hoisted to module scope (Phase 124 Plan 09) so both the header-telemetry
+// describe block below and the header-overflow-menu describe block further
+// down share one definition — SYS/LAT now live inside this same menu, so
+// the telemetry tests need it too.
+function openOverflowMenu() {
+  fireEvent.pointerDown(screen.getByLabelText("More options"), {
+    button: 0,
+    ctrlKey: false,
+  });
+}
+
 describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)", () => {
   beforeEach(() => {
     vi.mocked(useQuery).mockReset();
     vi.mocked(useAstridrWS).mockReset();
   });
 
+  // Phase 124 Plan 09: SYS/LAT moved from the always-visible header row into
+  // the closed-by-default "..." overflow menu (D-08). "Not in the document"
+  // is trivially true for content sitting inside a CLOSED menu regardless of
+  // whether the real-or-hidden gate works — so every case here now opens the
+  // menu first, or a broken gate and a working one would look identical.
+  // Do not "simplify" this open step away; see the showSys-gate-removed
+  // mutation proof in 124-09-SUMMARY.md for why it is required, not decor.
   it("hides SYS when systemResources.current returns null", () => {
     vi.mocked(useQuery).mockReturnValue(null);
     vi.mocked(useAstridrWS).mockReturnValue({
@@ -133,6 +153,7 @@ describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)"
     });
 
     renderLayout();
+    openOverflowMenu();
 
     expect(screen.queryByText(/SYS:/)).not.toBeInTheDocument();
   });
@@ -151,6 +172,7 @@ describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)"
     });
 
     renderLayout();
+    openOverflowMenu();
 
     expect(screen.getByText(/SYS:/)).toBeInTheDocument();
     expect(screen.getByText("43%")).toBeInTheDocument();
@@ -167,6 +189,7 @@ describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)"
     });
 
     renderLayout();
+    openOverflowMenu();
 
     expect(screen.queryByText(/LAT:/)).not.toBeInTheDocument();
   });
@@ -525,15 +548,6 @@ describe("DashboardLayout header overflow menu (D-07, Phase 124 Plan 07)", () =>
     });
   });
 
-  // Radix's DropdownMenuTrigger opens on pointerdown (not click) — same
-  // convention as RunTargetChooser.test.tsx / SkillLifecycleMenu.test.tsx.
-  function openOverflowMenu() {
-    fireEvent.pointerDown(screen.getByLabelText("More options"), {
-      button: 0,
-      ctrlKey: false,
-    });
-  }
-
   it('the "More options" trigger renders with an accessible name on every render', () => {
     renderLayout();
     expect(screen.getByLabelText("More options")).toBeInTheDocument();
@@ -576,5 +590,60 @@ describe("DashboardLayout header overflow menu (D-07, Phase 124 Plan 07)", () =>
     // can't render here.
     expect(screen.getByLabelText("More options")).toBeInTheDocument();
     expect(screen.getByText("Active Brain failed to load")).toBeInTheDocument();
+  });
+});
+
+describe("DashboardLayout zone 1 breadcrumb (D-16, Phase 124 Plan 09)", () => {
+  beforeEach(() => {
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useAstridrWS).mockReset();
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+  });
+
+  it('mounted at /alerts, renders "Observe / Alerts" with the last segment carrying aria-current="page"', () => {
+    renderLayout(["/alerts"]);
+    const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(nav).toHaveTextContent("Observe");
+    expect(nav).toHaveTextContent("Alerts");
+    const current = within(nav).getByText("Alerts");
+    expect(current).toHaveAttribute("aria-current", "page");
+    // The preceding ("Observe") segment must NOT carry aria-current — only
+    // the trail's last segment does.
+    expect(within(nav).getByText("Observe")).not.toHaveAttribute("aria-current");
+  });
+
+  it('mounted at /settings, renders the single segment "Settings" (no domain — D-04)', () => {
+    renderLayout(["/settings"]);
+    const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(nav).toHaveTextContent("Settings");
+    const current = within(nav).getByText("Settings");
+    expect(current).toHaveAttribute("aria-current", "page");
+  });
+
+  it("mounted at an unmapped path, no breadcrumb <nav> is in the document — never a guessed segment", () => {
+    renderLayout(["/this-route-does-not-exist-anywhere"]);
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).not.toBeInTheDocument();
+  });
+
+  it("the breadcrumb changes when navigating between mounted routes, not merely renders once", () => {
+    renderLayout(["/alerts"]);
+    expect(screen.getByRole("navigation", { name: "Breadcrumb" })).toHaveTextContent("Alerts");
+
+    // Click the footer-pinned Settings NavLink (real navigation, not a
+    // second render) to move from /alerts to /settings within one mount.
+    const settingsLinks = screen.getAllByRole("link", { name: "Settings" });
+    fireEvent.click(settingsLinks[0]);
+
+    const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(nav).toHaveTextContent("Settings");
+    expect(nav).not.toHaveTextContent("Alerts");
+    expect(nav).not.toHaveTextContent("Observe");
   });
 });
