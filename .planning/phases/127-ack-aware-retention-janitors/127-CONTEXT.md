@@ -101,6 +101,27 @@ already auto-acks stale alerts at 24h while exempting `severity === "critical"`.
 This is the same shape with longer windows and per-table carve-outs. Unlike
 `alerts` — which is `COVERAGE_KEEP_FOREVER` — these two tables then delete.
 
+**Copy its SHAPE, not its READ.** `alerts.ts:171-174` does an unbounded
+`.collect()` over the unacknowledged set. That is tolerable there only because
+`alerts` is 102 rows and is itself bounded by that same auto-ack. Replicating it
+here would reintroduce the unbounded-read defect class *inside the very mechanism
+built to prevent unbounded growth* — on the two tables where unbounded growth is
+the problem. Both auto-close steps MUST be bounded `.take(n)` and cursor-seeked,
+like `pruneTrashBatchHandler`. Fixing `alerts.ts` itself is out of scope.
+
+Why auto-close-then-delete rather than deleting by age directly, even for
+`card`/`notification` where nothing external reads the unacked set:
+1. One delete mechanism keyed on one closed-at field, matching the D-08 template.
+   Direct age deletion needs a SECOND index and a SECOND cursor shape (a range on
+   `createdAt` with an inverted not-closed condition), doubling what must be got
+   right and verified.
+2. It buys an audit/undo window — an auto-closed but not-yet-deleted row stays
+   queryable, so a badly chosen M is visible and reversible before data is gone.
+3. It is the house style: make the machine action indistinguishable from a human
+   one, then let normal downstream logic handle it.
+
+The cost of choosing this is real and is disclosed in D-05.
+
 ### D-03: `inbox` carve-out is `itemType === "held"` (CORRECTED — this is the one that matters)
 
 `held` rows are consumed EXTERNALLY. `convex/inbox.ts` `listHeldUnackedHandler`
@@ -118,10 +139,36 @@ problem is untouched by the coupling.
 Additional carve-out: `priority === "money"` (138 unacked rows) is never
 auto-acked, mirroring `alerts.ts:178`'s `severity !== "critical"`.
 
+**The two carve-outs are NOT symmetric, and the difference is load-bearing:**
+
+| | auto-close step | delete step |
+|---|---|---|
+| `itemType === "held"` | excluded | **excluded** — never touched in either direction |
+| `priority === "money"` | excluded | **NOT excluded** |
+
+`money` blocks only *silent* closure. Once a human genuinely acks a money item it
+is ordinary closed data and ages out on the normal grace window. `held` is
+excluded from both steps — even a held row a human acks is left alone, because
+this phase must not partially touch a table whose read side another phase owns
+(D-11).
+
+Consequence, stated plainly: a `money` row that a human never acks stays forever.
+That is the same accepted tradeoff `alerts.ts` already makes for `critical`.
+
 NOT carved out: `itemType === "alert"`. It appears only in a stale union comment
 (`inbox.ts:44`, `schema.ts:2106`) and has zero live rows. `itemType` is
 `v.string()`, so that union is a comment, not a validator — live data also
 contains `signal` (26 rows), which the comment omits.
+
+`signal` needs no special case, and is in fact the clearest justification for
+age-based auto-ack existing at all. `convex/inbox.ts:64-74` documents that
+Ástríðr writes MACHINE-only signal rows (emitter `watch_pulse_grace`) that exist
+purely to be counted, and that **"Nothing ever acks them — the producing module
+is read-only by design"**, so they accumulated as permanently-unread
+notifications. Phase 188.5 WR-04 let such a row be *born* read by honouring a
+caller-supplied `ackedAt`; the 26 unacked signal rows measured today either
+predate that change or come from a caller not supplying it. Either way they fall
+into the ordinary non-held, non-money auto-ack path correctly.
 
 ### D-04: `ideationFindings` carve-out is `severity` in {critical, high}
 
@@ -136,8 +183,19 @@ auto-ack is on `inbox`.
 
 | Table | Auto-close M | Grace G | Worst case (non-carve-out) |
 |---|---|---|---|
-| `inbox` | 30d unacked -> auto-ack | 30d after ack | 60d |
+| `inbox` | 30d unacked -> auto-ack | 14d after ack | 44d |
 | `ideationFindings` | 180d open -> auto-dismiss | 90d after dismiss | 270d |
+
+**Why `inbox`'s grace is 14d and not 30d — a disclosed UX cost.**
+`convex/inbox.ts:64-74` derives `read: row.ackedAt != null`. So an auto-acked
+card **displays as read for the whole grace window before it is deleted** — it
+tells the operator they saw something they did not. Direct deletion would not lie
+this way (a vanished card at least makes no claim), but it would need a second
+index and a second cursor shape (see D-02). 14 days keeps the lie short while
+preserving the audit/undo window that makes a badly-chosen M visible and
+reversible before data is gone. If that tradeoff is unacceptable, the alternative
+is direct age-based deletion for `card`/`notification`/`signal` and it should be
+decided at planning time, not discovered in review.
 
 Asymmetry rationale: `inbox` is operational noise at 100/day; a stale unacked
 card is abandoned within a month (`inbox.ts:231-244`'s `dismissAllCards` exists
@@ -298,42 +356,101 @@ apparent `priority: "card"` data-quality defect was a PARSING artifact — 28 of
 Restricted to the 1,972 cleanly-parsed rows every priority is a valid enum
 member. **There is no data-quality defect; do not write one into the plan.**
 
+### Revision on a second design pass (same day)
+
+After receiving the measurements, Codex superseded its own first answer. The
+correction it made to itself is the one worth recording: **the mechanism cannot
+be keyed on `ackedAt`/`dismissedAt` as the primary gate, because that field is
+almost never set.** Expiry is keyed on `createdAt` age; the closed-at field is
+only the delete step's cursor. Four things came out of that pass and are folded
+in above:
+
+1. **The two guarantees have different strengths** (Verification A vs B). The
+   absent-field property is enforced by the index and survives any future edit;
+   the carve-outs are ordinary predicates with no backstop. Testing both the same
+   way would look thorough and prove half of what it claims. This is the single
+   most valuable thing either pass produced.
+2. **The carve-outs are asymmetric** — `money` blocks silent closure only, `held`
+   blocks both steps (D-03 table).
+3. **Grace on `inbox` cut 30d -> 14d**, once the `read: row.ackedAt != null`
+   derivation made the "an auto-acked card lies about being read" cost concrete
+   (D-05).
+4. **Copy the auto-ack shape from `alerts.ts`, not its unbounded `.collect()`**
+   (D-02).
+
+Both passes were checked against live code rather than accepted; every citation
+in this document was verified individually against the tree on 2026-08-21.
+
 ## Verification Criteria
 
 Modeled on `convex/media.test.ts:577-736`, which already establishes this repo's
 control-pairing convention for exactly this function shape.
 
-1. **The proof that matters most** — an open row, however old, is never deleted
-   in the same run that deletes a closed row of the same age. Seed one row closed
-   91 days ago (past G) and one created 91 days ago but never closed and not past
-   M+G; assert the first is deleted and the second survives IN THE SAME
-   INVOCATION.
-   **Control:** disable the auto-close step (or set M so large it cannot fire)
-   and confirm the SAME test then shows the never-closed row surviving where it
-   otherwise would not — if the assertion does not move, the test is not
-   exercising the boundary it claims to.
-2. **`held` is untouchable** — a `held` row older than M+G is neither auto-acked
-   nor deleted, paired with a same-age `card` row that IS, in the same batch.
-   This is the focus_digest regression guard and it is not optional.
-3. **Cursor advances on skip** — a batch in which EVERY row is carved out still
-   advances the cursor and does not reschedule with an unchanged one. Direct
-   regression test for `retentionCursor.ts:122-139`.
-4. **Carve-out discriminates** — a `money`/`critical` row older than M is not
-   auto-closed while a same-age `normal`/`medium` row is, in the same batch.
-   Proves the predicate discriminates rather than refusing everything.
-5. **Absent field is unreachable** — seed a row with `ackedAt`/`dismissedAt`
-   absent and confirm the delete range never matches it at any cursor value.
-   Write this BEFORE trusting D-06's "no backfill needed" claim.
-6. **Batch/reschedule bounds** — full batch reschedules with an advanced cursor;
-   short batch does not; ceiling reached does zero work. Adapt
-   `media.test.ts:636-713`.
-7. **Coverage gate green** with both tables moved and both crons registered
-   LIVE (not commented out). This is the last gate before the phase is closed.
-8. **First-run watch** — after deploy, observe the first backlog-draining run in
-   `docker logs convex-backend`, not just the cron's own success line. The
-   backend is single-node SQLite and mass tombstones have OOM-crash-looped it
-   before (`retention.ts:28-33`). An instrument that cannot see the failure mode
-   reports success right up until it doesn't.
+**The two safety guarantees in this phase have DIFFERENT STRENGTHS, so they need
+different proof shapes. Conflating them is the easiest way to ship a test suite
+that looks thorough and proves half of what it claims.**
+
+- The `ackedAt`/`dismissedAt`-absent guarantee is **STRUCTURAL**: the index range
+  never returns those rows. It survives a future edit that deletes every
+  post-query predicate in the file.
+- The `held`/`money`/`critical`/`high` carve-outs are **ORDINARY POST-QUERY
+  PREDICATES**. They have no database-level backstop, and a careless future edit
+  can silently remove them. Nothing would fail except a test written to catch it.
+
+### A. Structural guarantee — assert at the QUERY layer, not the outcome layer
+
+Seed a row with `ackedAt` absent. Call the delete step's query directly with a
+cursor/cutoff range that WOULD include it if `ackedAt` were `0`. Assert the **raw
+query result length is 0** — proving the database never returned it, rather than
+that something filtered it afterwards.
+**Control:** seed a second row with `ackedAt = 0` explicitly (not absent) under
+the same cutoff and assert it IS returned. Without this the range query could be
+returning empty unconditionally and the test would pass for the wrong reason.
+Write this BEFORE trusting D-06's "no backfill required" claim.
+
+### B. Predicate guarantees — require a real mutation-testing control
+
+Seed one `itemType="held"` and one `itemType="card"` row, both unacked,
+`createdAt` 400 days ago (past M and G). Run the chain to convergence. Assert the
+held row's `ackedAt` is STILL undefined AND the row still exists; the card row is
+gone.
+**Control that makes the test worth having:** delete the `itemType !== "held"`
+line in the handler and re-run the identical test — the held row must now ALSO be
+auto-acked and deleted. If removing the guard does not flip the outcome, the test
+is not exercising the exclusion and proves nothing. Same shape and same control
+requirement for `priority === "money"` and for `severity IN {critical, high}`.
+
+This is the focus_digest regression guard. It is not optional.
+
+### C. Cursor advances on skip
+
+A batch consisting ENTIRELY of excluded rows still advances the cursor and does
+not reschedule with an unchanged one — direct regression test for
+`retentionCursor.ts:122-139`. Note this is **not a rare edge case**: `held` alone
+is 2.7% of the unacked population, so skipped rows will appear in nearly every
+real batch. The test is load-bearing, not decorative.
+
+### D. Batch/reschedule bounds
+
+Full batch reschedules with an advanced cursor; short batch does not; ceiling
+reached does zero further work. Adapt `media.test.ts:636-713` near-verbatim.
+
+### E. Coverage gate green
+
+Both tables moved to `COVERAGE_BOUNDED_BY_CRON` and both crons registered LIVE
+(not commented out). Last gate before the phase is closed.
+
+### F. First-run watch
+
+Observe the first backlog-draining run in `docker logs convex-backend`, not just
+the cron's own success line. The backend is single-node SQLite and mass
+tombstones have OOM-crash-looped it before (`retention.ts:28-33`). An instrument
+that cannot see the failure mode reports success right up until it doesn't.
+
+**The backlog is known, not estimated** — it does not need a cold-start plan:
+`inbox` has roughly 1,651 unacked x ~0.973 non-held x ~0.93 non-money ≈ **2,130
+auto-ack-eligible rows**, about 11 batches at 200; `ideationFindings` has **≤470**,
+about 3 batches. Both drain inside a single nightly chain.
 
 ## Canonical References
 
