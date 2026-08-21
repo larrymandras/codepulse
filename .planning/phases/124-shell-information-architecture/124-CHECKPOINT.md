@@ -220,10 +220,129 @@ regression introduced by this phase's shell/sidebar rewrite.
 
 ## Task 2 — Operator verdict
 
-*(Not yet run. This section is appended by the operator's checkpoint pass, per the plan's Task 2
-instruction: their verbatim response, plus a disposition for every defect raised, recorded
-below — not paraphrased, not summarized away.)*
+The operator reviewed the running shell at `http://localhost:5181` and supplied four screenshots
+at 1080p-class widths: `/inbox` (sidebar Inbox badge 46), `/alerts` (Alert Rules Engine rows
+overlapping), `/automation` (three placeholder stat cards, twelve "Invalid expression" rows), and
+`/tool-galaxy` (a Convex error card).
+
+### Verbatim responses
+
+On checklist items 2-5:
+
+> "2-5 ok"
+
+On the /alerts page (screenshot supplied, Alert Rules Engine table circled):
+
+> "page still bunches up the text"
+
+On checklist item 7 (narrow-width resize pass):
+
+> "resize is fine"
+
+On the /automation and /tool-galaxy screenshots:
+
+> "don't understand why thing look broken"
+
+Overall impression:
+
+> "i think it looks better"
+
+### Checklist outcomes
+
+- **Item 2** (Sidebar: four domains, collapse persists across reload, survives rail collapse) —
+  **PASS.** Operator: "2-5 ok".
+- **Item 3** (Active item: rail + tint only, weight uniform; is it too subtle?) — **PASS.**
+  Operator: "2-5 ok". He did not call it too subtle.
+- **Item 4** (Badges: Inbox/Alerts only) — **PASS.** Operator: "2-5 ok". See D-4 below, found by
+  the orchestrator, not the operator.
+- **Item 5** (Header: breadcrumb, four-control menu, theme applies from inside it, no Help) —
+  **PASS.** Operator: "2-5 ok".
+- **Item 6** (System chip agrees with Alerts badge) — **PASS.** The `/alerts` screenshot shows
+  CRITICAL 0 / ERROR 0 / WARNING 0 / INFO 0, "No active alerts", the sidebar Alerts row carrying no
+  badge, and the header chip reading "Nominal". Consistent.
+- **Item 7** (900px and 375px, nothing clipped, Ctrl+K at both) — **PASS.** Operator: "resize is
+  fine".
+- **Item 8** (five moved routes load at their old addresses) — **PARTIAL.** The operator visited
+  **Automation** and **Tool Galaxy**; both loaded at `/automation` and `/tool-galaxy` with correct
+  breadcrumbs (`System / Automation`, `System / Tool Galaxy`). **Briefings, Config, and Workspace
+  Map were NOT visited by the operator — recorded as NOT VERIFIED BY THE OPERATOR.** Separately,
+  all 44 route addresses are guarded automatically by 124-01's golden fixture (green) — that guard
+  covers the ADDRESS only, not the rendered page.
+- **Item 9** (anything else wrong) — three defects raised, below, plus one orchestrator-found
+  defect and one unruled non-defect.
+
+### Defect dispositions
+
+The operator's ruling on all three page-body defects (D-1, D-2, D-3) was: **close Phase 124,
+handle them in a follow-up phase.** None are fixed inside this phase.
+
+**D-1 — Alert Rules Engine rows overlap and bunch text.**
+Operator: "page still bunches up the text". Evidence: `/alerts` screenshot — rule names ("High
+Error Rate", "Long Session Duration", "Many Tool Failures", "Event Backlog", "Stale Sessions",
+"Agent Crash Loop") collide with their condition lines and adjacent rows; one badge renders
+truncated as `std-hi` where `STANDARD` is expected.
+Owner: `src/components/AlertRulesEngine.tsx`. **Not caused by Phase 124** —
+`git log --oneline --grep="(124" -- src/components/AlertRulesEngine.tsx` returns 0 commits; last
+touched by `206a26ff` (122-04), `8c82e76e` (89-03), and an earlier UI polish pass.
+Status: **NOT ROOT-CAUSED.** Rows are `flex items-center gap-4 px-5 py-4` with `truncate` on both
+text lines (`:75`, `:108-109`, `:205`, `:218-219`) inside a `max-h-[500px] overflow-y-auto` column
+(`:388`). Diagnosing it needs live DOM measurement, not source reading. Recorded as unexplained —
+no guessed mechanism is asserted as fact.
+Disposition: **DEFERRED to a follow-up phase.**
+
+**D-2 — Automation page: three of four stat cards never resolve, all twelve schedules read
+"Invalid expression".**
+Operator: "don't understand why thing look broken". Evidence: `/automation` screenshot —
+"CONFIGURED SCHEDULES 12" renders correctly while the other three tiles show purple skeleton
+placeholders; every cron row ("stale sessions", "alert evaluation", "metric rollup", "docker
+poll", "supabase poll", "llm cost rollup", "stale agents", "profile summary", "memory prune",
+"purge old telemetry events", and two more) shows its interval followed by "Invalid expression".
+Owner: `src/pages/Automation.tsx`. **Not caused by Phase 124** — 0 commits from this phase touch
+it.
+Status: **NOT INVESTIGATED.** Two symptoms, plausibly one cause; not established.
+Disposition: **DEFERRED to a follow-up phase.**
+
+**D-3 — Tool Galaxy fails to load with a Convex system-operations timeout.**
+Evidence: `/tool-galaxy` screenshot — "Tool Galaxy failed to load. [CONVEX
+Q(graphSnapshots:getProjectGraph)] [Request ID: ca4679bc1fc77d14] Server Error Your request timed
+out performing too many system operations."
+Owner: `convex/graphSnapshots.ts`. **Not caused by Phase 124** — 0 commits from this phase touch
+it, and this phase made no Convex deploy.
+Status: **HYPOTHESIS ONLY, explicitly unverified.** The symptom matches CodePulse's documented
+Convex read-limit class (a ~4,096-READ ceiling, not the 16,000-write ceiling the vendor docs and
+this repo's own comments point at), the same shape as the `heroStats` timeout resolved by
+range-bounding a descending index scan. This is recorded as a hypothesis, not a diagnosis.
+Disposition: **DEFERRED to a follow-up phase.**
+
+**D-4 — `/inbox` under-counts held items (orchestrator-found, not operator-found).**
+The sidebar badge reads 46 while the Inbox page's own Held tab reads 9, both on screen
+simultaneously. The badge is the correct figure: `inbox.listHeldUnacked` is index-scoped on
+`by_itemType`, uncapped, filtered on `ackedAt === undefined` (`convex/inbox.ts:206-214`). The page
+builds its Held tab from `inbox.listAll`, which is `.take(DEFAULT_LIST_ALL_LIMIT)` = 200
+(`convex/inbox.ts:173,187`), so only 9 held rows fall inside that window. Both sides define unread
+identically (`src/pages/Inbox.tsx:130` maps `read: row.ackedAt != null`), so the 200-row cap is
+the sole cause.
+This is a **pre-existing under-count in `/inbox`**, made visible — not caused — by this phase's
+badge. The badge behaved exactly as D-10 intended.
+Disposition: **DEFERRED to a follow-up phase.**
+
+**Non-defect, recorded to prevent a future misreading:** the `?` glyph at the far right of the
+header is NOT the deferred D-07 Help control. It is `UserMenu`'s signed-out placeholder —
+`src/components/UserMenu.tsx:7-12` returns a literal `?` in a muted circle when
+`VITE_CLERK_PUBLISHABLE_KEY` is unset, which is the case under `dev:noauth`. With a Clerk key it
+renders Clerk's `UserButton`. D-07's "no Help entry" holds
+(`grep -icE '\bhelp\b' src/layouts/DashboardLayout.tsx` = 0). The operator was asked whether to
+restyle it and has not ruled; recorded as **OPEN, unruled**.
+
+### Verdict
+
+The operator approved the shell overall ("i think it looks better") with all sidebar/header/badge/
+resize checklist items passing. Three page-body defects (D-1, D-2, D-3) and one orchestrator-found
+defect (D-4) are deferred to a follow-up phase, not fixed in this phase. Item 8 is partial —
+Briefings, Config, and Workspace Map were never visited and are NOT VERIFIED BY THE OPERATOR. The
+`?` glyph question is open and unruled.
 
 ---
 *Phase: 124-shell-information-architecture*
 *Task 1 completed: 2026-08-21*
+*Task 2 (operator checkpoint) completed: 2026-08-21*
