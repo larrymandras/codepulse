@@ -5,6 +5,11 @@ export default function AlertBanner() {
   const counts = useAlertCounts();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // D-12: counts is undefined until the query resolves — render nothing
+  // rather than computing on a fabricated zero.
+  if (!counts) return null;
+
   const urgentCount = counts.critical + counts.error;
 
   if (urgentCount === 0) return null;
