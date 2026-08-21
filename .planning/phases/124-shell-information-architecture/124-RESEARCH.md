@@ -492,7 +492,13 @@ something this research (or any planning document) can settle in advance.
 **If this table is sparse:** the bulk of this research consists of live `file:line` citations
 against code and locked upstream decisions, not assumptions requiring confirmation.
 
-## Open Questions
+## Open Questions (RESOLVED — see 124-01 and 124-10)
+
+> Both questions below were adopted as recommended and are now implemented by the plans.
+> (1) The golden fixture is a literal committed array in 124-01 Task 1 (which requires
+> `grep -cF "git show"` = 0, so a SHA-anchored read cannot sneak in). (2) The header
+> min-content measurement is a new `test.describe` block in 124-10 Task 1, not a reuse of
+> the existing whole-body overflow walk. Verified by the plan-checker, 2026-08-21.
 
 1. **Where does the golden route-set fixture live, and how is it captured?**
    - What we know: `124-CONTEXT.md`'s Claude's-Discretion section explicitly leaves the mechanism
