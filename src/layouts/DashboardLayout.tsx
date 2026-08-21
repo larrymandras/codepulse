@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, type ReactNode } from "react";
 import { NavLink, Outlet } from "react-router";
 import { useConvexConnectionState } from "convex/react";
 import AlertBanner from "../components/AlertBanner";
@@ -32,6 +32,9 @@ const CommandPalette = lazy(() =>
 );
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { BrainHeaderBadge } from "../components/brains/BrainHeaderBadge";
+import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/StatusBadge";
+import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // Phase 106 Plan 04 (DEBT-03): AvatarUploader pulls react-easy-crop (36,362
@@ -88,6 +91,105 @@ const DEFAULT_DOMAIN_OPEN_STATE: Record<string, boolean> = {
   system: true,
 };
 
+// Phase 124 (D-10/D-12/D-13): shared Data-typography classes for badge digits
+// (12px JetBrains Mono, weight 600, tabular-nums) — applied directly on the
+// base Badge below, and via a data-slot selector on the StatusBadge-composed
+// alerts badge, since StatusBadge's own `text-sm font-medium` classes live on
+// the same element and would otherwise win the specificity tie.
+const BADGE_DATA_TYPE = "font-mono text-xs font-semibold tabular-nums";
+
+// D-13: the dimmed neutral dot every shell-level badge boundary falls back
+// to on a query throw — no colour spent (matches the Inbox pill's "no colour
+// on a raw count" rule), carries the Copywriting Contract's accessible name
+// verbatim, and never renders a number.
+function BadgeUnavailableDot({ label }: { label: string }) {
+  return (
+    <span
+      aria-label={label}
+      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40"
+    />
+  );
+}
+
+// D-10/D-12: Inbox's sidebar badge. A dedicated component (not a useQuery
+// call inline in SidebarContent) so its own SectionErrorBoundary — added at
+// its call site below — actually sits between this subscription and the rest
+// of the sidebar; a throw during SidebarContent's own render would bubble
+// past any boundary wrapping only a piece of its returned JSX (Task 3).
+function InboxCountBadge() {
+  // D-10 (amended 2026-08-21): listHeldUnacked — not the per-profile inbox
+  // read (needs a profileId the shell doesn't have) or listAll (caps at 200
+  // against 2,777 live rows). Counts unacked `held` rows only — 46 live at
+  // planning time.
+  const held = useQuery(api.inbox.listHeldUnacked);
+  // D-12 state 1: unresolved -> nothing. `== null` also treats the mocked
+  // `null` this repo's test suite uses for "not yet resolved" as unresolved
+  // (Convex itself only ever returns `undefined` while loading; the mock
+  // shape is test-only, per this task's own action text).
+  if (held == null) return null;
+  const count = held.length;
+  if (count === 0) return null; // D-12 state 3: never a visible zero
+  return (
+    <Badge
+      className={cn(
+        "rounded-sm px-1.5 py-0",
+        BADGE_DATA_TYPE,
+        "bg-(--surface-3) text-(--foreground) border border-(--hairline)",
+      )}
+      aria-label={`${count} unread in Inbox`}
+    >
+      {count}
+    </Badge>
+  );
+}
+
+// D-10/D-12/D-13: Alerts' sidebar badge — severity-derived, matching the
+// header system chip's worst-severity logic (124-07) so the two can never
+// disagree, since both read the same `countBySeverity` subscription (Convex
+// dedupes identical subscriptions client-side — one round trip, two
+// consumers). `truncated` (124-03's ALERT_COUNT_SCAN_CAP) renders a trailing
+// "+" and an "at least" accessible label rather than a complete-looking
+// integer — the same honesty rule D-12 applies at the loading/zero end.
+function AlertsCountBadge() {
+  const counts = useQuery(api.alerts.countBySeverity);
+  if (counts == null) return null; // D-12 state 1 (see InboxCountBadge's note on `== null`)
+  const total = counts.info + counts.warning + counts.error + counts.critical;
+  if (total === 0) return null; // D-12 state 3
+
+  const displayLabel = counts.truncated ? `${total}+` : `${total}`;
+  const a11yLabel = counts.truncated
+    ? `at least ${total} unacknowledged alerts`
+    : `${total} unacknowledged alerts`;
+
+  if (counts.critical > 0 || counts.error > 0) {
+    return (
+      <span aria-label={a11yLabel} className="[&_[data-slot=badge]]:font-mono [&_[data-slot=badge]]:text-xs [&_[data-slot=badge]]:font-semibold [&_[data-slot=badge]]:tabular-nums">
+        <StatusBadge status="error" tier="strong" label={displayLabel} />
+      </span>
+    );
+  }
+  if (counts.warning > 0) {
+    return (
+      <span aria-label={a11yLabel} className="[&_[data-slot=badge]]:font-mono [&_[data-slot=badge]]:text-xs [&_[data-slot=badge]]:font-semibold [&_[data-slot=badge]]:tabular-nums">
+        <StatusBadge status="warn" tier="quiet" label={displayLabel} />
+      </span>
+    );
+  }
+  // Info-only: the same neutral pill as Inbox — no severity worth a colour.
+  return (
+    <Badge
+      className={cn(
+        "rounded-sm px-1.5 py-0",
+        BADGE_DATA_TYPE,
+        "bg-(--surface-3) text-(--foreground) border border-(--hairline)",
+      )}
+      aria-label={a11yLabel}
+    >
+      {displayLabel}
+    </Badge>
+  );
+}
+
 function NavGroup({
   label,
   items,
@@ -95,6 +197,7 @@ function NavGroup({
   collapsed,
   open,
   onOpenChange,
+  badges,
 }: {
   label: string;
   items: NavItem[];
@@ -102,11 +205,16 @@ function NavGroup({
   collapsed?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // D-10: keyed by route `to` — only "/inbox" and "/alerts" ever have an
+  // entry. Absent structurally at 48px: the `!collapsed &&` branch below is
+  // the only place a badge renders, same as the label it sits beside.
+  badges?: Record<string, ReactNode>;
 }) {
   const itemList = (
     <div className="space-y-[1px]">
       {items.map((item) => {
         const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
+        const badge = badges?.[item.to];
 
         const link = (
           <NavLink
@@ -124,7 +232,12 @@ function NavGroup({
             }
           >
             <IconComponent className="h-4 w-4 shrink-0 transition-all duration-slow ease-house" />
-            {!collapsed && <span>{item.label}</span>}
+            {!collapsed && (
+              <>
+                <span className="flex-1 min-w-0 truncate">{item.label}</span>
+                {badge}
+              </>
+            )}
           </NavLink>
         );
         if (collapsed) {
@@ -205,6 +318,30 @@ function SidebarContent({
     setIsAvatarUploadOpen(false);
   };
 
+  // D-10/D-13: Inbox and Alerts only, each wrapped in its own boundary — a
+  // throw from one query never takes down the other or the rest of the
+  // sidebar. Built once per SidebarContent instance (desktop + mobile drawer
+  // each mount their own; Convex dedupes the identical underlying
+  // subscriptions client-side, so this costs no extra round trip).
+  const navBadges: Record<string, ReactNode> = {
+    "/inbox": (
+      <SectionErrorBoundary
+        name="Inbox count"
+        fallback={<BadgeUnavailableDot label="Inbox count unavailable" />}
+      >
+        <InboxCountBadge />
+      </SectionErrorBoundary>
+    ),
+    "/alerts": (
+      <SectionErrorBoundary
+        name="Alerts count"
+        fallback={<BadgeUnavailableDot label="Alerts count unavailable" />}
+      >
+        <AlertsCountBadge />
+      </SectionErrorBoundary>
+    ),
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
       {/* Logo / Header */}
@@ -275,6 +412,7 @@ function SidebarContent({
                 collapsed={collapsed}
                 open={domainOpen[domainKey] ?? true}
                 onOpenChange={(next) => onDomainOpenChange(domainKey, next)}
+                badges={navBadges}
               />
             </div>
           );
