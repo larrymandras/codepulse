@@ -57,4 +57,16 @@ describe('AlertBanner', () => {
     const { container } = renderWithRouter(<AlertBanner />);
     expect(container.querySelector('button')).toBeNull();
   });
+
+  // D-12 (124-CONTEXT.md): an all-zero RESOLVED result and an UNRESOLVED
+  // query are different facts that happen to render identically here (both
+  // show nothing). Do not merge this test with the one above — collapsing
+  // them would hide a future regression where the loading state stops being
+  // guarded and the resolved-zero case masks it.
+  it('renders nothing while counts are still loading (undefined)', () => {
+    mockUseAlertCounts.mockReturnValue(undefined);
+    renderWithRouter(<AlertBanner />);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText(/active alert/)).toBeNull();
+  });
 });
