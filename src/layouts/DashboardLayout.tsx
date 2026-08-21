@@ -822,6 +822,20 @@ export default function DashboardLayout() {
           adds space BETWEEN wrapped lines and is a no-op in the single-line case. No sidebar
           width, breakpoint literal, or Settings markup was touched — see 120-GEOMETRY-EVIDENCE.md
           for the revert-and-refail control proving this is load-bearing.
+
+          RE-MEASURED 2026-08-21, Phase 124 Plan 10, Task 1 (D-06) — now that the 3-zone
+          consolidation (124-07..09) is built. `e2e/polish-geometry.spec.ts`'s
+          "Header three-zone min-content measurement" block forces each visible zone's width down
+          to its true CSS min-content (flex:none + width:min-content, one zone at a time, in
+          place) and sums it against the header's available width (clientWidth minus its own
+          px-6 padding). Result, both required viewports: the sum EXCEEDS available width even at
+          that absolute floor — 706.16px vs 620px available at 900px (86px over), and 351.55px vs
+          327px available at 375px (24.5px over). This is not a close call decided against the
+          wrap; the header's three zones cannot fit on one row at either viewport no matter how
+          much each is compressed. D-06's "clears with margin" branch was therefore NOT taken —
+          `min-h-14 flex-wrap gap-y-1` stays exactly as originally shipped by 120-07, unchanged by
+          this plan. The consolidation reduced the OVERFLOW (981px combined min-content at 900px
+          in 120-07's original measurement, above, down to 706px here) but not enough to close it.
         */}
         <header className="min-h-14 flex-shrink-0 flex-wrap gap-y-1 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center gap-4">

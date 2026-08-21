@@ -175,6 +175,188 @@ test.describe('E-Stop fixed geometry — in-page proof (POLISH-02)', () => {
   });
 });
 
+// ─── Plan 124-10 additions below ───────────────────────────────────────────
+// D-06's re-run of POLISH-06's measurement, now that the consolidated 3-zone
+// header (124-07 through 124-09) is built. See the plan's <interfaces> section
+// and 120-GEOMETRY-EVIDENCE.md for why this re-measurement exists at all.
+
+const HEADER_ZONE_WIDTHS = [375, 900];
+
+interface HeaderZoneEvidence {
+  className: string;
+  display: string;
+  hidden: boolean;
+  laidOutWidth: number;
+  minContentWidth: number;
+}
+
+interface HeaderZonesEvidence {
+  requestedWidth: number;
+  innerWidth: number;
+  headerClientWidth: number;
+  headerPaddingLeft: number;
+  headerPaddingRight: number;
+  headerAvailableWidth: number;
+  headerHeight: number;
+  headerClientRectsLength: number;
+  zones: HeaderZoneEvidence[];
+  sumMinContentWidth: number;
+  culprits: OverflowCulprit[];
+}
+
+test.describe('Header three-zone min-content measurement — D-06 branch decision (124-10)', () => {
+  for (const width of HEADER_ZONE_WIDTHS) {
+    test(`${width}px — header zone min-content vs available width`, async ({ page }) => {
+      await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+      await page.goto('/');
+
+      const header = page.locator('header').first();
+      await gateOrSkip(page, header, `the ${width}px header-zones measurement`);
+
+      await expect(header).toBeVisible();
+
+      const evidence = await header.evaluate((headerEl, w) => {
+        const zones: HeaderZoneEvidence[] = [];
+        let sum = 0;
+        Array.from(headerEl.children).forEach((child) => {
+          const el = child as HTMLElement;
+          const cs = getComputedStyle(el);
+          if (cs.display === 'none') {
+            // Genuinely not rendered at this viewport (e.g. the `hidden
+            // md:flex` command bar / breadcrumb below `md`) — contributes 0
+            // to the header's real content-driven width, not an unmeasured
+            // gap. Recorded, not silently dropped.
+            zones.push({
+              className: el.className,
+              display: cs.display,
+              hidden: true,
+              laidOutWidth: 0,
+              minContentWidth: 0,
+            });
+            return;
+          }
+          const laidOutWidth = el.getBoundingClientRect().width;
+          // Min-content measured IN PLACE, one zone at a time: force this
+          // zone's used width to `min-content`, then measure, then restore
+          // the original inline style before moving to the next zone. Not a
+          // detached clone — a clone re-parented outside the flex row would
+          // lose the flex-item context that determines whether `width:
+          // min-content` even applies at all, and this file's own POLISH-02
+          // methodology-correction section already shows an unverified
+          // measurement mechanism is worse than none.
+          //
+          // CORRECTION found live during this task: setting `flex-basis`
+          // alone is NOT sufficient for the command-bar zone (`flex-1`,
+          // i.e. `flex: 1 1 0%`) — flex-grow stays 1 from that class, so the
+          // item still grows to consume all leftover row space up to its
+          // `max-w-[420px]` cap regardless of the basis, and the first pass
+          // of this measurement recorded a false 420px "min-content" for it
+          // at every width. `flex: none` (grow:0, shrink:0, basis:auto)
+          // fully decouples the item from the row's flex distribution before
+          // `width: min-content` is applied, which is what a true min-content
+          // reading requires.
+          const savedWidth = el.style.width;
+          const savedFlex = el.style.flex;
+          el.style.flex = 'none';
+          el.style.width = 'min-content';
+          const minContentWidth = el.getBoundingClientRect().width;
+          el.style.width = savedWidth;
+          el.style.flex = savedFlex;
+          sum += minContentWidth;
+          zones.push({
+            className: el.className,
+            display: cs.display,
+            hidden: false,
+            laidOutWidth,
+            minContentWidth,
+          });
+        });
+        const headerRect = headerEl.getBoundingClientRect();
+        // The header's own px-6 padding is INSIDE clientWidth (clientWidth =
+        // content-box + padding, minus border/scrollbar) but is NOT available
+        // to the three zone children, which sit inside the padded content
+        // box. Comparing the zones' summed width straight against clientWidth
+        // would silently give them 48px of room they do not actually have —
+        // subtract the header's own left/right padding to get the width the
+        // zones are really competing for.
+        const headerCs = getComputedStyle(headerEl);
+        const headerPaddingLeft = parseFloat(headerCs.paddingLeft) || 0;
+        const headerPaddingRight = parseFloat(headerCs.paddingRight) || 0;
+
+        // Wrap-branch regression guard: walk every descendant of the header
+        // itself (not the whole body — that is the existing 900px /settings
+        // block's job) and flag any box whose right edge actually extends
+        // past window.innerWidth. Same `rightOverflow > 1` criterion and
+        // `sr-only` exclusion as the existing 900px collision walk below
+        // (found live there to avoid two known-benign false positives —
+        // Radix's `sr-only` clipping technique and the sidebar nav's own
+        // contained `overflow-x-auto` scroll).
+        const culprits: OverflowCulprit[] = [];
+        headerEl.querySelectorAll('*').forEach((node) => {
+          const cEl = node as HTMLElement;
+          if (cEl.classList.contains('sr-only')) return;
+          const rect = cEl.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return;
+          const scrollOverflow = cEl.scrollWidth - cEl.clientWidth;
+          const rightOverflow = rect.right - w;
+          if (rightOverflow > 1) {
+            culprits.push({
+              tag: cEl.tagName,
+              className: typeof cEl.className === 'string' ? cEl.className : String(cEl.className),
+              scrollWidth: cEl.scrollWidth,
+              clientWidth: cEl.clientWidth,
+              right: rect.right,
+              overflowAmount: Math.max(scrollOverflow, rightOverflow),
+            });
+          }
+        });
+        culprits.sort((a, b) => b.overflowAmount - a.overflowAmount);
+
+        return {
+          requestedWidth: w,
+          innerWidth: window.innerWidth,
+          headerClientWidth: headerEl.clientWidth,
+          headerPaddingLeft,
+          headerPaddingRight,
+          headerAvailableWidth: headerEl.clientWidth - headerPaddingLeft - headerPaddingRight,
+          headerHeight: headerRect.height,
+          headerClientRectsLength: headerEl.getClientRects().length,
+          zones,
+          sumMinContentWidth: sum,
+          culprits: culprits.slice(0, 15),
+        } satisfies HeaderZonesEvidence;
+      }, width);
+
+      // eslint-disable-next-line no-console
+      console.log(`HEADER-ZONES-EVIDENCE ${JSON.stringify(evidence)}`);
+
+      // Void check first, per this file's existing convention.
+      expect(
+        evidence.innerWidth,
+        `in-page window.innerWidth (${evidence.innerWidth}) must match the requested viewport width (${width}) or this tier is VOID`
+      ).toBe(width);
+
+      // Permanent regression guard (Task 1's own acceptance criterion). The
+      // measurement above (see SUMMARY) found the sum of zone min-content
+      // widths EXCEEDS the header's available width at both 375px and 900px
+      // — decisively, not marginally (706 vs 620 available at 900px; 351.5
+      // vs 327 at 375px) — so D-06's "clears with margin" branch was NOT
+      // taken; `min-h-14 flex-wrap gap-y-1` stays. Per the plan's own
+      // branch-dependent guard spec, the wrap branch's guard is therefore
+      // NOT "sum stays under available width" (that would never pass while
+      // wrapping is structurally required, and asserting it would make this
+      // a test of a fact already known false) — it is "the header still
+      // renders every right-zone control within the viewport" despite the
+      // wrap, i.e. no header descendant actually clips past the edge. This
+      // is what would fail if a future change broke `flex-wrap` again.
+      expect(
+        evidence.culprits.length,
+        `header culprit list must be empty at ${width}px (every control must render within the viewport even while wrapping); found: ${JSON.stringify(evidence.culprits)}`
+      ).toBe(0);
+    });
+  }
+});
+
 test.describe('900px sidebar/Settings collision — in-page proof (POLISH-06)', () => {
   test('900x900 /settings has no horizontal overflow and an empty culprit list', async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 900 });
