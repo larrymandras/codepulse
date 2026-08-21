@@ -106,13 +106,29 @@ export const listBySource = query({
   },
 });
 
+// D-13 (124-CONTEXT.md, first half): countBySeverity is about to run on EVERY
+// route once the shell subscribes to it, so an unbounded `.collect()` here is
+// an app-wide DoS risk, not a one-widget one. Live measurement, self-hosted
+// backend, 2026-08-21: 102 rows in the whole `alerts` table, of which 1 is
+// unacknowledged — so today this cap has ~20x headroom over the entire
+// current table; it exists for the future alert-storm case, not a live one.
+// `by_acknowledged` is `["acknowledged","createdAt"]`, so `.order("desc")`
+// yields the most recently-created unacknowledged alerts first when the cap
+// is hit. A per-severity bucketed count would need an
+// `["acknowledged","severity"]` composite index, which does not exist on this
+// table (convex/schema.ts:128-131) — adding one is a schema change and out of
+// scope for this presentation-only phase. `truncated` exists so a capped scan
+// can never be silently rendered as a complete count (D-13, D-12's honesty rule).
+const ALERT_COUNT_SCAN_CAP = 2000;
+
 export const countBySeverity = query({
   args: {},
   handler: async (ctx) => {
     const active = await ctx.db
       .query("alerts")
       .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
-      .collect();
+      .order("desc")
+      .take(ALERT_COUNT_SCAN_CAP);
     const counts = { info: 0, warning: 0, error: 0, critical: 0 };
     for (const a of active) {
       // An auto-resolved alert can still be unacknowledged — exclude it so the
@@ -121,7 +137,10 @@ export const countBySeverity = query({
       const sev = a.severity as keyof typeof counts;
       if (sev in counts) counts[sev]++;
     }
-    return counts;
+    // truncated === true means the scan hit ALERT_COUNT_SCAN_CAP and may not
+    // have seen every unacknowledged alert — consumers must not render the
+    // four counts as complete when this is true (D-13).
+    return { ...counts, truncated: active.length === ALERT_COUNT_SCAN_CAP };
   },
 });
 
