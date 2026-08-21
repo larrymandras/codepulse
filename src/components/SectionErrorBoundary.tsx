@@ -3,6 +3,14 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 interface Props {
   children: ReactNode;
   name?: string;
+  /**
+   * Phase 124 D-13: shell-level boundaries sit inside a 232px sidebar row and
+   * a 48px header slot, where the default card below (p-4, an 8x8 icon
+   * circle, a Retry button) would itself break the layout it exists to
+   * protect. When supplied, `fallback` renders in place of that card on
+   * error — additive only, every existing call site keeps the default card.
+   */
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -34,6 +42,9 @@ export default class SectionErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback !== undefined) {
+        return this.props.fallback;
+      }
       return (
         <div className="bg-[var(--status-error)]/10 border border-[var(--status-error)]/30 rounded-xl p-4">
           <div className="flex items-center gap-3">
