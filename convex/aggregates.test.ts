@@ -30,6 +30,9 @@ import {
 import { evaluateBudgets } from "./costBudgetEval";
 import { evaluateToolPolicyAlerts } from "./toolPolicyAlertEval";
 import { makeAggregatesCtx } from "./lib/fakeCtx";
+// D-12 guard below asserts against the live prune predicate rather than a
+// simulation — see "the live pruner never deletes a durable daily rollup".
+import { PRUNE_PREDICATES } from "./retention";
 
 // makeAggregatesCtx (the fake ctx.db harness for exercising real Convex
 // handlers via `._handler`) now lives in convex/lib/fakeCtx.ts (Phase 121,
@@ -1113,21 +1116,29 @@ describe("aggregates", () => {
       expect(existingEventRows.find((r) => r.dimensions.event_type === "Error")?.value).toBe(2);
     });
 
-    test("dataRetention purge target-table set contains no 'aggregates' (D-12)", () => {
-      // purgeOldTelemetryEvents queries only the "events" table and deletes those
-      // rows; the durable rollups in "aggregates" must never be a delete target.
-      // Mirror the purge's delete loop, recording which table each delete hit.
-      const deletedFromTables: string[] = [];
-      const purgeTargetTable = "events"; // dataRetention.ts:11 queries "events"
-      const oldDocs = [{ _id: "id1" }, { _id: "id2" }];
-      for (const _doc of oldDocs) {
-        deletedFromTables.push(purgeTargetTable);
-      }
-      // The set of tables the purge deletes from has zero "aggregates" entries.
-      const aggregatesDeletes = deletedFromTables.filter((t) => t === "aggregates");
-      expect(aggregatesDeletes).toHaveLength(0);
-      // Sanity: it DID operate on the events table.
-      expect(new Set(deletedFromTables)).toEqual(new Set(["events"]));
+    test("the live pruner never deletes a durable daily rollup (D-12)", () => {
+      // REWRITTEN 2026-08-21, when convex/dataRetention.ts was deleted as dead
+      // code (three internalMutations, zero callers since Phase 110 superseded
+      // them). The test that stood here named that module and was a tautology:
+      // it assigned `const purgeTargetTable = "events"`, pushed it into a local
+      // array, then asserted the array it had just built contained no
+      // "aggregates". It never imported or executed any production code, so it
+      // would have passed unchanged even if the real purge had deleted rollups.
+      //
+      // D-12 is a real invariant and it IS worth guarding — but the thing that
+      // enforces it today is retention.ts's PRUNE_PREDICATES, which is the only
+      // reason the nightly prune spares `period: "daily"` rows while ageing out
+      // hourly ones from the SAME table. So assert against that.
+      const daily = { period: "daily", metric_type: "cost", value: 1 };
+      const hourly = { period: "hourly", metric_type: "cost", value: 1 };
+      const predicate = PRUNE_PREDICATES.aggregates;
+
+      // Guard the guard: an absent predicate means `aggregates` is pruned
+      // unconditionally (retention.ts documents that a table missing from the
+      // map is pruned as before), which would delete daily cost history.
+      expect(predicate, "PRUNE_PREDICATES.aggregates must exist").toBeDefined();
+      expect(predicate!(daily), "daily rollups must be SPARED").toBe(false);
+      expect(predicate!(hourly), "hourly rollups must be prunable").toBe(true);
     });
   });
 
