@@ -48,7 +48,7 @@ Where the milestone's leverage is: 200+ components inherit from shared primitive
 
 ## Shell & Information Architecture (SHELL)
 
-- [ ] **SHELL-01** — A 48px 3-zone header (breadcrumb / command bar / system-chip + E-STOP + overflow menu holding theme, privacy, CRT, audio and help) replaces today's header on every route.
+- [ ] **SHELL-01** — A 48px 3-zone header (breadcrumb / command bar / system-chip + E-STOP + overflow menu holding theme, privacy, CRT and audio) replaces today's header on every route. *(Amended 2026-08-21: "help" struck from the overflow list to match the amended D-07 in `124-CONTEXT.md:90` and `124-UI-SPEC.md:247-250,509`. No Help control exists in the app today; building one is net-new UI outside a presentation-only regroup and is deferred pending its own scoping.)*
 - [ ] **SHELL-02** — The 232px sidebar is regrouped into 4 collapsible domains (Command / Observe / Agents / System) with count badges and a 2px active rail, delivered as a **pure `navRegistry.ts` regroup with no route changes**. *(Every route keeps its URL; this is presentation only.)*
 
 ## Signature Layers (SIGNAL)
