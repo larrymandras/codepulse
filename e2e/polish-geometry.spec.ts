@@ -457,5 +457,110 @@ test.describe('900px sidebar/Settings collision — in-page proof (POLISH-06)', 
       evidence.culprits.length,
       `culprit list must be empty; found: ${JSON.stringify(evidence.culprits)}`
     ).toBe(0);
+
+    // D-17 (plan 124-10, Task 2): RE-RUN of this same check, at the NEW
+    // 232px sidebar width, rather than a second/duplicate 900px block. The
+    // `asideRect` value has always been captured above (:193-197 originally)
+    // but never asserted on until now — the sidebar is already `w-[232px]`
+    // live (124-05/124-09; DashboardLayout.tsx's desktop <aside>), so this
+    // closes D-17's "re-measure, don't infer from 240px having survived" gap.
+    // 0.5px tolerance for sub-pixel layout rounding, stated per the plan's
+    // own instruction.
+    expect(
+      evidence.asideRect?.width,
+      `aside width must be 232px (+/- 0.5px tolerance) at 900px; got ${JSON.stringify(evidence.asideRect)}`
+    ).toBeGreaterThanOrEqual(231.5);
+    expect(
+      evidence.asideRect?.width,
+      `aside width must be 232px (+/- 0.5px tolerance) at 900px; got ${JSON.stringify(evidence.asideRect)}`
+    ).toBeLessThanOrEqual(232.5);
+  });
+});
+
+// D-17/124-05 (plan 124-10, Task 2): the 2px active-nav rail, measured as
+// RENDERED rather than asserted from a class string — jsdom (124-05's unit
+// test) cannot compute a `::before` pseudo-element, only a real browser can.
+interface NavRailEvidence {
+  innerWidth: number;
+  activeBeforeWidth: string;
+  activeBeforeBackgroundColor: string;
+  activeOwnBackgroundColor: string;
+  inactiveBeforeWidth: string;
+  inactiveBeforeBackgroundColor: string;
+}
+
+test.describe('Active nav rail — rendered measurement (D-17/124-05)', () => {
+  test('/alerts — active link carries a rendered 2px ::before rail; an inactive link does not', async ({ page }) => {
+    await page.setViewportSize({ width: 900, height: 900 });
+    await page.goto('/alerts');
+
+    const activeLink = page.locator('[aria-current="page"]').first();
+    await gateOrSkip(page, activeLink, 'the active nav rail measurement');
+
+    await expect(activeLink).toBeVisible();
+
+    const evidence = await page.evaluate(() => {
+      const active = document.querySelector('[aria-current="page"]');
+      // Control: an inactive sidebar nav link — same component, no isActive
+      // styling, no `before:*` utility classes at all. Without this pairing,
+      // a rule that applied the rail to EVERY nav item (active or not) would
+      // pass just as easily as the correct one.
+      const inactive = document.querySelector('nav[aria-label="Main navigation"] a:not([aria-current="page"])');
+
+      const readBefore = (el: Element | null) => {
+        if (!el) return { width: 'MISSING', backgroundColor: 'MISSING' };
+        const cs = getComputedStyle(el, '::before');
+        return { width: cs.width, backgroundColor: cs.backgroundColor };
+      };
+
+      const activeBefore = readBefore(active);
+      const inactiveBefore = readBefore(inactive);
+      const activeOwn = active ? getComputedStyle(active).backgroundColor : 'MISSING';
+
+      return {
+        innerWidth: window.innerWidth,
+        activeBeforeWidth: activeBefore.width,
+        activeBeforeBackgroundColor: activeBefore.backgroundColor,
+        activeOwnBackgroundColor: activeOwn,
+        inactiveBeforeWidth: inactiveBefore.width,
+        inactiveBeforeBackgroundColor: inactiveBefore.backgroundColor,
+      } satisfies NavRailEvidence;
+    });
+
+    // eslint-disable-next-line no-console
+    console.log(`NAV-RAIL-EVIDENCE ${JSON.stringify(evidence)}`);
+
+    expect(
+      evidence.innerWidth,
+      `in-page window.innerWidth (${evidence.innerWidth}) must be 900 or this tier is VOID`
+    ).toBe(900);
+
+    expect(
+      evidence.activeBeforeWidth,
+      `active link's ::before width must be 2px; got ${evidence.activeBeforeWidth}`
+    ).toBe('2px');
+
+    // Do NOT assert an exact colour string — Tailwind v4 emits oklch()/oklab()
+    // and this project has already produced a confidently wrong contrast
+    // verdict once by regex-scraping computed colour and reading a hue angle
+    // as a channel (see tailwind-v4-oklch-defeats-css-color-scraping). Assert
+    // only that a colour was actually applied (not transparent/unset), and
+    // record the raw string for the operator checkpoint to judge.
+    expect(
+      evidence.activeBeforeBackgroundColor,
+      `active link's ::before backgroundColor must not be transparent; got ${evidence.activeBeforeBackgroundColor}`
+    ).not.toBe('rgba(0, 0, 0, 0)');
+    expect(
+      evidence.activeBeforeBackgroundColor,
+      `active link's ::before backgroundColor must not be transparent; got ${evidence.activeBeforeBackgroundColor}`
+    ).not.toBe('transparent');
+
+    // Control (mandatory): the INACTIVE link's ::before must be absent/0px —
+    // without this, a rule applying the rail to every nav item would also
+    // pass the assertion above.
+    expect(
+      ['0px', 'auto', 'MISSING'],
+      `inactive link's ::before width must read as absent/0px, not a real rail; got ${evidence.inactiveBeforeWidth}`
+    ).toContain(evidence.inactiveBeforeWidth);
   });
 });
