@@ -12,12 +12,29 @@
  * avatar uploader, etc.) are stubbed so the layout mounts in
  * jsdom without pulling in their own contexts/dependencies — this test is
  * scoped to the header telemetry contract, not the full sidebar/palette UX
- * (see the original sidebar IA test.todo stubs below, still pending).
+ * (see the sidebar IA block below — Phase 124 replaced two of the original
+ * six placeholder stubs with real assertions; the remaining four cover
+ * icons, count badges and the collapsed-rail affordances, out of this
+ * phase's scope).
  */
 
-import { describe, test, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, test, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+
+// Radix Collapsible measures internally and jsdom doesn't provide
+// ResizeObserver — same shim as RunTargetChooser.test.tsx / RunChatPopover.test.tsx
+// / SkillLifecycleMenu.test.tsx. Without this, Collapsible's internal
+// measurement surfaces as a runtime error rather than a clean test failure.
+beforeAll(() => {
+  if (typeof window.ResizeObserver === "undefined") {
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+});
 
 // ─── Module mocks (declared before component import — Vitest hoisting) ──────
 
@@ -72,9 +89,9 @@ import { useQuery } from "convex/react";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import DashboardLayout from "../DashboardLayout";
 
-function renderLayout() {
+function renderLayout(initialEntries: string[] = ["/"]) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={initialEntries}>
       <DashboardLayout />
     </MemoryRouter>,
   );
@@ -185,11 +202,98 @@ describe("DashboardLayout keyboard shortcuts (global palette vs. Skills palette 
   });
 });
 
-describe("DashboardLayout Sidebar (UI-04)", () => {
-  test.todo("renders 5 section groups: OVERVIEW, OPERATIONS, SYSTEM, INSIGHTS, ADMIN");
+describe("DashboardLayout Sidebar (UI-04, Phase 124 SHELL-02)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useAstridrWS).mockReset();
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+  });
+
+  // Source-level only — jsdom does not do layout, so this cannot measure a
+  // rendered pixel width. The RENDERED 232px is measured by plan 124-09's
+  // Playwright geometry block; this assertion and that one are complementary,
+  // not duplicates.
+  it("desktop sidebar carries the w-[232px] expanded-width class, not w-60 (D-17)", () => {
+    const { container } = renderLayout();
+    const desktopAside = container.querySelector('aside[class*="hidden"][class*="md:flex"]');
+    expect(desktopAside).toBeTruthy();
+    expect(desktopAside?.className).toContain("w-[232px]");
+    expect(desktopAside?.className).not.toContain("w-60");
+  });
+
   test.todo("each nav item renders a Lucide icon, not ASCII text");
   test.todo("nav items with countQuery display a Badge with numeric count");
   test.todo("collapsed state shows icon-only with Tooltip labels");
   test.todo("collapsed icons have aria-label for accessibility");
-  test.todo("sidebar width is 240px (w-60) when expanded");
+
+  it("renders exactly the four domain headers Command, Observe, Agents, System — the old 5-group labels are gone", () => {
+    renderLayout();
+    for (const domain of ["Command", "Observe", "Agents", "System"]) {
+      expect(screen.getAllByText(domain).length).toBeGreaterThan(0);
+    }
+    // The old placeholder test above this block named these 5 groups — they
+    // never matched any shipped registry (stale before this phase touched
+    // it) and must not reappear now that the regroup has landed.
+    for (const staleLabel of ["OVERVIEW", "OPERATIONS", "SYSTEM", "INSIGHTS", "ADMIN"]) {
+      expect(screen.queryByText(staleLabel)).not.toBeInTheDocument();
+    }
+  });
+
+  it("all four domains are open by default when no stored value exists (D-15)", () => {
+    renderLayout();
+    // One item from each domain, per navRegistry.ts's live mapping.
+    expect(screen.getAllByText("Chat").length).toBeGreaterThan(0); // Command
+    expect(screen.getAllByText("Dashboard").length).toBeGreaterThan(0); // Observe
+    expect(screen.getAllByText("Roster").length).toBeGreaterThan(0); // Agents
+    expect(screen.getAllByText("Config").length).toBeGreaterThan(0); // System
+  });
+
+  it("the active nav item carries aria-current=\"page\" against a real mounted route", () => {
+    renderLayout(["/alerts"]);
+    const alertsLinks = screen.getAllByRole("link", { name: "Alerts" });
+    expect(alertsLinks.length).toBeGreaterThan(0);
+    for (const link of alertsLinks) {
+      expect(link).toHaveAttribute("aria-current", "page");
+    }
+  });
+
+  it("collapsing a domain hides its items, writes codepulse-nav-domains, and a later render honors the stored closed state (D-14/D-15)", () => {
+    renderLayout();
+    const commandTriggers = screen.getAllByRole("button", { name: "Command" });
+    expect(commandTriggers.length).toBeGreaterThan(0);
+    fireEvent.click(commandTriggers[0]);
+
+    expect(screen.queryAllByText("Chat").length).toBe(0);
+
+    const stored = JSON.parse(localStorage.getItem("codepulse-nav-domains") ?? "{}");
+    expect(stored.command).toBe(false);
+
+    cleanup();
+    renderLayout();
+    // A fresh mount reading the same localStorage value keeps Command closed.
+    expect(screen.queryAllByText("Chat").length).toBe(0);
+    // An untouched domain is unaffected by the write.
+    expect(screen.getAllByText("Dashboard").length).toBeGreaterThan(0);
+  });
+
+  it("toggling a domain in one sidebar instance keeps the desktop and mobile instances in sync (shared lifted state)", () => {
+    renderLayout();
+    const commandTriggers = screen.getAllByRole("button", { name: "Command" });
+    // Desktop <aside> and the mobile drawer <aside> are both mounted
+    // simultaneously, so there are two Collapsible triggers per domain.
+    expect(commandTriggers.length).toBe(2);
+
+    fireEvent.click(commandTriggers[0]);
+
+    // Both instances share the lifted state — neither is left stale.
+    expect(screen.queryAllByText("Chat").length).toBe(0);
+  });
 });
