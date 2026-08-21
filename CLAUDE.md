@@ -131,6 +131,64 @@ plan 09). **Heavy render libraries are mocked per test file, not globally** — 
 
 Path alias `@/` resolves to `./src/` in both Vite and tsconfig.
 
+
+## Convex & Frontend Lessons
+Moved here 2026-08-21 from global CLAUDE.md, where they were dead weight in every
+non-CodePulse session. Full war stories: memory [[lessons-archive-2026-08-21]].
+(Self-hosted operational rules are the section above; these are development-time traps.)
+
+- **`convex deploy` ships the WORKING TREE, not HEAD**, and in a whole-directory deploy system
+  deploying an earlier commit is a **rollback**, never a subset — "deploy only my change" is
+  unreachable that way if anything newer is live. Run `git status --porcelain` before every
+  deploy in this shared checkout and say what is dirty. The only announcement of a schema
+  rollback is a `Deleted table indexes:` line in the deploy output; a "surgical" older-tree
+  deploy silently deleted 3 live indexes on another session's active phase.
+- **`npx convex function-spec` lists PUBLIC functions only**, so a zero hit for an
+  `internal.*` function is guaranteed regardless of deploy state and is not evidence of
+  anything. A control that returns a non-zero public count proves only that the probe sees
+  public functions — the one thing never in doubt. Read schema/index state or query the table.
+- **The read budget is 4,096 READS, not the 16,000 documents-written figure in the docs.**
+  `ctx.db.delete()` counts as a read, and a query issued after N inserts *in the same mutation*
+  must merge that transaction's pending write set at ~N reads. When caps of 4000/2000/1000/500
+  all fail identically, the cap is not the cause — build a control that holds the suspect fixed
+  and varies one other input.
+- **Convex REDACTS plain `Error` messages to "Server Error" client-side.** Use
+  `throw new ConvexError(...)` whenever the client must see the reason (its `.data` survives
+  redaction), and read `err.data` before `err.message`. In an auth-disabled harness a generic
+  error is usually the AUTH GATE throwing before the feature code ever runs — confirm the code
+  path is reached before attributing a UI symptom to the feature under test.
+- **A Convex query that throws is unhandled at the `useQuery` boundary**: it unmounts the React
+  tree and blanks EVERY page using that hook, so it presents as "the whole app is broken", not
+  "one widget is empty". On a timeout, probe each read in isolation — the cost was a bounded
+  `.take(500)` descending index scan, not the unbounded `.collect()`s that looked guilty.
+- **An index cannot speed an UNFILTERED count** (`.collect()` purely for `.length`): with no
+  filter every row is read regardless, so a new index adds write cost and fixes nothing. Say so
+  when asked to add one; bound the read instead.
+- **Telemetry timestamps are epoch SECONDS.** Dividing by 1000 yields 1970 dates, and a
+  `fmt(max) < '<date>'` cutoff then passes VACUOUSLY. Any threshold check must print a sanity
+  line comparing the formatted value against today's date.
+- **Never regex-scrape `getComputedStyle` for colour.** Tailwind v4 emits `oklch()`/`oklab()`,
+  so a number-scrape reads the HUE ANGLE as a channel and every derived contrast ratio is
+  plausible garbage (the tell was an impossible `rgb(0,0,262)`). Rasterise instead
+  (`canvas.fillRect` + `getImageData`); `fillStyle` silently keeps its prior value on
+  unparseable input, so use a sentinel and return `null` rather than a guess. Pair every colour
+  claim with a before/after control measuring the pre-change class strings from git — on Phase
+  120 that control INVERTED the conclusion. → [[tailwind-v4-oklch-defeats-css-color-scraping]]
+- **`fs.Stats.ino` is a JS double and Windows NTFS FileIds exceed `MAX_SAFE_INTEGER`** (measured
+  99.9% of sampled directories), so identity keys built from a plain `statSync` collapse and a
+  visited-set cycle guard prunes real subtrees — it surfaced only as a test failing ~0.4% of the
+  time under load. Use `statSync(p, {bigint: true})` for IDENTITY (leave `size`/`mtime`
+  numeric), and make any injected or wrapped `statSync` forward its options argument.
+- **A hook wired at both user and project scope runs TWICE per event**, which for a telemetry
+  producer is silent double-ingest — 27% duplicate rows in `events` and 41% in `toolExecutions`
+  for 8 weeks, with the singly-wired PreToolUse at 0% as the control that isolated it. A
+  consumer-side dedup field that no producer populates is dead code, and any key derived from
+  pid/hrtime/`Date.now()` differs between the two processes and defeats dedup while looking
+  correct. → [[codepulse-duplicate-hook-wiring-double-ingest]]
+- **Long-uptime Vite drifts to ~124% of a core**; an hourly recycle is the mitigation. Any
+  process-kill guard here needs more than one loose regex — `codepulse.*vite` matches the
+  watcher script's own filename. → [[codepulse-vite-long-uptime-cpu-drift]]
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/.
