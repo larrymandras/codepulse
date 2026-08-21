@@ -56,7 +56,36 @@ export const RETENTION_DAYS: Record<string, number> = {
   // this whole module exists to avoid). Only the latest row per provider is ever
   // read, so 30 days is pure headroom for trend queries, not a functional limit.
   gatewayQuotaSnapshots: 30,
+  // Enrolled 2026-08-21 from COVERAGE_PRUNE_PROPOSED, after the coverage gate
+  // (convex/retentionCoverage.ts) surfaced that 143 tables had no retention
+  // decision at all. Rates below were measured on the live backend that day as
+  // oldest-row -> newest-row over current row count. Each was checked for a
+  // status/acknowledgement field first, because pruneBatchV3 deletes by
+  // whole-table _creationTime and cannot tell a handled row from an unhandled
+  // one — that check is what kept `inbox` out (see the note at the end).
+  //
+  // advisorEvents, 155.5 rows/day. Every consumer in convex/advisorEvents.ts
+  // (recent, savingsSummary, providerMetrics) is a newest-first .take(50) or
+  // .take(100), so nothing reads even one full day back; 30 days is headroom,
+  // not a functional limit. It carries costUsd, but llmMetrics remains the
+  // kept-forever cost history — this is the advisor-specific event stream.
+  advisorEvents: 30,
+  // promptSubmissions, 104.0 rows/day. Pure telemetry — sessionId,
+  // promptLength, promptId, timestamp. No status field, nothing to strand.
+  promptSubmissions: 30,
+  // supabaseHealth, 125.0 rows/day. supabase.ts:27 .collect()s the WHOLE table
+  // and then dedupes to the latest row per service, so only the newest is ever
+  // used and pruning actively shrinks an unbounded read.
+  supabaseHealth: 30,
   // build/history — 90 days
+  // episodicEvents, 96.2 rows/day, enrolled 2026-08-21 alongside the three
+  // 30-day entries above. Despite the name this is NOT memory content — its
+  // eventType is "memory_stored" | "memory_recalled" | "memory_pruned", i.e. an
+  // audit log ABOUT memory operations, and the memories themselves live outside
+  // Convex. 90 days matches what the deleted convex/dataRetention.ts's
+  // purgeOldMemoryEvents had targeted for this same table before it was
+  // superseded by Phase 110 and left uncalled.
+  episodicEvents: 90,
   events: 90,
   environmentSnapshots: 90,
   contextSnapshots: 90,

@@ -1,7 +1,7 @@
 /**
  * Retention COVERAGE policy — which bucket every schema table belongs to.
  *
- * WHY THIS EXISTS (2026-08-21). convex/retention.ts's RETENTION_DAYS covers 21
+ * WHY THIS EXISTS (2026-08-21). convex/retention.ts's RETENTION_DAYS covers 25
  * tables. schema.ts declares 145. Nothing connected the two in the direction
  * that mattered: retention.test.ts asserts every RETENTION_DAYS key is a real
  * table (catching typos), but nothing asserted that every real table has been
@@ -14,7 +14,7 @@
  * sweepGraphSnapshotVersions cron, sat COMMENTED OUT in crons.ts since
  * 2026-07-14. Nothing reported it for 29 days. The nightly health check said
  * "verdict=OK tables=21 all caught up" throughout, truthfully, because it only
- * inspects the 21 enrolled tables. An instrument that cannot see the failure
+ * inspects the 25 enrolled tables. An instrument that cannot see the failure
  * mode reports success right up until someone reads the disk.
  *
  * This module is a RATCHET, not a blessing list. A table absent from every
@@ -44,7 +44,11 @@ export const COVERAGE_PRUNED: readonly string[] = [
   "controlVerbSwaps",
   "governorDecisions",
   "messageRoutes",
-  "aggregates"
+  "aggregates",
+  "advisorEvents",
+  "promptSubmissions",
+  "supabaseHealth",
+  "episodicEvents"
 ] as const;
 
 /**
@@ -142,10 +146,7 @@ export const COVERAGE_PRUNE_PROPOSED: Record<
   string,
   { rowsPerDay: number | null; proposedDays: number; note: string }
 > = {
-  advisorEvents: { rowsPerDay: 155.5, proposedDays: 30, note: "append-only advisor event log" },
-  promptSubmissions: { rowsPerDay: 104, proposedDays: 30, note: "append-only submission log" },
-  inbox: { rowsPerDay: 100, proposedDays: 90, note: "append-only inbox items" },
-  episodicEvents: { rowsPerDay: 96.2, proposedDays: 90, note: "memory events; convex/dataRetention.ts (deleted 2026-08-21 as dead code) had targeted 90d here" },
+  inbox: { rowsPerDay: 100, proposedDays: 90, note: "DO NOT calendar-prune as-is: schema.ts:2112 has ackedAt, so a _creationTime cutoff would delete UNACKED items the operator never saw. Needs an ack-aware janitor keyed on ackedAt, the shape media.pruneTrashBatch uses for deletedAt" },
   configChanges: { rowsPerDay: 90.2, proposedDays: 90, note: "config audit trail" },
   run_blocks: { rowsPerDay: 70.7, proposedDays: 14, note: "runtime execution blocks - firehose tier" },
   gitActivity: { rowsPerDay: 68.3, proposedDays: 90, note: "git activity history" },
@@ -159,7 +160,6 @@ export const COVERAGE_PRUNE_PROPOSED: Record<
   hiveMindEntries: { rowsPerDay: 21.7, proposedDays: 90, note: "append-only hive-mind entries" },
   agentMetrics: { rowsPerDay: 19.9, proposedDays: 30, note: "per-run metric rows" },
   briefings: { rowsPerDay: 13.9, proposedDays: 90, note: "generated briefings" },
-  supabaseHealth: { rowsPerDay: 125, proposedDays: 30, note: "poll snapshots - only newest per project is read" },
   subagentExecutions: { rowsPerDay: 7.6, proposedDays: 90, note: "append-only subagent execution log" },
   skills: { rowsPerDay: 8.1, proposedDays: 90, note: "VERIFY WRITER: may be scan-append rather than upsert-by-name" },
   skillOverrides: { rowsPerDay: 7.7, proposedDays: 90, note: "VERIFY WRITER: may be scan-append rather than upsert-by-name" },
