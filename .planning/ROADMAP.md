@@ -716,6 +716,7 @@ Plans:
   5. Status badges follow the quiet law (only Failed renders filled) under one unified vocabulary (Running/Succeeded/Failed/Cancelled), and the sidebar and Settings no longer collide at 900px. *(Vocabulary is confined to those four spine words; states with no honest mapping — `auth_failed`, `queued`, `pending`, `stopping_pending` — keep distinct labels per D-15, and `auth_failed` must stay visually distinct from `failed`.)*
 
 **Plans**: 7 — planned 2026-08-17
+
   - `120-01` — `hover:scale-[1.01]` + paired-transition sweep (36 files) · POLISH-01 · D-01, D-02
   - `120-02` — `index.css` dead-rule deletions, scrollbar, and all `DashboardLayout` kill targets · POLISH-01 · D-03, D-04, D-05, D-06
   - `120-03` — both destructive confirms → `AlertDialog` · POLISH-01, POLISH-03 · D-12, D-13, D-14
@@ -745,6 +746,7 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
+
 - [x] `121-01-PLAN.md` - `metric_type: "calls"` hourly rollup in the shared `insertTokenSplitBuckets` helper, a de-latched `backfillTokenSplit` cursor, and a shared fake-`ctx.db` harness that records every queried table (D-05, D-08)
 - [x] `121-02-PLAN.md` - `costByModel`/`providerBreakdown` migrated to bounded `aggregates` reads with `asOf` + coverage; `costByProvider`, `latencyOverTime`, `useLatencyOverTime` and the Phase 104 STOPGAP note deleted; `evalScores` `llmMetrics` read capped (D-06, D-07, D-09, D-10)
 - [x] `121-03-PLAN.md` - eight self-fetching components created to receive the ten queries hoisted into the page body, none handling its own errors (D-02)
@@ -774,6 +776,7 @@ All 11 decisions D-01..D-11 covered; DEBT-08 mapped to every plan.
 **Plans**: 19 plans
 
 Plans:
+
 - [x] `122-01-PLAN.md` — A11Y-01 BEFORE contrast capture: per-cell JSON writer added to the 4×5 axe matrix, 20 control cells committed ahead of any `index.css` edit, sampling limit named (D-21, D-22, D-24)
 - [x] `122-02-PLAN.md` — per-theme surface ramps (`--surface-0/1/2/3`, `--hairline`) in all 5 themes, with `--background`/`--card`/`--popover`/`--border`/`--input` re-pointed as `var()` aliases (D-01, D-03, D-04)
 - [x] `122-03-PLAN.md` — three-hue-owner law (`--status-ok` decoupled, `--astridr` created, AA error-fill pair), motion tokens plus the three `@utility` duration blocks that make them emit CSS, `readable`'s blanket no-effects rule, then the hard checkpoint (D-05, D-06, D-08, D-09, D-10, D-11, D-28; autonomous: false)
@@ -813,6 +816,7 @@ All 28 decisions D-01..D-28 covered; TOKEN-01..05 and A11Y-01 each mapped to at 
 **Plans**: 13 plans
 
 Plans:
+
 - [x] `123-01-PLAN.md` — fail-on-skip via `globalTeardown` + `fs` side-channel, plus the durable gate-guard self-test carrying controls C1/C2/C7 (D-11, D-12)
 - [x] `123-02-PLAN.md` — extract the rasterisation/WCAG primitives to `e2e/lib/contrast.ts`, add the D-03 font-metric threshold reader, build the pass-2 isolation spec with its sub-AA fixture (D-02, D-03; C3, C6)
 - [x] `123-03-PLAN.md` — per-page content markers, 47-route widening, `A11Y_MEASURE_ONLY` made non-green, scanned-route-count assertion (D-13, D-14, D-16; C5)
@@ -845,6 +849,7 @@ All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/1
   3. A route-list diff taken before and after the regroup is identical — the `navRegistry.ts` change is presentation-only; no URL moves.
 
 **Plans**: 11 plans in 9 waves
+
 - [ ] 124-01-PLAN.md — Criterion-3 route-set golden fixture + 3-case mutation proof (wave 1)
 - [ ] 124-02-PLAN.md — useAlertCounts() honesty fix and its two callers (D-12, wave 1)
 - [ ] 124-03-PLAN.md — bound alerts.countBySeverity's unbounded .collect() (D-13, wave 1)
@@ -856,6 +861,7 @@ All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/1
 - [ ] 124-09-PLAN.md — breadcrumb, pill deletion, SYS/LAT relocation, 420px command bar (wave 7)
 - [ ] 124-10-PLAN.md — geometry gates: D-06 header height, 232px at 900px, rail, E-Stop, a11y (wave 8)
 - [ ] 124-11-PLAN.md — operator visual checkpoint (blocking, wave 9)
+
 **UI hint**: yes
 
 ---
@@ -874,18 +880,35 @@ All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/1
 **Plans**: 13 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 125-01-PLAN.md — CSS foundation: aurora + voice tokens, the event_type -> hue map, the entry-chunk ratchet
 - [ ] 125-02-PLAN.md — Bounded 60s `runtime_events` window query for the ECG backfill
 - [ ] 125-03-PLAN.md — astridr-repo: `estop_state` emitter, on-connect snapshot push, `run.blocks` single-emission fix
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 125-04-PLAN.md — Signal Horizon: aurora/state CSS and the fail-closed state machine, stub-verified
 - [ ] 125-05-PLAN.md — Serif voice trial: Instrument Serif italic on Briefings only
 - [ ] 125-06-PLAN.md — Pulse ECG canvas render layer: gated rAF trace and the two empty states
 - [ ] 125-07-PLAN.md — Operator: deploy the window query to the self-hosted Convex backend
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 125-08-PLAN.md — Signal Horizon: event packets, coalescing, and shell integration
 - [ ] 125-09-PLAN.md — Pulse ECG data layer: trace backfill, the D-17 live-only numeral, the D-19 guard
 - [ ] 125-10-PLAN.md — Operator: serif verdict checkpoint and `125-SERIF-TRIAL.md`
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 125-11-PLAN.md — Dashboard hero swap (D-09) and the entry-chunk ratchet on a complete build
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 125-12-PLAN.md — Operator: the ONE astridr rebuild, with a before/after wire probe
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 125-13-PLAN.md — Operator: live end-to-end E-Stop and ECG verification
 
 **UI hint**: yes
@@ -914,12 +937,14 @@ Plans:
 | `polish-geometry-spec-measures-cold-page` | Test/evidence | Yes — fix BEFORE that spec is used as a measurement source again |
 
 **Two standing cautions for whoever plans this:**
+
 - Two items above are deliberately NOT root-caused and say so in their own files. Planning must not convert a hypothesis into a task description that reads as a diagnosis.
 - The `inbox.listHeldUnacked` fix must NOT cap the shared query — `convex/inboxIngest.ts:174` consumes it server-side for `focus_digest.py` and needs the true unbounded set. Separate the two questions instead.
 
 **Plans**: TBD
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 126 to break down)
 
 ---
@@ -944,12 +969,14 @@ Plans:
 **The measurement that shapes it** (live, 2026-08-21): `ideationFindings` is 100% undismissed (0 of 470 dismissed) and `inbox` is 83.7% unacked. A janitor keyed only on acknowledgement would delete ZERO rows from the first table forever and reach 16% of the second. The never-acknowledged set IS the table; bounding it via auto-close is the phase.
 
 **Two standing cautions for whoever plans this:**
+
 - **Do not cap `inbox.listHeldUnacked`.** It is Phase 126's item, and the roadmap caution on that phase applies unchanged: `convex/inboxIngest.ts:174` consumes it server-side for `focus_digest.py` and needs the true unbounded set. This phase reduces that read's severity by shrinking the table; it must not close it.
 - **`ideationFindings`' proposed 180d window cannot fire yet.** The oldest row is 94 days old (verified), so auto-dismiss matches nothing for ~86 more days. That is inert-by-design, not broken — but the janitor must log that it ran and matched nothing, so the two are distinguishable. Shortening the window is an open planning decision.
 
 **Plans**: TBD
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 127 to break down)
 
 ---
