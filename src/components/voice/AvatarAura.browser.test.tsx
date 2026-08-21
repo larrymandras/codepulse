@@ -30,7 +30,7 @@
  * broad error suppression here would also hide a genuine render() throw, which
  * is the one failure mode the D-04 instrumentation exists to catch.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { AvatarAura } from "./AvatarAura";
 
@@ -61,6 +61,41 @@ function readCounters(): AuraCounters {
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Time-varying fake analyser for the 193-01 D-18.1 modulation guard. Local to
+ * this file (the jsdom sibling's makeFakeAnalyser is a static loud/silent
+ * toggle, not varying — and its makeCtx() full-getContext replacement in the
+ * same file is forbidden here).
+ *
+ * Implements only what analyserLevel() reads (getByteTimeDomainData), plus
+ * fftSize/frequencyBinCount for the AnalyserNode cast. Every sample in the
+ * buffer is filled with the SAME byte value each call, so analyserLevel()'s
+ * RMS reduces to exactly |v| with no cross-sample noise to confound the
+ * assertion.
+ *
+ * Range is [0.05, 0.40] for v (=~lvl): comfortably above the render loop's
+ * `lvl > 0.01` gate (0.05 is 5x the gate, well clear of the ~0.008 byte-
+ * quantization step), while still crossing the `Math.min(1, lvl * 5)`
+ * saturation point at lvl=0.2 — so `level` genuinely swings across the window
+ * rather than pinning at the 1.0 ceiling throughout. Period ~377ms
+ * (`now / 60` inside a sine), giving ~4 full cycles inside the 1500ms window
+ * below.
+ */
+function makeVaryingAnalyser(): AnalyserNode {
+  return {
+    fftSize: 256,
+    frequencyBinCount: 128,
+    getByteTimeDomainData: (buf: Uint8Array) => {
+      const now = performance.now();
+      const v = 0.225 + 0.175 * Math.sin(now / 60);
+      const byte = Math.max(0, Math.min(255, Math.round(v * 128 + 128)));
+      for (let i = 0; i < buf.length; i++) {
+        buf[i] = byte;
+      }
+    },
+  } as unknown as AnalyserNode;
+}
 
 describe("AvatarAura — real-browser draw cadence (LIP-01 guard)", () => {
   it(
@@ -128,5 +163,64 @@ describe("AvatarAura — real-browser draw cadence (LIP-01 guard)", () => {
     expect(mouthDelta).toBeGreaterThanOrEqual(10);
 
     unmount();
+  });
+
+  // D-18.1: 192's cadence guards above prove the loop draws repeatedly, but
+  // both drive the synthetic-breathing fallback (ttsAnalyser=null), which
+  // also varies — they cannot distinguish a healthy amplitude signal from
+  // AvatarAura's TIER-1 defect (frozen `level`, draw count still healthy).
+  // This spec feeds a real varying analyser and asserts the DRAWN GEOMETRY
+  // itself changes, which is what LIP-01's actual symptom is measured on.
+  //
+  // Named to not contain "keeps": the two specs above are filtered with
+  // `-t "keeps"` in the gating verify command specifically so a deliberate,
+  // recorded RED here cannot hard-fail that command's exit code.
+  it("the drawn mouth rx/ry track a varying analyser reading, not a frozen one (D-18.1)", async () => {
+    const ellipseSpy = vi.spyOn(CanvasRenderingContext2D.prototype, "ellipse");
+    try {
+      const { unmount } = render(
+        <AvatarAura state="speaking" ttsAnalyser={makeVaryingAnalyser()} />,
+      );
+
+      await wait(1500);
+
+      unmount();
+
+      // AvatarAura.tsx:470 (`ctx.ellipse(mouthCx, mouthCy, mouthRx, mouthRy,
+      // 0, 0, Math.PI * 2)`) is the ONLY `.ellipse(` call site in this
+      // component (confirmed by grep) — filter on its fixed
+      // (rotation=0, startAngle=0, endAngle=2*PI) argument shape anyway, so a
+      // future sibling ellipse() draw call cannot silently get folded into
+      // this assertion.
+      const mouthCalls = ellipseSpy.mock.calls.filter(
+        (args) =>
+          args.length === 7 &&
+          args[4] === 0 &&
+          args[5] === 0 &&
+          Math.abs((args[6] as number) - Math.PI * 2) < 1e-9,
+      );
+
+      // Floor before range: an empty array's Math.min/Math.max are
+      // Infinity/-Infinity, which would otherwise satisfy a naive inequality
+      // vacuously.
+      expect(mouthCalls.length).toBeGreaterThanOrEqual(10);
+
+      const rxs = mouthCalls.map((args) => args[2] as number);
+      const rys = mouthCalls.map((args) => args[3] as number);
+      const rxMin = Math.min(...rxs);
+      const rxMax = Math.max(...rxs);
+      const ryMin = Math.min(...rys);
+      const ryMax = Math.max(...rys);
+
+      // RELATIVE margin, not absolute pixels: mouthRx/mouthRy =
+      // base * RATIO * (1 + level * GAIN), so (max-min)/min cancels `base`
+      // entirely — the assertion stays meaningful regardless of the real
+      // container/canvas size this browser-mode harness produces (unknown at
+      // authoring time), tracking only whether `level` itself is varying.
+      expect((rxMax - rxMin) / rxMin).toBeGreaterThan(0.05);
+      expect((ryMax - ryMin) / ryMin).toBeGreaterThan(0.05);
+    } finally {
+      ellipseSpy.mockRestore();
+    }
   });
 });
