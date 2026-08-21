@@ -48,8 +48,8 @@ Where the milestone's leverage is: 200+ components inherit from shared primitive
 
 ## Shell & Information Architecture (SHELL)
 
-- [ ] **SHELL-01** — A 48px 3-zone header (breadcrumb / command bar / system-chip + E-STOP + overflow menu holding theme, privacy, CRT and audio) replaces today's header on every route. *(Amended 2026-08-21: "help" struck from the overflow list to match the amended D-07 in `124-CONTEXT.md:90` and `124-UI-SPEC.md:247-250,509`. No Help control exists in the app today; building one is net-new UI outside a presentation-only regroup and is deferred pending its own scoping.)*
-- [ ] **SHELL-02** — The 232px sidebar is regrouped into 4 collapsible domains (Command / Observe / Agents / System) with count badges and a 2px active rail, delivered as a **pure `navRegistry.ts` regroup with no route changes**. *(Every route keeps its URL; this is presentation only.)*
+- [x] **SHELL-01** — A 3-zone header (breadcrumb / command bar / system-chip + E-STOP + overflow menu holding theme, privacy, CRT and audio) replaces today's header on every route. *(Amended 2026-08-21: "help" struck from the overflow list to match the amended D-07 in `124-CONTEXT.md:90` and `124-UI-SPEC.md:247-250,509`. No Help control exists in the app today; building one is net-new UI outside a presentation-only regroup and is deferred pending its own scoping.)* *(Amended again 2026-08-21 on completion: the "48px" figure is struck. 124-10 owned D-06 and settled the header height by measurement -- the three zones' combined min-content EXCEEDS available width at both 375px and 900px (settled re-derivation: 366.2 vs 327, and 720.8 vs 620), so the wrap branch was taken and the header ships at **56px** (`min-h-14 flex-wrap gap-y-1`). Recorded as a ruled deviation on the letter of the requirement, with its intent met. See the matching ROADMAP criterion-1 amendment.)*
+- [x] **SHELL-02** — The 232px sidebar is regrouped into 4 collapsible domains (Command / Observe / Agents / System) with count badges and a 2px active rail, delivered as a **pure `navRegistry.ts` regroup with no route changes**. *(Every route keeps its URL; this is presentation only.)*
 
 ## Signature Layers (SIGNAL)
 
@@ -120,8 +120,8 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | A11Y-01 | Phase 122 | Complete |
 | A11Y-02 | Phase 123 | Complete — 20 criterion cells (D-16 hold-and-size); 42-route backlog filed separately |
 | A11Y-03 | Phase 123 | Complete — live gated-server evidence 2026-08-20, `123-CLOSEOUT.md` §12 |
-| SHELL-01 | Phase 124 | Pending |
-| SHELL-02 | Phase 124 | Pending |
+| SHELL-01 | Phase 124 | Complete |
+| SHELL-02 | Phase 124 | Complete |
 | SIGNAL-01 | Phase 125 | Pending |
 | SIGNAL-02 | Phase 125 | Pending |
 | SIGNAL-03 | Phase 125 | Pending |

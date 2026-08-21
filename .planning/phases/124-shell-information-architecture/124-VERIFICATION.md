@@ -1,7 +1,49 @@
 ---
 phase: 124-shell-information-architecture
 verified: 2026-08-21T14:15:00Z
-status: human_needed
+status: passed
+resolved: 2026-08-21T18:40:00Z
+resolution: |
+  Both human_verification items were closed by the operator on 2026-08-21,
+  with evidence, after this report was filed. Status moved human_needed ->
+  passed by the orchestrator; the human_verification block below is retained
+  verbatim as the historical record of what was outstanding, not as an open
+  item.
+
+  Item 1 (three unvisited moved routes) -- CLOSED, PASS. The operator supplied
+  three screenshots against http://localhost:5181. All three loaded at their
+  pre-regroup addresses with breadcrumbs matching D-16's registry lookup
+  exactly: /briefings -> "Agents / Briefings" (session list + daily digest
+  rendered), /config -> "System / Config" (Core Security Layers rendered),
+  /workspace-map -> "Observe / Workspace Map" (radial graph, "53/53 roots
+  covered"). Combined with Automation and Tool Galaxy from the original
+  checkpoint, all five moved routes are now operator-confirmed. Checklist item
+  8 moves PARTIAL -> PASS. A side observation from the same screenshots: the
+  per-domain collapse state persisted across navigation (COMMAND closed,
+  OBSERVE open on all three), independently corroborating 124-05's
+  persistence work.
+
+  Item 2 (Criterion 1 letter vs intent) -- CLOSED, RULED "AMEND". The operator
+  ruled explicitly to amend rather than to record a permanent miss. ROADMAP.md
+  criterion 1 and REQUIREMENTS.md SHELL-01 were both amended to strike the
+  "48px" figure, record the measured 56px, and carry the measurement and the
+  plan that authorised it -- the same amendment pattern SHELL-01 already
+  carried for D-07's struck Help control at 286c2d51. The deviation is
+  recorded as ruled, never rounded up to a pass.
+
+  ONE NEW DEFECT was found while closing these items and is DEFERRED, not
+  fixed: a 4px horizontal overflow in the sidebar. Measured live via
+  Playwright at 1512x900 after a 3s settle -- <aside> is exactly 232px (D-17
+  holds), but its <nav> reports clientWidth 231 / scrollWidth 235 with a
+  computed overflow-x of "auto", which is what renders the visible horizontal
+  scrollbar. Cause is <Separator className="my-2 mx-3" /> at
+  DashboardLayout.tsx:463: the primitive carries data-[orientation=horizontal]
+  :w-full, so mx-3 puts its right edge at 235px, 3px past the aside. The
+  scrollbar appears because CSS computes overflow-x: visible -> auto once
+  overflow-y-auto is set on the same box. NOT caused by this phase --
+  `git log -S '<Separator className="my-2 mx-3" />'` attributes it to
+  269458ac (Phase 71's nav clustering), with no Phase 124 commit in the
+  result set. Frontend-only, no deploy needed, a one-class fix.
 score: 3/3 success criteria intent achieved (1 not met AS WRITTEN, deviation ruled); 17/17 D-decisions verified in code
 overrides_applied: 0
 overrides: []
@@ -23,7 +65,7 @@ deferred:
 
 **Phase Goal:** Every route shares one calm 3-zone header and a 4-domain sidebar — presentation-only, with no route in the app changing address.
 **Verified:** 2026-08-21T14:15:00Z
-**Status:** human_needed
+**Status:** passed (was human_needed; both human items closed by the operator 2026-08-21 -- see `resolution` in the frontmatter and `124-HUMAN-UAT.md`)
 **Re-verification:** No — initial verification
 
 ## Method note
