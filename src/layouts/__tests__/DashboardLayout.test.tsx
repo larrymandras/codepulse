@@ -104,7 +104,7 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
 }));
 
-import { useQuery } from "convex/react";
+import { useQuery, useConvexConnectionState } from "convex/react";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import DashboardLayout from "../DashboardLayout";
 
@@ -409,6 +409,105 @@ describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 0
     // exact assertion turn red when the two SectionErrorBoundary wrappers
     // are removed.
     expect(screen.getAllByText("Command").length).toBeGreaterThan(0);
+  });
+});
+
+describe("DashboardLayout system chip (D-11/D-12/D-13, Phase 124 Plan 08)", () => {
+  beforeEach(() => {
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useAstridrWS).mockReset();
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+  });
+
+  // Dispatches on the reference string (same shape as mockBadgeQueries
+  // above) and drives useConvexConnectionState's mock per case — its module
+  // mock defaults to { isWebSocketConnected: true } (line 43), so each case
+  // below overrides it explicitly rather than relying on that default.
+  function mockChip(opts: { connected: boolean; counts?: unknown }) {
+    vi.mocked(useConvexConnectionState).mockReturnValue({
+      isWebSocketConnected: opts.connected,
+    } as ReturnType<typeof useConvexConnectionState>);
+    vi.mocked(useQuery).mockImplementation(((ref: unknown) => {
+      if (ref === "alerts:countBySeverity") return opts.counts;
+      return undefined;
+    }) as typeof useQuery);
+  }
+
+  // Every positive case below asserts the expected word IS present AND that
+  // the other three state words are ABSENT — a chip that renders every
+  // state at once, or that renders one word unconditionally, cannot pass
+  // this pairing (a presence-only assertion could not distinguish them).
+  const ALL_WORDS = ["Nominal", "Attention", "Critical", "Offline"];
+  function assertOnly(present: string) {
+    for (const word of ALL_WORDS) {
+      if (word === present) {
+        expect(screen.getAllByText(word).length).toBeGreaterThan(0);
+      } else {
+        expect(screen.queryByText(word)).not.toBeInTheDocument();
+      }
+    }
+  }
+
+  it("WS disconnected -> Offline, and none of Nominal/Attention/Critical renders", () => {
+    mockChip({ connected: false, counts: { info: 0, warning: 0, error: 0, critical: 0, truncated: false } });
+    renderLayout();
+    assertOnly("Offline");
+  });
+
+  it("WS connected, counts unresolved (undefined) -> no chip text at all renders", () => {
+    mockChip({ connected: true, counts: undefined });
+    renderLayout();
+    for (const word of ALL_WORDS) {
+      expect(screen.queryByText(word)).not.toBeInTheDocument();
+    }
+  });
+
+  it("WS connected, counts all zero -> Nominal", () => {
+    mockChip({ connected: true, counts: { info: 0, warning: 0, error: 0, critical: 0, truncated: false } });
+    renderLayout();
+    assertOnly("Nominal");
+  });
+
+  it("WS connected, warning: 3 -> Attention", () => {
+    mockChip({ connected: true, counts: { info: 0, warning: 3, error: 0, critical: 0, truncated: false } });
+    renderLayout();
+    assertOnly("Attention");
+  });
+
+  it("WS connected, error: 1 -> Critical", () => {
+    mockChip({ connected: true, counts: { info: 0, warning: 0, error: 1, critical: 0, truncated: false } });
+    renderLayout();
+    assertOnly("Critical");
+  });
+
+  it("WS connected, critical: 1 -> Critical (the || branch's other side)", () => {
+    mockChip({ connected: true, counts: { info: 0, warning: 0, error: 0, critical: 1, truncated: false } });
+    renderLayout();
+    assertOnly("Critical");
+  });
+
+  it("Offline wins over Critical: WS disconnected with critical:5 still renders Offline, never Critical (precedence)", () => {
+    mockChip({ connected: false, counts: { info: 0, warning: 0, error: 0, critical: 5, truncated: false } });
+    renderLayout();
+    assertOnly("Offline");
+  });
+
+  it("the chip's state agrees with the Alerts sidebar badge — both read the same countBySeverity subscription", () => {
+    // warning: 2 -> chip says Attention; the same counts sum to a total of 2
+    // in the Alerts sidebar badge's own aria-label, both derived from one
+    // mocked response, so a mismatch here can only mean the two consumers
+    // diverged, not that the mock was inconsistent.
+    mockChip({ connected: true, counts: { info: 0, warning: 2, error: 0, critical: 0, truncated: false } });
+    renderLayout();
+    assertOnly("Attention");
+    const alertsBadges = screen.getAllByLabelText("2 unacknowledged alerts");
+    expect(alertsBadges.length).toBeGreaterThan(0);
   });
 });
 
