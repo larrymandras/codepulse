@@ -77,6 +77,26 @@ export const RETENTION_DAYS: Record<string, number> = {
   // and then dedupes to the latest row per service, so only the newest is ever
   // used and pruning actively shrinks an unbounded read.
   supabaseHealth: 30,
+  // Second enrolment pass, 2026-08-21. Same discipline as the four above: rate
+  // measured live, writer read, readers checked for a range wider than the
+  // window. The VERIFY WRITER flags the first pass left open were resolved by
+  // reading the writers -- two of the five turned out NOT to be prunable and
+  // were moved to COVERAGE_KEEP_FOREVER instead (see agentProfiles/avatars and
+  // skills/skillOverrides there).
+  //
+  // agents, 55.3 rows/day. RESOLVED: agents.ts:14 does an UNCONDITIONAL
+  // ctx.db.insert on every register call -- one row per agent RUN, carrying
+  // sessionId/startedAt/status. It is append-only telemetry, not the registry
+  // its name suggests. A 30-day-old row with status "running" is a dead run.
+  agents: 30,
+  // startupEvents, 48.3 rows/day. Append-only boot log, no status field.
+  startupEvents: 30,
+  // agentMetrics, 19.9 rows/day. Has `archived`, but that is a soft-delete
+  // marker of the same kind `events` carries -- it does not mean "still needs
+  // attention", so a calendar cutoff strands nothing.
+  agentMetrics: 30,
+  // run_blocks, 70.7 rows/day -- firehose tier, matching runtime_events above.
+  run_blocks: 14,
   // build/history — 90 days
   // episodicEvents, 96.2 rows/day, enrolled 2026-08-21 alongside the three
   // 30-day entries above. Despite the name this is NOT memory content — its
@@ -86,6 +106,33 @@ export const RETENTION_DAYS: Record<string, number> = {
   // purgeOldMemoryEvents had targeted for this same table before it was
   // superseded by Phase 110 and left uncalled.
   episodicEvents: 90,
+  // Second enrolment pass, 2026-08-21 (90-day tier). Readers were checked for a
+  // range wider than the window before each was enrolled: every consumer is a
+  // bounded take(50/100/500) or an explicitly range-bounded .gte(), so none can
+  // reach past 90 days.
+  //
+  // configChanges, 90.2 rows/day. Audit trail; drift.ts reads it through
+  // range-bounded .gte() queries well inside this window.
+  configChanges: 90,
+  // gitActivity / gitCommits, 68.3 rows/day each. Ingested git history feeding
+  // bounded dashboard reads, not the git repository itself -- the actual history
+  // lives in git and is re-ingestable.
+  gitActivity: 90,
+  gitCommits: 90,
+  // commandExecutions, 32.4 rows/day. Carries a lifecycle `status` and
+  // `cancelRequested`, but both are terminal long before 90 days -- a 90-day-old
+  // queued command is dead, not pending. `parentExecutionId` is a plain string,
+  // not a v.id, so pruning cannot leave a dangling typed reference.
+  commandExecutions: 90,
+  // proactiveMessages, 23.4 rows/day. Append-only outbound message log.
+  proactiveMessages: 90,
+  // hiveMindEntries, 21.7 rows/day. Append-only.
+  hiveMindEntries: 90,
+  // briefings, 13.9 rows/day. Generated daily digests; briefings.ts reads
+  // newest-first and emailDigest.ts reads the current day.
+  briefings: 90,
+  // subagentExecutions, 7.6 rows/day. Append-only execution log.
+  subagentExecutions: 90,
   events: 90,
   environmentSnapshots: 90,
   contextSnapshots: 90,

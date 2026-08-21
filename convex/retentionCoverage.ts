@@ -1,7 +1,7 @@
 /**
  * Retention COVERAGE policy — which bucket every schema table belongs to.
  *
- * WHY THIS EXISTS (2026-08-21). convex/retention.ts's RETENTION_DAYS covers 25
+ * WHY THIS EXISTS (2026-08-21). convex/retention.ts's RETENTION_DAYS covers 37
  * tables. schema.ts declares 145. Nothing connected the two in the direction
  * that mattered: retention.test.ts asserts every RETENTION_DAYS key is a real
  * table (catching typos), but nothing asserted that every real table has been
@@ -14,7 +14,7 @@
  * sweepGraphSnapshotVersions cron, sat COMMENTED OUT in crons.ts since
  * 2026-07-14. Nothing reported it for 29 days. The nightly health check said
  * "verdict=OK tables=21 all caught up" throughout, truthfully, because it only
- * inspects the 25 enrolled tables. An instrument that cannot see the failure
+ * inspects the 37 enrolled tables. An instrument that cannot see the failure
  * mode reports success right up until someone reads the disk.
  *
  * This module is a RATCHET, not a blessing list. A table absent from every
@@ -48,7 +48,19 @@ export const COVERAGE_PRUNED: readonly string[] = [
   "advisorEvents",
   "promptSubmissions",
   "supabaseHealth",
-  "episodicEvents"
+  "episodicEvents",
+  "configChanges",
+  "run_blocks",
+  "gitActivity",
+  "gitCommits",
+  "startupEvents",
+  "agents",
+  "commandExecutions",
+  "proactiveMessages",
+  "hiveMindEntries",
+  "agentMetrics",
+  "briefings",
+  "subagentExecutions"
 ] as const;
 
 /**
@@ -122,6 +134,10 @@ export const COVERAGE_KEEP_FOREVER: Record<string, string> = {
   warRooms: "war-room definitions",
   swarmGoals: "goal definitions",
   operatorScores: "operator scoring reference",
+  agentProfiles: "MIXED curated + ephemeral: seedTeams.ts:142 and seedGateway.ts:67 insert real team config (displayName/systemPrompt/tools/sortOrder) while agents.ts:35 auto-creates one per new agentId. pruneBatchV3 deletes OLDEST FIRST, so calendar pruning would delete the seeded config before anything else",
+  avatars: "foreign-key target of agentProfiles.avatarId, typed v.id to this table; pruning would leave dangling references, and seedTeams.ts:133 seeds curated ones",
+  skills: "UPSERT registry keyed on (name, origin) at registry.ts:248-256 - a row IS an installed skill, so deleting one by calendar age removes a skill that is still present, exactly the hazard retention.ts:126-141 documents for prompts",
+  skillOverrides: "user-authored category/visibility overrides (skillCategories.ts:331) - configuration, not telemetry",
 };
 
 /**
@@ -147,23 +163,7 @@ export const COVERAGE_PRUNE_PROPOSED: Record<
   { rowsPerDay: number | null; proposedDays: number; note: string }
 > = {
   inbox: { rowsPerDay: 100, proposedDays: 90, note: "DO NOT calendar-prune as-is: schema.ts:2112 has ackedAt, so a _creationTime cutoff would delete UNACKED items the operator never saw. Needs an ack-aware janitor keyed on ackedAt, the shape media.pruneTrashBatch uses for deletedAt" },
-  configChanges: { rowsPerDay: 90.2, proposedDays: 90, note: "config audit trail" },
-  run_blocks: { rowsPerDay: 70.7, proposedDays: 14, note: "runtime execution blocks - firehose tier" },
-  gitActivity: { rowsPerDay: 68.3, proposedDays: 90, note: "git activity history" },
-  gitCommits: { rowsPerDay: 68.3, proposedDays: 90, note: "git commit history" },
-  agents: { rowsPerDay: 55.3, proposedDays: 30, note: "VERIFY WRITER: 5,032 rows for a handful of real agents means append-only, not a registry" },
-  startupEvents: { rowsPerDay: 48.3, proposedDays: 30, note: "append-only startup log" },
-  agentProfiles: { rowsPerDay: 48.1, proposedDays: 30, note: "VERIFY WRITER: growth rate implies append-only, not a profile registry" },
-  avatars: { rowsPerDay: 48.1, proposedDays: 30, note: "VERIFY WRITER: growth rate implies append-only" },
-  commandExecutions: { rowsPerDay: 32.4, proposedDays: 90, note: "append-only execution history" },
-  proactiveMessages: { rowsPerDay: 23.4, proposedDays: 90, note: "append-only message log" },
-  hiveMindEntries: { rowsPerDay: 21.7, proposedDays: 90, note: "append-only hive-mind entries" },
-  agentMetrics: { rowsPerDay: 19.9, proposedDays: 30, note: "per-run metric rows" },
-  briefings: { rowsPerDay: 13.9, proposedDays: 90, note: "generated briefings" },
-  subagentExecutions: { rowsPerDay: 7.6, proposedDays: 90, note: "append-only subagent execution log" },
-  skills: { rowsPerDay: 8.1, proposedDays: 90, note: "VERIFY WRITER: may be scan-append rather than upsert-by-name" },
-  skillOverrides: { rowsPerDay: 7.7, proposedDays: 90, note: "VERIFY WRITER: may be scan-append rather than upsert-by-name" },
-  ideationFindings: { rowsPerDay: 5.1, proposedDays: 90, note: "append-only findings log" },
+  ideationFindings: { rowsPerDay: 5.1, proposedDays: 90, note: "DO NOT calendar-prune as-is: schema.ts:892-898 has dismissed, dismissedAt, acknowledgedAt and convertedAt - this is a TRIAGE QUEUE, so a _creationTime cutoff would delete open, unacknowledged findings. Same class as inbox; needs a dismissed-aware janitor" },
   profileMetrics: { rowsPerDay: 0, proposedDays: 90, note: "DEAD WRITER: newest row 2026-04-10, 2,540 rows frozen. Confirm the feature is retired, then drop the table rather than prune it" },
   memoryQuality: { rowsPerDay: null, proposedDays: 90, note: "eval output, append-only" },
   evalScores: { rowsPerDay: null, proposedDays: 90, note: "eval output, append-only" },
