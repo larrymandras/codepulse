@@ -198,6 +198,49 @@ function AlertsCountBadge() {
   );
 }
 
+// D-11: the header's system chip — Nominal/Attention/Critical/Offline —
+// composed entirely client-side from the SAME `alerts.countBySeverity`
+// subscription AlertsCountBadge above reads (Convex dedupes the identical
+// subscription client-side, so this costs no extra round trip) plus the
+// connection flag SidebarContent already reads at its own call site
+// (:308-309, the "122 D-16 precedent" 124-CONTEXT.md cites). `convex/health.ts`
+// exports zero public queries (verified against `convex/alerts.ts` as a
+// control, which does export public `query`s) — D-11's whole rationale for
+// adding no backend rests on that absence, confirmed live rather than
+// inherited from the plan. This is the fourth shell-level subscription to
+// get its own SectionErrorBoundary (D-13) — Active Brain (pre-existing),
+// Inbox count and Alerts count (124-06) were the first three; the plan text
+// undercounts this as "the third", corrected here.
+function SystemChip() {
+  const { isWebSocketConnected } = useConvexConnectionState();
+  const counts = useQuery(api.alerts.countBySeverity);
+
+  // Resolution order, exactly (T-124-08-01). Offline wins over every
+  // alert-derived state: once the socket is down the alert counts are stale
+  // by definition, so reporting "Nominal" from them would be a confident
+  // claim about data that is not arriving.
+  if (!isWebSocketConnected) {
+    return <StatusBadge status="idle" tier="quietest" label="Offline" />;
+  }
+  // D-12's undefined-preserving rule, one layer up: render NOTHING rather
+  // than fabricate "Nominal" while the query has not resolved — the chip
+  // appearing is itself the signal that a real reading exists. `== null`
+  // also covers this suite's `null`-for-unresolved mock shape, matching
+  // InboxCountBadge/AlertsCountBadge above.
+  if (counts == null) return null;
+
+  if (counts.critical > 0 || counts.error > 0) {
+    return <StatusBadge status="error" tier="strong" label="Critical" />;
+  }
+  if (counts.warning > 0) {
+    return <StatusBadge status="warn" tier="quiet" label="Attention" />;
+  }
+  // Nominal reads --status-ok via StatusBadge's "quiet" tier, never
+  // --primary — the exact TOKEN-02 (Phase 122) collision this plan exists
+  // to keep out of a brand-new component (healthy is not interactive).
+  return <StatusBadge status="ok" tier="quiet" label="Nominal" />;
+}
+
 function NavGroup({
   label,
   items,
@@ -823,6 +866,17 @@ export default function DashboardLayout() {
             <EStopButton />
             <SectionErrorBoundary name="Active Brain">
               <BrainHeaderBadge />
+            </SectionErrorBoundary>
+            {/* D-11/D-13: own boundary, own fallback — a throw from the alerts
+                subscription or the connection hook must never blank the header.
+                Collapses "disconnected" and "the alerts query errored" to the
+                same dimmed dot per the UI-SPEC's Copywriting Contract, since the
+                chip cannot distinguish them without backend work D-11 declines. */}
+            <SectionErrorBoundary
+              name="System status"
+              fallback={<BadgeUnavailableDot label="System status unavailable" />}
+            >
+              <SystemChip />
             </SectionErrorBoundary>
             <NotificationBell />
             {/* Phase 124 (D-07, amended 2026-08-21): the four settings-shaped
