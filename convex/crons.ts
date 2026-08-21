@@ -36,12 +36,25 @@ crons.daily(
   {}
 );
 
-// DISABLED 2026-07-14 (self-hosted migration incident): markStaleArchived,
-// evaluateInternal, and sweepGraphSnapshotVersions all hit the 15s syscall cap
-// on self-hosted Convex (single node, SQLite, 3.2M docs) and NEVER complete.
+// DISABLED 2026-07-14 (self-hosted migration incident): markStaleArchived and
+// evaluateInternal hit the 15s syscall cap on self-hosted Convex (single node,
+// SQLite, 3.2M docs) and NEVER complete.
 // A failing cron execution retries on its own backoff regardless of schedule,
 // so throttling does not help — the retry storms starved ingest mutations.
 // Re-enable once their queries are bounded / retention has shrunk the tables.
+//
+// sweepGraphSnapshotVersions was in this list until 2026-08-21 and is now
+// RE-ENABLED below — its candidate-selection read was bounded by the
+// storedVersions field landing 2026-08-16. Do not re-add it here.
+//
+// Status of the two still listed, measured 2026-08-21 — BOTH are currently
+// no-ops, so neither is urgent:
+//   - markStaleArchived only SETS `archived: true`; convex/retention.ts already
+//     DELETES these tables nightly (verdict=OK, all 21 tables caught up), so the
+//     flag only affects the 30d–90d window, and the queries that read it are
+//     themselves time-bounded to 48h.
+//   - evaluateInternal evaluates `alertRules`, which currently has ZERO rows.
+//     Alerts still fire — they come from costBudgetEval, a different path.
 //
 // Phase 5: Archival at 02:00 UTC
 // crons.daily(
@@ -143,27 +156,38 @@ crons.daily(
 );
 
 // Phase 83: Graph snapshot version retention (D-03)
-// DISABLED 2026-07-14 — times out on self-hosted Convex; see note at archive-stale-events.
 //
-// CAUSE PINNED 2026-08-13 (Phase 115 defect-class sweep). Do NOT re-enable on the
-// strength of the line above: "times out" named a symptom, not a mechanism, and the
-// mechanism is still present. sweepGraphSnapshotVersions derives its candidate
-// versions by collecting EVERY graphSnapshotNodes row across EVERY stored version
-// for a snapshotId (graphSnapshots.ts, the `nodeRows` query) — with
-// GRAPH_SNAPSHOT_KEEP_VERSIONS at 7 that is up to seven full versions in one read.
-// Fixing it means storing the version list on the meta doc the way Phase 115 does
-// with workspaceSnapshots.storedVersions, plus a backfill.
+// RE-ENABLED 2026-08-21. Both blockers that kept this disabled since 2026-07-14
+// are now resolved, verified against the live backend:
+//   1. Candidate selection no longer scans entity rows — `graphSnapshots
+//      .storedVersions` landed 2026-08-16, so the sweep reads ONE meta field.
+//      (This is what the 2026-08-13 "CAUSE PINNED / do NOT re-enable" note asked
+//      for; that note was written before the field existed and was stale.)
+//   2. The per-version delete cap was corrected 2026-08-13 from a .collect() with
+//      a 15,000 cap justified against the 16,000-doc WRITE ceiling to a bounded
+//      .take() at MAX_DELETES_PER_INVOCATION=1000, against the real binding limit
+//      of 4,096 READS (a ctx.db.delete() counts as a read).
 //
-// A SEPARATE defect in the same function WAS fixed on 2026-08-13: its per-version
-// node/link deletes used .collect() with a 15,000 cap justified against the
-// 16,000-doc WRITE ceiling, when the binding limit is 4,096 READS and a
-// ctx.db.delete() counts as one. That is now a bounded .take(). Re-enabling still
-// requires the candidate-selection fix above.
-// crons.daily(
-//   "sweep-graph-snapshot-versions",
-//   { hourUTC: 4, minuteUTC: 30 },
-//   internal.graphSnapshots.sweepGraphSnapshotVersions,
-// );
+// HOURLY, not daily, and deliberately so. `storedVersions` was found on
+// 2026-08-21 to be PRESENT BUT INCOMPLETE: the field was added to a table that
+// already had rows, ingest appends to `existing?.storedVersions ?? []`, and
+// backfillGraphStoredVersions SKIPS any doc where the field is already set
+// (force=false default) — so it read [57,58,59,60] while versions 5..60 all had
+// rows. Versions 5–56 were orphaned, unreachable by any delete path, forever.
+// A force=true backfill corrected it to [5..60]; 49 versions (~321k rows) now
+// need draining. At 1000 rows/invocation and ~7 invocations per version that is
+// ~343 runs — 11 months daily, ~14 days hourly. Hourly is ~0.28 rows/sec, about
+// 240x gentler than the 120,000 docs/night (~67/sec) convex/retention.ts already
+// sustains, so this does NOT reintroduce the mass-delete tombstone hazard that
+// took the dashboard down 2026-07-21/22. The 1000-row cap is untouched — pace was
+// raised by FREQUENCY, never by cap. Once the backlog drains (storedVersions
+// length <= GRAPH_SNAPSHOT_KEEP_VERSIONS) every run is a cheap no-op, so leaving
+// it hourly afterwards costs one meta read per hour.
+crons.interval(
+  "sweep-graph-snapshot-versions",
+  { hours: 1 },
+  internal.graphSnapshots.sweepGraphSnapshotVersions,
+);
 
 // Phase 93: Nightly LLM-judge sampling (EVAL-02). Offset from the 04:30
 // graph-snapshot sweep and the 06:00 daily-digest generation to avoid

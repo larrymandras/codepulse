@@ -19,12 +19,22 @@
  *
  * Growth is bounded by an INLINE, batch-capped prune inside the SAME
  * mutation — never a cron (D-11). graphSnapshots.ts's own cron-based sweep
- * (sweepGraphSnapshotVersions) is disabled at crons.ts:145-151 because its
- * candidate-selection read (a full `.collect()` over every stored version's
- * rows) times out on this self-hosted backend. This module avoids that read
- * entirely: the live version list lives on the meta doc's `storedVersions`
- * field, so candidate selection costs O(keepN) array elements, never a table
- * scan (RESEARCH Assumption A2 / T-115-04-03).
+ * (sweepGraphSnapshotVersions) WAS disabled because its candidate-selection
+ * read (a full `.collect()` over every stored version's rows) timed out on
+ * this self-hosted backend; it was RE-ENABLED hourly on 2026-08-21 after
+ * graphSnapshots gained the same `storedVersions` field this module
+ * pioneered. This module avoids that read entirely: the live version list
+ * lives on the meta doc's `storedVersions` field, so candidate selection
+ * costs O(keepN) array elements, never a table scan
+ * (RESEARCH Assumption A2 / T-115-04-03).
+ *
+ * Carry-over caution from the 2026-08-21 graphSnapshots incident: a
+ * `storedVersions` field added to a table that ALREADY has rows is
+ * present-but-incomplete, and the ingest path's `existing?.storedVersions ??
+ * []` append cements that partial list. Any version missing from it is
+ * unreachable by the prune forever, because selection is by version. This
+ * module was born with the field, so it is not affected — but a force=true
+ * backfill is the only thing that repairs it if it ever is.
  */
 
 import { v } from "convex/values";

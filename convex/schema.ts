@@ -2404,11 +2404,12 @@ export default defineSchema({
   //
   // Growth is bounded by an INLINE, batch-capped prune inside the same ingest
   // mutation (D-11) — never a cron. graphSnapshots' own cron-based sweep
-  // (sweepGraphSnapshotVersions) is DISABLED at crons.ts:145-151 because its
-  // candidate-selection read times out on this self-hosted backend. That is
-  // why workspaceSnapshots.storedVersions exists: it lets the prune discover
-  // which versions exist from the meta doc alone, with no scan over entity
-  // rows at all (see convex/workspace.ts).
+  // (sweepGraphSnapshotVersions) WAS disabled because its candidate-selection
+  // read timed out on this self-hosted backend; it was RE-ENABLED 2026-08-21
+  // (hourly) once graphSnapshots.storedVersions removed that read. This
+  // module's design was the template for that fix: storedVersions lets the
+  // prune discover which versions exist from the meta doc alone, with no scan
+  // over entity rows at all (see convex/workspace.ts).
   //
   // Side-channel rule (Pitfall 1 / D-03): fileCount/totalSize count VISIBLE
   // files only. withheldCount is deliberately COUNT-ONLY — there is no
