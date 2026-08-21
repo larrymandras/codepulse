@@ -162,6 +162,34 @@ describe("CommandPalette", () => {
     expect(new Set(values).size).toBe(values.length);
   });
 
+  // Phase 124 D-05 rider — measure the cmdk value-collision claim against the
+  // LIVE (pre-rename) navRegistry rather than assuming it from a code
+  // reading. Both `/analytics` (OBSERVE) and `/hr/analytics` (AGENTS)
+  // currently carry `label: "Analytics"`, and neither Pages `CommandItem`
+  // sets an explicit `value` prop (`CommandPalette.tsx:66`), so cmdk falls
+  // back to deriving `value` from rendered text for both. This is the exact
+  // measurement 124-CONTEXT.md's D-05 Rider demands — reproduce before the
+  // rename, then this same assertion must go green once Task 2 disambiguates
+  // the labels to "Analytics" / "Agent Analytics".
+  it("D-05: two Pages entries sharing the label 'Analytics' — cmdk value collision measurement", () => {
+    renderPalette({ open: true });
+
+    const dupItems = screen.getAllByText("Analytics");
+    // Record the count independently of the uniqueness assertion below — a
+    // registry drift (more or fewer than 2 "Analytics" rows) must be caught
+    // here rather than silently changing what assertion (b) is measuring.
+    expect(dupItems.length).toBe(2);
+
+    const values = dupItems.map(
+      (el) => el.closest("[data-value]")?.getAttribute("data-value")
+    );
+    // Raw values recorded verbatim in 124-04-SUMMARY.md per the Rider.
+    // eslint-disable-next-line no-console
+    console.log("D-05 measurement — Analytics data-value pair:", values);
+
+    expect(new Set(values).size).toBe(values.length);
+  });
+
   it("Cron Jobs group renders cron job items from useCommandPaletteSearch", () => {
     renderPalette({ open: true });
     // The mock provides cronJobs: [{ id: "cj1", name: "health-check" }]
