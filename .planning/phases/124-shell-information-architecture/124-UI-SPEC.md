@@ -350,6 +350,15 @@ unchanged — POLISH-06's finding about *where* the clip happens is independent 
   `::before` pseudo-element per the sketch pattern) — the color source (`--primary`) is unchanged.
   Per the Typography section above, this rail + tint is now the *only* signal distinguishing an
   active item from an inactive one — weight is identical (400) on both.
+- **`aria-current="page"` must be preserved on the active item.**
+  `DashboardLayout.tsx:102` renders each nav item with react-router's `NavLink`, which sets
+  `aria-current="page"` on the active link by default; the live code adds no override
+  (`grep -c "aria-current" src/layouts/DashboardLayout.tsx` returns **0**, control: 5 `NavLink`
+  hits in the same file). SHELL-02 rewrites this exact render path to add the `::before` rail,
+  so the requirement is stated explicitly rather than left to the default surviving: an
+  implementer swapping to a plain styled `<Link>`, or stubbing the attribute, would silently
+  drop the only non-visual signal of which item is active. This mirrors the `aria-current`
+  requirement already carried for the breadcrumb.
 
 ### Count badges (D-10, D-12)
 
