@@ -125,88 +125,98 @@ export interface NavGroupConfig {
   items: NavItem[];
 }
 
-// Phase 71 IA refactor — 6 clusters. No existing `to` path changed. (This
-// comment used to add "new phase routes are registered as placeholder labels
-// only"; that was already untrue — no item ever set `placeholder` — and the
-// capability itself was removed at Phase 123's closeout. Settings still lives
-// in the footer UserMenu rather than a nav cluster.)
+// Phase 124 SHELL-02 regroup: 5 groups -> 4 domains (Command, Observe,
+// Agents, System). No `to` path changed — the golden-fixture test at
+// src/lib/__tests__/navRegistry.routes.test.ts guards the route set. Group
+// strings moved from UPPERCASE to sentence case ("Command" not "COMMAND")
+// because the breadcrumb (Phase 124 D-16) reads this string directly and
+// renders it in sentence-case Geist; the sidebar's eyebrow header uppercases
+// it via CSS instead, so there is one source of truth for the display
+// string. The domain split follows D-02 (GRAPHS splits by intent:
+// visualisation surfaces join Observe, inventory surfaces join System) and
+// D-03 (ACTIVITY's Ástríðr-authored output/channels join Agents; Automation,
+// being plumbing, joins System). Settings still lives in the footer UserMenu
+// rather than a nav domain (D-04) — unchanged by this phase.
+//
+// (Replaces a stale "Phase 71 IA refactor — 6 clusters" comment that
+// previously stood here — that count was already wrong before this phase
+// touched it: the file held 5 groups, not 6.)
 export const navGroups: NavGroupConfig[] = [
   {
-    group: "COMMAND",
+    group: "Command",
     items: [
-      { to: "/chat", label: "Chat", icon: "message", group: "COMMAND" },
-      { to: "/live-run", label: "Live Run", icon: "activity", group: "COMMAND" },
-      { to: "/inbox", label: "Inbox", icon: "inbox", group: "COMMAND" },
-      { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
-      { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
-      { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
+      { to: "/chat", label: "Chat", icon: "message", group: "Command" },
+      { to: "/live-run", label: "Live Run", icon: "activity", group: "Command" },
+      { to: "/inbox", label: "Inbox", icon: "inbox", group: "Command" },
+      { to: "/tasks", label: "Tasks", icon: "kanban", group: "Command" },
+      { to: "/skills", label: "Skills", icon: "wand-2", group: "Command" },
       // Adjacent to Skills on purpose: both are curated-content-library tools.
-      { to: "/galdr", label: "Galdr", icon: "sparkles", group: "COMMAND" },
+      { to: "/galdr", label: "Galdr", icon: "sparkles", group: "Command" },
       // Bifröst sits beside Galdr: both are Seiðr Suite curated-library surfaces.
-      { to: "/bifrost", label: "Bifröst", icon: "link-2", group: "COMMAND" },
+      { to: "/bifrost", label: "Bifröst", icon: "link-2", group: "Command" },
       // Studio is the fourth Seiðr Suite surface (D-16): a curated media
       // library alongside Galdr (prompts) and Bifröst (links).
-      { to: "/studio", label: "Studio", icon: "images", group: "COMMAND" },
-      { to: "/reminders", label: "Reminders", icon: "clock", group: "COMMAND" },
-      { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "COMMAND" },
-      { to: "/forge", label: "Forge", icon: "flame", group: "COMMAND" },
+      { to: "/studio", label: "Studio", icon: "images", group: "Command" },
+      { to: "/reminders", label: "Reminders", icon: "clock", group: "Command" },
+      { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "Command" },
+      { to: "/forge", label: "Forge", icon: "flame", group: "Command" },
     ],
   },
   {
-    group: "GRAPHS",
+    group: "Observe",
     items: [
-      { to: "/graphs", label: "Graphs Hub", icon: "network", group: "GRAPHS" },
-      // Loom is a graph surface (React Flow pipeline), not a COMMAND tool —
-      // design doc §4.4 places it in GRAPHS.
-      { to: "/loom", label: "Loom", icon: "waypoints", group: "GRAPHS" },
-      { to: "/tool-galaxy", label: "Tool Galaxy", icon: "boxes", group: "GRAPHS" },
-      { to: "/mcp-inventory", label: "MCP Inventory", icon: "server", group: "GRAPHS" },
-      { to: "/knowledge-graph", label: "KG Explorer", icon: "share-2", group: "GRAPHS" },
-      { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "GRAPHS" },
-      { to: "/workspace-map", label: "Workspace Map", icon: "radar", group: "GRAPHS" },
-    ],
-  },
-  {
-    group: "AGENTS",
-    items: [
-      { to: "/hr/roster", label: "Roster", icon: "users", group: "AGENTS" },
-      { to: "/hr/catalog", label: "Catalog", icon: "book-open", group: "AGENTS" },
-      { to: "/hr/onboarding", label: "Onboarding", icon: "wand-2", group: "AGENTS" },
-      { to: "/hr/teams", label: "Teams", icon: "users-round", group: "AGENTS" },
-      { to: "/hr/analytics", label: "Analytics", icon: "chart", group: "AGENTS" },
-    ],
-  },
-  {
-    group: "OBSERVE",
-    items: [
-      { to: "/", label: "Dashboard", icon: "grid", group: "OBSERVE" },
-      { to: "/hive", label: "Hive", icon: "hexagon", group: "OBSERVE" },
-      { to: "/executions", label: "Executions", icon: "list", group: "OBSERVE" },
-      { to: "/build", label: "Build", icon: "hammer", group: "OBSERVE" },
-      { to: "/analytics", label: "Analytics", icon: "chart", group: "OBSERVE" },
-      { to: "/alerts", label: "Alerts", icon: "bell", group: "OBSERVE" },
-      { to: "/quality", label: "Quality", icon: "gauge", group: "OBSERVE" },
-      { to: "/tools", label: "Tools", icon: "wrench", group: "OBSERVE" },
-      { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "OBSERVE" },
-      { to: "/security", label: "Security", icon: "shield", group: "OBSERVE" },
-      { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OBSERVE" },
-      { to: "/memory", label: "Memory", icon: "brain", group: "OBSERVE" },
-      { to: "/insights", label: "Insights", icon: "insights", group: "OBSERVE" },
+      { to: "/", label: "Dashboard", icon: "grid", group: "Observe" },
+      { to: "/hive", label: "Hive", icon: "hexagon", group: "Observe" },
+      { to: "/executions", label: "Executions", icon: "list", group: "Observe" },
+      { to: "/build", label: "Build", icon: "hammer", group: "Observe" },
+      // D-05: disambiguated from /hr/analytics's renamed label below — this
+      // was the only duplicate label in the registry.
+      { to: "/analytics", label: "Analytics", icon: "chart", group: "Observe" },
+      { to: "/alerts", label: "Alerts", icon: "bell", group: "Observe" },
+      { to: "/quality", label: "Quality", icon: "gauge", group: "Observe" },
+      { to: "/memory", label: "Memory", icon: "brain", group: "Observe" },
+      { to: "/insights", label: "Insights", icon: "insights", group: "Observe" },
+      { to: "/graphs", label: "Graphs Hub", icon: "network", group: "Observe" },
+      // Loom is a visualisation surface (React Flow pipeline) — it answers
+      // "what is happening", so D-02 moves it here with the other graph
+      // surfaces rather than leaving it in the dissolved GRAPHS group.
+      { to: "/loom", label: "Loom", icon: "waypoints", group: "Observe" },
+      { to: "/knowledge-graph", label: "KG Explorer", icon: "share-2", group: "Observe" },
+      { to: "/workspace-map", label: "Workspace Map", icon: "radar", group: "Observe" },
       // "Mission Control" removed (WR-03): merged into Tasks — By Agent view
       // (phase 96 Plan 04, D-02). /mission-control still redirects to
       // /tasks?view=agent in App.tsx, so deep links keep working.
     ],
   },
   {
-    group: "ACTIVITY",
+    group: "Agents",
     items: [
-      { to: "/briefings", label: "Briefings", icon: "scroll", group: "ACTIVITY" },
-      { to: "/automation", label: "Automation", icon: "clock", group: "ACTIVITY" },
-      { to: "/ideation", label: "Ideation", icon: "idea", group: "ACTIVITY" },
-      { to: "/dreaming", label: "Dreaming", icon: "moon", group: "ACTIVITY" },
-      { to: "/channels/whatsapp", label: "WhatsApp", icon: "whatsapp", group: "ACTIVITY" },
-      { to: "/war-room", label: "War Room", icon: "radio", group: "ACTIVITY" },
-      { to: "/meeting-bot", label: "Meeting Bot", icon: "video", group: "ACTIVITY" },
+      { to: "/hr/roster", label: "Roster", icon: "users", group: "Agents" },
+      { to: "/hr/catalog", label: "Catalog", icon: "book-open", group: "Agents" },
+      { to: "/hr/onboarding", label: "Onboarding", icon: "wand-2", group: "Agents" },
+      { to: "/hr/teams", label: "Teams", icon: "users-round", group: "Agents" },
+      // D-05 rename: was "Analytics", identical to /analytics's label.
+      { to: "/hr/analytics", label: "Agent Analytics", icon: "chart", group: "Agents" },
+      { to: "/briefings", label: "Briefings", icon: "scroll", group: "Agents" },
+      { to: "/ideation", label: "Ideation", icon: "idea", group: "Agents" },
+      { to: "/dreaming", label: "Dreaming", icon: "moon", group: "Agents" },
+      { to: "/war-room", label: "War Room", icon: "radio", group: "Agents" },
+      { to: "/meeting-bot", label: "Meeting Bot", icon: "video", group: "Agents" },
+      { to: "/channels/whatsapp", label: "WhatsApp", icon: "whatsapp", group: "Agents" },
+    ],
+  },
+  {
+    group: "System",
+    items: [
+      { to: "/config", label: "Config", icon: "sliders", group: "System" },
+      { to: "/tools", label: "Tools", icon: "wrench", group: "System" },
+      { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "System" },
+      { to: "/security", label: "Security", icon: "shield", group: "System" },
+      { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "System" },
+      { to: "/tool-galaxy", label: "Tool Galaxy", icon: "boxes", group: "System" },
+      { to: "/mcp-inventory", label: "MCP Inventory", icon: "server", group: "System" },
+      { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "System" },
+      { to: "/automation", label: "Automation", icon: "clock", group: "System" },
     ],
   },
 ];

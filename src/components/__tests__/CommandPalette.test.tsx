@@ -69,6 +69,10 @@ vi.mock("sonner", () => ({
 }));
 
 import { CommandPalette } from "@/components/CommandPalette";
+// Real (unmocked) registry — same instance CommandPalette itself consumes —
+// used only to derive expected counts dynamically for the D-05 regression
+// guard below, never to assert against a hardcoded literal.
+import { navItems } from "@/lib/navRegistry";
 
 function renderPalette(props: { open: boolean; onOpenChange?: (v: boolean) => void }) {
   const onOpenChange = props.onOpenChange ?? vi.fn();
@@ -163,29 +167,44 @@ describe("CommandPalette", () => {
   });
 
   // Phase 124 D-05 rider — measure the cmdk value-collision claim against the
-  // LIVE (pre-rename) navRegistry rather than assuming it from a code
-  // reading. Both `/analytics` (OBSERVE) and `/hr/analytics` (AGENTS)
-  // currently carry `label: "Analytics"`, and neither Pages `CommandItem`
-  // sets an explicit `value` prop (`CommandPalette.tsx:66`), so cmdk falls
-  // back to deriving `value` from rendered text for both. This is the exact
-  // measurement 124-CONTEXT.md's D-05 Rider demands — reproduce before the
-  // rename, then this same assertion must go green once Task 2 disambiguates
-  // the labels to "Analytics" / "Agent Analytics".
-  it("D-05: two Pages entries sharing the label 'Analytics' — cmdk value collision measurement", () => {
+  // navRegistry rather than assuming it from a code reading, and keep this as
+  // a standing regression guard afterward. Both `/analytics` (Observe) and
+  // `/hr/analytics` (Agents) used to carry `label: "Analytics"`, and neither
+  // Pages `CommandItem` sets an explicit `value` prop (`CommandPalette.tsx:66`),
+  // so cmdk falls back to deriving `value` from rendered text for both —
+  // identical text meant identical value.
+  //
+  // PLAN CORRECTION: the plan's Task 1 text says to hardcode
+  // `expect(dupItems.length).toBe(2)` and states the same assertion "will go
+  // green in Task 2 once the labels differ" — that is a false premise. Once
+  // D-05 renames `/hr/analytics` to "Agent Analytics", `getAllByText("Analytics")`
+  // legitimately returns 1 (RTL's default text matcher is exact, not a
+  // substring match), so a hardcoded `toBe(2)` would fail-by-construction
+  // after the very rename it is meant to prove is safe. Deriving the expected
+  // count from the live registry instead keeps this test correct in both the
+  // pre-rename (measurement) and post-rename (regression-guard) states.
+  //
+  // PRE-Task-2 measurement (recorded in 124-04-SUMMARY.md): both labels were
+  // literally "Analytics"; `getAllByText("Analytics")` returned 2 elements
+  // whose `data-value` were both `"Analytics"` — the collision was real.
+  it("D-05: Pages entries sharing the label 'Analytics' never collide on cmdk value", () => {
     renderPalette({ open: true });
+
+    const expectedCount = navItems.filter((i) => i.label === "Analytics").length;
 
     const dupItems = screen.getAllByText("Analytics");
     // Record the count independently of the uniqueness assertion below — a
-    // registry drift (more or fewer than 2 "Analytics" rows) must be caught
-    // here rather than silently changing what assertion (b) is measuring.
-    expect(dupItems.length).toBe(2);
+    // registry drift (more or fewer "Analytics"-labelled rows than the
+    // registry itself reports) must be caught here rather than silently
+    // changing what assertion (b) is measuring.
+    expect(dupItems.length).toBe(expectedCount);
 
     const values = dupItems.map(
       (el) => el.closest("[data-value]")?.getAttribute("data-value")
     );
     // Raw values recorded verbatim in 124-04-SUMMARY.md per the Rider.
     // eslint-disable-next-line no-console
-    console.log("D-05 measurement — Analytics data-value pair:", values);
+    console.log("D-05 measurement — Analytics data-value(s):", values);
 
     expect(new Set(values).size).toBe(values.length);
   });
