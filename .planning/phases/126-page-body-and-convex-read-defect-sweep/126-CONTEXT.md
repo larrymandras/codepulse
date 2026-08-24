@@ -171,6 +171,53 @@ existing reads bounded and honest.
   discussion (D-05). Remaining hypotheses: `/automation` placeholder cards + invalid expressions,
   and Alert Rules rows overlapping.
 
+### `/automation` — the parse half is ROOT-CAUSED; the stat-card half is not
+
+- **D-09 (2026-08-24, during planning): the "Invalid expression" symptom is DIAGNOSED, so it gets a
+  FIX task, not a measurement task. D-07 continues to govern the three dead stat cards, which
+  remain un-diagnosed. The item SPLITS.**
+
+  D-07 requires a measure-first task because an item is a hypothesis. This half is no longer one.
+  The chain was traced statically, end to end, by running the probe the todo itself prescribes
+  ("enumerate the distinct values actually reaching the formatter before assuming what shape it
+  expects") rather than by guessing the expected format:
+
+  1. `src/lib/cronSchedules.ts:11-22` — `CRON_SCHEDULES[].interval` holds **human-readable strings
+     by design** (`"Every 5 min"`, `"Daily 03:00 UTC"`). The machine-readable truth lives in
+     SEPARATE fields on the same row: `intervalSeconds: number`, and `dailyUTC?: {hour, minute}`.
+  2. `src/pages/Automation.tsx:43` — `schedulesToCronJobs()` maps `expression: s.interval`,
+     assigning the human string into a field named `expression`.
+  3. `src/components/CronJobList.tsx:66,69` — renders `{job.expression}` raw in mono, then
+     `{cronToHuman(job.expression)}` immediately beside it.
+  4. `src/lib/cronToHuman.ts:14-15` — `expr.trim().split(/\s+/)`; `if (parts.length !== 5) return
+     "Invalid expression"`.
+
+  **Enumerated all 12 values reaching the formatter: NOT ONE is a cron expression.** The longest is
+  3 whitespace tokens. So all 12 fail, identically and deterministically — which is exactly why the
+  operator saw the interval render correctly *beside* the error: step 3 prints the same string
+  twice, once raw and once through a parser that cannot accept it. This is a field-naming/type
+  confusion, not a parser bug.
+
+  **Why the test suite never caught it, which matters for the fix's verification:**
+  `src/pages/__tests__/Automation.test.tsx:35-41` `vi.mock`s `cronSchedules` with a synthetic
+  3-item catalog — deliberately, to prove the count is not hardcoded — but it substitutes the SAME
+  human-string shape. The mock is green while the real data is broken. **The fix's test must
+  exercise the REAL `CRON_SCHEDULES`, not a mock**, or it will reproduce the identical blind spot.
+
+  **Claude's discretion on the remedy** — the decision that the symptom is diagnosed does not
+  settle the fix, and two shapes are defensible: derive a real cron expression from the
+  `intervalSeconds`/`dailyUTC` fields that already carry the machine truth, or drop the
+  `cronToHuman()` call entirely, since `interval` is ALREADY human-readable and rendering it twice
+  was always redundant. Weigh them at planning time; the second is smaller and the first is only
+  worth it if a genuine cron string is needed elsewhere.
+
+  **NOT diagnosed, and NOT to be bundled into the same task:** the three stat cards that never
+  resolve. Research flagged `cronSummary`'s unbounded `.collect()` as a mechanically plausible
+  shape but explicitly noted the observed symptom (the rest of the page renders normally) does NOT
+  match this repo's documented "a throwing Convex query blanks the whole page" behaviour — so it
+  stays a lead, not a finding. That half keeps its D-07 measure-first task. The todo's own guidance
+  applies: the ONE tile that DOES render is the control that tells you which input differs.
+
 ### Claude's Discretion
 
 - Exact wording and placement of the truncation markers (D-01/D-02) — a label, a suffix, or a
