@@ -17,6 +17,7 @@ import ToolExecutionPanel from "../components/ToolExecutionPanel";
 import GitActivityWidget from "../components/GitActivityWidget";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import OperatorScoreCard from "../components/OperatorScoreCard";
+import PulseEcgHero from "../components/PulseEcgHero";
 import { PageHeader } from "@/components/PageHeader";
 
 type ChartTab = "pulse" | "timeline";
@@ -58,6 +59,19 @@ export default function Dashboard() {
         <div className="md:col-span-12">
           <SectionErrorBoundary name="Operator Score">
             <OperatorScoreCard />
+          </SectionErrorBoundary>
+        </div>
+
+        {/* Pulse ECG Hero (125-11/D-09): replaces the deleted SYSTEM LOAD
+            card in this slot. Static import, not lazy: Dashboard is already
+            lazy (App.tsx:18), so this lands in that chunk regardless -- a
+            nested lazy boundary would only add a Suspense flash. Not
+            wrapped in the flash-on-update ref below it: the trace is
+            already the live signal, and flashing its own container too
+            would be two animations in one region. */}
+        <div className="md:col-span-12">
+          <SectionErrorBoundary name="Pulse">
+            <PulseEcgHero />
           </SectionErrorBoundary>
         </div>
 
