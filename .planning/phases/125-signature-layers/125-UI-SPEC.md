@@ -51,7 +51,7 @@ This phase does not introduce a new spacing scale — it reuses the house 8-poin
 | 3xl | 64px | Page-level spacing |
 
 Exceptions (fixed by the sketch, not the 8pt scale — see Signal Horizon and Pulse ECG contracts below):
-- Horizon line: 2px at rest, 3px when E-Stop-armed.
+- Horizon line: 2px at rest, **7px when E-Stop-armed**, with a crimson bleed (two-layer `box-shadow` mixed from `--status-error`) and a 1100ms alternating pulse. **REVISED 2026-08-24 after plan 125-13's live verification superseded the original 3px.** The 3px armed treatment was implemented exactly as specified and still failed: with E-Stop genuinely armed, `data-horizon-state` reading `critical` on every route, the operator watching the screen and looking for it, the change was not perceptible. Success criterion 1 ("crimson on EVERY page the instant E-Stop arms") was met technically and missed perceptually, which for a safety signal is a miss. The pulse is gated under `prefers-reduced-motion` and `readable`, where the height and the brightest glow are retained as a static fallback -- the armed signal is functional, not decorative, so suppressing motion must not cost visibility.
 - Horizon event packet: 48px wide, 620ms travel.
 - Aurora drift cycle: 90s linear, 300% background-size.
 - Disarm dawn-ease: ~2.6s.

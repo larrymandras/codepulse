@@ -1047,10 +1047,46 @@ code, pre, .font-mono {
   to { background-position: 300% 0; }
 }
 
+/* CRITICAL -- widened 2026-08-24 after live verification (plan 125-13).
+   The armed state WAS correct and WAS crimson at the UI-SPEC's specified
+   3px, and the operator still saw nothing with E-Stop armed, on screen,
+   actively looking for it. `data-horizon-state` read `critical` on every
+   route throughout, so this was never a state or wire defect -- the
+   treatment simply was not perceptible as an alarm. Success criterion 1
+   ("crimson on EVERY page the instant E-Stop arms") was satisfied
+   technically and failed perceptually, which for a safety signal is
+   failing. This supersedes 125-UI-SPEC.md:54's "3px when E-Stop-armed".
+
+   Three perceptual levers rather than one extreme: height (2px -> 7px),
+   a crimson bleed well beyond the bar's own box, and a slow pulse. Motion
+   is the strongest of the three, which is exactly why it is gated below --
+   the bar must stay obvious for anyone who never sees the pulse. */
 .signal-horizon[data-horizon-state="critical"] {
-  height: 3px;
+  height: 7px;
   background: var(--status-error);
-  animation: none;
+  box-shadow:
+    0 0 14px color-mix(in oklab, var(--status-error) 75%, transparent),
+    0 0 34px color-mix(in oklab, var(--status-error) 45%, transparent);
+  animation: horizon-alarm 1100ms var(--ease-house) infinite alternate;
+}
+
+/* Pulses opacity AND glow radius together. Opacity alone reads as a
+   flicker; the spreading glow is what makes it scan as an alarm. Floor is
+   0.7, never 0 -- a signal that periodically vanishes is worse than a
+   static one, because a glance timed to the trough sees nothing. */
+@keyframes horizon-alarm {
+  from {
+    opacity: 0.7;
+    box-shadow:
+      0 0 10px color-mix(in oklab, var(--status-error) 55%, transparent),
+      0 0 24px color-mix(in oklab, var(--status-error) 28%, transparent);
+  }
+  to {
+    opacity: 1;
+    box-shadow:
+      0 0 20px color-mix(in oklab, var(--status-error) 90%, transparent),
+      0 0 48px color-mix(in oklab, var(--status-error) 60%, transparent);
+  }
 }
 
 .signal-horizon[data-horizon-state="warn"] {
@@ -1124,6 +1160,18 @@ code, pre, .font-mono {
     animation: none;
     background-size: 100% 100%;
   }
+  /* Named explicitly: the base selector is (0,1,0) and the critical rule is
+     (0,2,0), so a blanket `.signal-horizon { animation: none }` does NOT
+     stop the alarm pulse. Static fallback keeps the full height and the
+     brightest glow -- the armed signal is functional, not decorative, so
+     suppressing motion must not cost visibility. */
+  .signal-horizon[data-horizon-state="critical"] {
+    animation: none;
+    opacity: 1;
+    box-shadow:
+      0 0 20px color-mix(in oklab, var(--status-error) 90%, transparent),
+      0 0 48px color-mix(in oklab, var(--status-error) 60%, transparent);
+  }
   .signal-horizon .packet {
     display: none;
   }
@@ -1132,6 +1180,15 @@ code, pre, .font-mono {
 [data-theme="readable"] .signal-horizon {
   animation: none;
   background-size: 100% 100%;
+}
+
+/* Same specificity argument as the reduced-motion block above. */
+[data-theme="readable"] .signal-horizon[data-horizon-state="critical"] {
+  animation: none;
+  opacity: 1;
+  box-shadow:
+    0 0 20px color-mix(in oklab, var(--status-error) 90%, transparent),
+    0 0 48px color-mix(in oklab, var(--status-error) 60%, transparent);
 }
 
 [data-theme="readable"] .signal-horizon .packet {
