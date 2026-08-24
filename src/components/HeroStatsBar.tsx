@@ -2,33 +2,12 @@ import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useHeroStats } from "../hooks/useHeroStats";
-import { AnimatedNumber, thresholdColor, ThresholdConfig } from "./MetricCard";
+import { thresholdColor, ThresholdConfig } from "./MetricCard";
 import MetricCard from "./MetricCard";
 import Sparkline from "./Sparkline";
 import InfoTooltip from "./InfoTooltip";
 import { useMetricState } from "../hooks/useMetricState";
 import type { MetricState } from "../lib/metricState";
-
-const healthConfig = {
-  green: {
-    bg: "bg-(--status-ok)",
-    text: "text-(--status-ok)",
-    label: "Healthy",
-    ring: "ring-(--status-ok)/30",
-  },
-  yellow: {
-    bg: "bg-(--status-warn)",
-    text: "text-(--status-warn)",
-    label: "Warning",
-    ring: "ring-(--status-warn)/30",
-  },
-  red: {
-    bg: "bg-(--status-error)",
-    text: "text-(--status-error)",
-    label: "Critical",
-    ring: "ring-(--status-error)/30",
-  },
-};
 
 interface KpiDef {
   label: string;
@@ -47,7 +26,6 @@ interface KpiDef {
 export default function HeroStatsBar() {
   const stats = useHeroStats();
   const navigate = useNavigate();
-  const hc = healthConfig[stats.health] ?? healthConfig.yellow;
 
   // v6.0 new metrics
   const preflightStats = useQuery(api.memoryPreflight.stats);
@@ -161,44 +139,6 @@ export default function HeroStatsBar() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Top Section: Progress Bar and Global Controls */}
-      <div className="bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-lg">
-        <div className="absolute top-4 right-4 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground uppercase tracking-widest font-mono">Status</span>
-          <span className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${hc.bg} ${hc.text}`} />
-        </div>
-        
-        <div className="flex flex-col gap-4">
-          <div className="flex items-baseline gap-4">
-            <span className="text-sm text-primary uppercase tracking-widest font-mono flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              System Load
-            </span>
-            <span className="text-xs text-muted-foreground font-mono tracking-widest">LIVE / 5H WINDOW</span>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <div className="text-5xl font-medium tracking-tight text-foreground tabular-nums">
-              <AnimatedNumber value={stats.activeSessions > 0 ? 100 - (stats.errorRate * 2) : 100} format={(v) => `${Math.round(v)}%`} />
-            </div>
-
-            <div className="flex-1 h-8 bg-background rounded overflow-hidden border border-border relative">
-              <div
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-900/50 via-primary to-(--status-error) shadow-[0_0_20px_rgba(249,115,22,0.6)]"
-                style={{ width: `${stats.activeSessions > 0 ? 100 - (stats.errorRate * 2) : 100}%` }}
-              >
-                <div className="w-full h-full opacity-30 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_25%,rgba(255,255,255,0.2)_50%,transparent_50%,transparent_75%,rgba(255,255,255,0.2)_75%,rgba(255,255,255,0.2)_100%)] bg-[length:20px_20px]"></div>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-sm text-muted-foreground font-mono tracking-widest uppercase">Memory</div>
-              <div className="text-base text-foreground font-mono">{hitRateValue != null ? hitRateValue : 0}% / 100%</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* KPI grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.slice(0, 4).map((kpi) => (
