@@ -122,7 +122,7 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | A11Y-03 | Phase 123 | Complete — live gated-server evidence 2026-08-20, `123-CLOSEOUT.md` §12 |
 | SHELL-01 | Phase 124 | Complete |
 | SHELL-02 | Phase 124 | Complete |
-| SIGNAL-01 | Phase 125 | Pending |
+| SIGNAL-01 | Phase 125 | Partial — the 2px shell line, fail-closed state machine (125-04), event packets and every-route mount (125-08) are built and tested; "turns crimson on every page when E-Stop arms" is proven only against a dev-only simulation stub so far — the real cross-repo `estop_state` emitter's wire-up proof is 125-12's job |
 | SIGNAL-02 | Phase 125 | Pending |
 | SIGNAL-03 | Phase 125 | Partial — trial built and shipped (125-05, real italic face self-hosted and chunk-isolated); the requirement's own text ("evaluated before any app-wide commit") is not satisfied until 125-10's blocking operator checkpoint records the adopt/reject/revisit verdict |
 
