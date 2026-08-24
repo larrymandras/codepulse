@@ -138,3 +138,12 @@ None - no external service configuration required. (The `dev:noauth` server star
 ---
 *Phase: 125-signature-layers*
 *Completed: 2026-08-24*
+
+## Self-Check: PASSED
+
+All 7 created/modified files confirmed present on disk (`src/index.css`,
+`src/lib/eventHue.ts`, `src/lib/eventHue.test.ts`,
+`src/contexts/AstridrWSContext.tsx`, `src/entryChunk.ratchet.test.ts`,
+`e2e/signal-tokens.spec.ts`, this SUMMARY). All 4 commit hashes
+(`8481670e`, `ba3b20c2`, `2027adc7`, `9b58ad1b`) confirmed present via
+`git log --oneline --all`.
