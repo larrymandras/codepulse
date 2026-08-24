@@ -856,6 +856,36 @@ their assertion shape rather than invent one.
 - A component test for `src/pages/Inbox.tsx` covering the D-02 "N of M" / generic-marker branch.
 - No framework install needed — both runners and both configs are present.
 
+### Test harness shape — `convex-test` is NOT available, and the read-cost seam already exists
+
+**`convex-test` is not installed in this repo.** `package.json` carries only `convex@^1.42.0`
+(`node -e` over dependencies + devDependencies), and the codebase says so explicitly in at least
+ten places — e.g. `convex/cacheStats.test.ts:4` ("convex-test is not installed in this repo"),
+`convex/calendarEvents.ts:13`, `convex/costBudgets.ts:57`. Convex function logic is therefore
+tested either as extracted pure functions or through a **hand-built fake `ctx`** driven at the
+`._handler(ctx)` seam.
+
+**This matters directly for D-06-REVISED's read-cost assertion, and the pattern is already in the
+exact file the planner must extend.** `convex/graphSnapshots.test.ts:360-445` builds a fake `ctx`
+modelling the entity tables and returns `{ ctx, patches, deleted, warnings, metas, restore,
+readCount: () => rowsRead }` — an explicit **row-read counter**. It is consumed at
+`convex/graphSnapshots.test.ts:461` by a test named *"sweepGraphSnapshotVersions — candidate
+selection reads ONE field, not every row"*.
+
+That is precisely the shape the chunked-blob work needs:
+
+- **Read cost (property 2 above)** — assert via `readCount()` that rejoining the graph costs ~N
+  chunk rows, not 6,591. Do **not** invent a new harness; extend the existing fake-ctx factory in
+  this file. A test that only asserts the rejoined graph is correct would pass just as happily
+  against the unbounded `.collect()` that caused D-05 in the first place.
+- The same seam gives the failing controls their teeth: seed the fake `ctx` with corrupted,
+  out-of-order, and gapped chunk sets and assert each FAILS.
+
+**Consequence for planning:** no framework install is required, but "write a Convex integration
+test" is not available as a task shape here. Every Convex-side assertion in this phase is either a
+pure-function test or a fake-`ctx` handler test, and the planner should say which for each task
+rather than leaving it to the executor to discover mid-implementation.
+
 ### The chunked-blob verification note (D-06-REVISED)
 
 A test asserting only "the page rendered" would not have caught the original defect either, and
