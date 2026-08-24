@@ -139,6 +139,7 @@ export function BrainHeaderBadge() {
             <button
               type="button"
               aria-label={ariaLabel}
+              data-testid="brain-header-badge"
               className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
             >
               {isConfirmedLive && (

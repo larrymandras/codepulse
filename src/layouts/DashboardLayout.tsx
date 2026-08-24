@@ -245,8 +245,21 @@ function SystemChip({ counts }: { counts: AlertSeverityCounts | "error" }) {
   // is down the alert counts are stale by definition, so reporting
   // "Nominal" from them would be a confident claim about data that is not
   // arriving.
+  // 126-04 (SWEEP-07): `data-testid="system-chip"` sits on a wrapper, not on
+  // `StatusBadge` itself — `StatusBadge`'s own props type
+  // (`src/components/StatusBadge.tsx:28-38`) destructures only
+  // `status`/`label`/`tier` and does not spread `...rest`, so an unknown DOM
+  // attribute placed directly on it is silently dropped, never reaching the
+  // DOM. The wrapper is on every branch that actually renders something —
+  // never on the `counts == null` branch below, which stays a bare `null`
+  // exactly as D-12 requires; e2e/polish-geometry.spec.ts waits on this
+  // testid becoming visible as its "SystemChip actually rendered" gate.
   if (!isWebSocketConnected) {
-    return <StatusBadge status="idle" tier="quietest" label="Offline" />;
+    return (
+      <span data-testid="system-chip">
+        <StatusBadge status="idle" tier="quietest" label="Offline" />
+      </span>
+    );
   }
   if (counts === "error") {
     throw new Error("System status query failed");
@@ -259,15 +272,27 @@ function SystemChip({ counts }: { counts: AlertSeverityCounts | "error" }) {
   if (counts == null) return null;
 
   if (counts.critical > 0 || counts.error > 0) {
-    return <StatusBadge status="error" tier="strong" label="Critical" />;
+    return (
+      <span data-testid="system-chip">
+        <StatusBadge status="error" tier="strong" label="Critical" />
+      </span>
+    );
   }
   if (counts.warning > 0) {
-    return <StatusBadge status="warn" tier="quiet" label="Attention" />;
+    return (
+      <span data-testid="system-chip">
+        <StatusBadge status="warn" tier="quiet" label="Attention" />
+      </span>
+    );
   }
   // Nominal reads --status-ok via StatusBadge's "quiet" tier, never
   // --primary — the exact TOKEN-02 (Phase 122) collision this plan exists
   // to keep out of a brand-new component (healthy is not interactive).
-  return <StatusBadge status="ok" tier="quiet" label="Nominal" />;
+  return (
+    <span data-testid="system-chip">
+      <StatusBadge status="ok" tier="quiet" label="Nominal" />
+    </span>
+  );
 }
 
 function NavGroup({
@@ -484,7 +509,24 @@ function SidebarContent({
           const domainKey = grp.group.toLowerCase();
           return (
             <div key={grp.group}>
-              {i > 0 && <Separator className="my-2 mx-3" />}
+              {/* 126-04 (SWEEP-06): px-3 wrapper + no mx-3 on the Separator
+                  itself, not `w-auto` — shadcn's Separator carries
+                  `data-[orientation=horizontal]:w-full`, a variant-prefixed
+                  utility `cn()`/`twMerge` will not treat a plain `w-auto` as
+                  the same key, so both would land in the class list with the
+                  cascade deciding (and the variant-prefixed one generally
+                  wins) — a silent no-op that looks like a fix. Padding on
+                  the wrapper instead makes `w-full` resolve inside a
+                  narrower containing block: a real width change, not a
+                  specificity bet. This is what closed the 231/235px
+                  (nav clientWidth/scrollWidth) 4px overhang — see
+                  e2e/polish-geometry.spec.ts's "Sidebar nav — horizontal
+                  overflow" block for the before/after measurement. */}
+              {i > 0 && (
+                <div className="px-3 my-2">
+                  <Separator />
+                </div>
+              )}
               <NavGroup
                 label={grp.group}
                 items={grp.items}

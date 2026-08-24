@@ -204,18 +204,15 @@ interface HeaderZonesEvidence {
   culprits: OverflowCulprit[];
 }
 
-test.describe('Header three-zone min-content measurement — D-06 branch decision (124-10)', () => {
-  for (const width of HEADER_ZONE_WIDTHS) {
-    test(`${width}px — header zone min-content vs available width`, async ({ page }) => {
-      await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
-      await page.goto('/');
-
-      const header = page.locator('header').first();
-      await gateOrSkip(page, header, `the ${width}px header-zones measurement`);
-
-      await expect(header).toBeVisible();
-
-      const evidence = await header.evaluate((headerEl, w) => {
+// 126-04 (SWEEP-07): pulled out of the test body so it can be called twice
+// (settled reading + agreement re-read) without duplicating the min-content
+// measurement logic. Behavior is byte-identical to the original inline
+// version — only the extraction is new.
+async function readHeaderZonesEvidence(
+  header: ReturnType<Page['locator']>,
+  width: number
+): Promise<HeaderZonesEvidence> {
+  return header.evaluate((headerEl, w) => {
         const zones: HeaderZoneEvidence[] = [];
         let sum = 0;
         Array.from(headerEl.children).forEach((child) => {
@@ -326,15 +323,85 @@ test.describe('Header three-zone min-content measurement — D-06 branch decisio
           culprits: culprits.slice(0, 15),
         } satisfies HeaderZonesEvidence;
       }, width);
+}
+
+const HEADER_ZONE_AGREEMENT_TOLERANCE_PX = 1;
+
+test.describe('Header three-zone min-content measurement — D-06 branch decision (124-10)', () => {
+  for (const width of HEADER_ZONE_WIDTHS) {
+    test(`${width}px — header zone min-content vs available width`, async ({ page }) => {
+      await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+      await page.goto('/');
+
+      const header = page.locator('header').first();
+      await gateOrSkip(page, header, `the ${width}px header-zones measurement`);
+
+      await expect(header).toBeVisible();
+
+      // 126-04 (SWEEP-07): wait on the two async header children ACTUALLY
+      // RENDERING before measuring, instead of measuring immediately after
+      // goto() — a cold measurement undercounts zone 3 because SystemChip
+      // returns `null` until its `counts` prop resolves (D-12) and
+      // BrainHeaderBadge's initial "Not reported" label is narrower than its
+      // settled reading. Fail-don't-skip, per e2e/serif-trial.spec.ts:57-70's
+      // idiom — a `test.skip` here would silently drop the measurement
+      // rather than surface that the zone-3 wait itself is broken. This is
+      // deliberately NOT `gateOrSkip` (that call above is a distinct
+      // concern: the Clerk sign-in gate) and NOT `page.waitForTimeout`.
+      const systemChip = page.getByTestId('system-chip');
+      const brainHeaderBadge = page.getByTestId('brain-header-badge');
+      try {
+        await expect(systemChip).toBeVisible({ timeout: 15000 });
+        await expect(brainHeaderBadge).toBeVisible({ timeout: 15000 });
+      } catch (err) {
+        throw new Error(
+          `HEADER-ZONES measurement cannot be honestly taken: SystemChip ` +
+            `(data-testid="system-chip") and/or BrainHeaderBadge ` +
+            `(data-testid="brain-header-badge") did not render within 15s at ` +
+            `${width}px. A measurement taken before these async children ` +
+            `render undercounts zone 3 (the whole defect this wait exists to ` +
+            `close) — this is a FAILURE, not a skip. Original error: ${err}`
+        );
+      }
+
+      const evidence1 = await readHeaderZonesEvidence(header, width);
 
       // eslint-disable-next-line no-console
-      console.log(`HEADER-ZONES-EVIDENCE ${JSON.stringify(evidence)}`);
+      console.log(`HEADER-ZONES-EVIDENCE-1 ${JSON.stringify(evidence1)}`);
 
       // Void check first, per this file's existing convention.
       expect(
-        evidence.innerWidth,
-        `in-page window.innerWidth (${evidence.innerWidth}) must match the requested viewport width (${width}) or this tier is VOID`
+        evidence1.innerWidth,
+        `in-page window.innerWidth (${evidence1.innerWidth}) must match the requested viewport width (${width}) or this tier is VOID`
       ).toBe(width);
+
+      // 126-04 (SWEEP-07): the agreement assertion itself. A single passing
+      // reading cannot distinguish "the race is fixed" from "the race did
+      // not fire this time" (the todo's own words) — so this spec asserts
+      // its OWN two readings agree, on every run, forever, rather than
+      // relying on a human re-running it twice by hand. The extra settle
+      // here is a redundancy check on top of the real wait above, not the
+      // primary wait itself — a bare timeout would be forbidden as the
+      // PRIMARY wait mechanism, but is fine as a second confirmation once
+      // the real wait has already gated the measurement.
+      await page.waitForTimeout(3000);
+      const evidence2 = await readHeaderZonesEvidence(header, width);
+
+      // eslint-disable-next-line no-console
+      console.log(`HEADER-ZONES-EVIDENCE-2 ${JSON.stringify(evidence2)}`);
+
+      expect(
+        evidence2.innerWidth,
+        `in-page window.innerWidth (${evidence2.innerWidth}) must match the requested viewport width (${width}) or this tier is VOID`
+      ).toBe(width);
+
+      expect(
+        Math.abs(evidence1.sumMinContentWidth - evidence2.sumMinContentWidth),
+        `sumMinContentWidth must AGREE between the gated reading (${evidence1.sumMinContentWidth}) ` +
+          `and the re-read after an additional 3s settle (${evidence2.sumMinContentWidth}) within ` +
+          `${HEADER_ZONE_AGREEMENT_TOLERANCE_PX}px — disagreement means the wait above did not ` +
+          `actually close the race`
+      ).toBeLessThan(HEADER_ZONE_AGREEMENT_TOLERANCE_PX);
 
       // Permanent regression guard (Task 1's own acceptance criterion). The
       // measurement above (see SUMMARY) found the sum of zone min-content
@@ -350,11 +417,93 @@ test.describe('Header three-zone min-content measurement — D-06 branch decisio
       // wrap, i.e. no header descendant actually clips past the edge. This
       // is what would fail if a future change broke `flex-wrap` again.
       expect(
-        evidence.culprits.length,
-        `header culprit list must be empty at ${width}px (every control must render within the viewport even while wrapping); found: ${JSON.stringify(evidence.culprits)}`
+        evidence1.culprits.length,
+        `header culprit list must be empty at ${width}px (every control must render within the viewport even while wrapping); found: ${JSON.stringify(evidence1.culprits)}`
       ).toBe(0);
     });
   }
+});
+
+// 126-04 (SWEEP-06): the sidebar's own 4px horizontal-overflow overhang,
+// separate from the 900px /settings collision walk below (that block scopes
+// to <body> at 900px; this one is scoped to the nav itself at 1512x900, the
+// width the todo's own pre-fix measurement used).
+interface SidebarOverflowEvidence {
+  innerWidth: number;
+  asideWidth: number | null;
+  navClientWidth: number | null;
+  navScrollWidth: number | null;
+  navOverflowX: string | null;
+  navRight: number | null;
+  widestDescendantRight: number | null;
+  widestDescendantClassName: string | null;
+}
+
+async function readSidebarOverflowEvidence(page: Page): Promise<SidebarOverflowEvidence> {
+  return page.evaluate(() => {
+    const asideEl = document.querySelector('aside');
+    const navEl = document.querySelector('nav[aria-label="Main navigation"]') as HTMLElement | null;
+
+    let widestRight: number | null = null;
+    let widestClassName: string | null = null;
+    if (navEl) {
+      navEl.querySelectorAll('*').forEach((node) => {
+        const el = node as HTMLElement;
+        // Same sr-only exclusion as the existing walks in this file (Radix's
+        // accessible-hiding technique is not a real overflow).
+        if (el.classList.contains('sr-only')) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        if (widestRight === null || rect.right > widestRight) {
+          widestRight = rect.right;
+          widestClassName = typeof el.className === 'string' ? el.className : String(el.className);
+        }
+      });
+    }
+
+    return {
+      innerWidth: window.innerWidth,
+      asideWidth: asideEl ? asideEl.getBoundingClientRect().width : null,
+      navClientWidth: navEl ? navEl.clientWidth : null,
+      navScrollWidth: navEl ? navEl.scrollWidth : null,
+      navOverflowX: navEl ? getComputedStyle(navEl).overflowX : null,
+      navRight: navEl ? navEl.getBoundingClientRect().right : null,
+      widestDescendantRight: widestRight,
+      widestDescendantClassName: widestClassName,
+    } satisfies SidebarOverflowEvidence;
+  });
+}
+
+test.describe('Sidebar nav — horizontal overflow (SWEEP-06)', () => {
+  test('1512x900 / — nav.scrollWidth does not exceed nav.clientWidth', async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 900 });
+    await page.goto('/');
+
+    const nav = page.locator('nav[aria-label="Main navigation"]').first();
+    await gateOrSkip(page, nav, 'the sidebar horizontal-overflow check');
+
+    await expect(nav).toBeVisible();
+
+    const evidence = await readSidebarOverflowEvidence(page);
+
+    // eslint-disable-next-line no-console
+    console.log(`SIDEBAR-OVERFLOW-EVIDENCE ${JSON.stringify(evidence)}`);
+
+    expect(
+      evidence.innerWidth,
+      `in-page window.innerWidth (${evidence.innerWidth}) must be 1512 or this tier is VOID`
+    ).toBe(1512);
+
+    expect(
+      evidence.navScrollWidth,
+      `nav.scrollWidth (${evidence.navScrollWidth}) must not exceed nav.clientWidth (${evidence.navClientWidth}); widest descendant right=${evidence.widestDescendantRight} (${evidence.widestDescendantClassName}); full evidence: ${JSON.stringify(evidence)}`
+    ).toBeLessThanOrEqual(evidence.navClientWidth ?? Infinity);
+
+    expect(
+      evidence.widestDescendantRight,
+      `widest nav descendant's right edge (${evidence.widestDescendantRight}, ${evidence.widestDescendantClassName}) must not exceed the nav's own right edge (${evidence.navRight}); full evidence: ${JSON.stringify(evidence)}`
+    ).toBeLessThanOrEqual((evidence.navRight ?? 0) + 0.5);
+  });
 });
 
 test.describe('900px sidebar/Settings collision — in-page proof (POLISH-06)', () => {
