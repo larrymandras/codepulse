@@ -78,6 +78,61 @@ existing reads bounded and honest.
   incomplete); lowering the upstream 1,500-per-source emit cap (degrades every consumer of the
   snapshot to fix one page).
 
+- **D-06-REVISED (2026-08-24, during planning of Phase 126): the blob is N ROWS READ BY ONE
+  INDEXED QUERY, not one row. D-06's chosen remedy stands in intent; its "single row" wording is
+  WITHDRAWN as unimplementable, and BOTH mechanisms D-06 left to research are rejected.**
+  D-06 deferred "document field vs Convex file storage" to research. Research plus orchestrator
+  re-measurement disqualified both:
+
+  **(a) A single document field does not fit.** Measured 2026-08-24 from the producer trees
+  `graphify` walks, simulating the exact stored field set (`schema.ts:1940-1959`), 5,000-element
+  samples: codepulse averages 157.1 B/node and 154.7 B/link; astridr-repo averages 181.3 B/node
+  and 189.7 B/link. Against the live emitted counts (`graphSnapshots:listSnapshots`, read-only:
+  `nodeCount: 4001`, `linkCount: 2590`, per-source 1500/1500/1001 nodes and 1052/519/1019 links)
+  **those two repos alone total 769 KB of the 1,048,576-byte (1 MiB) document limit**, leaving
+  255 KB for the vault's remaining 2,020 elements — i.e. **the vault must average under 129 bytes
+  per element for the blob to fit at all**, against a ~130/~120 B estimate. That is 99-101% of the
+  ceiling before the wrapper fields and Convex's own per-document overhead. Corroborated by a
+  pre-existing comment written for an unrelated reason: `convex/runtimeIngest.ts:633-636` records
+  that row storage was chosen for THIS graph specifically "to avoid Convex array-element (8192)
+  and doc-size (~1 MiB) limits". **This is D-06's own headroom objection applied consistently** —
+  D-06 rejected the split-query option for leaving 95 rows of headroom; a document at ~100% of its
+  limit has less.
+
+  **(b) Convex file storage cannot be read by a query.** Verified against the INSTALLED package,
+  not the docs page — `node_modules/convex/dist/cjs-types/server/storage.d.ts`: `StorageReader`
+  (queries) exposes only `getUrl`/`getMetadata`, no `get()` (`:73-125`); `StorageWriter`
+  (mutations) adds only `generateUploadUrl`/`delete`, no `store()` (`:135-186`); `get()`/`store()`
+  exist solely on `StorageActionWriter` (`:188-215`), doc-commented "Only available in actions and
+  HTTP actions (not in mutations or queries)". `getProjectGraph` IS a `query`
+  (`convex/graphSnapshots.ts:416`) and `upsertGraphSnapshot` IS an `internalMutation` (`:55`), so
+  file storage would force the write out into the `runtimeIngest` httpAction, reduce
+  `getProjectGraph` to returning a URL, and make `src/hooks/useProjectGraph.ts:23-28` stop being a
+  reactive `useQuery` passthrough. That is a change to the SUBSCRIPTION MODEL, not a storage
+  detail, and D-06 did not authorize one.
+
+  **The remedy, chosen by Larry on 2026-08-24:** serialize `{nodes, links}` ONCE in the writer and
+  split the resulting string across N rows carrying a monotonic `seq`, read back by a single
+  indexed range query and rejoined. **In-repo precedent:** `forgeLogChunks`
+  (`convex/schema.ts:1723-1731`), a payload chunked across rows with `seq` and a
+  `by_host_job_seq` index, added in Phase 81 for this same class of reason.
+
+  **Why this satisfies D-06's stated intent rather than evading it.** D-06 chose the blob because
+  it was "the only option without a cliff." Chunking is the variant that actually has no cliff:
+  chunk COUNT is elastic, so a graph that doubles yields ~8 rows instead of ~4 with no limit to
+  breach, whereas both (a) and the split-query option D-06 rejected fail hard at a fixed boundary.
+  It also preserves what D-06 assumed silently — `getProjectGraph` stays a `query`, so
+  `useProjectGraph.ts` and every `useQuery` consumer are untouched — and it still collapses the
+  read from 6,591 rows to roughly the chunk count, well inside the 4,096 ceiling that D-05
+  diagnosed.
+
+  **Binding on the planner:** the chunk size must be a module constant with headroom under 1 MiB
+  per row (the per-ROW limit still applies to each chunk), the writer must delete the prior
+  version's chunks so storage does not grow unbounded, and the plan must still make the explicit
+  keep-or-retire call on `graphSnapshotNodes`/`graphSnapshotLinks` that research flagged — grepped
+  across `convex/**/*.ts`, `getProjectGraph` and the sweep are their only consumers, so leaving
+  both paths writing means every ingest pays for the chunks AND ~6,591 row inserts with no reader.
+
 - **Note for the planner:** the stored snapshot is ALREADY truncated upstream — graphify emitted
   71,016 nodes for `astridr-repo` and 1,500 were stored (`truncated: true` per source). Whatever
   the remedy, the graph on screen is a sample, and that should not be presented as complete.
@@ -102,9 +157,16 @@ existing reads bounded and honest.
 
 - Exact wording and placement of the truncation markers (D-01/D-02) — a label, a suffix, or a
   notice line — is a presentation detail, not a decision that was made here.
-- The specific cap value for D-03's count query, and the blob's storage mechanism under D-06
-  (document field vs Convex file storage), are for research/planning to determine against the
+- The specific cap value for D-03's count query is for research/planning to determine against the
   real row sizes.
+- **SUPERSEDED 2026-08-24 by D-06-REVISED:** this bullet previously delegated "the blob's storage
+  mechanism under D-06 (document field vs Convex file storage)" to research/planning. It no longer
+  does. **Both of those mechanisms are REJECTED** and the chunked-rows-plus-one-indexed-query shape
+  is MANDATED — see D-06-REVISED above for the measurements that forced it. The discretion that
+  actually remains under D-06 is narrower: the chunk SIZE constant (subject to the per-row 1 MiB
+  limit, with headroom), the serialization/rejoin details, whether the chunk rows live in a new
+  table or an existing one, and the keep-or-retire call on
+  `graphSnapshotNodes`/`graphSnapshotLinks`. Do not read this bullet as reopening the mechanism.
 
 </decisions>
 

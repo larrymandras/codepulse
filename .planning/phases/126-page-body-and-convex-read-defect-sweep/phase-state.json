@@ -1,0 +1,16 @@
+{
+  "phase": 126,
+  "phaseName": "page-body-and-convex-read-defect-sweep",
+  "created": "2026-08-24T21:07:44.555Z",
+  "history": [
+    {
+      "timestamp": "2026-08-24T21:07:44.556Z",
+      "command": "discuss-phase",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-24T21:07:44.556Z",
+  "isFrontend": true,
+  "artifacts": {}
+}
