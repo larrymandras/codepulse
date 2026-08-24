@@ -53,6 +53,7 @@ import { QuietHoursIndicator } from "./QuietHoursIndicator";
 import { ReadinessPill } from "./ReadinessPill";
 import { BrainControl } from "./BrainControl";
 import { VoiceControl } from "./VoiceControl";
+import { PersonaDialControl } from "./PersonaDialControl";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import {
   useProactivePrefs,
@@ -172,6 +173,7 @@ export function ControlCenterPanel({
             catalogue is browsable even with no active override. */}
         <BrainControl override={swapModelOverride} lastTurnModel={lastTurnModel} />
         <VoiceControl override={swapVoiceOverride} />
+        <PersonaDialControl />
 
         <div className="flex items-center justify-between gap-3">
           <span className="font-mono text-sm text-muted-foreground">STRICT MODE</span>

@@ -28,6 +28,7 @@ import { Lock, LockOpen, Focus, Circle, ScreenShare, ScreenShareOff } from "luci
 import { Button } from "@/components/ui/button";
 import { BrainControl } from "./BrainControl";
 import { VoiceControl } from "./VoiceControl";
+import { PersonaDialControl } from "./PersonaDialControl";
 import { useProactivePrefs } from "@/hooks/useProactivePrefs";
 import type { ScreenShareState } from "@/hooks/useScreenShare";
 
@@ -68,6 +69,7 @@ export function CompactControlStrip({
     >
       <BrainControl variant="chip" override={swapModelOverride} lastTurnModel={lastTurnModel} />
       <VoiceControl variant="chip" override={swapVoiceOverride} />
+      <PersonaDialControl variant="chip" />
 
       <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 

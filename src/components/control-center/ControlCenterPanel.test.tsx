@@ -15,6 +15,20 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
   })),
 }));
 
+// This panel now mounts PersonaDialControl (195-03), which reads
+// api.personaDials.get via useQuery -- there is no ConvexProvider in this
+// test tree, so useQuery must be mocked the same way Chat.test.tsx already
+// does for the same reason. `null` matches the "no row yet" Convex-read
+// shape (PersonaDialControl.tsx treats it as the empty/default state, not
+// an error), which keeps the panel's own assertions (BRAIN/VOICE labels,
+// STRICT/FOCUS/SCREEN rows) unaffected by an uninitialised dial read.
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(() => null),
+}));
+vi.mock("../../../convex/_generated/api", () => ({
+  api: { personaDials: { get: "personaDials:get" } },
+}));
+
 import {
   ControlCenterPanel,
   isWithinQuietHours,
