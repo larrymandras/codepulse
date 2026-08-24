@@ -104,17 +104,32 @@ export function PersonaDialControl({ variant = "row" }: PersonaDialControlProps)
   // write is in flight for that axis.
   const [localHumor, setLocalHumor] = useState(DEFAULT_HUMOR);
   const [localCandor, setLocalCandor] = useState(DEFAULT_CANDOR);
-  const pendingAxisRef = useRef({ humor: false, candor: false });
+  // In-flight write COUNT per axis, not a boolean. PersonaDialSlider fires
+  // `onCommit` per KEYSTROKE (`PersonaDialSlider.tsx`, `onValueCommit` with
+  // `step={1}`), so holding an arrow key puts several writes for the SAME
+  // axis in flight at once. With a boolean, the first write to settle ran
+  // its `finally` and cleared the flag while later writes were still
+  // pending -- reopening the Convex-clobber window this ref exists to close,
+  // mid-burst. A count only reaches 0 when the LAST write for that axis
+  // settles.
+  const pendingAxisRef = useRef({ humor: 0, candor: 0 });
+
+  // Monotonic per-axis commit sequence. Captured before the await and
+  // re-checked after it, so an OLDER ack that lands after a NEWER one is
+  // discarded instead of rolling the dial backwards (e.g. keystrokes
+  // 83 -> 93 -> 95 with the 93 ack arriving last would otherwise repaint 93
+  // while 95 is what is actually stored server-side).
+  const commitSeqRef = useRef({ humor: 0, candor: 0 });
 
   useEffect(() => {
     if (row === undefined) return; // still loading -- nothing to seed from yet
     if (row === null) {
-      if (!pendingAxisRef.current.humor) setLocalHumor(DEFAULT_HUMOR);
-      if (!pendingAxisRef.current.candor) setLocalCandor(DEFAULT_CANDOR);
+      if (pendingAxisRef.current.humor === 0) setLocalHumor(DEFAULT_HUMOR);
+      if (pendingAxisRef.current.candor === 0) setLocalCandor(DEFAULT_CANDOR);
       return;
     }
-    if (!pendingAxisRef.current.humor) setLocalHumor(row.humor);
-    if (!pendingAxisRef.current.candor) setLocalCandor(row.candor);
+    if (pendingAxisRef.current.humor === 0) setLocalHumor(row.humor);
+    if (pendingAxisRef.current.candor === 0) setLocalCandor(row.candor);
   }, [row]);
 
   // Changed-axis-only write (D-01/T-195-22). `axis` selects which single
@@ -127,7 +142,9 @@ export function PersonaDialControl({ variant = "row" }: PersonaDialControlProps)
   // revert and shows the per-axis error (D-03).
   const commitAxis = useCallback(
     async (axis: "humor" | "candor", newValue: number) => {
-      pendingAxisRef.current[axis] = true;
+      const sibling = axis === "humor" ? "candor" : "humor";
+      const mySeq = ++commitSeqRef.current[axis];
+      pendingAxisRef.current[axis] += 1;
       try {
         const ack = await sendCommand(
           axis === "humor"
@@ -139,14 +156,41 @@ export function PersonaDialControl({ variant = "row" }: PersonaDialControlProps)
             typeof ack.error === "string" ? ack.error : "persona_dials.set failed"
           );
         }
-        if (typeof ack.humor === "number") setLocalHumor(ack.humor);
-        if (typeof ack.candor === "number") setLocalCandor(ack.candor);
+        // STALE-ACK REJECTION. A newer commit for this axis was issued while
+        // this one was in flight, so this ack describes a superseded write.
+        // Resolve SILENTLY rather than rejecting: rejecting would make
+        // PersonaDialSlider paint "Couldn't save that ... change" for a write
+        // that a newer one has already replaced, and clear the drag value
+        // out from under the still-pending newer commit.
+        if (mySeq !== commitSeqRef.current[axis]) return;
+
+        if (axis === "humor") {
+          if (typeof ack.humor === "number") setLocalHumor(ack.humor);
+        } else if (typeof ack.candor === "number") {
+          setLocalCandor(ack.candor);
+        }
+        // The ack also carries the SIBLING axis, because astridr merges a
+        // concurrently-landed spoken change server-side inside its own lock.
+        // Apply it only when no write is in flight for that sibling --
+        // otherwise this ack's sibling value is older than the sibling write
+        // the user has already issued, and applying it would clobber it.
+        if (pendingAxisRef.current[sibling] === 0) {
+          if (sibling === "humor") {
+            if (typeof ack.humor === "number") setLocalHumor(ack.humor);
+          } else if (typeof ack.candor === "number") {
+            setLocalCandor(ack.candor);
+          }
+        }
       } catch (err) {
+        // Only the NEWEST commit for this axis may revert or surface an
+        // error. A stale failure is swallowed for the same reason a stale
+        // success is: a newer write owns the axis now.
+        if (mySeq !== commitSeqRef.current[axis]) return;
         if (axis === "humor") setLocalHumor(row?.humor ?? DEFAULT_HUMOR);
         else setLocalCandor(row?.candor ?? DEFAULT_CANDOR);
         throw err;
       } finally {
-        pendingAxisRef.current[axis] = false;
+        pendingAxisRef.current[axis] = 0; // MUTATION-PROOF-PENDING-COUNT: boolean-style clear
       }
     },
     [sendCommand, row]
@@ -159,8 +203,13 @@ export function PersonaDialControl({ variant = "row" }: PersonaDialControlProps)
   // one persona_dials.set carrying both axes, the sole deliberate exception
   // to changed-axis-only. Same success/failure handling as a normal commit.
   const handleReset = useCallback(async () => {
-    pendingAxisRef.current.humor = true;
-    pendingAxisRef.current.candor = true;
+    // Reset writes BOTH axes, so it takes a new sequence number on both --
+    // this supersedes any dial commit still in flight, and equally can be
+    // superseded by a dial commit issued after it.
+    const myHumorSeq = ++commitSeqRef.current.humor;
+    const myCandorSeq = ++commitSeqRef.current.candor;
+    pendingAxisRef.current.humor += 1;
+    pendingAxisRef.current.candor += 1;
     try {
       const ack = await sendCommand({
         type: "persona_dials.set",
@@ -172,14 +221,24 @@ export function PersonaDialControl({ variant = "row" }: PersonaDialControlProps)
           typeof ack.error === "string" ? ack.error : "persona_dials.set failed"
         );
       }
-      setLocalHumor(typeof ack.humor === "number" ? ack.humor : DEFAULT_HUMOR);
-      setLocalCandor(typeof ack.candor === "number" ? ack.candor : DEFAULT_CANDOR);
+      // Per-axis stale check: a dial commit issued after this reset owns
+      // that axis and must not be rolled back to 50 by this ack.
+      if (myHumorSeq === commitSeqRef.current.humor) {
+        setLocalHumor(typeof ack.humor === "number" ? ack.humor : DEFAULT_HUMOR);
+      }
+      if (myCandorSeq === commitSeqRef.current.candor) {
+        setLocalCandor(typeof ack.candor === "number" ? ack.candor : DEFAULT_CANDOR);
+      }
     } catch {
-      setLocalHumor(row?.humor ?? DEFAULT_HUMOR);
-      setLocalCandor(row?.candor ?? DEFAULT_CANDOR);
+      if (myHumorSeq === commitSeqRef.current.humor) {
+        setLocalHumor(row?.humor ?? DEFAULT_HUMOR);
+      }
+      if (myCandorSeq === commitSeqRef.current.candor) {
+        setLocalCandor(row?.candor ?? DEFAULT_CANDOR);
+      }
     } finally {
-      pendingAxisRef.current.humor = false;
-      pendingAxisRef.current.candor = false;
+      pendingAxisRef.current.humor -= 1;
+      pendingAxisRef.current.candor -= 1;
     }
   }, [sendCommand, row]);
 

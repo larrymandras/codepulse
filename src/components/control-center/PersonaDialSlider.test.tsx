@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 import { PersonaDialSlider } from "./PersonaDialSlider";
 
@@ -174,5 +174,96 @@ describe("PersonaDialSlider — disabled suppression", () => {
     pressSteps(getHumorThumb(), [{ key: "ArrowRight", count: 1 }]);
 
     expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Concurrency: PersonaDialSlider fires onCommit PER KEYSTROKE (Radix
+// `onValueCommit` at `step={1}`), so several commits are in flight at once.
+// These two cases were added after an adversarial review found the original
+// suite structurally unable to observe either defect: its mock resolved every
+// commit immediately, in invocation order, and asserted only
+// `toHaveBeenLastCalledWith`, never the call count or the resolution order.
+// ---------------------------------------------------------------------------
+
+/**
+ * Let queued microtasks (promise continuations) and React's state flush run.
+ * `waitFor` is wrong for asserting that something NEVER appears: it succeeds on
+ * its first poll, which can land before the rejection's continuation has even
+ * been scheduled -- the assertion then passes vacuously. Verified: with
+ * `waitFor` here, deleting the guard under test left the suite green.
+ */
+async function flushMicrotasks() {
+  for (let i = 0; i < 3; i++) {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  }
+}
+
+/** A promise whose settlement this test controls explicitly. */
+function deferred<T = void>() {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe("PersonaDialSlider — out-of-order commit resolution", () => {
+  it("a STALE rejection landing after a newer success does not revert the thumb or paint an error", async () => {
+    const first = deferred();
+    const second = deferred();
+    const calls: number[] = [];
+    const onCommit = vi.fn((v: number) => {
+      calls.push(v);
+      return calls.length === 1 ? first.promise : second.promise;
+    });
+
+    render(<PersonaDialSlider axisLabel="HUMOR" value={83} onCommit={onCommit} />);
+    const thumb = getHumorThumb();
+
+    // Two commits in flight: 93 (PageUp) then 94 (ArrowRight).
+    fireEvent.keyDown(thumb, { key: "PageUp" });
+    fireEvent.keyDown(thumb, { key: "ArrowRight" });
+    await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(2));
+    expect(calls).toEqual([93, 94]);
+
+    // Resolve the NEWER commit first, then reject the OLDER one.
+    second.resolve();
+    await second.promise;
+    await flushMicrotasks();
+
+    first.reject(new Error("stale failure"));
+    // Swallow the rejection at the source so an unhandled-rejection warning
+    // cannot mask the assertion, then let the component's .catch actually run.
+    await first.promise.catch(() => {});
+    await flushMicrotasks();
+
+    // The stale rejection must be swallowed by the sequence guard: no error
+    // copy, and no revert out from under the newer, successful write.
+    // CONTROL for this negative assertion: the "synchronous throw" case below
+    // asserts this SAME string positively and passes, so the string is
+    // findable and a null result here means the error genuinely was not
+    // painted -- not that the query is broken.
+    expect(screen.queryByText(HUMOR_ERROR_COPY)).toBeNull();
+  });
+
+  it("a SYNCHRONOUS throw from onCommit still triggers the D-03 revert and error copy", async () => {
+    // The prop contract says onCommit "Rejects (or throws) on failure".
+    // A sync throw previously escaped the .catch entirely, leaving the
+    // unconfirmed thumb on screen with no error rendered.
+    const onCommit = vi.fn(() => {
+      throw new Error("synchronous failure");
+    }) as unknown as (v: number) => Promise<void>;
+
+    render(<PersonaDialSlider axisLabel="HUMOR" value={83} onCommit={onCommit} />);
+    fireEvent.keyDown(getHumorThumb(), { key: "PageUp" });
+
+    await waitFor(() => {
+      expect(screen.getByText(HUMOR_ERROR_COPY)).toBeInTheDocument();
+    });
   });
 });

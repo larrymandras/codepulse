@@ -57,6 +57,7 @@ export function PersonaDialSlider({
   const [dragValue, setDragValue] = useState<number | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const commitSeqRef = useRef(0);
 
   useEffect(
     () => () => {
@@ -97,8 +98,24 @@ export function PersonaDialSlider({
       // instant a new commit starts.
       setStatus(null);
 
-      onCommit(committed)
+      // Monotonic commit sequence. Radix fires `onValueCommit` per KEYSTROKE
+      // at `step={1}`, so a held arrow key or a PageUp burst puts several
+      // commits in flight at once. Without this, an EARLIER commit rejecting
+      // AFTER a later one succeeded would paint "Couldn't save" and clear the
+      // thumb for a write that actually landed fine.
+      const mySeq = ++commitSeqRef.current;
+
+      // `Promise.resolve().then(...)` rather than calling `onCommit` directly:
+      // the prop contract says onCommit "Rejects (or throws) on failure", and a
+      // SYNCHRONOUS throw would escape a `.catch` attached to onCommit's own
+      // return value -- leaving dragValue set (an unconfirmed thumb position
+      // stuck on screen), no error rendered, and an uncaught error in the
+      // event handler: the exact inverse of the D-03 contract. Wrapping turns
+      // every failure path, sync or async, into a rejection this chain sees.
+      Promise.resolve()
+        .then(() => onCommit(committed))
         .then(() => {
+          if (mySeq !== commitSeqRef.current) return; // superseded by a newer commit
           setDragValue(null);
           if (previousBand === nextBand) {
             setStatus({ text: SAME_BAND_COPY, kind: "saved" });
@@ -118,6 +135,10 @@ export function PersonaDialSlider({
           }
         })
         .catch(() => {
+          // Only the NEWEST commit may revert or paint an error. A stale
+          // rejection landing after a newer success must not roll the thumb
+          // back or claim a failure the user has already superseded.
+          if (mySeq !== commitSeqRef.current) return;
           // D-03: revert the thumb to the last confirmed value and
           // surface the per-axis error. No optimistic-then-toast path.
           setDragValue(null);

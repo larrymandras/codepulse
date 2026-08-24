@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 // Real PersonaDialSlider and real src/lib/dialBands.ts are used throughout
 // -- mocking the slider would make the render assertions vacuous (the
@@ -358,4 +358,99 @@ describe("PersonaDialControl -- loading state", () => {
     // Resolve so the pending promise/timer doesn't leak across tests.
     resolveGetContext(getContextAck());
   });
+});
+
+// ---------------------------------------------------------------------------
+// 4. Out-of-order ack reconciliation
+//
+// PersonaDialSlider fires onCommit PER KEYSTROKE (Radix `onValueCommit` at
+// `step={1}`), so a held arrow key puts several `persona_dials.set` writes in
+// flight simultaneously. The original suite could not observe this: its mock
+// resolved every ack immediately, in invocation order. These cases resolve
+// DEFERRED acks explicitly out of order.
+// ---------------------------------------------------------------------------
+
+function deferred<T = void>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+async function flushMicrotasks() {
+  for (let i = 0; i < 3; i++) {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  }
+}
+
+describe("PersonaDialControl -- out-of-order ack reconciliation", () => {
+  it("a STALE ack landing after a newer one does not roll the dial backwards", async () => {
+    mockUseQuery.mockReturnValue({ humor: 83, candor: 17, updatedAt: FIXED_TS });
+
+    const acks: Array<ReturnType<typeof deferred<Record<string, unknown>>>> = [];
+    mockSendCommand.mockImplementation(async (cmd: Record<string, unknown>) => {
+      if (cmd.type === "persona_dials.get_context") return getContextAck();
+      const d = deferred<Record<string, unknown>>();
+      acks.push(d);
+      // Capture the value THIS write carried, so its ack echoes it back --
+      // exactly as astridr's persona_dials.set does.
+      d.promise.then(() => {});
+      return d.promise.then(() => ({
+        type: "ack",
+        request_id: "r1",
+        status: "ok",
+        profileId: SEEDED_PROFILE,
+        personaId: "astridr",
+        humor: cmd.humor,
+        candor: 17,
+      }));
+    });
+
+    render(<PersonaDialControl />);
+    openPopover();
+    await screen.findByText("83");
+
+    // Two writes in flight: 93 (PageUp) then 94 (ArrowRight).
+    const thumb = getHumorThumb();
+    fireEvent.keyDown(thumb, { key: "PageUp" });
+    fireEvent.keyDown(thumb, { key: "ArrowRight" });
+    await waitFor(() => expect(acks.length).toBe(2));
+
+    // Settle the NEWER write first, then the OLDER one.
+    acks[1].resolve({});
+    await flushMicrotasks();
+    acks[0].resolve({});
+    await flushMicrotasks();
+
+    // The stale 93 ack must be discarded. Without the sequence guard the
+    // dial visibly rolls back to 93 even though 94 is what is stored.
+    expect(screen.queryByText("93")).toBeNull();
+    expect(screen.getByText("94")).toBeInTheDocument();
+  });
+
+  // DELIBERATELY NOT TESTED: the pending-COUNT fix (pendingAxisRef holding a
+  // count rather than a boolean, so it only clears when the LAST in-flight
+  // write for an axis settles).
+  //
+  // A test for it was written, ran green, and was DELETED as vacuous: mutating
+  // the count back to boolean early-release left it passing. Two reasons it
+  // cannot be observed through rendered output here, both verified rather than
+  // assumed:
+  //   1. PersonaDialSlider's `displayValue` is `dragValue ?? value`, and a
+  //      superseded commit's `.then` now returns early WITHOUT clearing
+  //      dragValue -- so the readout keeps showing the in-flight number
+  //      regardless of what the host's localHumor actually is. The rendered
+  //      text is simply not a window onto the state under test.
+  //   2. The defect is self-healing: a mid-burst Convex clobber is overwritten
+  //      when the final ack lands, so the user-visible symptom is a transient
+  //      flicker, not a wrong resting value.
+  //
+  // The fix is retained because it is strictly correct and costs nothing, but
+  // it is UNPROVEN BY TEST and must not be described as covered. Proving it
+  // needs an observation point on the host's state that the slider does not
+  // mask -- exposing the pending count for assertion, or a host-level test
+  // that renders without the real slider.
 });
