@@ -46,7 +46,7 @@ export default function BriefingFeedItem({ briefing }: BriefingFeedItemProps) {
         <span className="text-sm text-muted-foreground font-mono shrink-0">
           {formatDate(generatedAt)}
         </span>
-        <span className="text-base flex-1 truncate">
+        <span className="briefing-voice flex-1 truncate">
           {summary || narrative.slice(0, 100)}
         </span>
         <ChevronDown
@@ -59,7 +59,7 @@ export default function BriefingFeedItem({ briefing }: BriefingFeedItemProps) {
       {/* Expanded content */}
       {expanded && (
         <div className="px-4 pb-4 pt-2 bg-muted/20">
-          <p className="text-base whitespace-pre-wrap">{narrative}</p>
+          <p className="briefing-voice whitespace-pre-wrap">{narrative}</p>
           {type === "session" && sessionId && (
             <p className="font-mono text-sm text-muted-foreground mt-2">
               Session: {sessionId}
