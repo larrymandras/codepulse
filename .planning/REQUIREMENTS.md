@@ -124,7 +124,7 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | SHELL-02 | Phase 124 | Complete |
 | SIGNAL-01 | Phase 125 | Pending |
 | SIGNAL-02 | Phase 125 | Pending |
-| SIGNAL-03 | Phase 125 | Pending |
+| SIGNAL-03 | Phase 125 | Partial — trial built and shipped (125-05, real italic face self-hosted and chunk-isolated); the requirement's own text ("evaluated before any app-wide commit") is not satisfied until 125-10's blocking operator checkpoint records the adopt/reject/revisit verdict |
 
 **Coverage: 20/20 v15.0 requirements mapped, 100%. No orphans, no duplicates.**
 
