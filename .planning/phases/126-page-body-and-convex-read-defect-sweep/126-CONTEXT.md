@@ -218,6 +218,29 @@ existing reads bounded and honest.
   stays a lead, not a finding. That half keeps its D-07 measure-first task. The todo's own guidance
   applies: the ONE tile that DOES render is the control that tells you which input differs.
 
+- **D-10 (2026-08-24, during planning; Larry's call): `/automation`'s catalog rows must stop
+  BEHAVING as broken, not just stop rendering as broken. The dead edit affordance is retired in the
+  same plan as the parse fix.**
+  Surfaced by a Codex adversarial review relayed from another session and verified here against
+  live code: every one of the twelve catalog rows opens an edit sheet whose Save can never enable.
+  `CronBuilder.tsx:39` classifies any non-5-token value as `custom`; `:76-78` seeds `customExpr`
+  with the human label itself; `:86-87` compute `canSave = name && isValidCron(label)`; `:281`
+  binds `disabled={!canSave}`. A live control against the real `CRON_REGEX`
+  (`src/lib/cronToHuman.ts:26`) returns `false` for all ten distinct catalog intervals and `true`
+  for `"*/5 * * * *"` and `"0 3 * * *"` — the control fires, so the falses are a property of the
+  data.
+  **Why this is in scope rather than a follow-up todo:** D-09's parse fix alone would delete the
+  visible "Invalid expression" text while leaving the dead click path, making the page *look*
+  healthier than it is. That is precisely the shape D-01/D-02 spent an entire discussion area
+  rejecting for `/inbox` — a surface presenting as more complete than it is. Today the page at
+  least signals its own brokenness loudly; a display-only fix would remove the signal and keep the
+  defect, which is a net loss in honesty even though it is a net gain in appearance.
+  **Bounded deliberately:** retire the affordance at the call site. Do NOT reshape `CronJob`,
+  build a cron-string generator, or touch the `cron.trigger`/`cron.create` dispatch — 126-03
+  declined those and D-10 does not reopen them. Do NOT "fix" it with a tooltip explaining why Save
+  is dead; the affordance is the defect. Implemented as 126-03 Task 1b, whose control asserts a row
+  with a REAL cron expression still opens the editor.
+
 ### Claude's Discretion
 
 - Exact wording and placement of the truncation markers (D-01/D-02) — a label, a suffix, or a
