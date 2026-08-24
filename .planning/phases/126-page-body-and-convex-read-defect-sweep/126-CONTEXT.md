@@ -117,6 +117,24 @@ existing reads bounded and honest.
   (`convex/schema.ts:1723-1731`), a payload chunked across rows with `seq` and a
   `by_host_job_seq` index, added in Phase 81 for this same class of reason.
 
+  **PRECEDENT QUALIFIED (2026-08-24, same session).** `forgeLogChunks` is a **table-SHAPE
+  precedent only — its READER must NOT be copied.** Verified:
+  `listJobLogs` (`convex/forge.ts:1584-1600`) reads with `.withIndex("by_host_job", ...)` +
+  `.order("asc")`, i.e. **`_creationTime` order, not `seq` order**. The `by_host_job_seq` index
+  is used at exactly ONE site — `convex/forge.ts:1567`, the D-1 idempotency unique-check — which
+  is what `convex/schema.ts:1731`'s own comment says it is for. Nothing tests reassembly:
+  grepping `listJobLogs` across `convex/**/*.ts` returns the definition, one unrelated docstring
+  mention, a schema comment, and **`convex/forgeLogIngest.test.ts:389`, which is a COMMENT
+  asserting "Chunks ordered by seq ascending (oldest first) - as returned by listJobLogs" — a
+  property `listJobLogs` does not actually guarantee.** Treat that comment as a claim, not
+  evidence; it is precisely the kind of line that would ratify a wrong copy.
+  For log lines, creation-time order coinciding with `seq` is harmless. **For a JSON blob whose
+  reassembly order must be exact, it is silent corruption** — and it would surface as a
+  `JSON.parse` throw or a truncated graph, not as a missing-data error. **Binding: the chunk read
+  MUST sort explicitly on `seq` via a `by_snapshot_version_seq`-style index**, and the ordering
+  control required by the validation strategy (a deliberately out-of-order chunk set must FAIL)
+  is what proves it.
+
   **Why this satisfies D-06's stated intent rather than evading it.** D-06 chose the blob because
   it was "the only option without a cliff." Chunking is the variant that actually has no cliff:
   chunk COUNT is elastic, so a graph that doubles yields ~8 rows instead of ~4 with no limit to
