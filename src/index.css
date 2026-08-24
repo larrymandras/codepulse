@@ -43,6 +43,13 @@
 @theme {
   --font-geist: "Geist", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+  /* D-14 (Phase 125): Ástríðr's serif voice, self-hosted via @fontsource in
+     plan 125-05 (module-scoped import, not the global Google Fonts link --
+     nobody who never opens Briefings downloads it). This token is declared
+     here so `.briefing-voice` below has a name to point at even before the
+     font import lands; the family list's Georgia/serif fallback means this
+     token is never literally undefined. */
+  --font-voice: 'Instrument Serif', Georgia, serif;
 
   /* D-10: motion tokens, verbatim from the locked decision. --ease-* IS a real
      Tailwind v4 theme namespace; --duration-* is NOT (verified by direct
@@ -185,6 +192,23 @@
   /* Phase 72: War Room speaking ring tokens */
   --speaking-ring: oklch(0.65 0.15 142);
   --speaking-ring-glow: oklch(0.65 0.15 142 / 0.35);
+}
+
+/* D-03 (Phase 125): the Signal Horizon's aurora derives from the three hue
+   owners, declared ONCE here rather than as five hand-picked per-theme
+   triads. var() resolves at used-value time against the cascade, and every
+   dark theme already re-declares --primary/--astridr/--status-ok in its own
+   [data-theme] block, so this single :root line gives every dark theme a
+   correct, drift-proof aurora with no fourth palette to keep in sync.
+   (--astridr is not itself re-declared in the light Paperclip :root above --
+   only the five dark themes carry it -- but ThemeSwitcher.tsx's VALID_THEMES
+   list never exposes that plain :root cascade at data-theme-selector level,
+   so the second aurora token below has no live-reachable theme in which it
+   resolves against an undefined --astridr.) */
+:root {
+  --aurora-a: var(--primary);
+  --aurora-b: var(--astridr);
+  --aurora-c: var(--status-ok);
 }
 
 .dark,
@@ -779,6 +803,27 @@ code, pre, .font-mono {
 [data-theme="readable"] *::after {
   animation: none !important;
   transition-duration: 0ms !important;
+}
+
+/* D-14/D-15 (Phase 125): Ástríðr's serif voice, applied by plan 125-05 to
+   Briefings only. Inert until then -- nothing in src/ references this class
+   yet, and it ships no font bytes on its own (the @fontsource import lands
+   in 125-05, module-scoped to the Briefings chunk). 17px/400/1.5 italic is
+   UI-SPEC's locked Typography row for her voice.
+   D-15: the readable override below MUST be a CSS-level rule, not a JS
+   theme check -- it then holds even if JS theme state is momentarily stale,
+   and it composes for free with this file's existing readable-effects-off
+   law rather than needing a second code path to remember. */
+.briefing-voice {
+  font-family: var(--font-voice);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+[data-theme="readable"] .briefing-voice {
+  font-family: var(--font-geist);
+  font-style: normal;
 }
 
 /* Phase 89 — suppress aubergine pseudo-elements under prefers-reduced-motion */
