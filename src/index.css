@@ -1020,3 +1020,84 @@ code, pre, .font-mono {
   .aura-ring::before { display: none; }
   .aura-float { animation: none; }
 }
+
+/* Phase 125-04 (SIGNAL-01): the Signal Horizon -- a 2px line beneath the
+   shell header (mounted by plan 125-08). One base class carries the resting
+   aurora; state-modifier attribute selectors key off data-horizon-state,
+   which SignalHorizon.tsx sets on the rendered DOM -- so a test can read
+   back WHICH condition was entered, not just infer it from colour.
+   Reference implementation:
+   .planning/sketches/001-dashboard-quiet-control-room/index.html:138-161.
+   Locked figures (2px/3px height, 90s linear / 300% drift) per
+   shell-and-dashboard.md SS4/SS12. Uses --duration-slow/--ease-house (Phase
+   122 D-10's real token names), not the sketch's shorter-numbered duration
+   token or its "ease-out" easing name. */
+.signal-horizon {
+  position: relative;
+  height: 2px;
+  flex-shrink: 0;
+  overflow: visible;
+  transition: background var(--duration-slow) ease, height var(--duration-slow) ease;
+  background: linear-gradient(90deg, var(--aurora-a), var(--aurora-b) 40%, var(--aurora-c) 75%, var(--aurora-a));
+  background-size: 300% 100%;
+  animation: aurora-drift 90s linear infinite;
+}
+
+@keyframes aurora-drift {
+  to { background-position: 300% 0; }
+}
+
+.signal-horizon[data-horizon-state="critical"] {
+  height: 3px;
+  background: var(--status-error);
+  animation: none;
+}
+
+.signal-horizon[data-horizon-state="warn"] {
+  background: color-mix(in oklab, var(--status-warn) 55%, var(--border));
+  animation: none;
+}
+
+/* Dawn: the component owns the ~2600ms disarm-ease timing (DAWN_MS in
+   SignalHorizon.tsx), this rule is the CSS "look" of it -- solid amber the
+   instant the attribute flips, then a background-color transition back
+   toward the resting aurora as the component swaps the attribute at
+   expiry. */
+.signal-horizon[data-horizon-state="dawn"] {
+  background: var(--status-warn);
+  animation: none;
+  transition: background-color 2600ms ease, height var(--duration-slow) ease;
+}
+
+/* Unknown and Offline share the SAME dashed neutral treatment but are kept
+   as two separately-named selector values (UI-SPEC:169) -- collapsing them
+   into one value would hide the timeout/malformed-payload path inside "we
+   happen to also be offline". */
+.signal-horizon[data-horizon-state="unknown"],
+.signal-horizon[data-horizon-state="offline"] {
+  background: repeating-linear-gradient(90deg, var(--muted-foreground) 0 6px, transparent 6px 12px);
+  animation: none;
+}
+
+/* D-04 motion gate: under reduced-motion and readable, the resting aurora
+   freezes -- no drift -- while every state override's colour (crimson-armed,
+   warn-amber, dashed-offline) still applies instantly, because the
+   crimson-when-armed signal is functional, not decorative. readable already
+   gets the animation half suppressed for free by the blanket rule above
+   ([data-theme="readable"] * { animation: none !important }) -- declared
+   explicitly here anyway so the rule is visible at this call site rather
+   than depending on a blanket three hundred lines away. Neither of these
+   two rules covers the packet spawner (plan 125-08) or the ECG's rAF loop
+   (plan 125-06/125-08) -- both are JS loops, not CSS animations, and need
+   their own explicit motion-preference gates in JS. */
+@media (prefers-reduced-motion: reduce) {
+  .signal-horizon {
+    animation: none;
+    background-size: 100% 100%;
+  }
+}
+
+[data-theme="readable"] .signal-horizon {
+  animation: none;
+  background-size: 100% 100%;
+}
