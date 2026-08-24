@@ -1,3 +1,10 @@
+import "@fontsource/instrument-serif/400-italic.css";
+// D-14 (Phase 125): the ITALIC SUBPATH, not the package root -- the bare
+// `@fontsource/instrument-serif` root ships only `font-style: normal`
+// (RESEARCH R-6), so importing it here would silently render faux-italic.
+// This import is module-scoped to this lazy route (see App.tsx's
+// `lazy(() => import("./pages/Briefings"))`), so nobody who never opens
+// /briefings downloads the face.
 import { useState } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
