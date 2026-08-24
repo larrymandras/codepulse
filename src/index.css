@@ -1079,6 +1079,31 @@ code, pre, .font-mono {
   animation: none;
 }
 
+/* Phase 125-08 (SIGNAL-01): event packets crossing the horizon -- 48px
+   luminous streaks, one spawned per surviving WS event, coalesced to at
+   most 1/second by the JS drop-gate in SignalHorizon.tsx (D-07). Coloured
+   per-packet via the inline --pk custom property, set from the D-06 hue map
+   in eventHue.ts (astridr/machine/error -> one of three fixed var(--token)
+   strings -- event_type itself never reaches the DOM, T-125-08-02). Uses
+   --ease-house (Phase 122 D-10's real token name), matching the base aurora
+   rule above, not the reference sketch's differently-named easing token. */
+.signal-horizon .packet {
+  position: absolute;
+  top: -1px;
+  height: 4px;
+  width: 48px;
+  border-radius: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--pk, var(--primary)));
+  box-shadow: 0 0 12px color-mix(in oklab, var(--pk, var(--primary)) 60%, transparent);
+  animation: travel 620ms var(--ease-house) forwards;
+}
+
+@keyframes travel {
+  from { left: -60px; opacity: 1; }
+  to { left: 101%; opacity: 0.4; }
+}
+
 /* D-04 motion gate: under reduced-motion and readable, the resting aurora
    freezes -- no drift -- while every state override's colour (crimson-armed,
    warn-amber, dashed-offline) still applies instantly, because the
@@ -1086,18 +1111,29 @@ code, pre, .font-mono {
    gets the animation half suppressed for free by the blanket rule above
    ([data-theme="readable"] * { animation: none !important }) -- declared
    explicitly here anyway so the rule is visible at this call site rather
-   than depending on a blanket three hundred lines away. Neither of these
-   two rules covers the packet spawner (plan 125-08) or the ECG's rAF loop
-   (plan 125-06/125-08) -- both are JS loops, not CSS animations, and need
-   their own explicit motion-preference gates in JS. */
+   than depending on a blanket three hundred lines away. The packet rule is
+   ALSO hidden here, belt-and-braces alongside SignalHorizon.tsx's JS gate
+   (which stops spawning packets at all under either condition) -- a packet
+   that got spawned anyway must never be visible, and a packet that animates
+   because the JS gate drifted out of sync with these media queries is
+   exactly the failure this redundancy exists to catch. Neither of these two
+   rules covers the ECG's rAF loop (plan 125-06) -- that is a JS loop, not a
+   CSS animation, and needs its own explicit motion-preference gate in JS. */
 @media (prefers-reduced-motion: reduce) {
   .signal-horizon {
     animation: none;
     background-size: 100% 100%;
+  }
+  .signal-horizon .packet {
+    display: none;
   }
 }
 
 [data-theme="readable"] .signal-horizon {
   animation: none;
   background-size: 100% 100%;
+}
+
+[data-theme="readable"] .signal-horizon .packet {
+  display: none;
 }

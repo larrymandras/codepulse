@@ -21,12 +21,18 @@
  * and issues zero data-fetching hook calls of its own — it adds no Convex
  * subscription to the every-route shell.
  *
- * This plan does NOT mount the component anywhere and adds no packet
- * spawning — see plan 125-08.
+ * Plan 125-08 additionally mounts this component in `DashboardLayout` and
+ * adds the event-packet spawner below (D-06/D-07): every surviving WS event
+ * crosses the horizon as a 48px hue-coloured streak, coalesced to at most
+ * one packet per second (T-125-08-01) and dropped entirely — no
+ * subscriptions registered at all — under reduced-motion or `readable`
+ * (D-04).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAstridrWS } from "@/contexts/AstridrWSContext";
+import { useAstridrWS, TOPIC_EVENT_MAP } from "@/contexts/AstridrWSContext";
+import { eventTypeToHue, HUE_TOKEN } from "@/lib/eventHue";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 // ─── Public contract (125-04-PLAN.md <interfaces> — 125-08 mounts against
 // exactly this signature; do not change it without updating that plan) ─────
@@ -151,7 +157,7 @@ function horizonAriaLabel(state: HorizonState, armed: boolean): string {
 // ─── Component ───────────────────────────────────────────────────────────
 
 export default function SignalHorizon({ alertLevel }: { alertLevel: AlertLevel }) {
-  const { status, subscribeEvent } = useAstridrWS();
+  const { status, subscribeEvent, subscribe } = useAstridrWS();
 
   const [snapshot, setSnapshot] = useState<EstopSnapshot | null>(null);
   const [dawnUntil, setDawnUntil] = useState<number | null>(null);
@@ -270,6 +276,104 @@ export default function SignalHorizon({ alertLevel }: { alertLevel: AlertLevel }
     };
   }, []);
 
+  // ─── Event packets (SIGNAL-01, plan 125-08) ─────────────────────────────
+  // The horizon element itself hosts the spawned packet nodes — appended
+  // directly to the DOM rather than through React state, since a packet's
+  // whole lifecycle (append, animate, remove after 700ms) never needs to
+  // re-render anything else on the page.
+  const horizonRef = useRef<HTMLDivElement>(null);
+  // Identity dedup (planner_corrections): AstridrWSContext.tsx passes the
+  // IDENTICAL msg object to every matching callback, both for a genuine
+  // multi-topic delivery and for its unknown-event-type fan-out-to-all
+  // branch (:337-342) — so a msg object already handled once is a repeat
+  // delivery of the same wire event, never a second event. A WeakSet holds
+  // no strong reference, so transient per-message objects are never
+  // retained past their own garbage collection.
+  const seenMsgsRef = useRef<WeakSet<object>>(new WeakSet());
+  const lastPacketRef = useRef(0);
+  const packetTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  const handlePacketEvent = useCallback((msg: Record<string, unknown>) => {
+    try {
+      if (seenMsgsRef.current.has(msg)) return;
+      seenMsgsRef.current.add(msg);
+
+      const eventType = msg.event_type;
+      if (typeof eventType !== "string") return; // malformed — no packet
+
+      // estop_state is a STATE TRANSITION the fail-closed machine above
+      // already visualises via the horizon's own colour/animation — it is
+      // not traffic, so it must not also spawn a packet (it is unknown to
+      // TOPIC_EVENT_MAP, so without this exclusion it would otherwise fall
+      // through to the "machine" hue via the unknown-type fan-out).
+      if (eventType === "estop_state") return;
+
+      const now = Date.now();
+      // D-07: coalesce to at most one packet per second — the exact
+      // drop-gate shape useLiveFlash.ts:22-24 already established
+      // repo-wide, copied in spirit and in constant. The horizon is
+      // ambient texture: a dropped event is fine, a lagging signal is not,
+      // which is why this is a DROP and not a queue-and-drain.
+      if (now - lastPacketRef.current < 1000) return;
+      lastPacketRef.current = now;
+
+      const host = horizonRef.current;
+      if (!host) return;
+      const token = HUE_TOKEN[eventTypeToHue(eventType)];
+      const packet = document.createElement("div");
+      packet.className = "packet";
+      packet.style.setProperty("--pk", token);
+      host.appendChild(packet);
+      const timer = setTimeout(() => {
+        packetTimersRef.current.delete(timer);
+        packet.remove();
+      }, 700);
+      packetTimersRef.current.add(timer);
+    } catch {
+      // This handler runs inside AstridrWSContext's synchronous
+      // ws.onmessage fan-out (:322-343) alongside every other subscriber —
+      // a throw here would kill the whole telemetry stream (T-125-08-03).
+      // Never rethrow, same discipline as handleFrame above.
+    }
+  }, []);
+
+  // D-04: re-evaluated on every data-theme mutation, same computation
+  // plan 125-06's canvas uses (PulseEcgCanvas.tsx's computeAnimate). Lazy
+  // initial state so the very first render already reflects the current
+  // preference rather than animating for one tick before correcting.
+  const [animate, setAnimate] = useState<boolean>(
+    () => !prefersReducedMotion() && document.documentElement.dataset.theme !== "readable"
+  );
+
+  useEffect(() => {
+    const recompute = () =>
+      setAnimate(!prefersReducedMotion() && document.documentElement.dataset.theme !== "readable");
+    const themeObs = new MutationObserver(recompute);
+    themeObs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class"],
+    });
+    return () => themeObs.disconnect();
+  }, []);
+
+  // D-04: when motion is suppressed, register NO packet subscriptions at
+  // all — the cheapest correct way to guarantee zero packets, rather than
+  // subscribing and discarding every delivery inside the handler. Tears
+  // down (and clears every outstanding removal timer) on unmount AND on a
+  // transition to `animate === false`, since this effect's cleanup runs on
+  // both a dependency change and unmount.
+  useEffect(() => {
+    if (!animate) return;
+    const unsubscribers = Object.keys(TOPIC_EVENT_MAP).map((topic) =>
+      subscribe(topic, handlePacketEvent)
+    );
+    return () => {
+      for (const unsub of unsubscribers) unsub();
+      for (const timer of packetTimersRef.current) clearTimeout(timer);
+      packetTimersRef.current.clear();
+    };
+  }, [animate, subscribe, handlePacketEvent]);
+
   // DEV-only simulation hook (T-125-04-05). Routes through the SAME
   // handleFrame parse path as the WS handler — a malformed stub payload
   // lands in Unknown exactly like a malformed wire payload. Gated on
@@ -297,6 +401,7 @@ export default function SignalHorizon({ alertLevel }: { alertLevel: AlertLevel }
 
   return (
     <div
+      ref={horizonRef}
       className="signal-horizon"
       data-horizon-state={state}
       role="status"

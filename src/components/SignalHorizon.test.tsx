@@ -35,20 +35,27 @@ const h = vi.hoisted(() => ({
   handlers: new Map<string, FrameCallback>(),
 }));
 
-vi.mock("@/contexts/AstridrWSContext", () => ({
-  useAstridrWS: () => ({
-    status: h.status,
-    subscribeEvent: (eventType: string, cb: FrameCallback) => {
-      h.handlers.set(eventType, cb);
-      return () => {
-        h.handlers.delete(eventType);
-      };
-    },
-    subscribe: vi.fn(() => () => {}),
-    sendCommand: vi.fn(),
-    reconnect: vi.fn(),
-  }),
-}));
+vi.mock("@/contexts/AstridrWSContext", async (importOriginal) => {
+  // TOPIC_EVENT_MAP is re-exported from the REAL module (not hand-copied)
+  // so this mock cannot silently drift from the live topic list — plan
+  // 125-08's `Object.keys(TOPIC_EVENT_MAP)` iterates whatever this returns.
+  const actual = await importOriginal<typeof import("@/contexts/AstridrWSContext")>();
+  return {
+    TOPIC_EVENT_MAP: actual.TOPIC_EVENT_MAP,
+    useAstridrWS: () => ({
+      status: h.status,
+      subscribeEvent: (eventType: string, cb: FrameCallback) => {
+        h.handlers.set(eventType, cb);
+        return () => {
+          h.handlers.delete(eventType);
+        };
+      },
+      subscribe: vi.fn(() => () => {}),
+      sendCommand: vi.fn(),
+      reconnect: vi.fn(),
+    }),
+  };
+});
 
 beforeEach(() => {
   vi.useFakeTimers();
