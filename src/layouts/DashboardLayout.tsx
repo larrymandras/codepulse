@@ -31,6 +31,7 @@ const CommandPalette = lazy(() =>
   import("../components/CommandPalette").then((m) => ({ default: m.CommandPalette }))
 );
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import SignalHorizon, { type AlertLevel } from "../components/SignalHorizon";
 import { BrainHeaderBadge } from "../components/brains/BrainHeaderBadge";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -203,6 +204,16 @@ function AlertsCountBadge() {
   );
 }
 
+// Matches convex/alerts.ts's countBySeverity return shape (`{ ...counts,
+// truncated }`). `| null | undefined` covers both the unresolved-query
+// state and this suite's `null`-for-unresolved mock shape (D-12's
+// `== null` guard already treats the two identically everywhere else in
+// this file).
+type AlertSeverityCounts =
+  | { info: number; warning: number; error: number; critical: number; truncated: boolean }
+  | null
+  | undefined;
+
 // D-11: the header's system chip — Nominal/Attention/Critical/Offline —
 // composed entirely client-side from the SAME `alerts.countBySeverity`
 // subscription AlertsCountBadge above reads (Convex dedupes the identical
@@ -216,16 +227,29 @@ function AlertsCountBadge() {
 // get its own SectionErrorBoundary (D-13) — Active Brain (pre-existing),
 // Inbox count and Alerts count (124-06) were the first three; the plan text
 // undercounts this as "the third", corrected here.
-function SystemChip() {
+//
+// D-05 (SIGNAL-01, plan 125-08): `counts` now arrives as a PROP — the
+// alert-severity query this component used to call itself is hoisted up
+// into DashboardLayout's own body, so the Signal Horizon's `alertLevel` and
+// this chip both read one call site rather than each mounting their own.
+// Rendered output (badges, labels, offline-wins ordering, the
+// `counts == null` guard) is UNCHANGED. `counts` can also be the literal
+// "error" sentinel (see the hoist site's own comment) — re-thrown below so
+// this component's OWN SectionErrorBoundary still catches a genuine query
+// failure exactly as it did before the hoist.
+function SystemChip({ counts }: { counts: AlertSeverityCounts | "error" }) {
   const { isWebSocketConnected } = useConvexConnectionState();
-  const counts = useQuery(api.alerts.countBySeverity);
 
   // Resolution order, exactly (T-124-08-01). Offline wins over every
-  // alert-derived state: once the socket is down the alert counts are stale
-  // by definition, so reporting "Nominal" from them would be a confident
-  // claim about data that is not arriving.
+  // alert-derived state, including a genuine query error: once the socket
+  // is down the alert counts are stale by definition, so reporting
+  // "Nominal" from them would be a confident claim about data that is not
+  // arriving.
   if (!isWebSocketConnected) {
     return <StatusBadge status="idle" tier="quietest" label="Offline" />;
+  }
+  if (counts === "error") {
+    throw new Error("System status query failed");
   }
   // D-12's undefined-preserving rule, one layer up: render NOTHING rather
   // than fabricate "Nominal" while the query has not resolved — the chip
@@ -648,6 +672,44 @@ export default function DashboardLayout() {
   const systemResources = useQuery(api.systemResources.current);
   const showSys = systemResources?.cpu != null;
 
+  // D-05 (SIGNAL-01, plan 125-08): the shell's own hoisted alert-severity
+  // subscription — moved out of SystemChip (which used to call this
+  // itself) so the Signal Horizon's `alertLevel` and the chip's own counts
+  // both read one call site instead of two. Passed down to SystemChip as a
+  // prop below; AlertsCountBadge's separate, pre-existing (Phase 124) call
+  // in the sidebar is untouched — out of this plan's scope (nav) and
+  // already deduped by Convex client-side ("one round trip, two
+  // consumers" — AlertsCountBadge's own comment above).
+  //
+  // [Rule 1 fix, deviation from plan text] The try/catch below was added
+  // during this plan: a Convex query that throws is unhandled AT the
+  // useQuery call site (codepulse/CLAUDE.md's own documented lesson) —
+  // before this hoist, that throw hit SystemChip's OWN direct useQuery call
+  // and was caught by SystemChip's OWN "System status" SectionErrorBoundary
+  // (D-13, own boundary/own fallback, independent of AlertsCountBadge's
+  // separate sidebar boundary). Hoisting the call to this UNPROTECTED
+  // top-level scope would let that same throw blank the entire layout
+  // instead of one header chip — exactly the failure D-13 exists to
+  // prevent, at a far larger blast radius. Caught here and converted to a
+  // distinguishable "error" sentinel (never confused with the real
+  // `undefined`/loading state) so SystemChip can re-throw it from WITHIN
+  // its own boundary-wrapped subtree below, restoring the original
+  // fault-isolation. Caught live by this suite's existing D-13 throw test.
+  let alertCounts: AlertSeverityCounts | "error";
+  try {
+    alertCounts = useQuery(api.alerts.countBySeverity);
+  } catch {
+    alertCounts = "error";
+  }
+  const alertLevel: AlertLevel =
+    alertCounts == null || alertCounts === "error"
+      ? "unknown"
+      : alertCounts.critical > 0 || alertCounts.error > 0
+        ? "critical"
+        : alertCounts.warning > 0
+          ? "warn"
+          : "none";
+
   const { status: wsStatus, sendCommand } = useAstridrWS();
 
   const [headerLatencyMs, setHeaderLatencyMs] = useState<number | null>(null);
@@ -837,7 +899,7 @@ export default function DashboardLayout() {
           this plan. The consolidation reduced the OVERFLOW (981px combined min-content at 900px
           in 120-07's original measurement, above, down to 706px here) but not enough to close it.
         */}
-        <header className="min-h-14 flex-shrink-0 flex-wrap gap-y-1 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+        <header className="min-h-14 flex-shrink-0 flex-wrap gap-y-1 bg-background/80 backdrop-blur-md flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center gap-4">
             {/* Hamburger button - mobile only. 32x32px hit area (D-09/UI-SPEC
                 Accessibility Contract): was p-1 (4px) + h-4 icon (16px) = 24x24,
@@ -917,7 +979,7 @@ export default function DashboardLayout() {
               name="System status"
               fallback={<BadgeUnavailableDot label="System status unavailable" />}
             >
-              <SystemChip />
+              <SystemChip counts={alertCounts} />
             </SectionErrorBoundary>
             <NotificationBell />
             {/* Phase 124 (D-07, amended 2026-08-21): the four settings-shaped
@@ -996,6 +1058,19 @@ export default function DashboardLayout() {
           </div>
           </TooltipProvider>
         </header>
+
+        {/* Signal Horizon (SIGNAL-01, plan 125-08) — the header's own
+            border-b border-border was removed above; this line is now the
+            separator. Fallback is a plain hairline making NO state claim: a
+            fallback rendering "offline" or the resting aurora would assert
+            something about E-Stop at the exact moment the component that
+            knows it just crashed (T-125-08-04). */}
+        <SectionErrorBoundary
+          name="Signal horizon"
+          fallback={<div className="h-px w-full bg-border" aria-hidden="true" />}
+        >
+          <SignalHorizon alertLevel={alertLevel} />
+        </SectionErrorBoundary>
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto bg-background p-6">
