@@ -190,7 +190,7 @@ export function PersonaDialControl({ variant = "row" }: PersonaDialControlProps)
         else setLocalCandor(row?.candor ?? DEFAULT_CANDOR);
         throw err;
       } finally {
-        pendingAxisRef.current[axis] = 0; // MUTATION-PROOF-PENDING-COUNT: boolean-style clear
+        pendingAxisRef.current[axis] -= 1;
       }
     },
     [sendCommand, row]

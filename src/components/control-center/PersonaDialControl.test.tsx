@@ -453,4 +453,81 @@ describe("PersonaDialControl -- out-of-order ack reconciliation", () => {
   // needs an observation point on the host's state that the slider does not
   // mask -- exposing the pending count for assertion, or a host-level test
   // that renders without the real slider.
+
+  it("does not let a stale Convex read clobber a still-pending axis, observed by forcing the slider to remount (pending-count guard)", async () => {
+    // The masking documented above is per-INSTANCE: PersonaDialSlider's
+    // `dragValue` lives in that instance's own local state and resets to
+    // `null` on mount. Closing the popover unmounts its content (Radix
+    // Popover.Content has no `forceMount` here, see ui/popover.tsx), so
+    // reopening it mounts a FRESH slider with no drag in progress --
+    // `displayValue` then falls through to the host's `value` prop with
+    // nothing left to mask it. This is the "observation point the slider
+    // does not mask" the comment above says is needed.
+    mockUseQuery.mockReturnValue({ humor: 83, candor: 17, updatedAt: FIXED_TS });
+
+    const acks: Array<ReturnType<typeof deferred<Record<string, unknown>>>> = [];
+    mockSendCommand.mockImplementation(async (cmd: Record<string, unknown>) => {
+      if (cmd.type === "persona_dials.get_context") return getContextAck();
+      const d = deferred<Record<string, unknown>>();
+      acks.push(d);
+      return d.promise.then(() => ({
+        type: "ack",
+        request_id: "r1",
+        status: "ok",
+        profileId: SEEDED_PROFILE,
+        personaId: "astridr",
+        humor: cmd.humor,
+        candor: 17,
+      }));
+    });
+
+    const trigger = () => screen.getByRole("button", { name: "Persona tone" });
+    const { rerender } = render(<PersonaDialControl />);
+    fireEvent.click(trigger()); // open
+    await screen.findByText("83");
+
+    const thumb = getHumorThumb();
+    fireEvent.keyDown(thumb, { key: "PageUp" }); // older commit -> 93
+    fireEvent.keyDown(thumb, { key: "ArrowRight" }); // newer commit -> 94
+    await waitFor(() => expect(acks.length).toBe(2));
+
+    // The OLDER write settles (stale, silently discarded by the sequencing
+    // guard) -- this is the exact moment a boolean pending flag would clear
+    // early, one write before the axis is actually done.
+    acks[0].resolve({});
+    await flushMicrotasks();
+
+    // A Convex read arrives while the NEWER write is still outstanding,
+    // carrying a value that matches neither the original (83) nor either
+    // in-flight commit (93/94) -- so it cannot be confused with a correct
+    // outcome by coincidence. `useQuery` is only actually re-invoked when
+    // PersonaDialControl itself re-renders (a Popover open/close toggle is
+    // internal to Radix's own subtree and does not, by itself, re-render
+    // this parent), so force it explicitly with `rerender`.
+    mockUseQuery.mockReturnValue({ humor: 70, candor: 17, updatedAt: FIXED_TS + 1 });
+    rerender(<PersonaDialControl />);
+    await flushMicrotasks();
+
+    // Close, then reopen -- unmounts and remounts PersonaDialSlider, wiping
+    // its local dragValue and exposing whatever the host's localHumor
+    // actually holds.
+    fireEvent.click(trigger()); // close
+    await waitFor(() => expect(screen.queryByRole("slider", { name: "Humor dial, 0 to 100" })).toBeNull());
+    fireEvent.click(trigger()); // reopen
+
+    // CONTROL: 70 must never appear. Under the boolean-flag regression this
+    // is exactly what renders here -- the fresh slider mounts with no drag
+    // in progress and paints the host's (wrongly reseeded) localHumor
+    // straight through.
+    await waitFor(() => {
+      expect(screen.queryByText("70")).toBeNull();
+    });
+    // The axis is still governed by whichever value survives -- either the
+    // original 83 (correctly untouched) or, once resolved below, 94.
+    expect(screen.getByText("83")).toBeInTheDocument();
+
+    // The newer, still-in-flight commit finally resolves -- its value wins.
+    acks[1].resolve({});
+    expect(await screen.findByText("94")).toBeInTheDocument();
+  });
 });
