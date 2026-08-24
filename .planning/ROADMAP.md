@@ -882,7 +882,7 @@ All 18 decisions D-01..D-18 covered (`check.decision-coverage-plan` reports 18/1
 Plans:
 **Wave 1**
 
-- [ ] 125-01-PLAN.md — CSS foundation: aurora + voice tokens, the event_type -> hue map, the entry-chunk ratchet
+- [x] 125-01-PLAN.md — CSS foundation: aurora + voice tokens, the event_type -> hue map, the entry-chunk ratchet
 - [ ] 125-02-PLAN.md — Bounded 60s `runtime_events` window query for the ECG backfill
 - [ ] 125-03-PLAN.md — astridr-repo: `estop_state` emitter, on-connect snapshot push, `run.blocks` single-emission fix
 
