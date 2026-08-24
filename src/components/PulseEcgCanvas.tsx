@@ -55,13 +55,21 @@ export interface EcgPalette {
 // the age->x mapping and the "drop blips older than the window" rule.
 const WINDOW_MS = 60_000;
 
-// D-11's own <interfaces> contract states "breathing baseline opacity
-// 0.5<->0.8 on a 4s sine" (twice). The reference sketch's draw() actually
-// used a ~12.6s period (`now / 2000` inside a raw `sin`, i.e. a 2000*2*PI ms
-// period), but since the plan's own written contract is what 125-09 composes
-// against, 4s is what ships — flagged as a plan/sketch discrepancy in the
-// SUMMARY rather than silently resolved either way.
-const BREATHE_PERIOD_MS = 4000;
+// Breathing baseline, opacity 0.5<->0.8. The divisor is written EXACTLY as the
+// validated sketch writes it — `.planning/sketches/001-dashboard-quiet-control-
+// room/index.html:592`, `Math.sin(now / 2000)` — deliberately NOT as a derived
+// period constant.
+//
+// Why the literal form matters: that argument is already in radians, so the true
+// period is 2*PI*2000 ~= 12,566ms, and 125-06-PLAN.md's prose misread the 2000
+// divisor as a half-period and wrote "a 4s sine" (twice). Shipping that would
+// have made the baseline breathe 3.14x faster than the design that was actually
+// validated, on a page whose whole intent is "quiet control room". Larry chose
+// the sketch on 2026-08-24 after the executor flagged the discrepancy rather
+// than silently resolving it. Writing `now / 2000` inside a raw sin() keeps this
+// byte-identical to the sketch so the misreading cannot recur; a rounded 12566
+// constant would invite exactly the same re-derivation error.
+const BREATHE_DIVISOR_MS = 2000;
 
 // Deliberately not a real theme colour — used only as a round-trip probe to
 // detect a CSS custom property that failed to parse. `fillStyle` silently
@@ -71,7 +79,7 @@ const BREATHE_PERIOD_MS = 4000;
 const SENTINEL_COLOR = "#ff00ff";
 
 function breatheAlpha(now: number): number {
-  return 0.5 + 0.3 * (0.5 + 0.5 * Math.sin((now / BREATHE_PERIOD_MS) * Math.PI * 2));
+  return 0.5 + 0.3 * (0.5 + 0.5 * Math.sin(now / BREATHE_DIVISOR_MS));
 }
 
 const prefersReducedMotion = () =>
