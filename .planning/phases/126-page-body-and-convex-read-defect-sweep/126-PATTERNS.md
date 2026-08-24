@@ -1,6 +1,6 @@
 # Phase 126: Page Body and Convex Read Defect Sweep - Pattern Map
 
-**Mapped:** 2026-08-24
+**Mapped:** 2026-08-24 (revised same day — see "PRECEDENT QUALIFIED" note below)
 **Files analyzed:** 11 modified + 2 created = 13
 **Analogs found:** 13 / 13 (2 items — Alert Rules CSS fix, Automation parser fix — are explicitly
 D-07 measure-first; their eventual FIX code has no analog because the fix isn't chosen yet. The
@@ -10,15 +10,32 @@ All line numbers below were read directly this session (2026-08-24), not carried
 CONTEXT.md/RESEARCH.md citations — where a citation had drifted (Todo 6's `DashboardLayout.tsx`),
 the corrected number is used and the drift is noted.
 
+> **PRECEDENT QUALIFIED (2026-08-24, after the orchestrator's correction).** The original version of
+> this file mapped `convex/forge.ts:1584-1600` (`listJobLogs`) as an "exact" analog for BOTH the
+> write and read paths of the new chunked-blob table. That was wrong for the READ half and is
+> corrected below. `listJobLogs` queries `.withIndex("by_host_job", ...).order("asc")` — that is
+> **`_creationTime` order, NOT `seq` order**. `by_host_job_seq` (`schema.ts:1731`) is used at
+> exactly ONE call site, `convex/forge.ts:1567`, for the D-1 idempotency unique-check, which is
+> what its own schema comment says it exists for — not for ordering reads. The only place in this
+> repo that asserts "chunks ordered by seq ascending... as returned by listJobLogs"
+> (`convex/forgeLogIngest.test.ts:389`) is a **comment on a test fixture, not an assertion that
+> exercises `listJobLogs` itself** — it is a claim, not evidence, and nothing in this repo tests
+> reassembly order. `forgeLogChunks` therefore remains the right precedent for the chunk-table
+> SHAPE and the WRITE path only. The READ path is mapped below as an explicit **counter-example**:
+> copying `listJobLogs`'s creation-time ordering would be harmless for append-only log lines (where
+> approximate order is fine) but is **silent corruption** for a JSON blob split across chunks,
+> surfacing as a `JSON.parse` throw or a truncated graph rather than a missing-data error. The new
+> read must sort explicitly on `seq` via a dedicated index (e.g. `by_snapshot_version_seq`).
+
 ## File Classification
 
 | New/Modified File | Role | Data Flow | Closest Analog | Match Quality |
 |---|---|---|---|---|
 | `convex/inbox.ts` (new `countHeldUnacked` query + `HELD_COUNT_SCAN_CAP`) | service/query | CRUD (count-only, bounded) | `convex/alerts.ts:109-145` `countBySeverity`/`ALERT_COUNT_SCAN_CAP` | exact — identical risk class, same file group |
 | `convex/inbox.test.ts` (does not exist — CREATE) | test | request-response (unit) | `convex/alertsCountBounded.test.ts` (whole file) | exact |
-| `convex/schema.ts` (new chunk table + index) | model/schema | batch (chunked blob) | `forgeLogChunks` (`schema.ts:1723-1731`) | exact — named as in-repo precedent by D-06-REVISED itself |
-| `convex/graphSnapshots.ts` `upsertGraphSnapshot` (writer, gains chunk-insert) | mutation | batch/transform | its own existing chunked node/link insert loop (`:102-121`) + `convex/forge.ts` `appendLogChunk` (`:1554-1582`) | exact (in-file) / exact (cross-file) |
-| `convex/graphSnapshots.ts` `getProjectGraph` (reader, rewritten) | query | CRUD (range read + rejoin) | `convex/forge.ts` `listJobLogs` (`:1584-1600`) | **SHAPE ONLY — its ordering is a COUNTER-EXAMPLE, see the warning at that section. Copy the range-read structure; do NOT copy its index choice.** |
+| `convex/schema.ts` (new chunk table + index) | model/schema | batch (chunked blob) | `forgeLogChunks` (`schema.ts:1723-1731`) — TABLE SHAPE ONLY | exact (shape) |
+| `convex/graphSnapshots.ts` `upsertGraphSnapshot` (writer, gains chunk-insert) | mutation | batch/transform | its own existing chunked node/link insert loop (`:102-121`) + `convex/forge.ts` `appendLogChunk` (`:1554-1582`) | exact (in-file) / exact (cross-file, write path) |
+| `convex/graphSnapshots.ts` `getProjectGraph` (reader, rewritten) | query | CRUD (range read + rejoin, `seq`-ordered) | `forgeLogChunks` — table SHAPE only. `convex/forge.ts` `listJobLogs` (`:1584-1600`) is a **COUNTER-EXAMPLE for ordering**, not a copy target — see qualified note above. | partial — shape yes, ordering approach must explicitly NOT be copied |
 | `convex/graphSnapshots.test.ts` (extend) | test | request-response (unit, fake-ctx) | its own `makeGraphSweepCtx` factory (`:364-446`) | exact — extend, don't replace |
 | `src/layouts/DashboardLayout.tsx` `InboxCountBadge` (`:133-155`) | component | request-response (subscription) | itself (existing component, swap query) | exact |
 | `src/layouts/DashboardLayout.tsx` nav separator (`:482,487`) | component | n/a (CSS) | itself | exact (drift corrected: NOT `:458/:463`) |
@@ -175,7 +192,9 @@ a bounded `.take()` from an unbounded `.collect()` the way `makeRecordingDb` can
 ### `convex/schema.ts` — new chunk table (D-06-REVISED)
 
 **Analog:** `forgeLogChunks` (`convex/schema.ts:1721-1731`), read in full — the ONLY in-repo
-precedent for "payload chunked across rows with a monotonic seq":
+precedent for "payload chunked across rows with a monotonic seq". **This is a table-SHAPE
+precedent only** (see the PRECEDENT QUALIFIED note at the top of this file) — copy the row shape
+and the additive-index pattern, not any assumption about how the read side orders results:
 ```typescript
 // Append-only log chunks from Forge daemon. Lines arrive pre-scrubbed (T-3-BYPASS upstream).
 // Retention enforced by sweep cron: 7-day TTL + ~1 MB per-job cap (D-2). Phase 81.
@@ -187,20 +206,24 @@ forgeLogChunks: defineTable({
   sentAt:     v.optional(v.string()), // client flush time (ISO)
 })
   .index("by_host_job",     ["hostId", "forgeJobId"])          // listJobLogs / retention sweep
-  .index("by_host_job_seq", ["hostId", "forgeJobId", "seq"]),  // D-1 idempotency unique-check
+  .index("by_host_job_seq", ["hostId", "forgeJobId", "seq"]),  // D-1 idempotency unique-check ONLY —
+  // NOT used to order any read in this repo. Confirmed: the one query reading this table,
+  // listJobLogs (forge.ts:1584-1600), uses by_host_job + .order("asc") (_creationTime order),
+  // and by_host_job_seq's sole call site is forge.ts:1567's idempotency .unique() lookup.
 ```
 
 **Adaptation for the graph blob:** key by `(snapshotId, version, seq)` instead of `(hostId,
 forgeJobId, seq)` — `graphSnapshots`/`graphSnapshotNodes`/`graphSnapshotLinks` already use
 `snapshotId` + `version` as their compound key (`schema.ts:1897-1899,1942-1950`), so the new table
 should match that existing convention rather than inventing a third naming scheme in the same file.
-Two indexes, same division of labor as `forgeLogChunks`: a `["snapshotId","version"]` index for the
-bulk read (mirrors `by_host_job`/`by_snapshot_version`) and a `["snapshotId","version","seq"]`
-index if ordered/unique-per-seq lookups are needed (mirrors `by_host_job_seq`). The payload field
-should hold a `v.string()` chunk of the serialized `{nodes,links}` JSON (not `v.array(v.string())`
-— `forgeLogChunks.lines` is an array because Forge sends line-delimited text; this blob is one
-continuous JSON string sliced by byte/char offset, so a single `v.string()` per row is the right
-shape, sized under the 1 MiB per-document ceiling with headroom, per D-06-REVISED's binding text).
+**Unlike `forgeLogChunks`, the new table's `by_snapshot_version_seq`-style index must actually be
+used to ORDER the read** (see the reader section below) — do not reuse it only for a dedup/
+idempotency check and fall back to creation-time order for the real read, which is the exact trap
+`forgeLogChunks` itself falls into. The payload field should hold a `v.string()` chunk of the
+serialized `{nodes,links}` JSON (not `v.array(v.string())` — `forgeLogChunks.lines` is an array
+because Forge sends line-delimited text; this blob is one continuous JSON string sliced by
+byte/char offset, so a single `v.string()` per row is the right shape, sized under the 1 MiB
+per-document ceiling with headroom, per D-06-REVISED's binding text).
 
 **Existing table headers in the same file to match style with** (`convex/schema.ts:1894-1950`):
 ```typescript
@@ -235,10 +258,12 @@ for (let i = 0; i < args.nodes.length; i += CHUNK) {
 }
 ```
 
-**Analog 2 (cross-file, seq-chunk precedent):** `convex/forge.ts:1554-1582` (`appendLogChunk`) —
-shows the idempotent-insert-with-seq idiom the new writer should mirror for the blob chunks
-(though the graph writer serializes+splits in ONE mutation call rather than receiving pre-chunked
-input over HTTP, so the idempotency check itself doesn't port — only the insert shape does):
+**Analog 2 (cross-file, seq-chunk precedent — WRITE PATH ONLY):** `convex/forge.ts:1554-1582`
+(`appendLogChunk`) — shows the idempotent-insert-with-seq idiom the new writer should mirror for
+the blob chunks (though the graph writer serializes+splits in ONE mutation call rather than
+receiving pre-chunked input over HTTP, so the idempotency check itself doesn't port — only the
+insert shape does). **This function's own READ sibling (`listJobLogs`) is explicitly NOT an analog
+— see the reader section below and the qualified note at the top of this file.**
 ```typescript
 export const appendLogChunk = internalMutation({
   args: { hostId: v.string(), forgeJobId: v.string(), lines: v.array(v.string()), seq: v.number(), sentAt: v.optional(v.string()) },
@@ -266,36 +291,8 @@ chunk rows must be deleted (mirroring `sweepGraphSnapshotVersions`'s bounded-del
 
 ### `convex/graphSnapshots.ts` — reader (`getProjectGraph`, D-06-REVISED)
 
-**Analog:** `convex/forge.ts:1584-1600` (`listJobLogs`) — the closest in-repo shape for "read a
-bounded, ordered set of chunk rows via ONE indexed query and hand back something the caller
-reassembles":
-
-> **⚠ COUNTER-EXAMPLE WARNING — do NOT copy this reader's index choice.** The block below is quoted
-> for its STRUCTURE (one indexed range read, bounded, oldest-first). Its ORDERING is not safe to
-> reuse for a blob.
->
-> Verified from the installed package (`node_modules/convex/dist/cjs-types/server/query.d.ts:12-14,37`):
-> `withIndex` iterates "over an index range **in index order**" and "Results will be returned in
-> index order." **The ordering guarantee therefore comes from `seq` being IN THE INDEX — not from
-> `.order("asc")`.**
->
-> `listJobLogs` queries `by_host_job` = `["hostId","forgeJobId"]` (`convex/schema.ts:1730`), which
-> does **not** contain `seq`. After the equality prefix, index order falls back to the implicit
-> `_creationTime` — so its chunks come back in insertion-time order, not `seq` order.
-> `by_host_job_seq` exists but is used at exactly ONE site, `convex/forge.ts:1567`, for the D-1
-> idempotency unique-check, which is what `convex/schema.ts:1731`'s own comment says.
->
-> **The live trap:** `by_snapshot_version` = `["snapshotId","version"]` ALREADY EXISTS on the
-> entity tables. Reusing it for chunk rows and applying `.order("asc")` reproduces exactly this
-> bug — `_creationTime` order — and for a JSON blob that is silent corruption, surfacing as a
-> `JSON.parse` throw or a truncated graph rather than a missing-data error. **The new chunk table
-> MUST be read through an index whose trailing field is `seq`** (e.g.
-> `by_snapshot_version_seq` = `["snapshotId","version","seq"]`).
->
-> Do not let `convex/forgeLogIngest.test.ts:389` reassure you — it is a COMMENT asserting "Chunks
-> ordered by seq ascending (oldest first) — as returned by listJobLogs", a property `listJobLogs`
-> does not guarantee. It is a claim, not evidence.
-
+**COUNTER-EXAMPLE, not a copy target: `convex/forge.ts:1584-1600` (`listJobLogs`).** Read in full
+during this pass:
 ```typescript
 export const listJobLogs = query({
   args: { hostId: v.string(), forgeJobId: v.string() },
@@ -309,10 +306,18 @@ export const listJobLogs = query({
   },
 });
 ```
-(Note: `listJobLogs` returns the raw chunk docs and lets the CALLER concatenate `lines` arrays —
-by contrast, `getProjectGraph` must do the rejoin itself server-side, since it currently returns a
-parsed `{nodes, links}` shape and `useProjectGraph.ts` is NOT to gain new client-side logic per
-D-06-REVISED's binding text.)
+This queries `by_host_job` (NOT `by_host_job_seq`) and `.order("asc")` sorts by Convex's implicit
+`_creationTime`, not by the `seq` field. For append-only log lines that arrive roughly in send
+order, creation-time order and `seq` order coincide closely enough that this has never mattered.
+**For a JSON blob split across chunks, they are not interchangeable.** A chunk write that races
+(retry, out-of-order delivery, a future batched-insert optimization) would silently reorder
+`_creationTime` while `seq` stays correct — reassembling by creation-time order in that case
+produces corrupt JSON (a `JSON.parse` throw at best, a plausible-looking truncated graph at worst),
+not an error that names the cause. **The new `getProjectGraph` read must query the new
+`by_snapshot_version_seq`-style index and sort explicitly on `seq`** — either via `.order("asc")`
+on an index whose key literally ends in `seq` (so ascending IS seq-ascending), or by an explicit
+in-memory sort on the `seq` field after `.collect()`/`.take()`, with a test asserting this
+specifically (see the test section below — "Ordering").
 
 **Existing reader being replaced, for the shape of what stays the same** (`convex/graphSnapshots.ts:416-462`):
 ```typescript
@@ -321,7 +326,9 @@ export const getProjectGraph = query({
   handler: async (ctx, { snapshotId = "astridr-project-graph" }) => {
     const meta = await ctx.db.query("graphSnapshots").withIndex("by_snapshotId", (q) => q.eq("snapshotId", snapshotId)).unique();
     if (!meta) return null;  // graceful-skip: no data yet — PRESERVE this
-    // REPLACE the two .collect()s below with ONE indexed range query over the new chunk table:
+    // REPLACE the two .collect()s below with ONE indexed range query over the new chunk table,
+    // explicitly ordered by seq (see the counter-example above — do NOT copy listJobLogs's
+    // by_host_job + .order("asc") shape verbatim):
     const nodes = await ctx.db.query("graphSnapshotNodes").withIndex("by_snapshot_version", (q) => q.eq("snapshotId", snapshotId).eq("version", meta.activeVersion)).collect();
     const links = await ctx.db.query("graphSnapshotLinks").withIndex("by_snapshot_version", (q) => q.eq("snapshotId", snapshotId).eq("version", meta.activeVersion)).collect();
     return { snapshotId: meta.snapshotId, sources: meta.sources, nodeCount: meta.nodeCount, linkCount: meta.linkCount, ..., nodes: nodes.map(...), links: links.map(...) };
@@ -331,18 +338,9 @@ export const getProjectGraph = query({
 Preserve: the `snapshotId` default arg, the `meta` lookup + graceful-skip-null, and the return
 shape's field names (`nodeCount`, `linkCount`, `sources`, `generatedAt`, `nodes`, `links`) —
 `src/hooks/useProjectGraph.ts` and its consumers are NOT in scope and must see an unchanged
-contract. Replace only the two `.collect()` calls with ONE indexed range read over the new chunk table
-keyed to `meta.activeVersion`, then `JSON.parse(chunks.map(c => c.chunk).join(""))` to rejoin.
-
-**Name the index explicitly and make its trailing field `seq`** — e.g.
-`.withIndex("by_snapshot_version_seq", q => q.eq("snapshotId", snapshotId).eq("version", meta.activeVersion))`
-over an index defined as `["snapshotId", "version", "seq"]`. `seq` ordering is a property of the
-INDEX, not of `.order("asc")` (see the counter-example warning above). **Do NOT reuse the existing
-`by_snapshot_version` index for the chunk rows** — it lacks `seq` and would order by
-`_creationTime`. Bound the read with `.take(CAP + 1)` so "more chunks remain" is visible rather
-than silent, matching `graphSnapshots.ts:252-259`'s in-file idiom, and treat an over-cap result as
-an error rather than rejoining a partial blob — a truncated blob is corrupt, not merely
-incomplete.
+contract. Replace only the two `.collect()` calls with: one query over the new chunk table keyed to
+`meta.activeVersion`, **sorted by `seq`** (not creation time), then
+`JSON.parse(chunks.map(c => c.chunk).join(""))` to rejoin.
 
 ---
 
@@ -379,9 +377,11 @@ FAILING control:
 2. **Read cost** — `expect(h.readCount()).toBeLessThan(10)` (roughly the chunk count) where the OLD
    code would have read 6,591; assert this against a fixture sized like the real 4,001/2,590 data,
    not a 3-row toy fixture that would pass even against the unbounded `.collect()`.
-3. **Ordering** — seed chunks out of `seq` order or with a gap; assert the reassembly either
-   reorders correctly (if the read applies `.order("asc")`) or FAILS LOUDLY on a gap (never silently
-   returns corrupt JSON).
+3. **Ordering** — seed chunks with `seq` deliberately out of `_creationTime` order (this is the
+   exact gap the qualified precedent note above exists to close — a fixture where insertion order
+   and `seq` order DIFFER, not one where they coincidentally match) and assert the reassembly is
+   correct anyway; separately seed a `seq` gap and assert the reader FAILS LOUDLY rather than
+   silently returning corrupt JSON.
 
 ---
 
@@ -622,14 +622,24 @@ export const someQuery = query({
 ```
 
 ### Chunked-row payload split across N docs with monotonic `seq`
-**Source:** `forgeLogChunks` (`convex/schema.ts:1721-1731`), `convex/forge.ts:1554-1600`
-**Apply to:** the new graph-blob chunk table + `graphSnapshots.ts` writer/reader (D-06-REVISED)
+**Source (SCHEMA + WRITE path only):** `forgeLogChunks` (`convex/schema.ts:1721-1731`),
+`convex/forge.ts:1554-1582` (`appendLogChunk`)
+**Explicitly NOT the source for the READ path:** `convex/forge.ts:1584-1600` (`listJobLogs`) sorts
+by creation time via `by_host_job`, not by `seq` via `by_host_job_seq` — see the PRECEDENT
+QUALIFIED note at the top of this file. The new graph-chunk reader must sort by `seq` explicitly;
+copying `listJobLogs`'s ordering verbatim would reproduce the same latent ordering gap this repo
+has never needed to close for log lines but cannot afford for a JSON blob.
+**Apply to:** the new graph-blob chunk table + `graphSnapshots.ts` writer (shape + write path) and
+reader (shape only — ordering must diverge) (D-06-REVISED)
 
 ### Fake-`ctx` with a read counter, not just a value-return mock
 **Source:** `convex/graphSnapshots.test.ts:364-446` (`readCount()`), `convex/alertsCountBounded.test.ts:31-70` (`uses[]` recording index/bounds/limit)
 **Apply to:** `convex/inbox.test.ts` (new), `convex/graphSnapshots.test.ts` extension — any test
 whose whole POINT is proving a bound was applied must assert on the recorded QUERY SHAPE, not only
 the returned VALUE, because a surviving `.collect()` returns correct values on a small fixture too.
+For the new chunk reader specifically, the ORDERING test also needs this discipline: a fixture
+where insertion order happens to equal `seq` order would pass even against a reader that (like
+`listJobLogs`) silently sorts by creation time instead of `seq`.
 
 ### Measure real DOM geometry, log one JSON line, assert the relationship
 **Source:** `e2e/polish-geometry.spec.ts:360-459` (900px collision walker), `:207-358` (header zones)
@@ -656,7 +666,10 @@ forgeLogIngest, inboxIngest + their `.test.ts` siblings), `convex/schema.ts`,
 `src/layouts/DashboardLayout.tsx`, `src/pages/Inbox.tsx`, `src/pages/Automation.tsx`,
 `src/hooks/useAutomation.ts`, `src/lib/cronToHuman.ts`, `src/lib/cronSchedules.ts`,
 `src/components/InboxFilterBar.tsx`, `src/components/AlertRulesEngine.tsx`,
-`src/components/CronJobList.tsx`, `e2e/polish-geometry.spec.ts`, `e2e/serif-trial.spec.ts`.
-**Files scanned:** 22 read directly this session, all excerpts above quoted from live reads (no
+`src/components/CronJobList.tsx`, `e2e/polish-geometry.spec.ts`, `e2e/serif-trial.spec.ts`,
+`convex/forgeLogIngest.test.ts` (re-read 2026-08-24 to confirm the `listJobLogs` ordering
+correction).
+**Files scanned:** 23 read directly this session, all excerpts above quoted from live reads (no
 citation taken on faith from CONTEXT.md/RESEARCH.md without re-confirming the line numbers).
-**Pattern extraction date:** 2026-08-24
+**Pattern extraction date:** 2026-08-24 (revised same day per the orchestrator's `listJobLogs`
+correction — see "PRECEDENT QUALIFIED" note at top).
