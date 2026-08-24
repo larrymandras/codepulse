@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import MetricCard from "../components/MetricCard";
-import CronJobList, { type CronJob } from "../components/CronJobList";
+import CronJobList from "../components/CronJobList";
 import CronSheet from "../components/CronSheet";
 import CronExecutionHistory from "../components/CronExecutionHistory";
 import HeartbeatAlertsPanel from "../components/HeartbeatAlertsPanel";
@@ -13,7 +13,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import { PageHeader } from "@/components/PageHeader";
 import { formatDurationMs } from "../lib/formatters";
-import { CRON_SCHEDULES } from "../lib/cronSchedules";
+import { CRON_SCHEDULES, schedulesToCronJobs } from "../lib/cronSchedules";
 import { useCommandDispatch } from "../hooks/useCommandDispatch";
 import {
   useAutomationSummary,
@@ -30,18 +30,6 @@ function relTime(epoch: number | null): string {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
-}
-
-// Convert static CRON_SCHEDULES to CronJob shape for the list.
-// `enabled` is intentionally left unset — this is a static configured catalog,
-// not a live-monitored job list; Ástríðr does not yet emit real per-job
-// enabled/disabled state (D-06, deferred). CronJobList hides the live
-// ACTIVE/DISABLED indicator when `enabled` is undefined.
-function schedulesToCronJobs(): CronJob[] {
-  return CRON_SCHEDULES.map((s) => ({
-    name: s.jobName,
-    expression: s.interval,
-  }));
 }
 
 export default function Automation() {

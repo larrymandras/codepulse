@@ -3,7 +3,7 @@ import { Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { StatusBadge } from "@/components/StatusBadge";
-import { cronToHuman } from "@/lib/cronToHuman";
+import { cronToHuman, isValidCron } from "@/lib/cronToHuman";
 
 export interface CronJob {
   name: string;
@@ -48,65 +48,83 @@ export default function CronJobList({
 
   return (
     <div className="border border-(--border) bg-(--card)">
-      {jobs.map((job) => (
-        <div
-          key={job.name}
-          className="flex items-center gap-3 px-3 py-2.5 border-b border-(--border) last:border-b-0 min-h-[44px]"
-        >
-          {/* Job info */}
+      {jobs.map((job) => {
+        // D-09: CRON_SCHEDULES[].interval is a human-readable label by
+        // design ("Every 5 min", "Daily 03:00 UTC") — the machine truth
+        // lives in separate intervalSeconds/dailyUTC fields, not here.
+        // Running the 5-field cron parser on a 1-3 token label produced
+        // "Invalid expression" on all twelve rows. Only run the parser (and
+        // offer the row as editable, D-10) when the string is actually a
+        // cron expression.
+        const editable = isValidCron(job.expression);
+        return (
           <div
-            className="flex flex-col gap-0.5 flex-1 min-w-0 cursor-pointer"
-            onClick={() => onEdit(job)}
+            key={job.name}
+            className="flex items-center gap-3 px-3 py-2.5 border-b border-(--border) last:border-b-0 min-h-[44px]"
           >
-            <span className="text-base font-medium text-(--foreground) truncate">
-              {job.name}
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm text-(--muted-foreground)">
-                {job.expression}
+            {/* Job info */}
+            <div
+              className={`flex flex-col gap-0.5 flex-1 min-w-0${editable ? " cursor-pointer" : ""}`}
+              onClick={editable ? () => onEdit(job) : undefined}
+            >
+              <span className="text-base font-medium text-(--foreground) truncate">
+                {job.name}
               </span>
-              <span className="text-sm text-(--muted-foreground)">
-                {cronToHuman(job.expression)}
-              </span>
+              <div className="flex items-center gap-2">
+                {editable ? (
+                  <>
+                    <span className="font-mono text-sm text-(--muted-foreground)">
+                      {job.expression}
+                    </span>
+                    <span className="text-sm text-(--muted-foreground)">
+                      {cronToHuman(job.expression)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm text-(--muted-foreground)">
+                    {job.expression}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Trailing controls */}
+            <div className="flex items-center gap-2 ml-auto">
+              {/* Play button - manual trigger */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-7 h-7"
+                onClick={() => handleTrigger(job.name)}
+                disabled={triggeringJob === job.name}
+              >
+                {triggeringJob === job.name ? (
+                  <Loader2 className="animate-spin w-4 h-4" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+              </Button>
+
+              {/* Toggle switch + live status badge — only shown when a real
+                  enabled/disabled state is known. Static catalog entries (no
+                  backing live data yet) omit `enabled` entirely rather than
+                  fabricate an ACTIVE/DISABLED claim (D-06). */}
+              {job.enabled !== undefined && (
+                <>
+                  <Switch
+                    checked={job.enabled}
+                    onCheckedChange={(checked) => onToggle(job.name, checked)}
+                  />
+                  <StatusBadge
+                    status={job.enabled ? "ok" : "idle"}
+                    label={job.enabled ? "ACTIVE" : "DISABLED"}
+                  />
+                </>
+              )}
             </div>
           </div>
-
-          {/* Trailing controls */}
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Play button - manual trigger */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-7 h-7"
-              onClick={() => handleTrigger(job.name)}
-              disabled={triggeringJob === job.name}
-            >
-              {triggeringJob === job.name ? (
-                <Loader2 className="animate-spin w-4 h-4" />
-              ) : (
-                <Play className="w-4 h-4" />
-              )}
-            </Button>
-
-            {/* Toggle switch + live status badge — only shown when a real
-                enabled/disabled state is known. Static catalog entries (no
-                backing live data yet) omit `enabled` entirely rather than
-                fabricate an ACTIVE/DISABLED claim (D-06). */}
-            {job.enabled !== undefined && (
-              <>
-                <Switch
-                  checked={job.enabled}
-                  onCheckedChange={(checked) => onToggle(job.name, checked)}
-                />
-                <StatusBadge
-                  status={job.enabled ? "ok" : "idle"}
-                  label={job.enabled ? "ACTIVE" : "DISABLED"}
-                />
-              </>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

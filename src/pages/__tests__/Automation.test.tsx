@@ -32,13 +32,23 @@ vi.mock("../../../convex/_generated/api", () => ({
 
 // Known-length static catalog, independent of the real CRON_SCHEDULES data —
 // proves the metric is computed from the imported list, not a hardcoded 12.
-vi.mock("../../lib/cronSchedules", () => ({
-  CRON_SCHEDULES: [
+// schedulesToCronJobs() moved into src/lib/cronSchedules.ts (126-03, D-09) so
+// CronJobList.test.tsx can drive the REAL mapping function against the REAL
+// catalog; this mock must mirror the same mapping shape to keep compiling.
+// (vi.mock factories are hoisted above module-scope const declarations, so
+// the catalog is defined inline rather than referenced from an outer const.)
+vi.mock("../../lib/cronSchedules", () => {
+  const schedules = [
     { jobName: "test job 1", label: "Test Job 1", interval: "Every 1 min", source: "convex", intervalSeconds: 60 },
     { jobName: "test job 2", label: "Test Job 2", interval: "Every 2 min", source: "convex", intervalSeconds: 120 },
     { jobName: "test job 3", label: "Test Job 3", interval: "Every 3 min", source: "convex", intervalSeconds: 180 },
-  ],
-}));
+  ];
+  return {
+    CRON_SCHEDULES: schedules,
+    schedulesToCronJobs: () =>
+      schedules.map((s) => ({ name: s.jobName, expression: s.interval })),
+  };
+});
 
 const mockSendCommand = vi.fn().mockResolvedValue({ status: "ok" });
 vi.mock("@/contexts/AstridrWSContext", () => ({

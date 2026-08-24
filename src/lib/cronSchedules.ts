@@ -1,3 +1,5 @@
+import type { CronJob } from "@/components/CronJobList";
+
 export interface CronSchedule {
   jobName: string;
   label: string;
@@ -21,6 +23,18 @@ export const CRON_SCHEDULES: CronSchedule[] = [
   { jobName: "purge old heartbeat alerts", label: "Purge Old Heartbeats", interval: "Daily 03:15 UTC", source: "convex", intervalSeconds: 86400, dailyUTC: { hour: 3, minute: 15 } },
   { jobName: "purge old memory events", label: "Purge Old Memory Events", interval: "Daily 03:30 UTC", source: "convex", intervalSeconds: 86400, dailyUTC: { hour: 3, minute: 30 } },
 ];
+
+// Convert static CRON_SCHEDULES to CronJob shape for the list.
+// `enabled` is intentionally left unset — this is a static configured catalog,
+// not a live-monitored job list; Ástríðr does not yet emit real per-job
+// enabled/disabled state (D-06, deferred). CronJobList hides the live
+// ACTIVE/DISABLED indicator when `enabled` is undefined.
+export function schedulesToCronJobs(): CronJob[] {
+  return CRON_SCHEDULES.map((s) => ({
+    name: s.jobName,
+    expression: s.interval,
+  }));
+}
 
 export function estimateNextRun(schedule: CronSchedule, lastRunAt?: number): number {
   const now = Date.now() / 1000;
