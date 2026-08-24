@@ -27,12 +27,17 @@ type FrameCallback = (event: Record<string, unknown>) => void;
 
 // ─── Mock @/contexts/AstridrWSContext ──────────────────────────────────────
 // `h` is the vi.hoisted handle: `status` is read fresh on every render (the
-// mock factory below is not memoized), and `handlers` captures the real
-// `subscribeEvent("estop_state", ...)` callback SignalHorizon registers, so
-// the test can push frames directly into it.
+// mock factory below is not memoized), `handlers` captures the real
+// `subscribeEvent("estop_state", ...)` callback SignalHorizon registers, and
+// `topicHandlers` captures every `subscribe(topic, ...)` registration the
+// plan 125-08 packet spawner makes — one Set per topic, mirroring
+// AstridrWSContext.tsx's own real fan-out shape (:441-449) closely enough
+// that pushing through it exercises the SAME multi-subscriber-per-topic and
+// unknown-type-fans-out-to-all paths the real context does.
 const h = vi.hoisted(() => ({
   status: "connected" as WSStatus,
   handlers: new Map<string, FrameCallback>(),
+  topicHandlers: new Map<string, Set<FrameCallback>>(),
 }));
 
 vi.mock("@/contexts/AstridrWSContext", async (importOriginal) => {
@@ -50,7 +55,13 @@ vi.mock("@/contexts/AstridrWSContext", async (importOriginal) => {
           h.handlers.delete(eventType);
         };
       },
-      subscribe: vi.fn(() => () => {}),
+      subscribe: (topic: string, cb: FrameCallback) => {
+        if (!h.topicHandlers.has(topic)) h.topicHandlers.set(topic, new Set());
+        h.topicHandlers.get(topic)!.add(cb);
+        return () => {
+          h.topicHandlers.get(topic)?.delete(cb);
+        };
+      },
       sendCommand: vi.fn(),
       reconnect: vi.fn(),
     }),
@@ -61,10 +72,13 @@ beforeEach(() => {
   vi.useFakeTimers();
   h.status = "connected";
   h.handlers.clear();
+  h.topicHandlers.clear();
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
+  delete document.documentElement.dataset.theme;
 });
 
 // ─── Test helpers ───────────────────────────────────────────────────────────
@@ -73,7 +87,8 @@ function renderHorizon(alertLevel: AlertLevel = "none") {
   const utils = render(<SignalHorizon alertLevel={alertLevel} />);
   const getState = () =>
     utils.container.querySelector(".signal-horizon")?.getAttribute("data-horizon-state");
-  return { ...utils, getState };
+  const getPackets = () => utils.container.querySelectorAll(".signal-horizon .packet");
+  return { ...utils, getState, getPackets };
 }
 
 /** Pushes a raw payload through the captured estop_state subscriber, inside act(). */
@@ -82,6 +97,52 @@ function push(payload: unknown) {
   if (!cb) throw new Error("no estop_state subscriber registered — did the component mount?");
   act(() => {
     cb(payload as Record<string, unknown>);
+  });
+}
+
+/**
+ * Delivers `payload` to the subscribers of ONE topic — mirrors a real
+ * event_type that maps to exactly one topic (AstridrWSContext.tsx:328-336).
+ * A no-op (not a throw) when nothing is registered on that topic, since "no
+ * subscribers" is the CORRECT state under D-04's motion gate — the whole
+ * point of cases (d) below.
+ */
+function pushTopic(topic: string, payload: unknown) {
+  const subs = h.topicHandlers.get(topic);
+  if (!subs) return;
+  act(() => {
+    for (const cb of subs) cb(payload as Record<string, unknown>);
+  });
+}
+
+/**
+ * Delivers the SAME payload object to EVERY topic's subscribers — mirrors
+ * AstridrWSContext.tsx's unknown-event-type fan-out-to-all branch
+ * (:337-342), which is what a message whose event_type is absent from
+ * TOPIC_EVENT_MAP actually receives in production.
+ */
+function pushUnknownToAllTopics(payload: unknown) {
+  act(() => {
+    for (const [, subs] of h.topicHandlers) {
+      for (const cb of subs) cb(payload as Record<string, unknown>);
+    }
+  });
+}
+
+function stubMatchMedia(reduced: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: reduced && query.includes("prefers-reduced-motion"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
   });
 }
 
@@ -276,5 +337,163 @@ describe("resolveHorizonState — priority order", () => {
 
   it("rule 6: the fully-cleared case reaches resting", () => {
     expect(resolveHorizonState(base)).toBe("resting");
+  });
+});
+
+// ─── Event packets (SIGNAL-01, plan 125-08) ─────────────────────────────────
+
+describe("SignalHorizon — event packets", () => {
+  it("(a) COALESCING: 5 events within 900ms produce exactly ONE packet; the removed-after-700ms control proves cleanup works, then a further event past the 1s gate produces a fresh packet", () => {
+    stubMatchMedia(false);
+    const { getPackets } = renderHorizon();
+
+    for (let i = 0; i < 5; i++) {
+      pushTopic("executions", { event_type: "command_execution", id: i });
+    }
+    expect(getPackets().length).toBe(1);
+
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+    // The first packet's own 700ms removal timer has already fired by t=1001
+    // -- zero packets here is the CONTROL proving removal actually works,
+    // not that spawning silently stopped.
+    expect(getPackets().length).toBe(0);
+
+    pushTopic("executions", { event_type: "command_execution", id: 99 });
+    expect(getPackets().length).toBe(1);
+  });
+
+  it("(b) HUE: an Ástríðr-family event colours the packet var(--astridr); a machine event colours it var(--primary) -- asserted on the packet's own inline style, not a class name", () => {
+    stubMatchMedia(false);
+    const { getPackets } = renderHorizon();
+
+    pushTopic("live-runs", { event_type: "run.tool_call" });
+    let packets = getPackets();
+    expect(packets.length).toBe(1);
+    expect((packets[0] as HTMLElement).style.getPropertyValue("--pk")).toBe("var(--astridr)");
+
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+    pushTopic("executions", { event_type: "command_execution" });
+    packets = getPackets();
+    expect(packets.length).toBe(1);
+    expect((packets[0] as HTMLElement).style.getPropertyValue("--pk")).toBe("var(--primary)");
+  });
+
+  it("(c) UNKNOWN TYPE: an unrecognised event_type still produces exactly ONE packet, coloured var(--primary), even though the context's unknown-branch fans it out to all five topic subscribers -- the production-faithful behavioural proof (same synchronous tick, matching AstridrWSContext.tsx's real fan-out loop)", () => {
+    stubMatchMedia(false);
+    const { getPackets } = renderHorizon();
+
+    expect(h.topicHandlers.size).toBe(5); // sanity: every TOPIC_EVENT_MAP key subscribed
+    pushUnknownToAllTopics({ event_type: "some_future_event_type_not_in_the_map" });
+
+    const packets = getPackets();
+    expect(packets.length).toBe(1);
+    expect((packets[0] as HTMLElement).style.getPropertyValue("--pk")).toBe("var(--primary)");
+  });
+
+  // (c, mechanism-isolated) Case (c) above is confounded with the D-07
+  // drop-gate: all five topic deliveries land in the SAME synchronous tick
+  // (matching production, where one wire message's fan-out is entirely
+  // synchronous inside ws.onmessage — AstridrWSContext.tsx:322-343), so
+  // Date.now() is identical across all five calls and the 1s gate alone
+  // would already collapse them to one packet even WITHOUT identity dedup.
+  // This test breaks that confound deliberately: the SAME message object is
+  // redelivered with the drop-gate cleared (>1000ms) between each delivery,
+  // so a passing gate check on every single call means the ONLY thing that
+  // can still prevent 5 packets is the WeakSet recognising it is the same
+  // object every time. Verified live (below): removing the WeakSet check
+  // turns this test RED with 5 packets while (c) above stays green,
+  // confirming (c) alone does not discriminate the mechanism — this test
+  // does.
+  it("(c, mechanism-isolated) IDENTITY DEDUP: the SAME message object redelivered with the drop-gate cleared between each delivery still results in only ONE packet ever CREATED -- spies on the host's own appendChild rather than final DOM state, since every packet auto-removes after 700ms regardless of how many were created", () => {
+    stubMatchMedia(false);
+    const { container } = renderHorizon();
+    const host = container.querySelector(".signal-horizon") as HTMLElement;
+    const appendSpy = vi.spyOn(host, "appendChild");
+
+    const topics = Array.from(h.topicHandlers.keys());
+    expect(topics.length).toBe(5);
+
+    const sameMsg = { event_type: "some_future_event_type_not_in_the_map" };
+    for (const topic of topics) {
+      pushTopic(topic, sameMsg);
+      act(() => {
+        vi.advanceTimersByTime(1001);
+      });
+    }
+
+    const packetAppends = appendSpy.mock.calls.filter(([node]) =>
+      (node as HTMLElement).classList?.contains("packet")
+    ).length;
+    expect(packetAppends).toBe(1);
+  });
+
+  it("(d) MOTION SUPPRESSION: under reduced-motion, the component registers NO topic subscriptions at all, and pushing events produces ZERO packets -- with the non-reduced case as the control", () => {
+    stubMatchMedia(true);
+    const { getPackets } = renderHorizon();
+    expect(h.topicHandlers.size).toBe(0);
+    for (let i = 0; i < 5; i++) {
+      pushTopic("executions", { event_type: "command_execution", id: i });
+    }
+    expect(getPackets().length).toBe(0);
+  });
+
+  it("(d control) MOTION ALLOWED: with reduced-motion NOT set, the same push produces a packet -- proves (d) is the gate, not a component that never spawns", () => {
+    stubMatchMedia(false);
+    const { getPackets } = renderHorizon();
+    expect(h.topicHandlers.size).toBe(5);
+    pushTopic("executions", { event_type: "command_execution" });
+    expect(getPackets().length).toBe(1);
+  });
+
+  it("(d) READABLE THEME: with data-theme=readable, the component registers NO topic subscriptions and pushing events produces ZERO packets", () => {
+    stubMatchMedia(false);
+    document.documentElement.dataset.theme = "readable";
+    const { getPackets } = renderHorizon();
+    expect(h.topicHandlers.size).toBe(0);
+    for (let i = 0; i < 5; i++) {
+      pushTopic("executions", { event_type: "command_execution", id: i });
+    }
+    expect(getPackets().length).toBe(0);
+  });
+
+  it("(e) ESTOP_STATE SPAWNS NOTHING: a valid estop_state frame changes data-horizon-state, and even delivered through the SAME unknown-type fan-out a real wire message would take (estop_state is absent from TOPIC_EVENT_MAP), it creates no packet -- the explicit exclusion", () => {
+    stubMatchMedia(false);
+    const { getState, getPackets } = renderHorizon();
+    const frame = armedFrame();
+    // One real wire message reaches BOTH mechanisms in production
+    // (AstridrWSContext.tsx's single ws.onmessage fans out to the
+    // event-level subscriber AND, since estop_state has no topic, every
+    // topic-level subscriber too) -- deliver it through both mocked paths
+    // to reproduce that faithfully.
+    push(frame);
+    pushUnknownToAllTopics(frame);
+    expect(getState()).toBe("critical");
+    expect(getPackets().length).toBe(0);
+  });
+
+  it("(f) CLEANUP: unmounting with a packet outstanding leaves no pending timer -- vi.getTimerCount() returns to zero, and advancing time afterward touches nothing", () => {
+    stubMatchMedia(false);
+    const { unmount, getPackets } = renderHorizon();
+
+    pushTopic("executions", { event_type: "command_execution" });
+    expect(getPackets().length).toBe(1);
+    expect(vi.getTimerCount()).toBeGreaterThan(0); // the packet's own 700ms removal timer, plus the connect-scoped snapshot timeout
+
+    unmount();
+    // Every timer this component owned -- the packet removal timer AND the
+    // snapshot/dawn timers from the state machine above -- is cleared on
+    // unmount; nothing pending means nothing CAN fire against a detached
+    // node.
+    expect(vi.getTimerCount()).toBe(0);
+
+    expect(() => {
+      act(() => {
+        vi.advanceTimersByTime(10000);
+      });
+    }).not.toThrow();
   });
 });

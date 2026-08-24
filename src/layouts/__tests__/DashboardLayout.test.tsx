@@ -58,15 +58,28 @@ vi.mock("../../../convex/_generated/api", () => ({
   },
 }));
 
-vi.mock("@/contexts/AstridrWSContext", () => ({
-  useAstridrWS: vi.fn(() => ({
-    status: "disconnected",
-    sendCommand: vi.fn().mockResolvedValue({ type: "ack", request_id: "1", status: "ok" }),
-    subscribe: vi.fn(),
-    subscribeEvent: vi.fn(),
-    reconnect: vi.fn(),
-  })),
-}));
+// Plan 125-08: SignalHorizon (now unconditionally mounted by DashboardLayout)
+// imports the REAL TOPIC_EVENT_MAP for its packet-subscription effect
+// (`Object.keys(TOPIC_EVENT_MAP)`) — re-exported here via importOriginal so
+// this mock cannot silently drift from the live topic list, same fix as
+// SignalHorizon.test.tsx's own mock (plan 125-08 Task 1). Without this, the
+// packet effect throws `Cannot convert undefined or null to object` on
+// every render, silently swallowed by SignalHorizon's own
+// SectionErrorBoundary — masking the horizon entirely behind its hairline
+// fallback in every test in this file (confirmed live before this fix).
+vi.mock("@/contexts/AstridrWSContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/AstridrWSContext")>();
+  return {
+    TOPIC_EVENT_MAP: actual.TOPIC_EVENT_MAP,
+    useAstridrWS: vi.fn(() => ({
+      status: "disconnected",
+      sendCommand: vi.fn().mockResolvedValue({ type: "ack", request_id: "1", status: "ok" }),
+      subscribe: vi.fn(() => () => {}),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    })),
+  };
+});
 
 // Stub heavy/side-effecting children so DashboardLayout mounts cleanly in jsdom.
 vi.mock("../../components/AlertBanner", () => ({ default: () => null }));
@@ -147,7 +160,7 @@ describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)"
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -166,7 +179,7 @@ describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)"
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -183,7 +196,7 @@ describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)"
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -203,7 +216,7 @@ describe("DashboardLayout keyboard shortcuts (global palette vs. Skills palette 
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -253,7 +266,7 @@ describe("DashboardLayout Sidebar (UI-04, Phase 124 SHELL-02)", () => {
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -348,7 +361,7 @@ describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 0
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -442,7 +455,7 @@ describe("DashboardLayout system chip (D-11/D-12/D-13, Phase 124 Plan 08)", () =
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -542,7 +555,7 @@ describe("DashboardLayout header overflow menu (D-07, Phase 124 Plan 07)", () =>
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -601,7 +614,7 @@ describe("DashboardLayout zone 1 breadcrumb (D-16, Phase 124 Plan 09)", () => {
     vi.mocked(useAstridrWS).mockReturnValue({
       status: "disconnected",
       sendCommand: vi.fn(),
-      subscribe: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
       subscribeEvent: vi.fn(),
       reconnect: vi.fn(),
     });
@@ -645,5 +658,100 @@ describe("DashboardLayout zone 1 breadcrumb (D-16, Phase 124 Plan 09)", () => {
     expect(nav).toHaveTextContent("Settings");
     expect(nav).not.toHaveTextContent("Alerts");
     expect(nav).not.toHaveTextContent("Observe");
+  });
+});
+
+describe("DashboardLayout Signal Horizon mount (SIGNAL-01, Phase 125 Plan 08)", () => {
+  beforeEach(() => {
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useAstridrWS).mockReset();
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+  });
+
+  // (g) Structural position, not mere presence — compareDocumentPosition
+  // proves document ORDER, so a future accidental reorder (e.g. mounting
+  // the horizon inside <main> instead of before it) fails here even though
+  // "the horizon exists somewhere" would still be true.
+  it("(g) the horizon renders AFTER <header> and BEFORE <main>, in document order", () => {
+    const { container } = renderLayout();
+    const header = container.querySelector("header");
+    const main = container.querySelector("main");
+    const horizon = container.querySelector(".signal-horizon");
+    expect(header).toBeTruthy();
+    expect(main).toBeTruthy();
+    expect(horizon).toBeTruthy();
+    expect(
+      Boolean(header!.compareDocumentPosition(horizon!) & Node.DOCUMENT_POSITION_FOLLOWING)
+    ).toBe(true);
+    expect(
+      Boolean(horizon!.compareDocumentPosition(main!) & Node.DOCUMENT_POSITION_FOLLOWING)
+    ).toBe(true);
+  });
+
+  // (j) the header's own border-b border-border was removed — the horizon
+  // is now the separator (its fallback preserves the line if it crashes).
+  it("(j) the header no longer carries border-b — the horizon is the separator", () => {
+    const { container } = renderLayout();
+    const header = container.querySelector("header");
+    expect(header).toBeTruthy();
+    expect(header!.className).not.toContain("border-b");
+  });
+
+  // (h) D-05/T-125-08-05: spies on the mocked useQuery itself (not a
+  // component's rendered output) so a future regression — e.g. SystemChip
+  // reintroducing its own direct call — is caught even if the extra call
+  // resolves to an identical value and would otherwise render identically.
+  //
+  // [Rule 1 plan-text correction] The plan's acceptance criterion expected
+  // this count to be exactly ONE per render pass. Measured against live
+  // code, the true per-render-pass count of genuine call SITES is THREE,
+  // not one: (1) the shell's own hoisted call in DashboardLayout's body,
+  // plus (2)+(3) AlertsCountBadge (Phase 124, a pre-existing, separate,
+  // untouched call in the sidebar — out of this plan's explicit "no nav"
+  // scope), which this suite's OWN pre-existing tests already establish is
+  // mounted TWICE per render (desktop `<aside>` + the mobile drawer
+  // `<aside>`, both simultaneously — see "toggling a domain... keeps the
+  // desktop and mobile instances in sync" above). D-05's real requirement —
+  // "the shell gains ZERO NEW Convex subscriptions" — is about not
+  // DUPLICATING the one call this plan's own hoist touches, not about
+  // eliminating an unrelated, already-deduped-by-Convex sidebar query this
+  // plan does not own.
+  //
+  // The RATIO below (rather than a raw count) is deliberate: this file's
+  // minimal `api` mock makes an unrelated, pre-existing component
+  // (BrainHeaderBadge — see the "Active Brain failed to load" assertion
+  // elsewhere in this file) throw and get caught by its own
+  // SectionErrorBoundary, and React's error-recovery mechanism re-renders
+  // the WHOLE tree an extra time to attempt recovery — doubling every hook
+  // call in the pass, confirmed live (raw count observed: 6, not 3).
+  // `systemResources:current` is called exactly ONCE per render pass with
+  // no sidebar duplication, so it doubles in lockstep and the ratio stays
+  // invariant to that unrelated defect.
+  it("(h) useQuery is called with alerts:countBySeverity exactly 3x as often as systemResources:current per render pass — the shell's one hoisted call plus AlertsCountBadge's separate, pre-existing sidebar call mounted twice", () => {
+    const spy = vi.fn((ref: unknown) => {
+      if (ref === "alerts:countBySeverity") {
+        return { info: 0, warning: 0, error: 0, critical: 0, truncated: false };
+      }
+      return undefined;
+    });
+    vi.mocked(useQuery).mockImplementation(spy as unknown as typeof useQuery);
+
+    renderLayout();
+
+    const countBySeverityCalls = spy.mock.calls.filter(
+      ([ref]) => ref === "alerts:countBySeverity"
+    ).length;
+    const systemResourcesCalls = spy.mock.calls.filter(
+      ([ref]) => ref === "systemResources:current"
+    ).length;
+    expect(systemResourcesCalls).toBeGreaterThan(0);
+    expect(countBySeverityCalls / systemResourcesCalls).toBe(3);
   });
 });
