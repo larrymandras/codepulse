@@ -169,8 +169,15 @@ function makeRecordingDb(rows: unknown[] = []) {
 
 **Assertions to copy** (`convex/alertsCountBounded.test.ts:88-141`):
 - `use.limit` is a number, `>= 1000` (never `null` — catches a reintroduced `.collect()`).
-- `truncated: true` at exactly `HELD_COUNT_SCAN_CAP` rows, `false` at `CAP - 1` (both boundary
-  sides, per the "control that could have come out the other way" discipline).
+- `truncated: false` at exactly `HELD_COUNT_SCAN_CAP` rows, `true` at `CAP + 1` (both boundary
+  sides, per the "control that could have come out the other way" discipline). **Corrected
+  2026-08-24** — this line previously read `true` at exactly `CAP`, which is the boundary for
+  `alerts.ts`'s OLDER `length === CAP` form quoted at `:83`, NOT for the `take(CAP + 1)` /
+  `rows.length > CAP` form this document prescribes at `:102-103` and at `:618-619`. Under
+  `> CAP`, exactly `CAP` rows yields `false`; an implementation following the prescription
+  correctly would have FAILED this test. Separately assert the DB read limit is `CAP + 1`.
+  (Plans `126-01`/`126-03` were checked and did NOT inherit the error — `126-01-PLAN.md:211-212`
+  already specifies `CAP+1 -> true`, `CAP-1 -> false`.)
 
 **Analog 2 — boundary-crossing test discipline** (`convex/eventsWindow.test.ts:1-21`, comment
 block): "Proves ... that BOTH of its bounds hold independently ... Neither assertion alone would

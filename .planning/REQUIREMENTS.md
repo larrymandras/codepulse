@@ -75,6 +75,52 @@ Numbering continues from v14.0's DEBT-05..07.
 
 ---
 
+## Page Body & Convex Read Defects (SWEEP)
+
+Phase 126. The ROADMAP left this phase's `**Requirements:**` line as the literal string
+"TBD — to be derived at planning time from the seven todos below." Derived here at planning time,
+2026-08-24, one requirement per todo, per Larry's decision. Every one of the seven was filed at
+`ec48907e`; six were surfaced (not caused) by Phase 124's shell regroup, and the seventh was found
+while verifying it. The criterion each serves is named because Phase 126's success criteria, not the
+requirement text, are what close it.
+
+- [ ] **SWEEP-01** — No shell-level Convex subscription performs an unbounded read: the sidebar Inbox
+  badge reads a bounded, index-scoped, count-only query that declares its cap, and the shared
+  `inbox.listHeldUnacked` stays uncapped for its server-side consumer (`convex/inboxIngest.ts:174` →
+  `focus_digest.py`). *(Serves criterion 3. Todo: `inbox-listheldunacked-unbounded-every-route.md`.
+  The one item of Phase 124's own making. D-03/D-04.)*
+- [ ] **SWEEP-02** — `/tool-galaxy` renders its topology against live data, asserted on a rendered
+  node count, with the read collapsed from 6,591 rows (4,001 nodes + 2,590 links, measured live
+  2026-08-24 against Convex's 4,096-read ceiling) to one bounded, `seq`-ordered indexed query over a
+  chunked blob. *(Serves criteria 1 and 3. Todo: `tool-galaxy-getprojectgraph-timeout.md`. Root-caused
+  during discussion as D-05; remedy fixed by D-06-REVISED.)*
+- [ ] **SWEEP-03** — No count rendered on `/inbox` contradicts the sidebar badge: the Held tab shows a
+  precise "N of M" drawn from the badge's own number, and every other capped tab declares that its
+  figure is a floor. *(Serves criterion 2. Todo: `inbox-page-undercounts-held-behind-200-cap.md`.
+  D-01/D-02.)*
+- [ ] **SWEEP-04** — The Alert Rules Engine rows render readably: row-to-row pitch and text-child
+  rects measured on the real rendered page, with no measured overlap between a row's text and the
+  next row. *(Serves criterion 1. Todo: `alert-rules-engine-rows-overlap.md`. NOT root-caused —
+  D-07 measure-first governs, and a non-reproduction is a permitted recorded outcome.)*
+- [ ] **SWEEP-05** — `/automation` renders its real content: all twelve schedule rows show their
+  parsed schedule string once, and the four stat cards either resolve or the phase records, with
+  measurements, why they do not. *(Serves criterion 1. Todo:
+  `automation-page-placeholder-cards-and-invalid-expression.md`. SPLIT by D-09: the parse half is
+  diagnosed and fixed; the stat-card half stays under D-07.)*
+- [ ] **SWEEP-06** — The sidebar `<nav>` has no horizontal overflow — `scrollWidth <= clientWidth`
+  measured on the real rendered page — achieved by removing the 4px overhang, never by hiding it with
+  `overflow-x-hidden`. *(Serves the phase Goal directly rather than one numbered criterion: it is
+  shell chrome around every page, not one of the three named routes. Verified by the same measured-px
+  discipline criterion 1 imposes. Todo: `sidebar-4px-horizontal-overflow-separator.md`.)*
+- [ ] **SWEEP-07** — `e2e/polish-geometry.spec.ts` measures a settled page: it waits on `SystemChip`
+  and `BrainHeaderBadge` actually rendering (fail-don't-skip, not a bare timeout) and asserts two
+  successive readings agree. *(Serves criterion 1 by fixing the instrument the other measured-value
+  assertions depend on. Todo: `polish-geometry-spec-measures-cold-page.md`. An EVIDENCE defect: the
+  spec passes correctly today, and its recorded sums can invert the conclusion they are cited for —
+  cold 268 vs settled 366.2 at 375px against 327 available.)*
+
+---
+
 ## Milestone-level acceptance (carried from MILESTONE-CONTEXT.md before it was consumed)
 
 These sit **above** the per-requirement checkboxes — they are how the milestone as a whole is judged, and they name the verification method, not just the outcome.
@@ -125,8 +171,15 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | SIGNAL-01 | Phase 125 | Partial — the 2px shell line, fail-closed state machine (125-04), event packets and every-route mount (125-08) are built and tested; "turns crimson on every page when E-Stop arms" is proven only against a dev-only simulation stub so far — the real cross-repo `estop_state` emitter's wire-up proof is 125-12's job |
 | SIGNAL-02 | Phase 125 | Pending |
 | SIGNAL-03 | Phase 125 | Partial — trial built and shipped (125-05, real italic face self-hosted and chunk-isolated); the requirement's own text ("evaluated before any app-wide commit") is not satisfied until 125-10's blocking operator checkpoint records the adopt/reject/revisit verdict |
+| SWEEP-01 | Phase 126 | Pending |
+| SWEEP-02 | Phase 126 | Pending |
+| SWEEP-03 | Phase 126 | Pending |
+| SWEEP-04 | Phase 126 | Pending |
+| SWEEP-05 | Phase 126 | Pending |
+| SWEEP-06 | Phase 126 | Pending |
+| SWEEP-07 | Phase 126 | Pending |
 
-**Coverage: 20/20 v15.0 requirements mapped, 100%. No orphans, no duplicates.**
+**Coverage: 27/27 v15.0 requirements mapped, 100%. No orphans, no duplicates.** (20 through Phase 125, plus SWEEP-01..07 derived at Phase 126 planning time, 2026-08-24, one per todo in that phase's ROADMAP scope table.)
 
 ---
 
