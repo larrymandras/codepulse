@@ -265,6 +265,40 @@ prior artifacts left open — none reverses D-01..D-16.
   upstream only (cleanest data model, but the count then breaks against any Ástríðr build
   predating the fix, with nothing to notice it).
 
+- **D-19-REVISED (2026-08-24, during execution of 125-03): the upstream half of D-19 is
+  WITHDRAWN. The client-side dedup guard is now the whole mitigation, not half of it.**
+  D-19 as written above is not implementable without data loss, and the option it explicitly
+  rejected — client-side only — is the one taken. The reason is a fact D-19 did not have:
+  the buffered `.send()` call it told 125-03 to delete is the **sole writer of a live
+  persisted consumer**. Measured 2026-08-24, all four links independently re-verified by the
+  orchestrator after the executor reported them:
+  `convex/runtimeIngest.ts:1375` routes `case "run.blocks"` into
+  `ctx.runMutation(api.runBlocks.record)`; `convex/runBlocks.ts:12` is the only
+  `ctx.db.insert("run_blocks", …)` in the repo; `src/pages/LiveRun.tsx:70,72` reads that
+  table back via `useQuery(api.runBlocks.listSessions)` / `getBySession`; and it is routed
+  live at `App.tsx:162` (`/live-run`). The surviving call D-19 named as the keeper
+  (`_emit_run_event()` → `send_live()`) reaches Convex through **no path at all** —
+  `astridr/engine/telemetry.py:395-399`, docstring: "bypasses batch buffer, WS fan-out only.
+  Does NOT send to Convex HTTP endpoint." So executing D-19 as specified would have silently
+  and permanently emptied `/live-run`'s history, observable only as an absence.
+  This is the D-19 rejection reasoning inverted by evidence: "leaves a known correctness
+  defect live upstream" was the right call when the upstream fix was believed free, and the
+  wrong one now that its true price is a deleted persistence path.
+  **What this does NOT change:** 125-09 already assumed it. `125-09-PLAN.md:150` states
+  "`run.blocks` may still arrive twice even after plan 125-03 ships. The client guard stays",
+  and its cases (f) doubled-delivery and (g) single-delivery both remain required — the guard
+  must still handle either. No 125-09 edit is needed.
+  **What this DOES change:** `125-12-PLAN.md:14`'s must_have cites D-01/D-02/**D-19** as the
+  three changes riding one rebuild. Only D-01 and D-02 now ride it; the D-19 reference there
+  is stale and must not be read as an unmet acceptance criterion at 125-12 execution time.
+  **Still open, deliberately not decided here:** whether the WS stream should carry the
+  duplicate at all. Any FUTURE WS consumer inherits it, and the only two real fixes both cost
+  an astridr change — a `ws=False` option on `send()` so the buffered call skips its fan-out,
+  or dropping `_emit_run_event` at the paired sites, which first requires PROVING `send()`'s
+  contextvar `session_id` equals `set_run_event_session_id`'s override. Larry chose the
+  client-side guard over both on 2026-08-24. Revisit only if a second WS consumer of
+  `run.blocks` appears.
+
 ### Claude's Discretion
 
 None — every question in this discussion was answered explicitly. No "you decide" options
