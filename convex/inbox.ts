@@ -218,6 +218,83 @@ export const listHeldUnacked = query({
   handler: async (ctx) => listHeldUnackedHandler(ctx),
 });
 
+// SWEEP-01 (126-CONTEXT.md D-03/D-04): listHeldUnacked above is subscribed at
+// shell level (src/layouts/DashboardLayout.tsx) so the sidebar badge can show
+// a live unacked-held count -- but that means the badge's unbounded
+// .collect() now runs on EVERY route, not one widget, which is the exact
+// every-route DoS risk convex/alerts.ts:109-131's countBySeverity/
+// ALERT_COUNT_SCAN_CAP already closed for the sibling Alerts badge (Phase
+// 124, D-13). countHeldUnacked is the same fix applied here: a count-only,
+// index-scoped, hard-capped read that ships two numbers to every route
+// instead of shipping up to 2,001 inbox row objects (title/body/profileId)
+// the badge never reads -- it only needs `.length`.
+//
+// listHeldUnackedHandler/listHeldUnacked above are DELIBERATELY left
+// untouched: convex/inboxIngest.ts:174 (inboxReadHeldUnacked httpAction)
+// calls listHeldUnacked directly to feed focus_digest.py, which needs the
+// TRUE unbounded unacked-held set across all profiles. Capping the shared
+// query would silently truncate that cross-repo consumer with no error.
+//
+// 2000 is ALERT_COUNT_SCAN_CAP's value reused verbatim -- ~43x headroom over
+// the 46 held-unacked rows measured live 2026-08-24 -- and it is deliberately
+// high because plan 126-06 renders this number as the /inbox Held tab's
+// "of M" denominator (D-04): a cap that binds here would propagate into that
+// display. When `truncated` is true, `count` is a FLOOR on the true unacked
+// total, not the total, because the take() window is the newest
+// HELD_COUNT_SCAN_CAP held rows (by_itemType ends in createdAt, order desc).
+const HELD_COUNT_SCAN_CAP = 2000;
+
+/**
+ * countHeldUnacked() (SWEEP-01, D-03/D-04): bounded, count-only sibling to
+ * listHeldUnacked() above, for the every-route shell badge.
+ *
+ * Reads by_itemType eq("itemType","held") -- the same index listHeldUnacked
+ * uses -- and takes CAP+1 rows (the graphSnapshots.ts:252-259 idiom: the
+ * extra row is the signal that more remain, not a row to count) with NO
+ * `.filter()` before the take. Filtering ackedAt===undefined BEFORE the take
+ * would make the scan run until it accumulated CAP+1 *matching* rows, so the
+ * number of rows actually read would depend on the table's acked:unacked
+ * ratio rather than on the cap -- not a bounded read. Instead this takes
+ * CAP+1 rows unconditionally (reads are always exactly min(heldRows, CAP+1))
+ * and counts ackedAt===undefined in JavaScript afterward.
+ *
+ * `truncated` uses the strict `rows.length > CAP` form, NOT
+ * countBySeverity's older `length === CAP` form (convex/alerts.ts:143) --
+ * `=== CAP` reports true on a table holding EXACTLY CAP rows, a false
+ * positive D-04 cannot afford since `truncated` is load-bearing for a number
+ * rendered on /inbox.
+ */
+export async function countHeldUnackedHandler(
+  ctx: { db: InboxDb } | any
+): Promise<{ count: number; truncated: boolean }> {
+  const rows = await ctx.db
+    .query("inbox")
+    .withIndex("by_itemType", (q: { eq: (field: string, value: any) => any }) =>
+      q.eq("itemType", "held")
+    )
+    .order("desc")
+    .take(HELD_COUNT_SCAN_CAP + 1);
+
+  const truncated = rows.length > HELD_COUNT_SCAN_CAP;
+  const window = truncated ? rows.slice(0, HELD_COUNT_SCAN_CAP) : rows;
+  let count = 0;
+  for (const row of window as any[]) {
+    if (row.ackedAt === undefined) count++;
+  }
+
+  return { count, truncated };
+}
+
+// args: {} -- NO client-supplied cap. Load-bearing, not tidiness: every
+// public Convex function on this deployment is callable with no credential
+// (CLAUDE.md SEED-008, measured 2026-08-11), so a caller-widenable limit on a
+// publicly-callable function would reopen the exact DoS this query exists to
+// close (mirrors convex/events.ts:253-260's listRecentRuntimeWindow).
+export const countHeldUnacked = query({
+  args: {},
+  handler: async (ctx) => countHeldUnackedHandler(ctx),
+});
+
 /**
  * dismissAllCards() (Phase 186 checkpoint round 4 backlog cleanup): bulk-
  * stamps ackedAt on every currently-unacked itemType="card" row across ALL
