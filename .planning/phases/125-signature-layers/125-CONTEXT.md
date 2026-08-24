@@ -299,6 +299,40 @@ prior artifacts left open — none reverses D-01..D-16.
   client-side guard over both on 2026-08-24. Revisit only if a second WS consumer of
   `run.blocks` appears.
 
+- **D-20 (2026-08-24): 125-12's before/after wire control is REPLACED by a malformed-snapshot
+  control, because the "before" state was destroyed before it could be captured.**
+  125-12's must_have specifies proving the D-02 wire by a before/after contrast on one probe —
+  "the horizon stays `unknown` while no emitter is deployed and leaves `unknown` after the
+  rebuild". That is no longer observable. The `estop_state` emitter is ALREADY LIVE in the running
+  container, shipped incidentally by the concurrent astridr-repo session's Phase 195 rebuild, not
+  by any plan of this phase.
+  Measured 2026-08-24, with a control at each step: the compose project's `working_dir` is
+  `C:\Users\mandr\astridr-repo` (the main checkout, on `feature/brain-swap`); `/app/astridr` is NOT
+  among the container's mounts, so it is image-baked and the copy read is the copy that runs; the
+  image `sha256:9114482b45cf` was created `13:49:51Z` and the container started `13:50:06Z`, 15
+  seconds later, on that same image id. Control on the code itself: `estop_state` occurs 0 times in
+  `estop.py` at `86b6282b~1` and 3 times at `86b6282b`; 0 times in `ws_telemetry.py` at
+  `eb8f780b~1` and 6 times at `eb8f780b`. The running container shows exactly 3 and 6, and both
+  files are byte-identical to `feature/brain-swap`'s tip once CRLF is normalised.
+  **Consequences.** (a) `feature/brain-swap` IS production for the agent container — there is no
+  separate prod checkout, and merging to `main` would deploy nothing. (b) Nothing astridr-side
+  remains unshipped, since D-19's upstream half was withdrawn by D-19-REVISED, so 125-12's rebuild
+  is now a NO-OP rather than a delivery. (c) The "no emitter deployed" half of its control cannot
+  be recreated without deliberately rebuilding backwards off a pre-125-03 commit, which was
+  considered and rejected as disproportionate and risky.
+  **The replacement, chosen by Larry on 2026-08-24:** prove on the same observable
+  (`data-horizon-state`) that the horizon enters `unknown` on a MALFORMED snapshot and leaves
+  `unknown` only on a well-formed one. This tests the same property the original control tested —
+  that only a valid snapshot can clear the fail-closed state — and it is still falsifiable, because
+  a component that ignored payload validity would pass the well-formed case and fail the malformed
+  one. It requires no undeployed emitter and no time travel.
+  **What is LOST and must be stated rather than papered over:** the original control would also
+  have proven the wire end-to-end from Ástríðr's emitter through the socket to the DOM. The
+  replacement proves only the client's handling of snapshot validity. End-to-end delivery is
+  therefore NOT established by 125-12 under D-20 and must be carried by 125-13's live E-Stop
+  verification, which arms the real E-Stop and watches the real horizon. Do not read a green 125-12
+  as evidence that Ástríðr's emitter reaches the browser.
+
 ### Claude's Discretion
 
 None — every question in this discussion was answered explicitly. No "you decide" options
