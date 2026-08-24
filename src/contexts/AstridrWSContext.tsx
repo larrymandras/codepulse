@@ -55,7 +55,7 @@ interface AstridrWSContextValue {
 
 // ─── Topic → event_type mapping (mirrors TOPIC_EVENT_MAP in ws_telemetry.py) ─
 
-const TOPIC_EVENT_MAP: Record<string, Set<string>> = {
+export const TOPIC_EVENT_MAP: Record<string, Set<string>> = {
   health: new Set([
     "health_check",
     "docker_status",
