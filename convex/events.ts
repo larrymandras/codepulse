@@ -243,6 +243,48 @@ export const listRecentUnified = query({
   },
 });
 
+// D-05/D-17 (Phase 125 plan 02): the Pulse ECG hero's one bounded backfill read.
+// 60s is fixed by D-17 and by the sketch — "5min was tried and made the trace look
+// empty; do not widen it." 500 is a hard cap because a 60s trace cannot legibly draw
+// more rows than that.
+const WINDOW_SEC = 60;
+const MAX_ROWS = 500;
+
+// args: {} — NO client-supplied window. This is load-bearing, not tidiness: every
+// public Convex function on this deployment is callable with no credential (CLAUDE.md,
+// measured 2026-08-11), an unbounded scan of THIS exact table is the 2026-07-22
+// incident recorded above on listRecentUnified, and the read ceiling here is 4,096
+// reads, not the docs' 16,000 figure. A constant removes the attacker-reachable
+// surface entirely rather than merely clamping it.
+export const listRecentRuntimeWindow = query({
+  args: {},
+  handler: async (ctx) => {
+    const nowSec = Date.now() / 1000; // seconds, fractional — producer convention
+    const lo = nowSec - WINDOW_SEC;
+    // Both bounds are complementary, never alternatives: the time range keeps this
+    // query from scanning the whole table, and .take(MAX_ROWS) keeps a storm INSIDE
+    // the window from exceeding the read ceiling — a time bound alone does not
+    // survive that case (see listRecentUnified's :213 .take(fetchCount) analog).
+    const rows = await ctx.db
+      .query("runtime_events")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", lo).lte("timestamp", nowSec))
+      .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .take(MAX_ROWS);
+
+    // Project only what the hero needs (hue from eventType, x-position from
+    // timestamp). Never return `data` — it's v.any() and can carry whole
+    // tool-argument payloads. Never merge in the `events` table.
+    return {
+      rows: rows.map((r) => ({ _id: r._id, eventType: r.eventType, timestamp: r.timestamp })),
+      // Declared, not swallowed (house no-silent-caps rule): if the cap ever binds,
+      // the consumer can say the trace is incomplete rather than draw a quietly
+      // partial one.
+      truncated: rows.length === MAX_ROWS,
+    };
+  },
+});
+
 // ---- LEGACY runtime_events functions (kept for backward compat) ----
 
 export const insertEvent = mutation({
