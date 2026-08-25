@@ -899,7 +899,18 @@ export default defineSchema({
   })
     .index("by_scan_type", ["scanType"])
     .index("by_severity", ["severity"])
-    .index("by_dismissed", ["dismissed"])
+    // Phase 127 (JANITOR-02) — widened from ["dismissed"] to serve the new
+    // auto-dismiss janitor's not-yet-dismissed scan ordered by createdAt.
+    // Non-breaking: audited every caller (briefings.ts:196, ideation.ts:48,
+    // ideation.ts:60, ideationFindings.ts:52) and all four use only
+    // `.eq("dismissed", x)` with no dependence on the single-field shape.
+    .index("by_dismissed", ["dismissed", "createdAt"])
+    // Phase 127 (JANITOR-02) — backs the janitor's delete-step cursor-seeked
+    // range scan (`.gte("dismissedAt", cursor).lt("dismissedAt", cutoff)`),
+    // mirroring the inbox janitor's index shape one table up. Does NOT
+    // replace `dismissed`/`dismissedAt` with a new lifecycle field the way
+    // the inbox table gained one (D-01, R-02 keep this table's asymmetry).
+    .index("by_dismissedAt", ["dismissedAt"])
     .index("by_content_hash", ["contentHash"]),
 
   commandExecutions: defineTable({
@@ -2164,6 +2175,17 @@ export default defineSchema({
     sourceId: v.optional(v.string()), // Phase 188.2 D-08 — stable per-item id for future dedup audits; forwarded unchanged, never backfilled
     createdAt: v.float64(),
     ackedAt: v.optional(v.float64()),
+    // Phase 127 (R-02, JANITOR-01) — a LIFECYCLE field, written ONLY by
+    // internal.inbox.autoCloseAndPrune (plan 127-02) and by nothing else,
+    // same relationship media.deletedAt has to media.pruneTrashBatch.
+    // Deliberately NOT ackedAt: ackedAt is the sole representation of "the
+    // operator saw this" (src/pages/Inbox.tsx:130 `read: row.ackedAt !=
+    // null`; src/components/control-center/IntelligenceFeedPanel.tsx:64
+    // `if (row.ackedAt != null) return ""`), and the janitor must never
+    // touch it. closedAt is epoch SECONDS, matching createdAt/ackedAt in
+    // this table (every writer uses Date.now() / 1000, see inbox.ts) —
+    // NOT milliseconds like media.ts's deletedAt/TRASH_GRACE_MS template.
+    closedAt: v.optional(v.float64()),
   })
     .index("by_profile", ["profileId", "createdAt"])
     .index("by_createdAt", ["createdAt"])
@@ -2172,7 +2194,15 @@ export default defineSchema({
     // across ALL itemTypes (focus_digest.py was silently dropping/never
     // acking older held-focus rows once other traffic pushed them past the
     // cutoff).
-    .index("by_itemType", ["itemType", "createdAt"]),
+    .index("by_itemType", ["itemType", "createdAt"])
+    // Phase 127 (D-06 superseded by R-02, JANITOR-01) — serves BOTH janitor
+    // steps on one index: `.eq("closedAt", undefined)` for not-yet-closed
+    // rows ordered by createdAt (the auto-close step's scan), and
+    // `.gte("closedAt", cursor).lt("closedAt", cutoff)` for the delete
+    // step's cursor-seeked range. No backfill required — Convex indexes an
+    // absent field under `undefined` (controlVerbSwaps.ts:105-109,
+    // media.ts:733-736: `undefined < null < all other values`).
+    .index("by_closedAt", ["closedAt", "createdAt"]),
 
   // ============================================================
   // ACTIVE ENGINE SNAPSHOTS (Phase 103, BSC-01/D-14) — per-profile
