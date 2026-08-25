@@ -19,7 +19,10 @@ export function useCommandPaletteSearch() {
   // Phase 117 D-05: Bifröst links join this existing aggregation seam rather
   // than getting their own palette plumbing. Not sliced — the hub is curated by
   // hand and is expected to stay small, unlike the telemetry sets above.
-  const linksRaw = useQuery(api.bifrost.list) ?? [];
+  // SWEEP-01 guard (2026-08-25): this subscription is SHELL-LEVEL — the palette
+  // is rendered unconditionally by DashboardLayout, so it runs on every route.
+  // `api.bifrost.list` is now bounded and returns `{links, truncated}`.
+  const linksRaw = useQuery(api.bifrost.list)?.links ?? [];
 
   const agents: PaletteAgent[] = (agentsRaw as any[]).slice(0, 20).map((a) => ({
     id: a._id,

@@ -49,9 +49,43 @@ export function compareLinks(
 // Read paths
 // ============================================================
 
+/**
+ * Hard bound on the launcher read. Derived, not picked: `links` is a curated
+ * hub (25 rows live at the time of writing), so 2000 is ~80x headroom while
+ * staying far under Convex's 4,096-read ceiling. Reused verbatim from
+ * `ALERT_COUNT_SCAN_CAP` (`convex/alerts.ts:122`) so the two shell-level
+ * bounded reads share one number rather than drifting apart.
+ */
+export const LINK_LIST_SCAN_CAP = 2000;
+
+/**
+ * SWEEP-01 correctness guard, applied here 2026-08-25.
+ *
+ * This read is subscribed at SHELL level — `useCommandPaletteSearch` feeds the
+ * command palette, which `DashboardLayout` renders unconditionally, so this
+ * query runs on EVERY ROUTE. It was an unbounded `.collect()` that read every
+ * row and filtered archived ones afterwards, and `links` is soft-delete only,
+ * so archived rows accumulate forever and were read on every route.
+ *
+ * That is the identical defect class Phase 126's SWEEP-01 removed from the
+ * Inbox badge, in a different module. Fixing one and leaving the other would
+ * have shipped an app that still performs an unbounded shell read.
+ *
+ * `take(CAP + 1)` rather than `take(CAP)` so "more remain" is VISIBLE: the
+ * house no-silent-caps rule (D-01) — a cap must be declared to its consumer,
+ * never swallowed. Returns `{links, truncated}` for that reason; the bare-array
+ * return it replaced had nowhere to put the flag.
+ *
+ * NOTE the filter runs AFTER the take, so `truncated` means "the SCAN hit the
+ * cap", not "more visible links exist". With 25 rows against a 2000 cap that
+ * distinction is academic today; it is stated so a future reader does not
+ * mistake it for an exact count.
+ */
 export async function listHandler(ctx: BifrostCtx) {
-  const rows = await ctx.db.query("links").collect();
-  return rows.filter(isVisible).sort(compareLinks);
+  const rows = await ctx.db.query("links").take(LINK_LIST_SCAN_CAP + 1);
+  const truncated = rows.length > LINK_LIST_SCAN_CAP;
+  const scanned = truncated ? rows.slice(0, LINK_LIST_SCAN_CAP) : rows;
+  return { links: scanned.filter(isVisible).sort(compareLinks), truncated };
 }
 
 export const list = query({

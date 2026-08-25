@@ -2401,10 +2401,20 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_category", ["category"])
-    // No `by_usage` index on purpose. `bifrost.list` collects the whole table
-    // and sorts in memory because the hub is curated and small; an index would
-    // add write amplification on every open for a read path that never filters
-    // on it. Revisit only if `list` ever grows a server-side ranked query.
+    // No `by_usage` index on purpose: an index would add write amplification on
+    // every open for a read path that never filters on it. Revisit only if
+    // `list` ever grows a server-side ranked query.
+    //
+    // CORRECTED 2026-08-25 (SWEEP-01 guard). This comment previously said
+    // "`bifrost.list` collects the whole table and sorts in memory because the
+    // hub is curated and small". It no longer collects the whole table — that
+    // was an UNBOUNDED read on a SHELL-LEVEL subscription (the command palette
+    // is rendered unconditionally by DashboardLayout, so it ran on every
+    // route), against a soft-delete-only table whose archived rows accumulate
+    // forever. `listHandler` now uses `take(LINK_LIST_SCAN_CAP + 1)` and
+    // returns a declared `truncated` flag. "The hub is curated and small" was
+    // true and is still why the CAP is generous, but it was never a reason to
+    // leave the read unbounded.
     .index("by_order", ["order"]),
 
   // Phase 119 Loom (D-01). Curated pipelines: what the system is DESIGNED to

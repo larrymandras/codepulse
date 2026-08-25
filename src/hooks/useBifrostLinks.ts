@@ -16,8 +16,15 @@ import { api } from "../../convex/_generated/api";
 
 /** Links plus the loading signal the `?? []` fallback destroys. */
 export function useBifrostLinksState() {
-  const links = useQuery(api.bifrost.list);
-  return { links: links ?? [], isLoading: links === undefined };
+  // SWEEP-01 guard (2026-08-25): `api.bifrost.list` now returns
+  // `{links, truncated}` instead of a bare array, because the underlying read
+  // is bounded and a cap must be declared rather than silently swallowed.
+  const result = useQuery(api.bifrost.list);
+  return {
+    links: result?.links ?? [],
+    truncated: result?.truncated ?? false,
+    isLoading: result === undefined,
+  };
 }
 
 /**
