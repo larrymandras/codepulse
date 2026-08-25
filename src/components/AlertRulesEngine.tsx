@@ -72,7 +72,7 @@ function StaticRuleRow({
 
   return (
     <div
-      className={`group relative flex items-center gap-4 px-5 py-4 border-b border-primary/10 transition-colors overflow-hidden ${
+      className={`group relative flex items-center shrink-0 gap-4 px-5 py-4 border-b border-primary/10 transition-colors overflow-hidden ${
         isDisabled ? "opacity-40 bg-background/20" : "bg-background/40 hover:bg-primary/5 hover:border-primary/30"
       } ${isMuted ? "opacity-50" : ""}`}
       onMouseEnter={() => setHovered(true)}
@@ -202,7 +202,7 @@ function CustomRuleRow({
 
   return (
     <div
-      className={`group relative flex items-center gap-4 px-5 py-4 border-b border-primary/10 bg-background/40 hover:bg-primary/5 hover:border-primary/30 transition-colors overflow-hidden ${
+      className={`group relative flex items-center shrink-0 gap-4 px-5 py-4 border-b border-primary/10 bg-background/40 hover:bg-primary/5 hover:border-primary/30 transition-colors overflow-hidden ${
         isMuted || rule.enabled === false ? "opacity-50" : ""
       }`}
     >

@@ -20,13 +20,38 @@ import { test, expect, type Page } from '@playwright/test';
  *     e2e/polish-geometry.spec.ts:211-326 (`readHeaderZonesEvidence`) and :570-641 (the 900px
  *     Settings collision walk), including its `sr-only` exclusion.
  *
- * NO pass/fail assertion is made on the measured pitch in this task beyond the `rows > 0` sanity
- * gate — the threshold isn't known until the measurement exists (D-07). Task 2 turns this into a
- * permanent assertion once the mechanism (or its absence) is established.
+ * TASK 2 (post-measurement fix, Branch A): the measurement located a real layout cause — see the
+ * SUMMARY for the full mutation-proof trail. In short, `StaticRuleRow`/`CustomRuleRow`'s outer
+ * `<div>` carries `overflow-hidden` (to clip the decorative hover scanline) and sits, unconstrained
+ * by any `flex-shrink-0`/`shrink-0`, inside `.custom-scrollbar` (`flex flex-col max-h-[500px]
+ * overflow-y-auto`). Per the CSS Flexbox spec (`min-size: auto` resolution, §4.5), a flex item whose
+ * own `overflow` is not `visible` has its AUTOMATIC minimum main-size forced to 0 rather than its
+ * content-based minimum — so with 66 rows whose combined natural height (~5,135px) exceeds the
+ * container's 500px cap, the default `flex-shrink: 1` compresses every row uniformly, with nothing
+ * left to stop it at the content floor. `overflow-y-auto` still works (excess scrolls), but only
+ * AFTER the shrink has already crushed each row to ~33px. Fix: `shrink-0` on the row container
+ * (both variants) — content asserts its own size and the excess overflow becomes a real scrollbar
+ * instead of compression. This spec now asserts on that fixed geometry permanently (below), scoped
+ * PER SECTION (`static` vs `custom`, discriminated by presence of the toggle `<button>` — only
+ * StaticRuleRow renders one) so the cross-section DOM-order artifact (the single seeded custom rule
+ * sits in a separate, unclipped sibling container and is not "the next row" of the static list) does
+ * not pollute the pitch assertion.
  */
 
 const ROW_WIDTHS = [1512, 900];
 const VIEWPORT_HEIGHT = 900;
+
+// Permanent regression guard (Task 2). Derived from the FIXED row's own
+// measured content requirement, not a round number: padding-top 16px + name
+// line-height 24px + condition margin-top 2px + condition line-height 20px +
+// padding-bottom 16px = 78px, plus the row's own 1px border-bottom = 79px —
+// exactly what post-fix measurement recorded for every static row at both
+// 1512px and 900px (see SUMMARY). 70px leaves ~8-9px of margin for sub-pixel/
+// font-rendering variance while staying far above the pre-fix 33px defect
+// (roughly half the correct pitch, matching the original todo's own
+// estimate) — the mutation proof below reverts the fix and confirms this
+// threshold actually catches that regression rather than passing vacuously.
+const MIN_STATIC_ROW_PITCH_PX = 70;
 
 interface RectLike {
   top: number;
@@ -46,6 +71,11 @@ interface AncestorEvidence {
 
 interface AlertRowEvidence {
   rowIndex: number;
+  // Discriminated by the toggle `<button style="...">`, which only
+  // StaticRuleRow renders (AlertRulesEngine.tsx:87-93; CustomRuleRow has no
+  // toggle). Used to scope the pitch/overlap assertions to same-section
+  // neighbours only.
+  section: 'static' | 'custom';
   ruleName: string;
   severityText: string;
   rect: RectLike;
@@ -75,11 +105,21 @@ interface AlertRowsEvidence {
   innerWidth: number;
   rowCount: number;
   rows: AlertRowEvidence[];
+  // Raw (unscoped) figures — kept for the record, but NOT what the permanent
+  // assertion below uses, because they include the one cross-section jump
+  // from the last static row to the separately-positioned custom-rule row
+  // (an artifact of the two sections living in different DOM containers, not
+  // a defect — see staticSectionPitch* for the assertion-grade figures).
   pitchArray: number[];
   pitchMin: number | null;
   pitchMax: number | null;
   pitchMean: number | null;
   crossRowTextOverlapPx: number[];
+  // Same-section-only figures (consecutive pairs where both rows share
+  // `section`). These are what Task 2's permanent assertion below checks.
+  staticSectionPitchArray: number[];
+  staticSectionPitchMin: number | null;
+  staticSectionCrossRowTextOverlapPx: number[];
   ancestorChain: AncestorEvidence[];
 }
 
@@ -159,6 +199,7 @@ async function readAlertRowsEvidence(page: Page, width: number): Promise<AlertRo
 
       return {
         rowIndex,
+        section: (toggleEl ? 'static' : 'custom') as 'static' | 'custom',
         ruleName: (nameEl?.textContent ?? '').trim(),
         severityText: (badgeEl?.textContent ?? '').trim(),
         rect: toRect(rect),
@@ -200,6 +241,20 @@ async function readAlertRowsEvidence(page: Page, width: number): Promise<AlertRo
       crossRowTextOverlapPx.push(ov ?? 0);
     }
 
+    // Same-section-only figures: only compare a row against its neighbour
+    // when both share `section`, so the one cross-section DOM-order jump
+    // (static list -> separately-positioned custom-rule section) never
+    // enters the pitch/overlap figures the permanent assertion checks.
+    const staticSectionPitchArray: number[] = [];
+    const staticSectionCrossRowTextOverlapPx: number[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i].section !== rows[i - 1].section) continue;
+      staticSectionPitchArray.push(rows[i].rect.top - rows[i - 1].rect.top);
+      const ov = vOverlap(rows[i - 1].conditionRect, rows[i].nameRect);
+      staticSectionCrossRowTextOverlapPx.push(ov ?? 0);
+    }
+    const staticSectionPitchMin = staticSectionPitchArray.length ? Math.min(...staticSectionPitchArray) : null;
+
     // Ancestor chain: list container up to <body> — settles or rules out the Radix ScrollArea lead.
     const ancestorChain: { tagName: string; className: string; display: string; radixAttrs: string[] }[] = [];
     let cur: Element | null = listContainer;
@@ -228,6 +283,9 @@ async function readAlertRowsEvidence(page: Page, width: number): Promise<AlertRo
       pitchMax,
       pitchMean,
       crossRowTextOverlapPx,
+      staticSectionPitchArray,
+      staticSectionPitchMin,
+      staticSectionCrossRowTextOverlapPx,
       ancestorChain,
     } satisfies AlertRowsEvidence;
   }, width);
@@ -280,6 +338,39 @@ test.describe('Alert Rules Engine row geometry — D-07 measurement (SWEEP-04)',
         evidence.rowCount,
         `rowCount must be > 0 or this measurement is void (recorded a page with no rendered rows): ${JSON.stringify(evidence)}`
       ).toBeGreaterThan(0);
+
+      // ─── Permanent regression guard (Task 2, D-07 Branch A fix) ──────────
+      // Scoped to same-section neighbours only (staticSectionPitchArray/
+      // staticSectionCrossRowTextOverlapPx) — see the interface comment for
+      // why the raw/global figures are unsuitable here.
+      expect(
+        evidence.staticSectionPitchMin,
+        `every consecutive same-section row pair must be at least ${MIN_STATIC_ROW_PITCH_PX}px apart ` +
+          `(min observed: ${evidence.staticSectionPitchMin}px, full array: ` +
+          `${JSON.stringify(evidence.staticSectionPitchArray)}) — a value near 33px means the ` +
+          `flex-shrink/overflow-hidden row-compression regression (D-07 Branch A) is back`
+      ).toBeGreaterThanOrEqual(MIN_STATIC_ROW_PITCH_PX);
+
+      const withinRowOverlaps = evidence.rows
+        .map((r) => r.nameConditionOverlapPx)
+        .filter((v): v is number => v !== null);
+      expect(
+        Math.max(...withinRowOverlaps),
+        `every row's own name/condition text must not overlap (max observed: ` +
+          `${Math.max(...withinRowOverlaps)}px, per-row: ${JSON.stringify(
+            evidence.rows.map((r) => ({ ruleName: r.ruleName, nameConditionOverlapPx: r.nameConditionOverlapPx }))
+          )})`
+      ).toBe(0);
+
+      const crossRowMax = evidence.staticSectionCrossRowTextOverlapPx.length
+        ? Math.max(...evidence.staticSectionCrossRowTextOverlapPx)
+        : 0;
+      expect(
+        crossRowMax,
+        `no row's condition text may overlap the next same-section row's name text (max observed: ` +
+          `${crossRowMax}px, full array: ${JSON.stringify(evidence.staticSectionCrossRowTextOverlapPx)}) — ` +
+          `a nonzero value is exactly the "bunches up the text" symptom the operator reported`
+      ).toBe(0);
     });
   }
 });
