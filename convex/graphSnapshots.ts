@@ -2,10 +2,18 @@
  * Graph Snapshot Receiver — Phase 83, GH-01.
  *
  * Persists Ástríðr's nightly graphify + Obsidian vault code/dependency graph
- * snapshots instead of dropping them. Stores graph data in three tables:
- *   - graphSnapshots     — meta doc (1 row per snapshotId, activeVersion pointer)
- *   - graphSnapshotNodes — entity rows keyed by (snapshotId, version)
- *   - graphSnapshotLinks — entity rows keyed by (snapshotId, version)
+ * snapshots instead of dropping them. Stores graph data in four tables:
+ *   - graphSnapshots          — meta doc (1 row per snapshotId, activeVersion
+ *                                pointer, blobChunkCount)
+ *   - graphSnapshotBlobChunks — Phase 126, SWEEP-02, D-06-REVISED: the ACTIVE
+ *                                read/write path — {nodes,links} serialized
+ *                                once and split across seq-ordered rows
+ *   - graphSnapshotNodes      — LEGACY entity rows keyed by (snapshotId,
+ *                                version). No longer written (see
+ *                                upsertGraphSnapshot); kept so the retention
+ *                                sweep can drain rows from versions written
+ *                                before this table existed.
+ *   - graphSnapshotLinks      — LEGACY, same status as graphSnapshotNodes.
  *
  * Writers are internalMutation — called from the /runtime-ingest httpAction
  * which has no Clerk identity (same rule as forge.appendLogChunk).
@@ -53,6 +61,18 @@ export function selectVersionDeletes(versions: number[], keepN: number): number[
  * rows, i.e. a read of ~10 rows where the old path read 6,591.
  */
 export const GRAPH_BLOB_CHUNK_CHARS = 128_000;
+
+/**
+ * Per-invocation cap on how many STALE (older-version) chunk rows
+ * upsertGraphSnapshot deletes after flipping the pointer. ~9 chunk rows per
+ * version at the size above, so 200 is ~20 versions' worth of backlog per
+ * ingest — deliberately NOT "delete everything older in one pass", which is
+ * the mass-delete pattern CLAUDE.md forbids on this self-hosted instance (it
+ * took the dashboard down for days in 2026-07-21/22). ctx.db.delete() counts
+ * as a read against the 4,096-per-invocation ceiling, same as every read this
+ * cap is meant to bound.
+ */
+export const STALE_CHUNK_DELETE_CAP = 200;
 
 /**
  * Splits a JSON string into chunks of at most `maxChars` characters each,
@@ -119,17 +139,32 @@ export function joinGraphBlobChunks(chunks: Array<{ seq: number; chunk: string }
 /**
  * Versioned-swap upsert for a graph snapshot (D-02).
  *
- * Algorithm:
+ * Algorithm (rewritten Phase 126, SWEEP-02, D-06-REVISED — steps 5-7 replaced,
+ * step 8 added; this comment is kept in sync with the code because a stale
+ * algorithm comment on this exact function is what hid the read-vs-write
+ * confusion D-05 diagnosed for a month):
  *   1. Read existing meta doc to determine currentVersion (0 if first ingest).
  *   2. newVersion = currentVersion + 1.
  *   3. Build Set<string> of incoming node ids (dangling-link guard, D-05).
  *   4. Filter links to those with both endpoints in the node set.
- *   5. Insert graphSnapshotNodes rows for newVersion (chunked, defensive).
- *   6. Insert graphSnapshotLinks rows for newVersion (chunked, defensive).
- *   7. LAST: patch-or-insert graphSnapshots meta doc with activeVersion = newVersion.
+ *   5. Serialize {nodes, links} ONCE into a JSON string — the same field
+ *      shapes getProjectGraph returns (community null/undefined coerced
+ *      first). ENTITY-ROW WRITES ARE RETIRED: this function no longer
+ *      inserts graphSnapshotNodes/graphSnapshotLinks rows (see the retire-
+ *      writes-keep-tables note at the deletion site below).
+ *   6. Split the blob into chunks (splitGraphBlob) and insert one
+ *      graphSnapshotBlobChunks row per chunk, keyed (snapshotId, newVersion, seq).
+ *   7. LAST of the write-then-flip steps: patch-or-insert graphSnapshots meta
+ *      doc with activeVersion = newVersion and blobChunkCount = chunk count.
+ *   8. AFTER the pointer flip: delete this snapshotId's chunk rows for every
+ *      version OLDER than newVersion, bounded by STALE_CHUNK_DELETE_CAP so a
+ *      backlog drains over several ingests rather than in one mass delete.
  *
- * Step 7 is last: readers continue to see the complete previous version
- * until the pointer flips (Pitfall 2 guard).
+ * Step 7 is last of the CREATE steps: readers continue to see the complete
+ * previous version until the pointer flips (Pitfall 2 guard). Step 8 runs
+ * only AFTER that flip — deleting the previous version's chunks before the
+ * flip would let a mid-crash leave activeVersion pointing at a version whose
+ * chunks are already gone.
  */
 export const upsertGraphSnapshot = internalMutation({
   args: {
@@ -178,49 +213,58 @@ export const upsertGraphSnapshot = internalMutation({
       (l) => nodeIdSet.has(l.source) && nodeIdSet.has(l.target)
     );
 
-    // 5. Insert graphSnapshotNodes rows in chunks of 1,000 (defensive headroom).
-    const CHUNK = 1000;
-    for (let i = 0; i < args.nodes.length; i += CHUNK) {
-      const batch = args.nodes.slice(i, i + CHUNK);
-      for (const node of batch) {
-        // Coerce community null/undefined → undefined for the optional field.
-        const community = node.community === null || node.community === undefined
-          ? undefined
-          : node.community;
-        await ctx.db.insert("graphSnapshotNodes", {
-          snapshotId: args.snapshotId,
-          version:    newVersion,
-          nodeId:     node.id,
-          label:      node.label,
-          type:       node.type,
-          community,
-          source:     node.source,
-        });
-      }
+    // RETIRED (Phase 126, SWEEP-02, D-06-REVISED, 2026-08-25): this function
+    // used to insert graphSnapshotNodes/graphSnapshotLinks rows here, in
+    // chunks of 1,000, as steps 5-6. Grepped across convex/**/*.ts,
+    // getProjectGraph (plan 126-05) and sweepGraphSnapshotVersions were those
+    // tables' only consumers — once the reader points at
+    // graphSnapshotBlobChunks below, continuing to write ~6,591 entity rows
+    // per ingest would cost real writes with no reader. The table
+    // definitions, their indexes, and the sweep's handling of them are
+    // DELIBERATELY KEPT (see schema.ts) so the sweep can drain legacy
+    // versions' rows at its existing bounded rate; this function simply stops
+    // adding to the pile. NOTE for reviewers: getProjectGraph still reads the
+    // now-empty-for-new-versions entity tables until plan 126-05 lands, so
+    // /tool-galaxy remains broken in the interim — that is expected, not a
+    // regression introduced here.
+
+    // 5. Serialize {nodes, links} ONCE. Same field shapes getProjectGraph
+    // currently returns, so plan 126-05's reader can return the parsed blob
+    // directly with no re-mapping: nodes as {id, label, type, community,
+    // source} (community null/undefined coerced first, same rule the retired
+    // insert loop applied), links as {source, target, relation} (filteredLinks
+    // already has exactly that shape).
+    const projectedNodes = args.nodes.map((node) => ({
+      id:        node.id,
+      label:     node.label,
+      type:      node.type,
+      community: node.community === null || node.community === undefined
+        ? undefined
+        : node.community,
+      source:    node.source,
+    }));
+    const blob = JSON.stringify({ nodes: projectedNodes, links: filteredLinks });
+
+    // 6. Split the blob and insert one graphSnapshotBlobChunks row per chunk.
+    const blobChunks = splitGraphBlob(blob);
+    for (let seq = 0; seq < blobChunks.length; seq++) {
+      await ctx.db.insert("graphSnapshotBlobChunks", {
+        snapshotId: args.snapshotId,
+        version:    newVersion,
+        seq,
+        chunk:      blobChunks[seq],
+      });
     }
 
-    // 6. Insert graphSnapshotLinks rows in chunks of 1,000.
-    for (let i = 0; i < filteredLinks.length; i += CHUNK) {
-      const batch = filteredLinks.slice(i, i + CHUNK);
-      for (const link of batch) {
-        await ctx.db.insert("graphSnapshotLinks", {
-          snapshotId: args.snapshotId,
-          version:    newVersion,
-          source:     link.source,
-          target:     link.target,
-          relation:   link.relation,
-        });
-      }
-    }
-
-    // 7. LAST: patch-or-insert meta doc with new activeVersion pointer.
+    // 7. LAST of the create steps: patch-or-insert meta doc with new
+    // activeVersion pointer AND blobChunkCount.
     //
     // storedVersions is appended here, at the ONLY place a version's rows are
     // created, so the list cannot drift from the rows it describes. Appending
-    // LAST — after every node and link insert above — matters: a crash midway
-    // leaves rows with no list entry, which the sweep ignores (it deletes only
-    // what the list names), whereas the reverse order would leave the list
-    // naming a version whose rows were never written and invite a delete pass
+    // LAST — after every chunk insert above — matters: a crash midway leaves
+    // rows with no list entry, which the sweep ignores (it deletes only what
+    // the list names), whereas the reverse order would leave the list naming
+    // a version whose rows were never written and invite a delete pass
     // against nothing.
     //
     // `?? []` is safe here and NOT the "absent means empty" trap the sweep
@@ -238,11 +282,42 @@ export const upsertGraphSnapshot = internalMutation({
       generatedAt:     args.generatedAt,
       updatedAt:       args.receivedAt,
       storedVersions:  storedVersionsAfter,
+      blobChunkCount:  blobChunks.length,
     };
     if (existing) {
       await ctx.db.patch(existing._id, metaDoc);
     } else {
       await ctx.db.insert("graphSnapshots", metaDoc);
+    }
+
+    // 8. AFTER the pointer flip: delete chunk rows for versions OLDER than the
+    // one just written, bounded so this never becomes the mass delete
+    // CLAUDE.md forbids on this self-hosted instance (it took the dashboard
+    // down for days in 2026-07-21/22). ctx.db.delete() counts as a READ
+    // against the 4,096-per-invocation ceiling — same as the sweep's own
+    // node/link deletes — which is why STALE_CHUNK_DELETE_CAP exists at all
+    // rather than deleting "everything older" in one pass.
+    const staleChunks = await ctx.db
+      .query("graphSnapshotBlobChunks")
+      .withIndex("by_snapshot_version_seq", (q) =>
+        q.eq("snapshotId", args.snapshotId).lt("version", newVersion)
+      )
+      .take(STALE_CHUNK_DELETE_CAP + 1);
+
+    const toDelete = staleChunks.slice(0, STALE_CHUNK_DELETE_CAP);
+    for (const row of toDelete) {
+      await ctx.db.delete(row._id);
+    }
+    if (staleChunks.length > STALE_CHUNK_DELETE_CAP) {
+      // More stale chunks remain than this invocation's cap allows. Leave them
+      // for the next ingest to continue draining — NEVER raise the cap to
+      // finish in one pass; that is the mass-delete pattern this cap exists
+      // to prevent.
+      console.warn(
+        `[upsertGraphSnapshot] stale chunk delete hit STALE_CHUNK_DELETE_CAP ` +
+          `(${STALE_CHUNK_DELETE_CAP}) for snapshotId "${args.snapshotId}"; ` +
+          `more stale chunks remain and will be drained on a later ingest.`
+      );
     }
   },
 });
