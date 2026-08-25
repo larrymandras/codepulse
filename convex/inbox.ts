@@ -11,8 +11,10 @@
  * repo — see convex/runtimeIngest.test.ts:9). The mutation()/query()
  * builders below are thin wrappers that supply the real ctx and Date.now()/1000.
  */
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { partitionBatchForPrune } from "./retentionCursor";
 
 /** Minimal ctx.db surface the handlers depend on — implemented for real by
  * Convex's ctx.db, and by an in-memory fake in convex/inboxIngest.test.ts. */
@@ -324,3 +326,170 @@ export const dismissAllCards = mutation({
   args: {},
   handler: async (ctx) => dismissAllCardsHandler(ctx, Date.now() / 1000),
 });
+
+// ============================================================
+// Phase 127 (JANITOR-01, R-02) — ack-aware auto-close + prune janitor
+// ============================================================
+//
+// See 127-CONTEXT.md's R-02 for the full design rationale (superseding the
+// original D-05/D-06 ackedAt-stamping proposal, which this code must never
+// resurrect): inbox grows ~100 rows/day and 83.7% of it is never acked, so a
+// calendar prune alone would delete cards an operator never saw, and an
+// ackedAt-keyed prune alone reaches at most 16% of the table. `closedAt` is
+// a dedicated lifecycle field the janitor owns exclusively — it stamps
+// EITHER an already-acked row OR a stale-open row the same way, then
+// permanently deletes 14 days after that stamp. `ackedAt` itself is never
+// written here; it stays the sole "the operator saw this" signal two
+// frontend surfaces read (src/pages/Inbox.tsx:130,
+// src/components/control-center/IntelligenceFeedPanel.tsx:64).
+
+/** Ctx shape the janitor needs on top of `InboxDb` above: `scheduler.runAfter`
+ * for self-rescheduling. `db` is typed `any`, same as media.ts's `MediaCtx`
+ * (media.ts:58) — the two-field `by_closedAt` range queries below
+ * (`.eq(field, undefined)`, `.gte().lt()`) need chained-builder forms
+ * `InboxDb`'s narrower query interface does not describe. Narrower than
+ * media.ts's own `JanitorCtx`, which also needs `storage`: inbox rows carry
+ * no blobs. */
+type JanitorCtx = {
+  db: any;
+  scheduler: { runAfter: (delayMs: number, fnRef: any, args: any) => Promise<any> };
+};
+
+/** D-05's M, re-expressed under R-02 — 30 days in SECONDS, matching every
+ * other `inbox` timestamp (every existing writer above uses
+ * `Date.now() / 1000`, never milliseconds). A row this old with `closedAt`
+ * still undefined is stale-open and gets stamped closed here, whether or
+ * not a human ever acked it. */
+export const INBOX_AUTOCLOSE_AGE_SEC = 30 * 24 * 60 * 60;
+
+/** D-05/R-02's G — 14 days in SECONDS past `closedAt` before a row is
+ * permanently deleted. */
+export const INBOX_CLOSED_GRACE_SEC = 14 * 24 * 60 * 60;
+
+/**
+ * Matches `TRASH_PRUNE_BATCH_SIZE` by name and value (media.ts:638).
+ * Re-derived against the REAL ceiling this deployment enforces, the way
+ * media.ts:624-636 does: a `.take(INBOX_JANITOR_BATCH_SIZE)` read costs up
+ * to 200 reads, plus up to 200 `ctx.db.patch()` (closing step) or
+ * `ctx.db.delete()` (deleting step) calls in the loop below — `ctx.db.delete()`
+ * counting as a read is PROVEN on this self-hosted instance (the literal
+ * error text is transcribed at convex/graphSnapshots.ts:505); `ctx.db.patch()`
+ * is not proven to, so it is budgeted conservatively as if it does too
+ * (D-07's own instruction). 200 + 200 = ~400 reads/invocation against the
+ * **4,096-read** ceiling this deployment has actually enforced — never the
+ * 16,000/32,000 figures on Convex's published platform-limits page, which
+ * are NOT what this self-hosted instance enforces (Phase 115 hit the real
+ * ceiling at caps of 4000, 2000, 1000 AND 500, all failing identically,
+ * because every one of those was still bisecting against the wrong
+ * number).
+ */
+export const INBOX_JANITOR_BATCH_SIZE = 200;
+
+/**
+ * Mirrors `TRASH_PRUNE_MAX_BATCHES` (media.ts:649) — the per-invocation-
+ * chain ceiling, CARRIED ACROSS the `"closing"` -> `"deleting"` transition
+ * (never reset — see the chain handler in the next section), so a
+ * pathological backlog cannot turn this janitor into an unbounded
+ * self-rescheduling loop.
+ */
+export const INBOX_JANITOR_MAX_BATCHES = 100;
+
+/**
+ * Inter-batch delay in MILLISECONDS — `ctx.scheduler.runAfter` takes a
+ * millisecond delay regardless of what units the table's own fields use.
+ * Named `_MS` precisely so this is the one mixed-unit boundary in this
+ * janitor: every other constant above is in seconds.
+ */
+export const INBOX_JANITOR_RESCHEDULE_MS = 3000;
+
+/**
+ * shouldAutoClose(row) — the auto-close step's carve-out predicate (D-03,
+ * R-02). `held` items are excluded unconditionally, including rows a human
+ * has already acked — this phase must never partially touch a table whose
+ * read side Phase 126 owns (D-03, D-11). `money` items are excluded UNLESS
+ * a human has already acked them: D-03's own words are that `money`
+ * "blocks only *silent* closure. Once a human genuinely acks a money item
+ * it is ordinary closed data and ages out on the normal grace window." A
+ * bare `priority !== "money"` guard would leave every human-acked money row
+ * without a `closedAt` forever — the permanently-undeletable treatment D-03
+ * reserves for `held` alone.
+ */
+export function shouldAutoClose(row: {
+  itemType: string;
+  priority: string;
+  ackedAt?: number;
+}): boolean {
+  if (row.itemType === "held") return false;
+  return row.ackedAt != null || row.priority !== "money";
+}
+
+/**
+ * shouldDeleteClosed(row) — the delete step's carve-out predicate. `held`
+ * is excluded unconditionally, mirroring `shouldAutoClose` above (D-03,
+ * D-11) — kept as an explicit second guard here rather than relying solely
+ * on the invariant that a `held` row can never acquire a `closedAt` in the
+ * first place, so the two steps stay independently correct even if one of
+ * them is edited later.
+ */
+export function shouldDeleteClosed(row: { itemType: string }): boolean {
+  return row.itemType !== "held";
+}
+
+/**
+ * The auto-close step: stamps `closedAt` on rows that are either stale-open
+ * (older than `INBOX_AUTOCLOSE_AGE_SEC`) or already acked by a human,
+ * excluding `held` unconditionally and `money` unless acked (see
+ * `shouldAutoClose` above).
+ *
+ * One query serves both populations R-02 names: a row a human already acked
+ * and a row nobody ever touched are both `closedAt === undefined` (Convex
+ * indexes an absent field under `undefined` — controlVerbSwaps.ts:105-109,
+ * media.ts:733-736), so one `.eq("closedAt", undefined)` range read and one
+ * `{ closedAt: nowSec }` patch handle both. An already-acked row younger
+ * than 30d simply waits until it crosses the age bound — that is D-05's 44d
+ * worst case, not a gap.
+ *
+ * Cursor-seeked on `createdAt` (the field this step's cutoff is keyed on),
+ * via `partitionBatchForPrune`'s optional `cursorField` extractor
+ * (retentionCursor.ts, plan 127-01) rather than off the raw batch's patched
+ * rows — a batch of entirely carved-out rows (e.g. an all-`held` run) must
+ * still advance the cursor, or the ~45 `held` rows at the head of the index
+ * would re-block the same batch every run forever (D-08; `held` is 2.7% of
+ * the unacked population, so an all-skipped batch is normal operation, not
+ * an edge case).
+ *
+ * The patch object below names `closedAt` and NOTHING else — never
+ * `ackedAt` (R-02). This is the single defect this whole revision exists to
+ * prevent.
+ */
+async function runClosingStep(
+  ctx: JanitorCtx,
+  cursor: number,
+  nowSec: number
+): Promise<{ actedCount: number; batchLength: number; nextCursor: number }> {
+  const cutoff = nowSec - INBOX_AUTOCLOSE_AGE_SEC;
+
+  const batch: any[] = await ctx.db
+    .query("inbox")
+    .withIndex("by_closedAt", (q: any) =>
+      q.eq("closedAt", undefined).gte("createdAt", cursor).lt("createdAt", cutoff)
+    )
+    .order("asc")
+    .take(INBOX_JANITOR_BATCH_SIZE);
+
+  const { toDelete: toClose, lastCursorValue } = partitionBatchForPrune<any>(
+    batch,
+    shouldAutoClose,
+    (doc: any) => doc.createdAt
+  );
+
+  for (const row of toClose) {
+    await ctx.db.patch(row._id, { closedAt: nowSec });
+  }
+
+  return {
+    actedCount: toClose.length,
+    batchLength: batch.length,
+    nextCursor: lastCursorValue ?? cursor,
+  };
+}
