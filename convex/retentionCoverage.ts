@@ -83,6 +83,7 @@ export const COVERAGE_BOUNDED_BY_CRON: Record<string, string> = {
 
 /** Table -> where it is bounded at WRITE time. Documented, not machine-checkable. */
 export const COVERAGE_BOUNDED_INLINE: Record<string, string> = {
+  graphSnapshotBlobChunks: "convex/graphSnapshots.ts - upsertGraphSnapshot step 8 deletes prior-version chunk rows AFTER the pointer flip, capped by STALE_CHUNK_DELETE_CAP (Phase 126, SWEEP-02, D-06-REVISED)",
   workspaceSnapshots: "convex/workspace.ts - batch-capped prune inside the ingest mutation (D-11)",
   workspaceDirs: "convex/workspace.ts - batch-capped prune inside the ingest mutation (D-11)",
   promptVersions: "convex/galdr.ts - newest-20-per-prompt, pruned inline on save/restore (retention.ts:130-141 forbids calendar pruning here)",
