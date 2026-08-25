@@ -12,6 +12,9 @@ import {
   projectSnapshotRow,
   sweepGraphSnapshotVersions,
   backfillGraphStoredVersions,
+  GRAPH_BLOB_CHUNK_CHARS,
+  splitGraphBlob,
+  joinGraphBlobChunks,
 } from "./graphSnapshots";
 
 // ---------------------------------------------------------------------------
@@ -330,6 +333,77 @@ describe("projectSnapshotRow (114 D-13)", () => {
   it("handles an empty sources array (row predates the arms probe)", () => {
     const result = projectSnapshotRow({ ...baseRow, sources: [] });
     expect(result.sources).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 126, SWEEP-02, D-06-REVISED: splitGraphBlob / joinGraphBlobChunks —
+// the chunked-blob split/join round trip that replaces the two 6,591-row
+// .collect()s D-05 measured against Convex's 4,096-read ceiling.
+// ---------------------------------------------------------------------------
+
+describe("splitGraphBlob / joinGraphBlobChunks (126-02, D-06-REVISED)", () => {
+  it("splitGraphBlob('') returns [] (documented empty-blob case)", () => {
+    expect(splitGraphBlob("")).toEqual([]);
+  });
+
+  it("joinGraphBlobChunks([]) returns '' — the reader must handle the empty case identically", () => {
+    expect(joinGraphBlobChunks([])).toBe("");
+  });
+
+  it("a string of length 3 * GRAPH_BLOB_CHUNK_CHARS splits into exactly 3 chunks", () => {
+    const s = "a".repeat(3 * GRAPH_BLOB_CHUNK_CHARS);
+    const chunks = splitGraphBlob(s);
+    expect(chunks).toHaveLength(3);
+    expect(chunks.every((c) => c.length === GRAPH_BLOB_CHUNK_CHARS)).toBe(true);
+  });
+
+  it("a string of length 2 * GRAPH_BLOB_CHUNK_CHARS + 1 splits into exactly 3 chunks, the last of length 1", () => {
+    const s = "a".repeat(2 * GRAPH_BLOB_CHUNK_CHARS + 1);
+    const chunks = splitGraphBlob(s);
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toHaveLength(GRAPH_BLOB_CHUNK_CHARS);
+    expect(chunks[1]).toHaveLength(GRAPH_BLOB_CHUNK_CHARS);
+    expect(chunks[2]).toHaveLength(1);
+  });
+
+  it("round-trips an ASCII fixture through split then join", () => {
+    const s = JSON.stringify({ nodes: Array.from({ length: 500 }, (_, i) => ({ id: `n${i}`, label: `Node ${i}` })), links: [] });
+    const rows = splitGraphBlob(s, 200).map((chunk, seq) => ({ seq, chunk }));
+    expect(joinGraphBlobChunks(rows)).toBe(s);
+  });
+
+  it("round-trips a fixture with an astral character positioned exactly on a chunk boundary", () => {
+    // Build a string where a surrogate pair (an astral emoji, U+1F600) straddles
+    // what would otherwise be the chunk boundary at maxChars.
+    const maxChars = 20;
+    const padding = "x".repeat(maxChars - 1); // boundary would fall AFTER this
+    const emoji = "\u{1F600}"; // U+1F600, encoded as a UTF-16 surrogate pair
+    const s = padding + emoji + "y".repeat(30);
+    const chunks = splitGraphBlob(s, maxChars);
+
+    // No chunk may end with a lone high surrogate, none may begin with a lone
+    // low surrogate — the whole point of the boundary adjustment.
+    for (const c of chunks) {
+      const lastCode = c.charCodeAt(c.length - 1);
+      expect(lastCode >= 0xd800 && lastCode <= 0xdbff).toBe(false);
+      const firstCode = c.charCodeAt(0);
+      expect(firstCode >= 0xdc00 && firstCode <= 0xdfff).toBe(false);
+    }
+
+    const rows = chunks.map((chunk, seq) => ({ seq, chunk }));
+    expect(joinGraphBlobChunks(rows)).toBe(s);
+  });
+
+  it("joinGraphBlobChunks sorts by seq — shuffled row order still returns the identical string (control: fails if the sort is removed)", () => {
+    const s = JSON.stringify({ nodes: Array.from({ length: 200 }, (_, i) => ({ id: `n${i}` })), links: [] });
+    const rows = splitGraphBlob(s, 50).map((chunk, seq) => ({ seq, chunk }));
+    expect(rows.length).toBeGreaterThan(2); // otherwise shuffling proves nothing
+
+    // Deliberately shuffled — NOT the seq-ascending array order.
+    const shuffled = [rows[rows.length - 1], ...rows.slice(1, -1).reverse(), rows[0]];
+    expect(joinGraphBlobChunks(shuffled)).toBe(s);
+    expect(joinGraphBlobChunks(rows)).toBe(s); // same result regardless of input order
   });
 });
 

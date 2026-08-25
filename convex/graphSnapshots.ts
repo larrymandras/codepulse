@@ -34,6 +34,85 @@ export function selectVersionDeletes(versions: number[], keepN: number): number[
 }
 
 // ---------------------------------------------------------------------------
+// Chunked blob helpers — Phase 126, SWEEP-02, D-06-REVISED.
+//
+// D-05 measured getProjectGraph's two .collect()s at 6,591 rows against
+// Convex's 4,096-read ceiling. D-06-REVISED rejected a single-document blob
+// (measured 99-101% of the 1 MiB document limit) and Convex file storage
+// (unreadable from a `query`). The remedy: serialize {nodes, links} ONCE and
+// split the JSON string across N rows carrying a monotonic `seq`
+// (graphSnapshotBlobChunks, schema.ts), read back through
+// by_snapshot_version_seq and rejoined in `seq` order.
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-row chunk size, in characters. Convex's per-document limit is ~1 MiB.
+ * 128,000 characters is 512 KB even at UTF-8's 4-bytes-per-character worst
+ * case — at least 2x headroom under the per-row ceiling. Against
+ * D-06-REVISED's measured ~1.03 MB total blob this yields roughly 9 chunk
+ * rows, i.e. a read of ~10 rows where the old path read 6,591.
+ */
+export const GRAPH_BLOB_CHUNK_CHARS = 128_000;
+
+/**
+ * Splits a JSON string into chunks of at most `maxChars` characters each,
+ * never cutting a UTF-16 surrogate pair in two.
+ *
+ * `JSON.stringify` does not escape non-ASCII, so an emoji or other astral
+ * character in a node `label` survives into the string as a UTF-16 surrogate
+ * pair (a high surrogate 0xD800-0xDBFF followed by a low surrogate
+ * 0xDC00-0xDFFF). Slicing at an arbitrary index can split that pair across
+ * two chunks — two lone surrogates, which are not valid UTF-8 and which a
+ * store may reject or silently replace with U+FFFD, corrupting the JSON on
+ * rejoin. Before cutting, if the character immediately before the boundary is
+ * a high surrogate, the boundary is pulled back by one so the pair stays
+ * together in the later chunk.
+ *
+ * `splitGraphBlob("")` returns `[]` — an empty blob has zero chunks to write,
+ * and `joinGraphBlobChunks([])` (below) returns `""` to round-trip it.
+ */
+export function splitGraphBlob(json: string, maxChars: number = GRAPH_BLOB_CHUNK_CHARS): string[] {
+  if (json.length === 0) return [];
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < json.length) {
+    let end = Math.min(start + maxChars, json.length);
+    // Don't split a surrogate pair: if the char just before `end` is a high
+    // surrogate, its partner (the low surrogate) is at `end` — pull the
+    // boundary back so the pair stays intact in the NEXT chunk.
+    if (end < json.length) {
+      const code = json.charCodeAt(end - 1);
+      if (code >= 0xd800 && code <= 0xdbff) {
+        end -= 1;
+      }
+    }
+    chunks.push(json.slice(start, end));
+    start = end;
+  }
+  return chunks;
+}
+
+/**
+ * Rejoins chunk rows into the original JSON string, in `seq` order.
+ *
+ * Sorts a COPY of `rows` ascending by `seq` before concatenating — this is
+ * the whole point of the function, not an optimization. `convex/forge.ts`'s
+ * `listJobLogs` (the table-shape precedent for this chunking pattern) sorts
+ * its chunks by `_creationTime` via `.order("asc")`, not by `seq`, which is
+ * harmless for append-only log lines but would be silent corruption here:
+ * a race, retry, or future batched insert could reorder `_creationTime`
+ * while `seq` stays correct, and reassembling by the wrong order produces
+ * corrupt JSON (a `JSON.parse` throw at best, a plausible truncated graph at
+ * worst) rather than a visible error. Do not "simplify" this sort away.
+ */
+export function joinGraphBlobChunks(chunks: Array<{ seq: number; chunk: string }>): string {
+  return [...chunks]
+    .sort((a, b) => a.seq - b.seq)
+    .map((c) => c.chunk)
+    .join("");
+}
+
+// ---------------------------------------------------------------------------
 // Write mutations (internalMutation — httpAction + cron callers only)
 // ---------------------------------------------------------------------------
 

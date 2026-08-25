@@ -1935,10 +1935,31 @@ export default defineSchema({
     // PARTIALLY removed. Mirrors workspaceSnapshots. The stale entry stays in
     // storedVersions so the next call re-selects and finishes it.
     pruneIncomplete:  v.optional(v.boolean()),
+    // Phase 126, SWEEP-02, D-06-REVISED: how many chunk rows (in the new
+    // blob-chunk table below) make up this activeVersion's serialized
+    // {nodes,links} blob. Written by the writer at the same time it flips
+    // activeVersion, so the reader (plan 126-05's getProjectGraph) can
+    // compare "chunks found" against this count and fail loudly on a short
+    // read instead of silently reassembling a truncated graph (JSON.parse
+    // throw at best, plausible-but-wrong at worst). v.optional because meta
+    // docs written before this field existed have none.
+    blobChunkCount:   v.optional(v.number()),
   }).index("by_snapshotId", ["snapshotId"]),
 
   // Entity rows for graph nodes, keyed by (snapshotId, version).
   // community is optional float64 — vault nodes emit community: null (Pitfall 4 / T-83-04).
+  //
+  // Phase 126, SWEEP-02, D-06-REVISED: upsertGraphSnapshot STOPPED WRITING
+  // these rows (2026-08-25) — getProjectGraph now reads the new blob-chunk
+  // table below instead, and grepped across convex/**/*.ts, getProjectGraph
+  // and sweepGraphSnapshotVersions were this table's only consumers, so
+  // dual-writing would cost ~6,591 inserts per ingest with no reader. This
+  // table's definition, its index, and the sweep's handling of it are
+  // DELIBERATELY KEPT (not removed) so the sweep can drain legacy versions'
+  // rows over its existing bounded rate, and so this schema deploy is
+  // additive-only — removing a table here would print "Deleted table
+  // indexes:" on deploy, the only announcement of a destructive schema
+  // rollback (see CLAUDE.md).
   graphSnapshotNodes: defineTable({
     snapshotId: v.string(),
     version:    v.number(),
@@ -1950,6 +1971,8 @@ export default defineSchema({
   }).index("by_snapshot_version", ["snapshotId", "version"]),
 
   // Entity rows for graph links, keyed by (snapshotId, version).
+  // Phase 126, SWEEP-02, D-06-REVISED: same retire-writes-keep-table decision
+  // as the node table above — see its comment.
   graphSnapshotLinks: defineTable({
     snapshotId: v.string(),
     version:    v.number(),
@@ -1957,6 +1980,37 @@ export default defineSchema({
     target:     v.string(),   // namespaced node id (target node)
     relation:   v.string(),
   }).index("by_snapshot_version", ["snapshotId", "version"]),
+
+  // Phase 126, SWEEP-02, D-06-REVISED: the graph blob read/write path.
+  // D-05 measured `getProjectGraph`'s two entity-table .collect()s (the node
+  // and link tables above) at nodeCount:4001 + linkCount:2590 = 6,591 rows in
+  // one query, against Convex's 4,096-read ceiling — that is the /tool-galaxy defect.
+  // D-06-REVISED rejected both a single-document blob (measured at 99-101% of
+  // the 1 MiB document limit for this data) and Convex file storage (unreadable
+  // from a `query` — StorageReader has no `get()`). The remedy: the writer
+  // serializes {nodes, links} ONCE into a JSON string and splits it across N
+  // rows carrying a monotonic `seq`, read back by one indexed range query and
+  // rejoined in order.
+  graphSnapshotBlobChunks: defineTable({
+    snapshotId: v.string(),
+    version:    v.number(),
+    // 0-based, monotonic, dense — the REASSEMBLY order. NOT _creationTime.
+    seq:        v.number(),
+    // One slice of JSON.stringify({nodes, links}), sized under 1 MiB per row
+    // with headroom (GRAPH_BLOB_CHUNK_CHARS in graphSnapshots.ts).
+    chunk:      v.string(),
+  })
+    // Unlike forgeLogChunks.by_host_job_seq (schema.ts:1731, used ONLY for a
+    // dedup/idempotency .unique() check, never for read ordering — its reader
+    // listJobLogs sorts by _creationTime via by_host_job instead), THIS index
+    // IS the read's ordering key. getProjectGraph must query through it and
+    // sort by seq explicitly; reusing by_snapshot_version's
+    // ["snapshotId","version"] shape here would fall back to implicit
+    // _creationTime order after the equality prefix, which is silent
+    // corruption for a JSON blob (a JSON.parse throw at best, a plausible
+    // truncated graph at worst) — harmless as that fallback is for
+    // forgeLogChunks' append-only log lines.
+    .index("by_snapshot_version_seq", ["snapshotId", "version", "seq"]),
 
   // ============================================================
   // EVAL PIPELINE & QUALITY KPIs (Phase 93, EVAL-01)
