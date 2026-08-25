@@ -158,6 +158,25 @@ describe("D-07/D-14 departments — suite 9: out-of-vocabulary department -> Unc
 // D-09 access
 // ---------------------------------------------------------------------------------------
 
+// PLATFORM PINNED (2026-08-25). Every assertion below expects LOWERCASED
+// paths, which `normalizePath` (hooks/workspaceClassifier.mjs:38) only produces
+// when the platform is win32:
+//
+//   (platform ?? process.platform) === "win32" ? s.toLowerCase() : s
+//
+// Left to `process.platform` these suites passed on the Windows authoring
+// machine and failed on the Linux CI runner with
+// `expected 'C:/Example/...' to be 'c:/example/...'` -- a platform-dependent
+// test masquerading as a broken assertion, and the second of two such causes
+// behind a permanently red master build.
+//
+// The production code already exposes `platform` as an injection point for
+// exactly this. Pinning it here tests the WINDOWS BEHAVIOUR DELIBERATELY on
+// every platform, rather than testing whichever platform happens to be
+// running. The lowercase expectations are the point of these cases -- Windows
+// paths are case-insensitive, so the classifier folds case to compare them --
+// so pinning win32 preserves what is being asserted instead of weakening it.
+
 describe("D-09 access — suite 10: deriveMountedPaths unions ALL services, not just the first", () => {
   it("a path declared only under the second service is present in the union", () => {
     const composeFixture = {
@@ -169,6 +188,7 @@ describe("D-09 access — suite 10: deriveMountedPaths unions ALL services, not 
     const { mounted, ok } = deriveMountedPaths(composeFixture, {
       composeDir: "C:/Example/repo",
       homeDir: "C:/Example/home",
+      platform: "win32",
     });
     expect(ok).toBe(true);
     expect(mounted.has("c:/example/alpha-only")).toBe(true);
@@ -180,7 +200,7 @@ describe("D-09 access — suite 11: a ${VAR:-default} token as a PREFIX of the s
   it("resolves to default + suffix, not the whole-string default", () => {
     const raw = "${FORGE_REPO_PATH:-C:\\Example\\forge}\\.claude\\skills";
     expect(substituteComposeDefaults(raw)).toBe("C:\\Example\\forge\\.claude\\skills");
-    expect(resolveComposeSource(raw, { composeDir: "C:/Example/repo" })).toBe(
+    expect(resolveComposeSource(raw, { composeDir: "C:/Example/repo", platform: "win32" })).toBe(
       "c:/example/forge/.claude/skills"
     );
   });
@@ -188,19 +208,19 @@ describe("D-09 access — suite 11: a ${VAR:-default} token as a PREFIX of the s
 
 describe("D-09 access — suite 12: ~ expands against homeDir; ./ and ../ resolve against composeDir", () => {
   it("~/x expands against homeDir", () => {
-    expect(resolveComposeSource("~/x", { homeDir: "C:/Example/home" })).toBe(
+    expect(resolveComposeSource("~/x", { homeDir: "C:/Example/home", platform: "win32" })).toBe(
       "c:/example/home/x"
     );
   });
 
   it("../y resolves against composeDir", () => {
     expect(
-      resolveComposeSource("../y", { composeDir: "C:/Example/repo/sub" })
+      resolveComposeSource("../y", { composeDir: "C:/Example/repo/sub", platform: "win32" })
     ).toBe("c:/example/repo/y");
   });
 
   it("./ (exactly) resolves to composeDir itself", () => {
-    expect(resolveComposeSource("./", { composeDir: "C:/Example/repo" })).toBe(
+    expect(resolveComposeSource("./", { composeDir: "C:/Example/repo", platform: "win32" })).toBe(
       "c:/example/repo"
     );
   });
