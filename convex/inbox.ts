@@ -493,3 +493,179 @@ async function runClosingStep(
     nextCursor: lastCursorValue ?? cursor,
   };
 }
+
+/**
+ * The delete step: permanently removes rows whose `closedAt` is more than
+ * `INBOX_CLOSED_GRACE_SEC` in the past, excluding `held` unconditionally
+ * (`shouldDeleteClosed` above).
+ *
+ * Reads the SAME `by_closedAt` index as the closing step, this time as a
+ * range on `closedAt` itself: rows with `closedAt` absent are STRUCTURALLY
+ * excluded from this range rather than merely filtered out of it — Convex's
+ * index value ordering is `undefined < null < all other values`
+ * (controlVerbSwaps.ts:105-109, independently re-derived at
+ * media.ts:733-736), so an absent `closedAt` sorts below any real cursor. A
+ * not-yet-closed row cannot be reached by this query even if every
+ * post-query predicate in this file were deleted — a stronger guarantee
+ * than the carve-out predicates, which have no database-level backstop.
+ *
+ * Cursor-seeked on `closedAt` via `partitionBatchForPrune`'s extractor,
+ * falling back to `0` only for the type-total case of a row somehow lacking
+ * `closedAt` inside `toDelete` — unreachable given the structural exclusion
+ * above, but keeps the extractor defined for every input.
+ */
+async function runDeletingStep(
+  ctx: JanitorCtx,
+  cursor: number,
+  nowSec: number
+): Promise<{ actedCount: number; batchLength: number; nextCursor: number }> {
+  const cutoff = nowSec - INBOX_CLOSED_GRACE_SEC;
+
+  const batch: any[] = await ctx.db
+    .query("inbox")
+    .withIndex("by_closedAt", (q: any) => q.gte("closedAt", cursor).lt("closedAt", cutoff))
+    .order("asc")
+    .take(INBOX_JANITOR_BATCH_SIZE);
+
+  const { toDelete, lastCursorValue } = partitionBatchForPrune<any>(
+    batch,
+    shouldDeleteClosed,
+    (doc: any) => doc.closedAt ?? 0
+  );
+
+  for (const row of toDelete) {
+    await ctx.db.delete(row._id);
+  }
+
+  return {
+    actedCount: toDelete.length,
+    batchLength: batch.length,
+    nextCursor: lastCursorValue ?? cursor,
+  };
+}
+
+/**
+ * `autoCloseAndPruneHandler(ctx, args, nowSec)` — the two-step
+ * self-rescheduling chain. Args default to
+ * `{ step: "closing", cursor: 0, batchesDone: 0 }` when omitted, which is
+ * the chain's first invocation (kicked off by the cron with `{}`).
+ *
+ * `batchesDone` is carried ACROSS the `"closing"` -> `"deleting"`
+ * transition and NEVER reset — resetting it would give one chain
+ * invocation a fresh full budget for its second step, doubling the worst
+ * case with no cap governing it. Only `cursor` resets between steps,
+ * because the two steps range over different fields (`createdAt` vs
+ * `closedAt`).
+ *
+ * Every reschedule decision is ALSO gated on
+ * `batchesDone + 1 < INBOX_JANITOR_MAX_BATCHES` — the batch already in
+ * flight still completes, but the chain must not reschedule past its own
+ * ceiling. This is media.ts:765-779's exact arithmetic (`batchWasFull &&
+ * batchesUsedAfter < MAX`), applied to both steps and to the
+ * closing-to-deleting transition alike.
+ *
+ * Logs UNCONDITIONALLY on every invocation, including a zero-work one —
+ * deliberately unlike media.ts's `pruneTrashBatchHandler`, which logs only
+ * when `deletedCount > 0`. R-01 makes the ran-and-matched-nothing line a
+ * hard requirement for the sibling `ideation` janitor, and Verification F
+ * reads `docker logs convex-backend` rather than either janitor's own
+ * success line, so a silent invocation is invisible to the only instrument
+ * that can see this failure mode.
+ */
+export async function autoCloseAndPruneHandler(
+  ctx: JanitorCtx,
+  args: { step?: "closing" | "deleting"; cursor?: number; batchesDone?: number },
+  nowSec: number
+): Promise<{
+  step: "closing" | "deleting";
+  actedCount: number;
+  nextCursor: number;
+  rescheduled: boolean;
+}> {
+  const step = args.step ?? "closing";
+  const cursor = args.cursor ?? 0;
+  const batchesDone = args.batchesDone ?? 0;
+
+  // Entry guard, before any read — mirrors media.ts:720-725's
+  // TRASH_PRUNE_MAX_BATCHES check. Refuses to do ANY work, not even read a
+  // batch, once this chain has already used its per-chain ceiling.
+  if (batchesDone >= INBOX_JANITOR_MAX_BATCHES) {
+    console.log(
+      `inbox: auto-close/prune per-chain batch cap (${INBOX_JANITOR_MAX_BATCHES}) already reached at step "${step}", cursor ${cursor}; remainder deferred to the next scheduled run`
+    );
+    return { step, actedCount: 0, nextCursor: cursor, rescheduled: false };
+  }
+
+  const result =
+    step === "closing"
+      ? await runClosingStep(ctx, cursor, nowSec)
+      : await runDeletingStep(ctx, cursor, nowSec);
+
+  const batchesUsedAfter = batchesDone + 1;
+  const batchWasFull = result.batchLength >= INBOX_JANITOR_BATCH_SIZE;
+  const underCap = batchesUsedAfter < INBOX_JANITOR_MAX_BATCHES;
+
+  let rescheduled = false;
+  let nextStep: "closing" | "deleting" = step;
+  let nextCursor = result.nextCursor;
+
+  if (step === "closing") {
+    if (batchWasFull && underCap) {
+      // More stale-open/already-acked rows may remain past this batch —
+      // continue the closing step with the advanced cursor.
+      rescheduled = true;
+      nextStep = "closing";
+    } else if (underCap) {
+      // Short batch: the open set past the cutoff is drained (the query is
+      // already range-bounded by cutoff, so every returned doc was
+      // eligible). Move to the deleting step. Only the cursor resets here
+      // — batchesDone carries forward unchanged (see docstring above).
+      rescheduled = true;
+      nextStep = "deleting";
+      nextCursor = 0;
+    }
+    // else: this batch itself hit the per-chain ceiling — fall through to
+    // rescheduled = false, deferring the remainder (including the deleting
+    // step) to the next scheduled run, same as media.ts's own cap behavior.
+  } else {
+    // "deleting"
+    if (batchWasFull && underCap) {
+      rescheduled = true;
+      nextStep = "deleting";
+    }
+    // A short deleting batch means the range is drained (already
+    // cutoff-bounded) — the chain is fully done, nothing left to
+    // reschedule for.
+  }
+
+  if (rescheduled) {
+    await ctx.scheduler.runAfter(INBOX_JANITOR_RESCHEDULE_MS, internal.inbox.autoCloseAndPrune, {
+      step: nextStep,
+      cursor: nextCursor,
+      batchesDone: batchesUsedAfter,
+    });
+  }
+
+  console.log(
+    `inbox: auto-close/prune step "${step}" acted on ${result.actedCount} row(s), next cursor ${result.nextCursor}, batches used ${batchesUsedAfter}/${INBOX_JANITOR_MAX_BATCHES}${rescheduled ? `, rescheduled to step "${nextStep}"` : ", chain complete"}`
+  );
+
+  return { step, actedCount: result.actedCount, nextCursor: result.nextCursor, rescheduled };
+}
+
+/**
+ * `internalMutation`, same rationale as media.ts's `pruneTrashBatch`
+ * (T-118-02, mirrored here as T-127-08): an irreversible permanent delete
+ * with no UI control anywhere in this phase; only the cron
+ * (`convex/crons.ts`, wired outside this plan's `files_modified`) may reach
+ * it.
+ */
+export const autoCloseAndPrune = internalMutation({
+  args: {
+    step: v.optional(v.union(v.literal("closing"), v.literal("deleting"))),
+    cursor: v.optional(v.float64()),
+    batchesDone: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) =>
+    autoCloseAndPruneHandler(ctx as JanitorCtx, args, Date.now() / 1000),
+});
