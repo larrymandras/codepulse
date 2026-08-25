@@ -334,6 +334,16 @@ const HEADER_ZONE_SETTLE_TIMEOUT_MS = 20000;
 test.describe('Header three-zone min-content measurement — D-06 branch decision (124-10)', () => {
   for (const width of HEADER_ZONE_WIDTHS) {
     test(`${width}px — header zone min-content vs available width`, async ({ page }) => {
+      // Worst-case wait budget here is 15s + 15s (the two toBeVisible render
+      // gates, sequential, both maxed out) + 20s (HEADER_ZONE_SETTLE_TIMEOUT_MS,
+      // the settle poll below) = up to ~50s, which exceeds Playwright's default
+      // 30s per-test timeout. Without this, a genuinely slow-but-not-broken run
+      // (e.g. under the same 11-worker contention that motivated the settle
+      // loop) would be killed by Playwright's OWN timeout before the mechanism
+      // below gets to fail (or pass) on its own terms -- an unrelated failure
+      // mode, not evidence about the race this test exists to catch.
+      test.setTimeout(60_000);
+
       await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
       await page.goto('/');
 
@@ -436,10 +446,12 @@ test.describe('Header three-zone min-content measurement — D-06 branch decisio
 
       expect(
         Math.abs(evidence1.sumMinContentWidth - evidence2.sumMinContentWidth),
-        `sumMinContentWidth must AGREE between the gated reading (${evidence1.sumMinContentWidth}) ` +
-          `and the re-read after an additional 3s settle (${evidence2.sumMinContentWidth}) within ` +
-          `${HEADER_ZONE_AGREEMENT_TOLERANCE_PX}px — disagreement means the wait above did not ` +
-          `actually close the race`
+        `sumMinContentWidth must AGREE between two CONSECUTIVE readings ` +
+          `${HEADER_ZONE_SETTLE_POLL_MS}ms apart (${evidence1.sumMinContentWidth} vs ` +
+          `${evidence2.sumMinContentWidth}, after ${settleAttempts} settle attempt(s), ` +
+          `deadline ${HEADER_ZONE_SETTLE_TIMEOUT_MS}ms) within ${HEADER_ZONE_AGREEMENT_TOLERANCE_PX}px ` +
+          `— disagreement means the settle loop above hit its deadline without the ` +
+          `measurement stabilizing`
       ).toBeLessThan(HEADER_ZONE_AGREEMENT_TOLERANCE_PX);
 
       // Permanent regression guard (Task 1's own acceptance criterion). The
