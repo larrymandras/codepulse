@@ -1,7 +1,8 @@
 {
   "workflow": {
     "_auto_chain_active": false,
-    "use_worktrees": false,
-    "adversarial_verification": false
+    "use_worktrees": true,
+    "adversarial_verification": false,
+    "worktree_prep": "bash $HOME/.claude/scripts/gsd-worktree-prep.sh"
   }
 }
