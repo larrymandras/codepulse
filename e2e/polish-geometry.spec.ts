@@ -326,6 +326,10 @@ async function readHeaderZonesEvidence(
 }
 
 const HEADER_ZONE_AGREEMENT_TOLERANCE_PX = 1;
+// Settle poll for the agreement wait (see the long note at its use site).
+// Bounded: on expiry the agreement assertion FAILS rather than skipping.
+const HEADER_ZONE_SETTLE_POLL_MS = 500;
+const HEADER_ZONE_SETTLE_TIMEOUT_MS = 20000;
 
 test.describe('Header three-zone min-content measurement — D-06 branch decision (124-10)', () => {
   for (const width of HEADER_ZONE_WIDTHS) {
@@ -364,7 +368,54 @@ test.describe('Header three-zone min-content measurement — D-06 branch decisio
         );
       }
 
-      const evidence1 = await readHeaderZonesEvidence(header, width);
+      // 126-04 (SWEEP-07): the agreement assertion below is the point of this
+      // block. A single passing reading cannot distinguish "the race is fixed"
+      // from "the race did not fire this time" (the todo's own words), so this
+      // spec asserts its OWN two readings agree, on every run, forever, rather
+      // than relying on a human re-running it twice by hand.
+      //
+      // REVISED 2026-08-24 (orchestrator verification of 126-04). The original
+      // shape here was: read once, `waitForTimeout(3000)`, read again, compare.
+      // That was FLAKY under parallel load — measured FAIL, FAIL, PASS across
+      // three consecutive full-file runs (11 tests, 11 workers, one shared dev
+      // server), while the same test run in isolation passed every time. The
+      // assertion's own message names the cause exactly: the wait above did not
+      // close the race. Under worker contention the header is still settling
+      // when the first reading is taken, and a single fixed 3s sleep is not a
+      // settle condition — it is a guess about how slow the machine is.
+      //
+      // Two remedies were deliberately REJECTED. Raising
+      // HEADER_ZONE_AGREEMENT_TOLERANCE_PX masks the race and turns a real
+      // signal into a vacuous pass — the exact defect class SWEEP-07 exists to
+      // remove. Serializing this file (workers: 1) makes the symptom disappear
+      // without establishing the wait is sufficient, and would leave the spec
+      // measuring under conditions it does not actually run in.
+      //
+      // Instead the WAIT now polls until two CONSECUTIVE readings agree. The
+      // window slides — a first reading taken too early can never be agreed
+      // with, so holding it fixed would just fail forever — and the loop is
+      // bounded. On timeout it falls through to the assertion, which FAILS with
+      // its existing message rather than skipping. The wait's job is to close
+      // the race; the assertion's job is to prove it closed. Both stay.
+      let evidence1 = await readHeaderZonesEvidence(header, width);
+      let evidence2 = evidence1;
+      let settleAttempts = 0;
+      const settleDeadline = Date.now() + HEADER_ZONE_SETTLE_TIMEOUT_MS;
+
+      for (;;) {
+        await page.waitForTimeout(HEADER_ZONE_SETTLE_POLL_MS);
+        evidence2 = await readHeaderZonesEvidence(header, width);
+        settleAttempts++;
+        const delta = Math.abs(
+          evidence1.sumMinContentWidth - evidence2.sumMinContentWidth
+        );
+        if (delta < HEADER_ZONE_AGREEMENT_TOLERANCE_PX) break;
+        if (Date.now() >= settleDeadline) break; // assertion below fails, by design
+        evidence1 = evidence2; // slide the window and try the next pair
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`HEADER-ZONES-SETTLE ${JSON.stringify({ width, settleAttempts })}`);
 
       // eslint-disable-next-line no-console
       console.log(`HEADER-ZONES-EVIDENCE-1 ${JSON.stringify(evidence1)}`);
@@ -374,18 +425,6 @@ test.describe('Header three-zone min-content measurement — D-06 branch decisio
         evidence1.innerWidth,
         `in-page window.innerWidth (${evidence1.innerWidth}) must match the requested viewport width (${width}) or this tier is VOID`
       ).toBe(width);
-
-      // 126-04 (SWEEP-07): the agreement assertion itself. A single passing
-      // reading cannot distinguish "the race is fixed" from "the race did
-      // not fire this time" (the todo's own words) — so this spec asserts
-      // its OWN two readings agree, on every run, forever, rather than
-      // relying on a human re-running it twice by hand. The extra settle
-      // here is a redundancy check on top of the real wait above, not the
-      // primary wait itself — a bare timeout would be forbidden as the
-      // PRIMARY wait mechanism, but is fine as a second confirmation once
-      // the real wait has already gated the measurement.
-      await page.waitForTimeout(3000);
-      const evidence2 = await readHeaderZonesEvidence(header, width);
 
       // eslint-disable-next-line no-console
       console.log(`HEADER-ZONES-EVIDENCE-2 ${JSON.stringify(evidence2)}`);
