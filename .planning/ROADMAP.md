@@ -983,7 +983,7 @@ Plans:
 
 **Depends on**: Phase 126's coverage gate (`convex/retentionCoverage.ts` + `retentionCoverage.test.ts`), which is already shipped and is what identified these two. No dependency on 125. Can run before or after 126; it touches the WRITE/retention side of `inbox`, while 126 owns the READ side — see the scope boundary below.
 
-**Requirements**: TBD — derive at planning time from `127-CONTEXT.md`'s D-01..D-11.
+**Requirements**: JANITOR-01 (inbox ack-aware janitor), JANITOR-02 (ideationFindings janitor), JANITOR-03 (coverage-bucket move into `COVERAGE_BOUNDED_BY_CRON`) — minted at planning time 2026-08-25, defined in `.planning/REQUIREMENTS.md`.
 
 **Success Criteria** (what must be TRUE):
 
@@ -1001,11 +1001,18 @@ Plans:
 - **Do not cap `inbox.listHeldUnacked`.** It is Phase 126's item, and the roadmap caution on that phase applies unchanged: `convex/inboxIngest.ts:174` consumes it server-side for `focus_digest.py` and needs the true unbounded set. This phase reduces that read's severity by shrinking the table; it must not close it.
 - **`ideationFindings`' proposed 180d window cannot fire yet.** The oldest row is 94 days old (verified), so auto-dismiss matches nothing for ~86 more days. That is inert-by-design, not broken — but the janitor must log that it ran and matched nothing, so the two are distinguishable. Shortening the window is an open planning decision.
 
-**Plans**: TBD
+**Plans**: 8 plans in 5 waves
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 127 to break down)
+- [ ] 127-01-PLAN.md — generalize `partitionBatchForPrune`'s cursor field; add `inbox.closedAt` + `by_closedAt`, widen `by_dismissed`, add `by_dismissedAt` (wave 1)
+- [ ] 127-02-PLAN.md — `internal.inbox.autoCloseAndPrune`: two-step auto-close/delete chain (wave 2)
+- [ ] 127-03-PLAN.md — `internal.ideation.autoCloseAndPrune`, incl. R-01's mandatory inert-run log (wave 2)
+- [ ] 127-04-PLAN.md — inbox janitor tests: Verifications A, B, C, D + R-02's never-patches-`ackedAt` guard (wave 3)
+- [ ] 127-05-PLAN.md — ideation janitor tests: Verifications A, B, C, D + R-01's log assertion (wave 3)
+- [ ] 127-06-PLAN.md — two `crons.daily()` registrations at 08:20/08:35 UTC + the D-09 coverage-bucket move (wave 3)
+- [ ] 127-07-PLAN.md — Verification B's manual mutation-testing control: delete each guard, confirm the outcome flips (wave 4)
+- [ ] 127-08-PLAN.md — `ackedAt` consumer sweep, [BLOCKING] Convex schema deploy + index-diff read, Verification F first-run watch (wave 5)
 
 ---
 

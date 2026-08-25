@@ -1,9 +1,9 @@
 ---
 phase: 127
 slug: ack-aware-retention-janitors
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: planned  # task IDs assigned 2026-08-25 by /gsd:plan-phase 127
+nyquist_compliant: true
+wave_0_complete: false  # tests are Wave 3 (plans 127-04, 127-05); the handlers they cover are Wave 2
 created: 2026-08-25
 ---
 
@@ -44,20 +44,23 @@ see "Known limitation" below.
 
 ## Per-Task Verification Map
 
-Task IDs are assigned by the planner; rows below are keyed on CONTEXT.md's
-Verification Criteria labels until then. Requirement IDs do not yet exist in
-`.planning/REQUIREMENTS.md` — RESEARCH.md recommends minting three (one per table
-janitor, one for the coverage-bucket move).
+Task IDs assigned 2026-08-25. Requirement IDs were minted at the same time and now
+exist in `.planning/REQUIREMENTS.md`: **JANITOR-01** (inbox janitor), **JANITOR-02**
+(ideationFindings janitor), **JANITOR-03** (coverage-bucket move) — the three-way split
+RESEARCH.md recommended, confirmed by the planner.
+
+Note the table below covers `inbox` rows; the identical A/B/C/D set exists for
+`ideationFindings` in plan 127-05, against `dismissed`/`dismissedAt` instead of `closedAt`.
 
 | Task ID | Plan | Wave | Requirement | Verification | Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|--------------|----------|-----------|-------------------|-------------|--------|
-| TBD | TBD | 0 | TBD | **A** | Absent `closedAt` (inbox) / `dismissedAt` (ideationFindings) structurally excluded from the delete-step index range — asserted at the QUERY layer, with a control row whose field is explicitly `0` that IS returned | unit (query-layer, NOT outcome-layer) | `npx vitest run convex/inbox.test.ts -t "structural"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 0 | TBD | **B** | `held` / `money` / `critical`+`high` carve-outs survive a guard-deletion mutation-testing control | unit (mutation pair: intact run + guard-removed re-run) | `npx vitest run convex/inbox.test.ts -t "carve-out"` · `convex/ideation.test.ts -t "carve-out"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 0 | TBD | **C** | An all-excluded batch still advances the cursor and does not reschedule unchanged | unit — direct regression test for `retentionCursor.ts:122-139` | `npx vitest run convex/inbox.test.ts -t "cursor advances on skip"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 0 | TBD | **D** | Full-batch reschedules / short-batch stops / ceiling reached does zero further work | unit — adapted from `media.test.ts:636-713` | `npx vitest run convex/inbox.test.ts -t "batch"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | — | TBD | **E** | Both tables in `COVERAGE_BOUNDED_BY_CRON`, both crons registered LIVE (non-commented) | unit — existing machine-check | `npx vitest run convex/retentionCoverage.test.ts` | ✅ mechanism exists (`retentionCoverage.test.ts:130-142`); only the DATA is new | ⬜ pending |
-| TBD | TBD | — | TBD | **R-02** | Auto-close step's patch call NEVER names `ackedAt` (source-level assertion, per `media.test.ts:740-743` convention) | unit — source-text assertion | `npx vitest run convex/inbox.test.ts -t "never patches ackedAt"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | — | TBD | **F** | First backlog-draining run observed in `docker logs convex-backend` with no crash-loop | **manual** — see Manual-Only below | n/a | N/A | ⬜ pending |
+| 127-04 T1 | 127-04 | 3 | JANITOR-01 | **A** | Absent `closedAt` (inbox) / `dismissedAt` (ideationFindings) structurally excluded from the delete-step index range — asserted at the QUERY layer, with a control row whose field is explicitly `0` that IS returned | unit (query-layer, NOT outcome-layer) | `npx vitest run convex/inbox.test.ts -t "structural"` | ❌ W0 | ⬜ pending |
+| 127-04 T2 + 127-05 T2 (auto) / 127-07 T1 (manual control) | 127-04 | 3 | JANITOR-01, JANITOR-02 | **B** | `held` / `money` / `critical`+`high` carve-outs survive a guard-deletion mutation-testing control | unit (mutation pair: intact run + guard-removed re-run) | `npx vitest run convex/inbox.test.ts -t "carve-out"` · `convex/ideation.test.ts -t "carve-out"` | ❌ W0 | ⬜ pending |
+| 127-04 T3 + 127-05 T2 | 127-04 | 3 | JANITOR-01, JANITOR-02 | **C** | An all-excluded batch still advances the cursor and does not reschedule unchanged | unit — direct regression test for `retentionCursor.ts:122-139` | `npx vitest run convex/inbox.test.ts -t "cursor advances on skip"` | ❌ W0 | ⬜ pending |
+| 127-04 T3 + 127-05 T2 | 127-04 | 3 | JANITOR-01, JANITOR-02 | **D** | Full-batch reschedules / short-batch stops / ceiling reached does zero further work | unit — adapted from `media.test.ts:636-713` | `npx vitest run convex/inbox.test.ts -t "batch"` | ❌ W0 | ⬜ pending |
+| 127-06 T2 | 127-06 | 3 | JANITOR-03 | **E** | Both tables in `COVERAGE_BOUNDED_BY_CRON`, both crons registered LIVE (non-commented) | unit — existing machine-check | `npx vitest run convex/retentionCoverage.test.ts` | ✅ mechanism exists (`retentionCoverage.test.ts:130-142`); only the DATA is new | ⬜ pending |
+| 127-04 T1 | 127-04 | 3 | JANITOR-01 | **R-02** | Auto-close step's patch call NEVER names `ackedAt` (source-level assertion, per `media.test.ts:740-743` convention) | unit — source-text assertion | `npx vitest run convex/inbox.test.ts -t "never patches ackedAt"` | ❌ W0 | ⬜ pending |
+| 127-08 T3 | 127-08 | 5 | JANITOR-01, JANITOR-02 | **F** | First backlog-draining run observed in `docker logs convex-backend` with no crash-loop | **manual** — see Manual-Only below | n/a | N/A | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -123,6 +126,18 @@ same cutoff) is what keeps the test meaningful rather than tautological — keep
 - [ ] Feedback latency < 30s
 - [ ] Verification R-02 (`ackedAt` never patched) present in a plan
 - [ ] Verification A's limitation stated explicitly in the plan text
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] `nyquist_compliant: true` set in frontmatter
+- [x] Verification R-02 present in plan 127-04, Task 1 (behavioural + source-level, with a
+      `closedAt:` control hit so the `ackedAt` zero is discriminating)
+- [x] Verification A's limitation required in the plan text AND in the test file (127-04 T1,
+      127-05 T1)
+- [x] Two verifications added that CONTEXT.md's A-F list does not carry, both mandatory:
+      a **unit-scale control** (a row created this instant must NOT be auto-closed) and, for
+      `ideationFindings`, R-01's **zero-row log assertion** with a non-1970 cutoff year. Every
+      timestamp in both tables is epoch SECONDS while the `media.ts` template this phase clones
+      is MILLISECONDS — a cutoff computed in ms and compared against a seconds field is larger
+      than every row's timestamp, so the janitor would auto-close rows created moments ago.
+      Neither source artifact states the units.
 
-**Approval:** pending
+**Approval:** planner-approved 2026-08-25. Sign-off items above verified against the eight
+PLAN.md files as written; the two manual gates (127-07, 127-08) remain outstanding by design.
