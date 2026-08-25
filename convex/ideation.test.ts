@@ -18,7 +18,13 @@
  * this plan) can actually turn a test red.
  */
 import { describe, it, expect, vi } from "vitest";
-import { autoCloseAndPruneHandler } from "./ideation";
+import {
+  autoCloseAndPruneHandler,
+  shouldAutoDismiss,
+  shouldDeleteDismissed,
+  IDEATION_JANITOR_BATCH_SIZE,
+  IDEATION_JANITOR_MAX_BATCHES,
+} from "./ideation";
 
 // Independent restatements of the janitor's age thresholds -- NOT imported
 // from ideation.ts -- so these tests are a real check on the threshold
@@ -27,6 +33,7 @@ import { autoCloseAndPruneHandler } from "./ideation";
 // (media.test.ts:572).
 const DAY_SEC = 24 * 60 * 60;
 const AUTO_DISMISS_AGE_SEC_TEST = 180 * DAY_SEC;
+const DISMISSED_GRACE_SEC_TEST = 90 * DAY_SEC;
 
 type FakeRow = Record<string, unknown> & { _id: string };
 
@@ -245,3 +252,241 @@ describe("ideation janitor — unit-scale control (seconds, not milliseconds)", 
     expect(patch).toHaveBeenCalledWith("old-enough", { dismissed: true, dismissedAt: nowSec });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Verification B (carve-out): critical/high severity survives auto-dismiss;
+// a same-batch medium row is dismissed and, once the grace period elapses,
+// deleted. Plus the delete-step asymmetry case: a HUMAN-dismissed critical
+// row has nothing left protecting it and must be deleted like any other
+// closed row.
+// ---------------------------------------------------------------------------
+describe("ideation janitor — Verification B (carve-out): predicates", () => {
+  it("shouldAutoDismiss excludes critical and high; includes medium and low. shouldDeleteDismissed is unconditionally true", () => {
+    expect(shouldAutoDismiss({ severity: "critical" })).toBe(false);
+    expect(shouldAutoDismiss({ severity: "high" })).toBe(false);
+    expect(shouldAutoDismiss({ severity: "medium" })).toBe(true);
+    expect(shouldAutoDismiss({ severity: "low" })).toBe(true);
+
+    expect(shouldDeleteDismissed({ severity: "critical" })).toBe(true);
+    expect(shouldDeleteDismissed({ severity: "high" })).toBe(true);
+    expect(shouldDeleteDismissed({ severity: "medium" })).toBe(true);
+  });
+});
+
+describe("ideation janitor — Verification B (carve-out): critical/high survive auto-dismiss while a same-batch medium row is dismissed and later deleted", () => {
+  it("critical and high rows stay open through the dismissing step; the medium row is patched then, after the grace period, deleted", async () => {
+    const nowSec = 1_800_000_000;
+    const veryOld = nowSec - 400 * DAY_SEC;
+    const rows: FakeRow[] = [
+      { _id: "critical1", severity: "critical", dismissed: false, createdAt: veryOld },
+      { _id: "high1", severity: "high", dismissed: false, createdAt: veryOld },
+      // The control that proves the run did any work at all -- a
+      // critical-and-high-only fixture would pass against a handler that
+      // does nothing.
+      { _id: "medium1", severity: "medium", dismissed: false, createdAt: veryOld },
+    ];
+    const { ctx, patch, delete: del } = makeIdeationJanitorMockCtx(rows);
+
+    await autoCloseAndPruneHandler(ctx, { step: "dismissing" }, nowSec);
+
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(patch).toHaveBeenCalledWith("medium1", { dismissed: true, dismissedAt: nowSec });
+
+    const critRow = rows.find((r) => r._id === "critical1")!;
+    const highRow = rows.find((r) => r._id === "high1")!;
+    expect(critRow.dismissed).toBe(false);
+    expect(critRow.dismissedAt).toBeUndefined();
+    expect(highRow.dismissed).toBe(false);
+    expect(highRow.dismissedAt).toBeUndefined();
+
+    // Simulate the grace period elapsing (independently restated
+    // DISMISSED_GRACE_SEC_TEST, plus one day of headroom), then run the
+    // delete step against the SAME fixture (patch already mutated medium1
+    // in place above).
+    const laterSec = nowSec + DISMISSED_GRACE_SEC_TEST + DAY_SEC;
+    await autoCloseAndPruneHandler(ctx, { step: "deleting" }, laterSec);
+
+    expect(del).toHaveBeenCalledWith("medium1");
+    expect(del).not.toHaveBeenCalledWith("critical1");
+    expect(del).not.toHaveBeenCalledWith("high1");
+
+    expect(rows.some((r) => r._id === "medium1")).toBe(false);
+    expect(rows.some((r) => r._id === "critical1")).toBe(true);
+    expect(rows.some((r) => r._id === "high1")).toBe(true);
+  });
+});
+
+describe("ideation janitor — Verification B (carve-out): delete-step asymmetry — a human-dismissed critical row IS deleted", () => {
+  it("a critical row a HUMAN dismissed long ago is deleted; an undismissed critical row in the same fixture survives", async () => {
+    const nowSec = 1_800_000_000;
+    const oldDismissedAt = nowSec - 400 * DAY_SEC;
+    const rows: FakeRow[] = [
+      {
+        _id: "critical-human-dismissed",
+        severity: "critical",
+        dismissed: true,
+        dismissedAt: oldDismissedAt,
+        createdAt: oldDismissedAt - DAY_SEC,
+      },
+      // The pair that discriminates: without this row, a handler that
+      // deletes every critical row regardless of dismissal state would
+      // also pass.
+      { _id: "critical-still-open", severity: "critical", dismissed: false, createdAt: oldDismissedAt },
+    ];
+    const { ctx, delete: del } = makeIdeationJanitorMockCtx(rows);
+
+    await autoCloseAndPruneHandler(ctx, { step: "deleting" }, nowSec);
+
+    expect(del).toHaveBeenCalledWith("critical-human-dismissed");
+    expect(del).not.toHaveBeenCalledWith("critical-still-open");
+    expect(rows.some((r) => r._id === "critical-still-open")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Verification C: an entirely carved-out batch still advances the cursor
+// (D-08) -- direct regression test for retentionCursor.ts's
+// partitionBatchForPrune lastCursorValue behaviour, applied to this table.
+// ---------------------------------------------------------------------------
+describe("ideation janitor — Verification C: cursor advances on skip (all-carved-out batch)", () => {
+  it("a FULL batch of entirely carved-out (critical) rows advances the cursor and does NOT reschedule with an unchanged cursor", async () => {
+    const nowSec = 1_800_000_000;
+    const veryOld = nowSec - 400 * DAY_SEC;
+    const rows: FakeRow[] = Array.from({ length: IDEATION_JANITOR_BATCH_SIZE }, (_, i) => ({
+      _id: `critical-${i}`,
+      severity: "critical",
+      dismissed: false,
+      createdAt: veryOld + i, // strictly increasing
+    }));
+    const { ctx, patch, runAfter } = makeIdeationJanitorMockCtx(rows);
+
+    const result = await autoCloseAndPruneHandler(ctx, { step: "dismissing", cursor: 0, batchesDone: 0 }, nowSec);
+
+    expect(patch).not.toHaveBeenCalled();
+    expect(result.actedCount).toBe(0);
+    expect(result.rescheduled).toBe(true);
+    expect(result.nextCursor).toBeGreaterThan(0);
+
+    expect(runAfter).toHaveBeenCalledTimes(1);
+    const [, , scheduledArgs] = runAfter.mock.calls[0] as [number, unknown, { cursor: number }];
+    expect(scheduledArgs.cursor).toBeGreaterThan(0);
+    expect(scheduledArgs.cursor).not.toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Verification D: full batch reschedules, short batch stops, ceiling does
+// zero work, and batchesDone carries across the dismissing -> deleting
+// transition. Adapted from media.test.ts:636-713.
+// ---------------------------------------------------------------------------
+describe("ideation janitor — Verification D (batch): full batch reschedules the SAME step with batchesDone: 1", () => {
+  it("a FULL dismissing batch reads .take(IDEATION_JANITOR_BATCH_SIZE) and reschedules with an advanced cursor and batchesDone: 1", async () => {
+    const nowSec = 1_800_000_000;
+    const veryOld = nowSec - 400 * DAY_SEC;
+    const rows: FakeRow[] = Array.from({ length: IDEATION_JANITOR_BATCH_SIZE }, (_, i) => ({
+      _id: `medium-${i}`,
+      severity: "medium",
+      dismissed: false,
+      createdAt: veryOld + i,
+    }));
+    const { ctx, runAfter, getTakeCalledWith } = makeIdeationJanitorMockCtx(rows);
+
+    const result = await autoCloseAndPruneHandler(ctx, { step: "dismissing", cursor: 0, batchesDone: 0 }, nowSec);
+
+    expect(getTakeCalledWith()).toBe(IDEATION_JANITOR_BATCH_SIZE);
+    expect(result.rescheduled).toBe(true);
+    expect(result.step).toBe("dismissing");
+    expect(runAfter).toHaveBeenCalledTimes(1);
+    const [, , scheduledArgs] = runAfter.mock.calls[0] as [number, unknown, { step: string; cursor: number; batchesDone: number }];
+    expect(scheduledArgs.step).toBe("dismissing");
+    expect(scheduledArgs.cursor).toBeGreaterThan(0);
+    expect(scheduledArgs.batchesDone).toBe(1);
+  });
+});
+
+describe("ideation janitor — Verification D (batch): control — a short batch does NOT reschedule", () => {
+  it("a SHORT deleting batch does not reschedule", async () => {
+    const nowSec = 1_800_000_000;
+    const rows: FakeRow[] = [
+      { _id: "only-one", severity: "medium", dismissed: true, dismissedAt: nowSec - 400 * DAY_SEC },
+    ];
+    const { ctx, runAfter } = makeIdeationJanitorMockCtx(rows);
+
+    const result = await autoCloseAndPruneHandler(ctx, { step: "deleting" }, nowSec);
+
+    expect(result.rescheduled).toBe(false);
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+});
+
+describe("ideation janitor — Verification D (batch): per-chain batch ceiling", () => {
+  it("batchesDone already AT the ceiling: zero work, no reschedule", async () => {
+    const nowSec = 1_800_000_000;
+    const veryOld = nowSec - 400 * DAY_SEC;
+    const rows: FakeRow[] = Array.from({ length: IDEATION_JANITOR_BATCH_SIZE }, (_, i) => ({
+      _id: `medium-${i}`,
+      severity: "medium",
+      dismissed: false,
+      createdAt: veryOld + i,
+    }));
+    const { ctx, patch, runAfter } = makeIdeationJanitorMockCtx(rows);
+
+    const result = await autoCloseAndPruneHandler(
+      ctx,
+      { step: "dismissing", cursor: 0, batchesDone: IDEATION_JANITOR_MAX_BATCHES },
+      nowSec
+    );
+
+    expect(result.rescheduled).toBe(false);
+    expect(runAfter).not.toHaveBeenCalled();
+    expect(patch).not.toHaveBeenCalled();
+    expect(result.actedCount).toBe(0);
+  });
+
+  it("a FULL batch that reaches the ceiling on THIS invocation still does its own work but does not reschedule further", async () => {
+    const nowSec = 1_800_000_000;
+    const veryOld = nowSec - 400 * DAY_SEC;
+    const rows: FakeRow[] = Array.from({ length: IDEATION_JANITOR_BATCH_SIZE }, (_, i) => ({
+      _id: `medium-${i}`,
+      severity: "medium",
+      dismissed: false,
+      createdAt: veryOld + i,
+    }));
+    const { ctx, patch, runAfter } = makeIdeationJanitorMockCtx(rows);
+
+    const result = await autoCloseAndPruneHandler(
+      ctx,
+      { step: "dismissing", cursor: 0, batchesDone: IDEATION_JANITOR_MAX_BATCHES - 1 },
+      nowSec
+    );
+
+    // The work for this batch still happens -- an unbounded self-reschedule
+    // is the risk, not doing the batch that's already in flight.
+    expect(patch).toHaveBeenCalledTimes(IDEATION_JANITOR_BATCH_SIZE);
+    expect(result.rescheduled).toBe(false);
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+});
+
+describe("ideation janitor — Verification D (batch): dismissing -> deleting transition carries batchesDone forward", () => {
+  it("a SHORT dismissing batch transitions to deleting with cursor: 0 and batchesDone: 1 (carried forward, never reset to 0)", async () => {
+    const nowSec = 1_800_000_000;
+    const rows: FakeRow[] = [
+      { _id: "medium1", severity: "medium", dismissed: false, createdAt: nowSec - 400 * DAY_SEC },
+    ];
+    const { ctx, runAfter } = makeIdeationJanitorMockCtx(rows);
+
+    const result = await autoCloseAndPruneHandler(ctx, { step: "dismissing" }, nowSec);
+
+    expect(result.step).toBe("deleting");
+    expect(result.rescheduled).toBe(true);
+    expect(runAfter).toHaveBeenCalledTimes(1);
+    const [, , scheduledArgs] = runAfter.mock.calls[0] as [number, unknown, { step: string; cursor: number; batchesDone: number }];
+    expect(scheduledArgs).toMatchObject({ step: "deleting", cursor: 0, batchesDone: 1 });
+  });
+});
+
+// This plan deliberately does NOT assert anything about the finding
+// lifecycle's task-linking status value -- D-10 fences that gap out of the
+// phase, and a test asserting current behaviour there would harden a gap
+// the roadmap left open on purpose.
