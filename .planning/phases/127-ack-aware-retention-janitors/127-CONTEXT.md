@@ -183,8 +183,15 @@ auto-ack is on `inbox`.
 
 | Table | Auto-close M | Grace G | Worst case (non-carve-out) |
 |---|---|---|---|
-| `inbox` | 30d unacked -> auto-ack | 14d after ack | 44d |
+| `inbox` | 30d unacked -> auto-CLOSE [see R-02] | 14d after closure | 44d |
 | `ideationFindings` | 180d open -> auto-dismiss | 90d after dismiss | 270d |
+
+>  **SUPERSEDED IN PART BY R-02 (2026-08-25).** The UX cost described below is
+>  real and was the reason R-02 was reopened — but it is no longer ACCEPTED. The
+>  janitor now stamps a dedicated `closedAt` field and never touches `ackedAt`,
+>  so no card renders as read that the operator did not see. The 14d grace
+>  itself stands. Read the rest of this subsection as the rationale that led to
+>  R-02, not as live instruction.
 
 **Why `inbox`'s grace is 14d and not 30d — a disclosed UX cost.**
 `convex/inbox.ts:64-74` derives `read: row.ackedAt != null`. So an auto-acked
@@ -222,12 +229,22 @@ decision, not an implementation detail.
 
 ### D-06: Indexes, and why no backfill is required
 
-`inbox` — one new index:
+>  **SUPERSEDED BY R-02 (2026-08-25) — DO NOT IMPLEMENT THE INDEX BELOW.**
+>  The `inbox` janitor keys on a NEW `closedAt` field, not on `ackedAt`. Add
+>  `closedAt: v.optional(v.float64())` to the table and use:
+>  `.index("by_closedAt", ["closedAt", "createdAt"])`
+>  Serving both steps identically: `.eq("closedAt", undefined)` for not-yet-closed
+>  rows ordered by `createdAt`; `.gte("closedAt", cursor).lt("closedAt", cutoff)`
+>  for the delete step. The reasoning below about absent-field ordering and "no
+>  backfill required" transfers unchanged to `closedAt` — only the field name
+>  differs. `ideationFindings` is NOT affected and keeps `dismissed`/`dismissedAt`.
+
+~~`inbox` — one new index:~~ *(superseded — kept for rationale only)*
 ```
 .index("by_ackedAt", ["ackedAt", "createdAt"])
 ```
-Serves both steps: `.eq("ackedAt", undefined)` for open rows ordered by
-`createdAt`; `.gte("ackedAt", cursor).lt("ackedAt", cutoff)` for the delete step.
+~~Serves both steps: `.eq("ackedAt", undefined)` for open rows ordered by
+`createdAt`; `.gte("ackedAt", cursor).lt("ackedAt", cutoff)` for the delete step.~~
 
 `ideationFindings` — widen `.index("by_dismissed", ["dismissed"])`
 (`schema.ts:902`) to `["dismissed", "createdAt"]`, and add
@@ -412,11 +429,13 @@ Write this BEFORE trusting D-06's "no backfill required" claim.
 
 Seed one `itemType="held"` and one `itemType="card"` row, both unacked,
 `createdAt` 400 days ago (past M and G). Run the chain to convergence. Assert the
-held row's `ackedAt` is STILL undefined AND the row still exists; the card row is
-gone.
+held row's `closedAt` is STILL undefined AND the row still exists; the card row is
+gone. (Per R-02 the held row's `ackedAt` must ALSO still be undefined — the
+janitor never writes that field for any row, held or not.)
 **Control that makes the test worth having:** delete the `itemType !== "held"`
 line in the handler and re-run the identical test — the held row must now ALSO be
-auto-acked and deleted. If removing the guard does not flip the outcome, the test
+auto-closed (`closedAt` stamped, per R-02 — NOT `ackedAt`) and deleted. If
+removing the guard does not flip the outcome, the test
 is not exercising the exclusion and proves nothing. Same shape and same control
 requirement for `priority === "money"` and for `severity IN {critical, high}`.
 
@@ -465,3 +484,146 @@ about 3 batches. Both drain inside a single nightly chain.
 - Tables: `convex/schema.ts:884-902` (ideationFindings), `2099-2118` (inbox)
 - External consumer: `convex/inbox.ts` listHeldUnackedHandler,
   `convex/inboxIngest.ts:174`
+
+## Planning-time resolutions (2026-08-25)
+
+The four items this document deferred to planning time are now SETTLED. Every
+one lands on the design as written above — no deviation. They are recorded here
+so the planner, the executor, and any resumed session read a closed decision
+rather than an open one.
+
+**R-01 (settles D-05, `ideationFindings` window M): keep M = 180d.**
+Rejected shortening to 90d. A finding open for months may mean "still unfixed
+and important", not "abandoned", and that conservatism is the point of the
+longer window. The consequence is accepted and unchanged: auto-dismiss matches
+ZERO rows until roughly 2026-11-16 and the delete step therefore has nothing to
+act on until then.
+
+**This makes D-05's inert-run log line a REQUIREMENT, not a nicety.** The
+janitor MUST emit a line stating it ran and matched nothing. For ~83 days the
+only difference between "correct and dormant" and "dead on arrival" is that log
+line; without it the mechanism is unfalsifiable in exactly the window where it
+produces no other evidence. A zero-delete run must be attributable.
+
+**R-02 (settles D-05, `inbox` delete path): auto-close then delete at G = 14d,
+closing into a NEW normalized `closedAt` field — NOT into `ackedAt`.**
+
+Rejected direct age-based deletion for `card`/`notification`/`signal`, for the
+reason D-02 gives: one index and one cursor shape beats a second index plus an
+inverted-condition range on `createdAt`, and the audit/undo window is worth
+keeping.
+
+**REVISED 2026-08-25 after adversarial review.** The original resolution had the
+janitor stamp `ackedAt`, accepting D-05's disclosed cost that an auto-acked card
+displays as read for the full grace window. That disclosure was accurate, but the
+choice was made from a false binary: D-05 framed the decision as auto-ack-vs-
+direct-delete, and a third option dominates both.
+
+`ackedAt` is the ONLY representation in this schema of *the operator saw this*.
+Verified consumers, 2026-08-25:
+
+| Consumer | Reads | Affected by a janitor stamp? |
+|---|---|---|
+| `src/pages/Inbox.tsx:130` | `read: row.ackedAt != null` | **YES** — renders as read |
+| `src/components/control-center/IntelligenceFeedPanel.tsx:64` | `stripeClass`, stripe suppressed when `ackedAt != null` | **YES** — unread stripe lost |
+| `convex/inbox.ts:281-283` `countHeldUnackedHandler` (shell badge) | counts `ackedAt === undefined` | no — `held`-only query, and `held` is carved out of both steps by D-03 |
+| `convex/inbox.ts:213` `listHeldUnackedHandler` | filters `ackedAt === undefined` | no — same reason |
+
+Note the derivation is NOT in `convex/`. D-01 and the comment at
+`convex/inbox.ts:70-72` attribute it to `inboxRowToInboxItem`; the executing code
+is in the frontend at the two paths above. The comment is accurate about the
+behaviour and misleading about the location.
+
+So: **add `closedAt: v.optional(v.float64())` to the `inbox` table.** The
+auto-close step stamps `closedAt` for BOTH cases in one pass — a row a human
+already acked (`ackedAt != null`, `closedAt` absent), and a row aged past M that
+is not carved out. The delete step cursors on `closedAt` alone.
+
+This keeps everything D-02 was protecting:
+- **One index, one cursor shape.** `by_closedAt: ["closedAt", "createdAt"]`
+  serves both steps exactly as D-06's `by_ackedAt` was to: `.eq("closedAt",
+  undefined)` yields not-yet-closed rows ordered by `createdAt` for the
+  auto-close step; a `.gte/.lt` range on `closedAt` serves the delete step.
+- **The audit/undo window**, unchanged at 14d.
+- **The absent-field structural guarantee of D-06**, unchanged — it now attaches
+  to `closedAt` rather than `ackedAt`, and is if anything cleaner, because
+  `closedAt` has exactly one writer (this janitor) instead of five.
+
+And it drops the thing that was wrong: `ackedAt` keeps its exclusive user-action
+meaning, so nothing renders a false read-state and no future `ackedAt` consumer
+inherits the lie.
+
+What it gives up is D-02's third rationale — "make the machine action
+indistinguishable from a human one, then let normal downstream logic handle it."
+That principle is sound where nothing reads the distinction and harmful where
+something does. Two surfaces read it. The principle loses here.
+
+**Cost, stated plainly:** one new schema field, and the auto-close step now also
+patches already-acked rows to stamp `closedAt` (321 rows one-time, then ~16/day
+— negligible against the batch budget in D-07). Behaviour change for the
+operator: an auto-closed card stays visibly UNREAD for its 14-day grace window
+and then disappears, rather than going quiet first. That is the honest rendering
+of what actually happened.
+
+**This closely matches the `media.ts` template rather than departing from it.**
+`deletedAt` there is precisely a lifecycle field distinct from any user-action
+field — `closedAt` is the same shape. The original R-02 was the departure.
+
+**`ideationFindings` is deliberately NOT changed to match.** Its closure fields
+stay `dismissed` + `dismissedAt` as D-01/D-04 specify. The asymmetry is
+justified, not an oversight: `dismissed` is a triage state, not a claim that a
+human saw something, and it has no read/unread rendering semantics anywhere.
+`convex/briefings.ts:194-197` reads undismissed findings for the briefing, so an
+auto-dismiss does remove a finding from that surface — but that is the intended
+effect of the 180d window, not a false claim about operator attention, and
+D-04's `critical`/`high` carve-out already protects what must not vanish. D-01's
+"two janitors, not one shared generic" holds. If a later phase wants symmetry it
+should be argued on its own evidence, not inherited from this revision.
+
+**R-03 (settles D-05, carve-out ceiling): no outer ceiling. Carve-out rows stay
+unbounded.**
+Rejected a 365d force-expire. A `money` inbox item or a `critical`/`high`
+finding that a human never closes lives forever — the identical tradeoff
+`alerts.ts` already makes for `critical`. A ceiling would add a third code path
+per janitor and reintroduce silent closure on precisely the rows the carve-outs
+exist to protect. The carve-outs stay absolute.
+
+Note this is why the phase's bounding claim carries an asterisk, and the
+asterisk is deliberate: the janitors bound the growth (97.3% of unacked `inbox`
+by `itemType`), not the table's theoretical maximum.
+
+**R-04 (settles D-07, cron slots): 08:20 and 08:35 UTC, not 08:00/08:15.**
+D-07 noted the 08:00 slot is not actually empty —
+`sweep-graph-snapshot-versions` is `crons.interval({ hours: 1 })` and so also
+fires there. Contention was judged unlikely, but avoiding it outright is free:
+
+```
+crons.daily("inbox-janitor",             { hourUTC: 8, minuteUTC: 20 }, internal.inbox.autoCloseAndPrune, {});
+crons.daily("ideation-findings-janitor", { hourUTC: 8, minuteUTC: 35 }, internal.ideation.autoCloseAndPrune, {});
+```
+
+The 15-minute offset between the two janitors is preserved per this file's own
+anti-contention discipline.
+
+## Citation drift warning — re-derive, do not transcribe
+
+Every citation in this document was verified against the tree on 2026-08-21, but
+the tree has moved since. Spot-checked 2026-08-25:
+
+- `ackedAt: v.optional(v.float64())` is at `schema.ts:2167`, NOT the `2112` cited
+  in D-01. The `inbox` table starts at `schema.ts:2153`; the cited `2099-2118`
+  range now lands in `personaDials`.
+- `ideationFindings` and its single-field `.index("by_dismissed", ["dismissed"])`
+  ARE where cited (`schema.ts:884-903`).
+- `read: row.ackedAt != null` IS documented at `convex/inbox.ts:64-74` as cited.
+
+Treat every line number in this document as approximate. Re-derive each one
+against the live tree before depending on it; the surrounding claim has held up
+where checked, but the coordinates have not.
+
+One artifact worth the planner's attention that this document does not mention:
+`inbox` already carries `.index("by_itemType", ["itemType", "createdAt"])`
+(`schema.ts:2175`), added by WR-01 to back `listHeldUnacked`. D-02 deliberately
+applies the carve-out as a post-query predicate rather than an index query, per
+the `retention.ts:236-241` pattern — that choice stands, but the existing index
+should be acknowledged rather than silently ignored.
