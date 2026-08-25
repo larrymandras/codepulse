@@ -400,6 +400,24 @@ describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 0
     expect(screen.queryByLabelText(/unread in Inbox/)).not.toBeInTheDocument();
   });
 
+  // SWEEP-01 correctness guard (orchestrator, 2026-08-24). A TRUNCATED zero is not
+  // an authoritative zero: countHeldUnacked takes the newest CAP+1 held rows and only
+  // then counts unacked ones inside that window, so {count: 0, truncated: true} means
+  // "none unread among the newest 2000", NOT "none unread". Hiding the badge there is
+  // a false empty on an operator notification. The test directly above — the same
+  // count with truncated:false — is this test's CONTROL: without it, a badge that
+  // never hides would pass this one. Both branches are required.
+  it("STILL renders the Inbox badge on a TRUNCATED zero — a capped zero is not an authoritative zero", () => {
+    mockBadgeQueries({ inbox: { count: 0, truncated: true } });
+    renderLayout();
+    // getAllBy*: the layout renders this badge in BOTH the desktop sidebar and the
+    // mobile sheet, so a getBy* would throw on multiple matches rather than fail on
+    // the property under test. Matches this file's existing idiom.
+    const badges = screen.getAllByLabelText(/at least 0 unread in Inbox/);
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) expect(badge).toHaveTextContent("0+");
+  });
+
   it("renders the Inbox count with a domain-naming aria-label when > 0 (D-12 state 2)", () => {
     mockBadgeQueries({ inbox: { count: 3, truncated: false } });
     renderLayout();

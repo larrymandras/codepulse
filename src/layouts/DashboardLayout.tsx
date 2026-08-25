@@ -150,7 +150,28 @@ function InboxCountBadge() {
   // shape is test-only, per this task's own action text).
   if (result == null) return null;
   const { count, truncated } = result;
-  if (count === 0) return null; // D-12 state 3: never a visible zero
+  // D-12 state 3: never a visible zero — but ONLY when zero is authoritative.
+  //
+  // SWEEP-01 correctness guard (orchestrator, 2026-08-24, after three converging
+  // adversarial reviews). `countHeldUnacked` takes the NEWEST `HELD_COUNT_SCAN_CAP + 1`
+  // held rows and only THEN counts `ackedAt === undefined` within that window. So
+  // `{count: 0, truncated: true}` does NOT mean "nothing unread" — it means "nothing
+  // unread among the newest 2000". Once held history exceeds the cap and the newest
+  // 2000 are all acknowledged, older unacknowledged rows still exist and hiding the
+  // badge here would be a FALSE EMPTY on an operator notification.
+  //
+  // That is the exact "works today, breaks at scale with no signal" shape D-01
+  // rejected when it refused a merely-larger silent cap for the tab counts, so it is
+  // not acceptable here either. Zero suppresses the badge only when `truncated` is
+  // false; a truncated zero renders `0+` / "at least 0", declaring the uncertainty
+  // rather than asserting an emptiness the query cannot establish.
+  //
+  // The SOUND fix is for the bounded window to contain only unacknowledged rows,
+  // which needs a composite index on `inbox` (`["itemType","ackedAt","createdAt"]`);
+  // today it has only `by_itemType: ["itemType","createdAt"]`. That is a
+  // `convex/schema.ts` change and is tracked, not done here. This guard makes the
+  // symptom safe; it does NOT make the count exact beyond the cap.
+  if (count === 0 && !truncated) return null;
 
   // D-04: truncated means `count` is a FLOOR on the true unacked-held total,
   // not the total — declare the cap visually AND to assistive tech, the same
