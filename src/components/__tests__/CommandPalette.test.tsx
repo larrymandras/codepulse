@@ -2,6 +2,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 
+// CommandPalette calls `useMutation(api.bifrost.recordOpen)` unconditionally on
+// every render, and this harness has no ConvexProvider — so without this mock
+// Convex cannot resolve a client and every test in the file throws during
+// render, before any assertion runs.
+//
+// `vi.hoisted` because `vi.mock` factories are hoisted above const declarations;
+// referencing a plain `const` from inside one is a TDZ error.
+//
+// The mock MUST return a promise: CommandPalette attaches `.catch()` to the
+// result so a failed usage bump can never break a launch, and a bare `vi.fn()`
+// returning `undefined` would throw a TypeError on that very line — turning the
+// safety net into the crash.
+const { mockRecordOpen } = vi.hoisted(() => ({
+  mockRecordOpen: vi.fn(() => Promise.resolve()),
+}));
+vi.mock("convex/react", () => ({
+  useMutation: () => mockRecordOpen,
+  useQuery: () => undefined,
+}));
+
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
   const actual = await vi.importActual<typeof import("react-router")>("react-router");
@@ -37,9 +57,26 @@ vi.mock("@/hooks/useCommandPaletteSearch", () => ({
     // no other assertion in this file resolves that text, so the fixture does
     // not make unrelated tests ambiguous (an earlier attempt used "Forge" and
     // broke three of them).
+    // `createdAt` and `usageCount` are the palette's ranking inputs. Carried on
+    // the fixture so the ordering path runs against realistic rows rather than
+    // `undefined - undefined` (a NaN comparator, which sorts as a silent no-op
+    // and would let a broken ranking pass unnoticed).
     links: [
-      { id: "l1", title: "Convex dashboard", url: "http://127.0.0.1:6791" },
-      { id: "l2", title: "Tasks", url: "http://127.0.0.1:7070" },
+      {
+        id: "l1",
+        title: "Convex dashboard",
+        url: "http://127.0.0.1:6791",
+        usageCount: 7,
+        lastUsedAt: 2_000,
+        createdAt: 1_000,
+      },
+      {
+        id: "l2",
+        title: "Tasks",
+        url: "http://127.0.0.1:7070",
+        usageCount: 0,
+        createdAt: 1_500,
+      },
     ],
   }),
 }));
@@ -86,6 +123,7 @@ function renderPalette(props: { open: boolean; onOpenChange?: (v: boolean) => vo
 describe("CommandPalette", () => {
   beforeEach(() => {
     mockNavigate.mockClear();
+    mockRecordOpen.mockClear();
   });
 
   it("renders CommandDialog when open=true", () => {
@@ -148,6 +186,35 @@ describe("CommandPalette", () => {
     renderPalette({ open: true });
     expect(screen.getByText("Links")).toBeInTheDocument();
     expect(screen.getByText("Convex dashboard")).toBeInTheDocument();
+  });
+
+  // Usage tracking — what the palette's launcher ranking is built on. Without
+  // these two, the ranking sorts by a field nothing ever writes.
+  it("selecting a link records the open against that link's id", () => {
+    // jsdom's window.open is unimplemented and logs a noisy error; stub it so
+    // the assertion is about the mutation, not about jsdom's navigation.
+    const openSpy = vi
+      .spyOn(window, "open")
+      .mockImplementation(() => null as unknown as Window);
+    try {
+      renderPalette({ open: true });
+      fireEvent.click(screen.getByText("Convex dashboard"));
+      expect(mockRecordOpen).toHaveBeenCalledWith({ linkId: "l1" });
+      // The open still happened — proving the bump did not replace the launch.
+      expect(openSpy).toHaveBeenCalled();
+    } finally {
+      openSpy.mockRestore();
+    }
+  });
+
+  it("selecting a PAGE records nothing — only links count as usage", () => {
+    // The control. Without it, a `recordOpen` fired indiscriminately on every
+    // selection would satisfy the test above while making the ranking
+    // meaningless.
+    renderPalette({ open: true });
+    fireEvent.click(screen.getByText("Forge"));
+    expect(mockNavigate).toHaveBeenCalledWith("/forge");
+    expect(mockRecordOpen).not.toHaveBeenCalled();
   });
 
   it("a link whose title duplicates a nav page renders BOTH, with distinct cmdk values", () => {

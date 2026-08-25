@@ -5,7 +5,19 @@ export interface PaletteAgent { id: string; name: string }
 export interface PaletteSession { id: string; label: string }
 export interface PaletteAlert { id: string; title: string }
 export interface PaletteCronJob { id: string; name: string }
-export interface PaletteLink { id: string; title: string; url: string }
+export interface PaletteLink {
+  id: string;
+  title: string;
+  url: string;
+  icon?: string;
+  // Ranking inputs, carried through so CommandPalette can order and bound the
+  // group itself — it needs the live cmdk search state to decide whether the
+  // cap applies, and that state does not exist up here.
+  pinned?: boolean;
+  usageCount?: number;
+  lastUsedAt?: number;
+  createdAt: number;
+}
 
 export function useCommandPaletteSearch() {
   // Live Convex subscriptions — always up-to-date (avoids stale data)
@@ -17,8 +29,15 @@ export function useCommandPaletteSearch() {
   // recentCrons returns individual cron execution records with jobName field
   const cronRaw = useQuery(api.automation.recentCrons, {}) ?? [];
   // Phase 117 D-05: Bifröst links join this existing aggregation seam rather
-  // than getting their own palette plumbing. Not sliced — the hub is curated by
-  // hand and is expected to stay small, unlike the telemetry sets above.
+  // than getting their own palette plumbing.
+  //
+  // Still not sliced HERE, and that is now a decision rather than the original
+  // "the hub stays small" assumption — which stopped holding the moment the hub
+  // became somewhere to put every link. Ranking and bounding moved into
+  // CommandPalette's own Links group (src/lib/bifrostPaletteRank.ts) because the
+  // cap must lift while the operator is typing, and the cmdk search state that
+  // decides it is only readable inside <CommandList>. Slicing up here would put
+  // the long tail permanently out of reach of search.
   const linksRaw = useQuery(api.bifrost.list) ?? [];
 
   const agents: PaletteAgent[] = (agentsRaw as any[]).slice(0, 20).map((a) => ({
@@ -52,6 +71,11 @@ export function useCommandPaletteSearch() {
     id: l._id,
     title: l.title,
     url: l.url,
+    icon: l.icon,
+    pinned: l.pinned,
+    usageCount: l.usageCount,
+    lastUsedAt: l.lastUsedAt,
+    createdAt: l.createdAt,
   }));
 
   return { agents, sessions, alerts, cronJobs, links };

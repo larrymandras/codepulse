@@ -1,0 +1,234 @@
+/* Shared style for Claude Code HTML deliverables.
+   Referenced via <link rel="stylesheet" href="style.css"> or pandoc --css.
+   Clean, readable, print-friendly. Edit to taste — every deliverable inherits it. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Crisp Blue Tech Theme (Antigravity/DeepMind inspired) */
+  --fg: #0f172a;
+  --muted: #475569;
+  --bg-color: #f4f7fb;
+  --bg-glow1: rgba(37, 99, 235, 0.05);
+  --bg-glow2: rgba(59, 130, 246, 0.04);
+  
+  /* Glass Variables */
+  --surface: rgba(255, 255, 255, 0.75);
+  --surface-border: rgba(255, 255, 255, 1);
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.04);
+  
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  --border: #cbd5e1;
+  --code-bg: rgba(226, 232, 240, 0.6);
+  --code-fg: #0f172a;
+  
+  --bg-wash: linear-gradient(rgba(244, 247, 251, 0.92), rgba(244, 247, 251, 0.92));
+  
+  --max-width: 48rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Blue Tech Theme */
+    --fg: #f8fafc;
+    --muted: #94a3b8;
+    --bg-color: #0b1120;
+    --bg-glow1: rgba(59, 130, 246, 0.08);
+    --bg-glow2: rgba(96, 165, 250, 0.05);
+    
+    /* Glass Variables */
+    --surface: rgba(30, 41, 59, 0.4);
+    --surface-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    
+    --accent: #60a5fa;
+    --accent-hover: #93c5fd;
+    --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    --border: rgba(255, 255, 255, 0.1);
+    --code-bg: rgba(15, 23, 42, 0.8);
+    --code-fg: #f8fafc;
+    --bg-wash: linear-gradient(rgba(11, 17, 32, 0.88), rgba(11, 17, 32, 0.88));
+  }
+}
+
+html { font-size: 16px; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--fg);
+  /* Ethereal Abstract Core with Wash */
+  background-color: var(--bg-color);
+  background-image: 
+    var(--bg-wash),
+    radial-gradient(circle at 20% 20%, var(--bg-glow1), transparent 50%),
+    radial-gradient(circle at 80% 80%, var(--bg-glow2), transparent 50%),
+    url('bg-abstract.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  line-height: 1.7;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Crisp Sans-Serif Headings */
+h1, h2, h3, h4 { 
+  line-height: 1.25; 
+  font-weight: 700; 
+  margin: 2em 0 0.75em; 
+  color: var(--fg);
+  letter-spacing: -0.02em;
+}
+h1 { 
+  font-size: 3rem; 
+  margin-top: 0; 
+  letter-spacing: -0.04em; 
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+}
+h2 { 
+  font-size: 1.75rem; 
+  padding-bottom: 0.4em; 
+  border-bottom: 1px solid var(--border); 
+}
+h3 { font-size: 1.25rem; font-weight: 600; }
+h4 { font-size: 1.1rem; color: var(--muted); font-weight: 600; }
+
+p, ul, ol, blockquote, table, pre { margin: 0 0 1.5em; }
+
+a { 
+  color: var(--accent); 
+  text-decoration: none; 
+  font-weight: 500;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+a:hover { 
+  color: var(--accent-hover); 
+  text-decoration-color: var(--accent-hover);
+}
+
+ul, ol { padding-left: 1.5em; }
+li { margin: 0.5em 0; }
+li::marker { color: var(--accent); font-weight: 700; }
+
+/* Modern Blockquotes with Glassmorphism */
+blockquote {
+  margin: 2em 0;
+  padding: 1.2em 1.5em;
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--surface-border);
+  border-left: 4px solid var(--accent);
+  color: var(--muted);
+  font-size: 1.1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  box-shadow: var(--glass-shadow);
+  font-weight: 500;
+}
+
+/* Crisp Code Blocks */
+code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  background: var(--code-bg);
+  color: var(--accent);
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  border: 1px solid var(--surface-border);
+  font-weight: 500;
+}
+
+/* Pre blocks with Glassmorphism */
+pre {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  padding: 1.5em;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--glass-shadow);
+  margin: 2em 0;
+}
+pre code { 
+  background: none; 
+  padding: 0; 
+  font-size: 0.85em; 
+  color: var(--code-fg);
+  border: none;
+  font-weight: 400;
+}
+
+/* Data Tables with Glassmorphism */
+table { 
+  border-collapse: collapse; 
+  width: 100%; 
+  font-size: 0.95em; 
+  margin: 2em 0;
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+}
+th, td { 
+  text-align: left; 
+  padding: 1em 1.2em; 
+  border-bottom: 1px solid var(--border); 
+}
+th { 
+  background: rgba(0,0,0,0.03); 
+  font-weight: 600; 
+  color: var(--fg);
+  text-transform: uppercase;
+  font-size: 0.85em;
+  letter-spacing: 0.05em;
+}
+@media (prefers-color-scheme: dark) {
+  th { background: rgba(255,255,255,0.03); }
+}
+
+/* Sharp Dividers */
+hr { 
+  border: none; 
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 3.5em 0; 
+}
+
+/* Image Handling */
+img { 
+  max-width: 100%; 
+  height: auto; 
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
+  display: block;
+  margin: 2em auto;
+}
+
+@media print {
+  body { max-width: none; padding: 0; color: #000; background: #fff; }
+  h1 { background: none; -webkit-text-fill-color: #000; color: #000; }
+  h2 { border-color: #ccc; }
+  a { color: #000; text-decoration: underline; }
+  pre, table, blockquote, img { box-shadow: none; border: 1px solid #ddd; filter: none; backdrop-filter: none; background: #fff; }
+}

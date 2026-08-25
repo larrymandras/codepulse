@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bifröst, Galdr &amp; Studio — what they actually do</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { max-width: 62rem; }
+  .lede { font-size: 1.15rem; color: var(--muted); }
+  .verdict {
+    background: var(--surface);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--surface-border);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 1.4em 1.6em;
+    box-shadow: var(--glass-shadow);
+    margin: 2em 0;
+  }
+  .verdict p:last-child { margin-bottom: 0; }
+  .pill {
+    display: inline-block; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 0.2em 0.6em; border-radius: 999px;
+    border: 1px solid currentColor; white-space: nowrap;
+  }
+  .pill.built { color: #16a34a; }
+  .pill.empty { color: #d97706; }
+  .pill.deferred { color: #64748b; }
+  .num { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .big { font-size: 2.1rem; line-height: 1; display: block; }
+  .scorecard { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 2em 0; }
+  .scorecard > div {
+    background: var(--surface); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--surface-border); border-radius: var(--radius-md);
+    padding: 1.2em; box-shadow: var(--glass-shadow); text-align: center;
+  }
+  .scorecard .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .scorecard .big { color: var(--accent); margin-bottom: 0.3em; }
+  table.compact { font-size: 0.88em; }
+  table.compact th, table.compact td { padding: 0.65em 0.9em; }
+  .tablewrap { overflow-x: auto; }
+  h2 .sub { font-size: 1rem; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+  .evidence { font-size: 0.85em; color: var(--muted); }
+  .evidence code { font-size: 0.95em; }
+  footer { margin-top: 4em; padding-top: 1.5em; border-top: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Bifröst, Galdr &amp; Studio</h1>
+
+<p class="lede">What these three CodePulse surfaces actually do — and why they look like almost nothing when you open them.</p>
+
+<div class="verdict">
+<p><strong>Short answer: your read is correct, but the cause isn't what it looks like.</strong></p>
+<p>All three are <em>curated libraries</em> — they hold what you deliberately put in them, and none of them seeds itself. Right now they hold <strong>7 rows between them</strong>, and 3 of those are leftover test fixtures from the phase that built Studio. The pages are empty because the libraries are empty, not because the features are stubs.</p>
+<p>The second cause: for all three, most of the engineering is <em>off-page</em> — HTTP routes agents call, a scheduled file watcher, a version trail, a trash janitor. None of that is visible from the browser, so the pages read as "a grid and four buttons."</p>
+</div>
+
+<h2>The scoreboard</h2>
+
+<div class="scorecard">
+  <div><span class="big num">1</span><span class="label">Galdr prompts</span></div>
+  <div><span class="big num">2</span><span class="label">Bifröst links</span></div>
+  <div><span class="big num">4</span><span class="label">Studio media</span></div>
+  <div><span class="big num">~7,300</span><span class="label">lines of code</span></div>
+</div>
+
+<div class="tablewrap">
+<table class="compact">
+<thead>
+<tr><th>Surface</th><th>What it is</th><th>Phase</th><th>Code shipped</th><th>Live content today</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Galdr</strong><br><span class="evidence">/galdr</span></td>
+  <td>A versioned prompt library. Reusable prompts with typed variables, fetchable from any Claude Code session.</td>
+  <td>116</td>
+  <td class="num">~2,470 lines</td>
+  <td><span class="pill empty">1 prompt</span></td>
+</tr>
+<tr>
+  <td><strong>Bifröst</strong><br><span class="evidence">/bifrost</span></td>
+  <td>A bookmark hub for the URLs you actually open, with a liveness dot for anything backed by a Docker container.</td>
+  <td>117</td>
+  <td class="num">~594 lines</td>
+  <td><span class="pill empty">2 links</span></td>
+</tr>
+<tr>
+  <td><strong>Studio</strong><br><span class="evidence">/studio</span></td>
+  <td>A media gallery fed by a filesystem watcher, where every generated asset carries a copyable recipe of how it was made.</td>
+  <td>118</td>
+  <td class="num">~4,235 lines</td>
+  <td><span class="pill empty">4 images · 3 model cards · 0 styles</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p class="evidence">Row counts measured live against the self-hosted backend, 2026-08-24, via <code>npx convex run bifrost:list / galdr:list / media:list --env-file …selfhosted.envfile</code>. Line counts are <code>wc -l</code> over each feature's Convex modules, page, components, hooks and host-side scripts.</p>
+
+<hr>
+
+<h2>Galdr <span class="sub">— the prompt library</span></h2>
+
+<p>Galdr stores prompts you want to reuse, and makes the <em>same</em> library reachable from the browser and from any Claude Code session on any machine, with no export step.</p>
+
+<h3>The actual mechanism</h3>
+
+<p>A prompt is a body of text with <code>{{variables}}</code> in it. The backend detects those variables (one implementation, <code>convex/galdrVariables.ts</code>, shared by the UI and the CLI so they can't disagree) and refuses to deliver a body until every variable has a real value. Blank is not an answer; a partial body never ships.</p>
+
+<div class="tablewrap">
+<table class="compact">
+<thead><tr><th>Where</th><th>What you can do</th></tr></thead>
+<tbody>
+<tr><td><strong>The page</strong></td><td>New Prompt · edit (drawer) · favorite · search · filter chips (All / Favorites / Recent / per-category) · <strong>Copy</strong>, <strong>Send to Chat</strong>, <strong>Copy as command</strong> (all three gated behind the fill-in-variables dialog) · version history with restore · archive</td></tr>
+<tr><td><strong>From a session</strong></td><td><code>/galdr</code> browses categories and favorites · <code>/galdr &lt;slug&gt; key=value</code> fetches, fills and injects a prompt · <code>/galdr-save &lt;title&gt;</code> captures the current conversation back into the library</td></tr>
+<tr><td><strong>Over HTTP</strong></td><td>4 bearer-authed routes: <code>GET /galdr/prompt</code>, <code>GET /galdr/list</code>, <code>POST /galdr/prompt</code>, <code>POST /galdr/usage</code> — deliberately CORS-free, so they're agent-only and a browser can't read them</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>The invisible parts (this is where the code went)</h3>
+<ul>
+<li><strong>A capped version trail.</strong> Every body-changing write snapshots the old body into <code>promptVersions</code>, pruned to the newest 20 per prompt, inline, scoped to a single prompt's index so it can never become a mass delete.</li>
+<li><strong>Slug uniqueness with no unique index.</strong> Convex has none, so a read-then-write inside a transaction stands in for one. A collision <em>refuses</em> with a 409 naming the existing prompt — it never overwrites and never auto-suffixes.</li>
+<li><strong>Fuzzy lookup that can't auto-inject.</strong> A non-exact search returns candidates with <em>no body attached</em> — there is literally nothing to inject until you pick one. A single fuzzy hit still stops and asks.</li>
+<li><strong>Usage counting that means something.</strong> <code>usageCount</code> bumps only on resolved-body delivery, never on browsing, viewing, favoriting, or "Copy as command".</li>
+</ul>
+
+<h3>Deliberately not built</h3>
+<p><span class="pill deferred">by decision</span> No archived-prompt view and no un-archive control. No hard delete anywhere (no mutation exists that could serve one). No category admin — chips are derived from live rows. <strong>No seed rows</strong>: the page's own source comment says "the library begins genuinely empty and the empty state is the first-run experience."</p>
+
+<hr>
+
+<h2>Bifröst <span class="sub">— the link hub</span></h2>
+
+<p>The smallest of the three, and honestly small on purpose: it's a categorised grid of URLs, with a pinned row on top.</p>
+
+<p>The one idea that isn't just a bookmark manager: a link can name a <strong>Docker container</strong>, and Bifröst joins that against the live container status CodePulse already ingests to show a green/red dot. If a link names no container it shows <strong>no dot at all</strong> — never a green one, because an absent signal must not read as "up."</p>
+
+<div class="tablewrap">
+<table class="compact">
+<thead><tr><th>Operation</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td>Add link</td><td>Title, URL, category, optional container name</td></tr>
+<tr><td>Pin / unpin</td><td>Pinned links surface in their own section above the categories</td></tr>
+<tr><td>Archive</td><td>Soft delete only — hidden everywhere, never purged. No hard-delete mutation exists.</td></tr>
+<tr><td>Search</td><td>Client-side across title, URL, category, description</td></tr>
+<tr><td>Sort</td><td>Pinned first, then explicit order, then newest. An unordered link sorts <em>after</em> every ordered one rather than jumping to the front.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Why it feels thinnest</h3>
+<p>Because it is. <span class="pill built">594 lines</span> total, and three planned pieces were explicitly deferred: <strong>drag-to-reorder</strong> (the <code>order</code> field ships and is respected — the drag UI doesn't exist), and the <code>/bifrost-scan</code> and <code>/link-add</code> curation skills that would have populated it automatically. With those deferred, the only way links get in is you typing them in the dialog — which is why there are two.</p>
+
+<p class="evidence">Live rows: <code>CodePulse dev server → http://localhost:5173</code> (no container, so no dot) and <code>Ástríðr API → http://localhost:8181</code> (container <code>astridr-agent</code>, so it shows a real dot). Neither is pinned.</p>
+
+<hr>
+
+<h2>Studio <span class="sub">— the media gallery</span></h2>
+
+<p>By far the largest of the three, and the one where nearly all the functionality lives outside the page. Studio's actual claim is not "a gallery" — it's <strong>provenance</strong>: every generated asset arrives with a machine-readable record of the model, provider, prompt and parameters that produced it, and you can copy that recipe back out.</p>
+
+<h3>How media gets in — the part you can't see</h3>
+
+<p>Nothing in the browser uploads anything. The flow is filesystem-first:</p>
+
+<ol>
+<li><code>/studio-generate</code> calls a generator backend and writes <strong>two files</strong> into <code>C:\Users\mandr\media-vault\gen\</code> — the asset, plus a JSON sidecar holding its provenance. It is the <em>only</em> skill permitted to write sidecars, so the contract can't drift across the eight other media skills.</li>
+<li>A scheduled task, <strong>StudioWatch</strong>, runs a 1,181-line watcher every 5 minutes. It walks the vault, SHA-256 hashes every file (the hash <em>is</em> the row identity, so re-syncing never duplicates), pairs each file with its sidecar, encodes a webp thumbnail under 200 KB with ffmpeg — retrying at lower quality, and <em>refusing</em> rather than shipping an oversized one — uploads the thumbnail, POSTs the row through a bearer-authed <code>/studio/ingest</code> route, and reconciles the trash folder against what Convex thinks exists.</li>
+<li><code>/studio-sync</code> runs that identical code path on demand when you don't want to wait 5 minutes.</li>
+</ol>
+
+<p class="evidence">Verified live: scheduled task <code>StudioWatch</code> is <strong>Ready</strong>, last ran 2026-08-24 18:55:39 with result 0, next run 19:00:38 — a real 5-minute cadence, not a dormant task.</p>
+
+<h3>What the page gives you</h3>
+
+<div class="tablewrap">
+<table class="compact">
+<thead><tr><th>Element</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>Gallery tab</td><td>Masonry grid, capped at 500 rows, filter bar (type / kind / model / starred), client-side search — no filter is ever pushed into the query</td></tr>
+<tr><td>Trash tab</td><td>Deliberately flatter: search only. Deleted media sits for 30 days, then a batched janitor removes it.</td></tr>
+<tr><td>Detail sheet</td><td><strong>Copy Path</strong>, <strong>Copy Recipe</strong> (the formatted provenance block), star, Move to Trash / Restore</td></tr>
+<tr><td>Styles &amp; Models panels</td><td>Collapsed by default. Models are "recipe cards" — the how-to-call-this-backend instructions live in <em>one table</em>, not scattered across skills.</td></tr>
+<tr><td>Missing provenance</td><td>Renders "No provenance recorded" — never a blank field, never an inferred value</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Deliberately not built</h3>
+<p><span class="pill deferred">by decision</span> <strong>No lightbox and no original-file fetch.</strong> The page only ever serves the ≤200 KB thumbnail — clicking a card opens the detail sheet, not the full asset. That's the single biggest reason Studio feels less capable than a gallery "should."</p>
+
+<h3>What's actually in it</h3>
+<p>Four images, all from the phase's own end-to-end proving runs in mid-August:</p>
+<ul>
+<li><code>oa_kling-3-omni_…</code> — OpenArt, with provenance</li>
+<li><code>studio_falflux_a1_…</code> — fal.ai FLUX schnell, with provenance</li>
+<li><code>studio_lighthouse_a1_…</code> — Higgsfield z_image, with provenance</li>
+<li><code>studio_control-no-sidecar_a1_…</code> — <em>a deliberate control</em>, generated with no sidecar to prove the "No provenance recorded" path actually fires</li>
+</ul>
+<p>Three model cards are registered (z_image, fal-ai/flux/schnell, openart-kling-3-omni), <strong>zero styles</strong>. So the Styles panel is empty and the filter bar has almost nothing to filter.</p>
+
+<hr>
+
+<h2>So why does it look like not much?</h2>
+
+<p>Four distinct reasons, worth separating because they need different fixes:</p>
+
+<div class="tablewrap">
+<table class="compact">
+<thead><tr><th>#</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr>
+  <td class="num">1</td>
+  <td><strong>Empty by design.</strong> All three refuse to seed themselves. Galdr's source says so explicitly. Seven rows total, three of them test fixtures.</td>
+  <td>Use them for a week. This is the entire fix for Galdr and Bifröst.</td>
+</tr>
+<tr>
+  <td class="num">2</td>
+  <td><strong>The work is off-page.</strong> Version trails, content-hash dedup, a 5-minute watcher, bearer-authed agent routes, a trash janitor — ~7,300 lines that render as zero pixels.</td>
+  <td>Nothing to fix; just worth knowing the pages aren't the product.</td>
+</tr>
+<tr>
+  <td class="num">3</td>
+  <td><strong>The auto-population never shipped.</strong> Bifröst's <code>/bifrost-scan</code> and <code>/link-add</code> skills were deferred, so nothing fills it but manual typing.</td>
+  <td>Build those two skills — Bifröst goes from 2 links to dozens in one pass.</td>
+</tr>
+<tr>
+  <td class="num">4</td>
+  <td><strong>Studio's headline interaction is missing.</strong> No lightbox, no full-size view. A gallery you can't open images in reads as broken even when it isn't.</td>
+  <td>Reopen that decision — it's the highest-leverage single change across all three.</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>Where they sit in the app</h3>
+<p>Galdr, Bifröst and Studio are all in the <strong>Command</strong> nav group — three of the four "Seiðr Suite" operator surfaces added to milestone v14.0 in August 2026. The fourth, <strong>Loom</strong> (phase 119, pipeline visualisation), sits in <strong>Observe</strong> instead, because it answers "what is the system designed to do" rather than "what do I keep here."</p>
+
+<footer>
+Generated 2026-08-24 · CodePulse · phases 116 (Galdr), 117 (Bifröst), 118 (Studio)<br>
+Row counts and the StudioWatch schedule were measured live against the self-hosted Convex instance; line counts and behaviour are read from source at <code>convex/galdr.ts</code>, <code>convex/bifrost.ts</code>, <code>convex/media.ts</code>, <code>hooks/studioWatch.mjs</code> and the corresponding pages under <code>src/pages/</code>.
+</footer>
+
+</body>
+</html>

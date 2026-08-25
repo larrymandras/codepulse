@@ -40,6 +40,7 @@ import { iconComponents } from "@/lib/navRegistry";
 import {
   useBifrostLinksState,
   useContainerStatusMap,
+  useRecordLinkOpen,
 } from "@/hooks/useBifrostLinks";
 
 interface LinkRow {
@@ -88,11 +89,13 @@ function LivenessDot({ state }: { state: "up" | "down" | null }) {
 function LinkCard({
   link,
   liveness,
+  onOpen,
   onTogglePin,
   onArchive,
 }: {
   link: LinkRow;
   liveness: "up" | "down" | null;
+  onOpen: () => void;
   onTogglePin: () => void;
   onArchive: () => void;
 }) {
@@ -132,10 +135,30 @@ function LinkCard({
             {link.description}
           </p>
         )}
+        {/* Counts as usage for the palette's ranking, exactly like the palette's
+            own Enter — the two are the same act. Handlers sit ALONGSIDE the real
+            `href` rather than replacing it, so Ctrl+click, "open in new tab" and
+            "copy link address" all still behave like a normal link.
+
+            BOTH handlers are required, and this is not belt-and-braces. Per the
+            UI Events spec, a `click` event fires only for the PRIMARY button;
+            middle-button activation dispatches `auxclick` instead (Chrome 55+,
+            Firefox 53+). React's `onClick` maps to `click`, so an onClick-only
+            wiring silently misses every middle-click — which for a launcher is
+            not an edge case but one of the two normal ways to open a link, and
+            it would bias the ranking against exactly the links you open in
+            background tabs.
+
+            `auxclick` also covers the RIGHT button, so the button check is what
+            keeps opening a context menu from counting as a launch. */}
         <a
           href={link.url}
           target="_blank"
           rel="noreferrer"
+          onClick={onOpen}
+          onAuxClick={(e) => {
+            if (e.button === 1) onOpen();
+          }}
           className="text-primary inline-flex items-center gap-1 font-mono text-xs break-all"
         >
           <ExternalLink className="h-3 w-3 shrink-0" />
@@ -246,6 +269,7 @@ function BifrostBody({ search }: { search: string }) {
   const statuses = useContainerStatusMap();
   const togglePin = useMutation(api.bifrost.togglePin);
   const archiveLink = useMutation(api.bifrost.archiveLink);
+  const recordLinkOpen = useRecordLinkOpen();
 
   const rows = links as unknown as LinkRow[];
 
@@ -311,6 +335,7 @@ function BifrostBody({ search }: { search: string }) {
           key={link._id}
           link={link}
           liveness={livenessOf(link, statuses)}
+          onOpen={() => recordLinkOpen(link._id)}
           onTogglePin={() => void togglePin({ linkId: link._id as never })}
           onArchive={() => void archiveLink({ linkId: link._id as never })}
         />
