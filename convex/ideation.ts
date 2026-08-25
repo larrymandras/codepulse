@@ -275,3 +275,197 @@ async function runIdeationAutoDismissStep(
     nextCursor: lastCursorValue ?? cursor,
   };
 }
+
+/**
+ * runIdeationDeletePruneStep -- the permanent-delete half of the chain
+ * (D-05's grace period G). Bounded, cursor-seeked read through
+ * `by_dismissedAt` as a range on `dismissedAt`: seek from `cursor`
+ * (inclusive) up to `nowSec - IDEATION_DISMISSED_GRACE_SEC` (exclusive),
+ * ascending, `.take(IDEATION_JANITOR_BATCH_SIZE)`.
+ *
+ * Undismissed rows are STRUCTURALLY excluded from this range, not merely
+ * filtered out of it: Convex indexes an absent field only under
+ * `undefined`, and orders `undefined < null < all other values` (cited at
+ * `convex/controlVerbSwaps.ts:109`, re-derived independently at
+ * `convex/media.ts:733-736`'s `by_deletedAt` scan), so an absent
+ * `dismissedAt` sorts below any real cursor value and this range never
+ * matches it. That guarantee survives an edit that deletes every
+ * post-query predicate in this file -- unlike the `severity` carve-out
+ * above, which is enforced by `shouldDeleteDismissed`/`shouldAutoDismiss`
+ * alone and has NO database-level backstop (T-127-09). The two guarantees
+ * have different strengths, which is why plans 127-05 (automated test) and
+ * 127-07 (manual mutation-testing control) test them differently.
+ *
+ * Split with `shouldDeleteDismissed` (unconditionally true -- see its own
+ * docstring for why there is no delete-step carve-out) and `ctx.db.delete`
+ * each returned row. Cursor advances from `lastCursorValue` over every
+ * iterated row (D-08), same discipline as the auto-dismiss step.
+ */
+async function runIdeationDeletePruneStep(
+  ctx: JanitorCtx,
+  cursor: number,
+  nowSec: number
+): Promise<{ actedCount: number; batchLength: number; nextCursor: number }> {
+  const cutoff = nowSec - IDEATION_DISMISSED_GRACE_SEC;
+  const batch = await ctx.db
+    .query("ideationFindings")
+    .withIndex("by_dismissedAt", (q: any) =>
+      q.gte("dismissedAt", cursor).lt("dismissedAt", cutoff)
+    )
+    .order("asc")
+    .take(IDEATION_JANITOR_BATCH_SIZE);
+
+  const { toDelete, lastCursorValue } = partitionBatchForPrune(
+    batch,
+    shouldDeleteDismissed,
+    (doc: any) => doc.dismissedAt ?? 0
+  );
+
+  for (const row of toDelete) {
+    await ctx.db.delete(row._id);
+  }
+
+  return {
+    actedCount: toDelete.length,
+    batchLength: batch.length,
+    nextCursor: lastCursorValue ?? cursor,
+  };
+}
+
+/**
+ * Renders an epoch-SECONDS cutoff as a human-readable UTC date for R-01's
+ * mandatory log line below. A `fmt(cutoff)` that printed a 1970 date would
+ * be the loudest possible signal that a seconds/milliseconds error had
+ * slipped in -- this repo has shipped that exact defect before (CLAUDE.md's
+ * "Telemetry timestamps are epoch SECONDS" lesson) -- so the cutoff is
+ * always rendered, never logged as the raw number alone.
+ */
+function fmtCutoffSec(cutoffSec: number): string {
+  return new Date(cutoffSec * 1000).toISOString();
+}
+
+export interface AutoCloseAndPruneArgs {
+  step?: "dismissing" | "deleting";
+  cursor?: number;
+  batchesDone?: number;
+}
+
+export interface AutoCloseAndPruneResult {
+  /** The step the NEXT scheduled invocation (if any) will run -- equal to
+   * the step just processed unless this call was the one that transitioned
+   * "dismissing" -> "deleting". */
+  step: "dismissing" | "deleting";
+  actedCount: number;
+  nextCursor: number;
+  rescheduled: boolean;
+}
+
+/**
+ * autoCloseAndPruneHandler -- the two-step self-rescheduling chain (D-02),
+ * exported plain so it is directly unit-testable with a fake `JanitorCtx`,
+ * without booting the Convex runtime (this repo has no `convex-test`
+ * harness -- see `runtimeIngest.test.ts:9`).
+ *
+ * "dismissing" auto-dismisses eligible open findings past
+ * `IDEATION_AUTODISMISS_AGE_SEC`; a short (drained) "dismissing" batch
+ * transitions to "deleting" with the cursor reset to 0. "deleting"
+ * permanently removes findings dismissed for longer than
+ * `IDEATION_DISMISSED_GRACE_SEC`; a short "deleting" batch ends the chain.
+ * A full batch in either step reschedules the SAME step with the cursor
+ * advanced. Both steps share ONE batch budget carried across the
+ * transition -- `batchesDone` is only ever incremented, never reset; only
+ * the cursor resets on transition. Mirrors the sibling `inbox` janitor's
+ * chain shape (plan 127-02) without sharing code with it (D-01).
+ */
+export async function autoCloseAndPruneHandler(
+  ctx: JanitorCtx,
+  args: AutoCloseAndPruneArgs,
+  nowSec: number
+): Promise<AutoCloseAndPruneResult> {
+  const step = args.step ?? "dismissing";
+  const cursor = args.cursor ?? 0;
+  const batchesDone = args.batchesDone ?? 0;
+
+  // D-02 entry guard, before ANY read: once this chain has already used its
+  // per-chain ceiling, do no work at all -- the remainder waits for the
+  // next scheduled invocation rather than looping.
+  if (batchesDone >= IDEATION_JANITOR_MAX_BATCHES) {
+    console.log(
+      `ideation: auto-close/prune per-chain batch cap (${IDEATION_JANITOR_MAX_BATCHES}) already reached at step "${step}"; remainder deferred to the next scheduled run`
+    );
+    return { step, actedCount: 0, nextCursor: cursor, rescheduled: false };
+  }
+
+  const stepResult =
+    step === "dismissing"
+      ? await runIdeationAutoDismissStep(ctx, cursor, nowSec)
+      : await runIdeationDeletePruneStep(ctx, cursor, nowSec);
+
+  const batchesUsedAfter = batchesDone + 1;
+  const batchWasFull = stepResult.batchLength >= IDEATION_JANITOR_BATCH_SIZE;
+  const canReschedule = batchesUsedAfter < IDEATION_JANITOR_MAX_BATCHES;
+
+  let nextStep: "dismissing" | "deleting" = step;
+  let nextCursorForSchedule = stepResult.nextCursor;
+  let rescheduled = false;
+
+  if (batchWasFull) {
+    // Same step, more eligible rows may remain past this batch's window.
+    rescheduled = canReschedule;
+  } else if (step === "dismissing") {
+    // Short "dismissing" batch: the auto-dismiss window is drained.
+    // Transition to "deleting" with a reset cursor (D-02). batchesDone
+    // carries forward via batchesUsedAfter below -- never reset here.
+    nextStep = "deleting";
+    nextCursorForSchedule = 0;
+    rescheduled = canReschedule;
+  }
+  // else: short "deleting" batch -- that window is drained too. The chain
+  // ends here; rescheduled stays false.
+
+  if (rescheduled) {
+    await ctx.scheduler.runAfter(
+      IDEATION_JANITOR_RESCHEDULE_MS,
+      internal.ideation.autoCloseAndPrune,
+      { step: nextStep, cursor: nextCursorForSchedule, batchesDone: batchesUsedAfter }
+    );
+  }
+
+  // R-01's mandatory log line -- fires on EVERY invocation that reaches
+  // this point, including one that acted on zero rows, and is NEVER nested
+  // inside an `if (actedCount > 0)` guard. At M=180d this janitor matches
+  // zero rows until roughly 2026-11-16 (the oldest ideationFindings row was
+  // 94 days old on 2026-08-21); for those ~83 days this line is the ONLY
+  // evidence distinguishing a correct, dormant mechanism from a dead one. A
+  // zero-row run must be attributable to a real, logged cutoff -- not to
+  // silence.
+  const cutoffSec =
+    step === "dismissing"
+      ? nowSec - IDEATION_AUTODISMISS_AGE_SEC
+      : nowSec - IDEATION_DISMISSED_GRACE_SEC;
+  console.log(
+    `ideation: auto-close/prune ran step "${step}", acted on ${stepResult.actedCount} row(s), cutoff ${fmtCutoffSec(cutoffSec)}${rescheduled ? `, rescheduled to step "${nextStep}"` : ""}`
+  );
+
+  return {
+    step: nextStep,
+    actedCount: stepResult.actedCount,
+    nextCursor: nextCursorForSchedule,
+    rescheduled,
+  };
+}
+
+/**
+ * `internalMutation`, same rationale as `media.ts`'s `pruneTrashBatch`
+ * (T-127-13): this reaches an irreversible permanent delete with no UI
+ * control anywhere in this phase -- only the nightly cron
+ * (`convex/crons.ts`, wired by a later wave-2 plan) may reach it.
+ */
+export const autoCloseAndPrune = internalMutation({
+  args: {
+    step: v.optional(v.union(v.literal("dismissing"), v.literal("deleting"))),
+    cursor: v.optional(v.number()),
+    batchesDone: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => autoCloseAndPruneHandler(ctx, args, Date.now() / 1000),
+});
