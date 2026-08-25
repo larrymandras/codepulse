@@ -24,16 +24,18 @@ key-files:
   created: []
   modified:
     - convex/graphSnapshots.ts
+    - convex/graphSnapshots.test.ts
 
 key-decisions:
   - "Typed the parsed blob's {nodes, links} explicitly instead of leaving JSON.parse's result as the widened `unknown[]` TypeScript would otherwise infer -- ProjectGraphData (src/hooks/useProjectGraph.ts) derives its type directly from getProjectGraph's own inferred return type, so an untyped parsed blob would have silently broken type-checking in CodeVaultGraph.tsx and ToolGalaxy.tsx (both out of scope to edit) without any runtime symptom."
   - "Broke a same-file circular type-inference error (TS7022/TS7023) in backfillGraphBlob by adding an explicit Promise<BackfillGraphBlobResult> return-type annotation on its handler, an explicit Promise<Doc<'graphSnapshots'>|null> annotation on getGraphMetaForBackfill, and a declared union return type plus two `as` casts (kind-discriminated, safe by construction) at the two call sites in getGraphEntityPage/backfillGraphBlob."
   - "Reworded two doc comments that literally contained the substring '.collect()' (referring to the OLD code being replaced) so the acceptance criterion's grep -c \"collect()\" == 0 measures actual code, not prose about the code it replaced."
+  - "POST-REVIEW (2026-08-25): a concurrent process applied commit 2d5c1158 fixing two HIGH defects (writer/reader chunk-cap asymmetry; a TOCTOU-racy version guard) while this plan was still active. I verified 2d5c1158 against the reviewer's spec, found the version guard implemented as a throw where the spec required a returned named status (because a throw from a mutation called via ctx.runMutation with no try/catch propagates as an uncaught exception through the whole backfillGraphBlob action), and corrected it in a follow-up commit 606e07fa: upsertGraphSnapshot now RETURNS {status:\"versionAdvanced\",...} instead of throwing, backfillGraphBlob checks that return value, and a new test suite exercises backfillGraphBlob itself (not just upsertGraphSnapshot in isolation) via a hand-built fake action ctx simulating the exact race the action's own pre-check cannot see."
 
 requirements-completed: [SWEEP-02]
 
 # Metrics
-duration: ~45min
+duration: ~45min + ~15min post-review correction
 completed: 2026-08-25
 ---
 
@@ -236,6 +238,29 @@ Combined into one commit rather than two atomic per-task commits: both tasks tou
   - A declared union return type on `getGraphEntityPage` (`PaginationResult<Doc<"graphSnapshotNodes">> | PaginationResult<Doc<"graphSnapshotLinks">>`), plus `as` casts at its two call sites (safe by construction — each call site's own `kind: "nodes"|"links"` literal is what the handler branches on, so the cast matches the actual runtime shape).
   - This precedent does not exist elsewhere in this codebase's own same-file `ctx.runQuery(internal.<sameModule>.*)` calls (e.g. `gatewayQuota.ts`'s `pollAndStore` → `insertSnapshot`) only because those existing functions have no branch returning a value, so their inferred return type is `void` and never hits the cycle.
 - **Reworded two doc comments** that literally contained the substring `.collect()` in prose describing the code being REPLACED (not actual `.collect()` calls) — to `collect-all reads` — so the acceptance criterion's literal `grep -c "collect()"` measures real code, not documentation about the code it replaced.
+
+## Post-Review Fixes (Two HIGH Defects, found by cross-AI review after initial completion)
+
+The team lead sent two HIGH-severity defects found by cross-AI review against the code committed in `a6dc8dd0`, both verified against live code:
+
+**DEFECT 1 — writer/reader chunk-cap asymmetry.** `GRAPH_BLOB_MAX_CHUNKS` was enforced only by the reader (`getProjectGraph`'s `take(CAP+1)` + throw); the writer (`upsertGraphSnapshot`) split and inserted every chunk unconditionally, flipped `activeVersion`, then deleted the prior version's chunks. Past 16 chunks, the writer would publish a blob the reader always rejects, with the rollback data already deleted — an oversized ingest becoming a user-visible `/tool-galaxy` outage.
+
+**DEFECT 2 — the TOCTOU version guard I built for `backfillGraphBlob` was racy.** The team lead's own dispatch had specified "re-read the meta immediately before publishing and require `activeVersion === sourceVersion`" from an *action*, which is unavoidably two separate transactions (`runQuery` then `runMutation`) — a producer ingest landing in between would sail past the check undetected, and `upsertGraphSnapshot` would then publish the backfill's stale data as the newest version. The team lead named this as their own specification error, not mine.
+
+**What happened while I was mid-task:** by the time I picked up this message, a concurrent process had already committed `2d5c1158`, whose message states "The 126-05 executor terminated without applying either, so they are applied here" — evidently believing I had stopped. I had not; I verified `2d5c1158` in detail rather than assuming it was correct or redoing the work from scratch:
+
+- Defect 1's fix in `2d5c1158` was correct and complete: the cap check runs in `upsertGraphSnapshot` before any chunk insert, throwing `ConvexError` and leaving the existing version and its chunks untouched (verified: since the check runs before any `ctx.db` write, the whole mutation transaction aborts with nothing committed). Tests included a control proving the prior version survives, not merely that the call threw.
+- Defect 2's fix in `2d5c1158` closed the actual data-safety hole (the mutation re-checks `expectedVersion` inside its own transaction, atomically with the writes it guards) but implemented the guard as a **throw**, where the team lead's spec explicitly said "**Return** `status: "versionAdvanced"` ... **rather than throwing**." Since `backfillGraphBlob` calls this mutation via `ctx.runMutation` with no `try/catch`, a throw here would propagate as an **uncaught exception through the whole action** — the operator running `npx convex run backfillGraphBlob` would see a raw thrown error, not the clean named-status object `backfillGraphBlob`'s own contract promises for every other path. I also found no test exercised `backfillGraphBlob` itself (only `upsertGraphSnapshot`'s handler directly) — the team lead's own required test ("simulate the advance BETWEEN the pre-check and the mutation... a test that only exercises the action-side pre-check cannot catch this") was not present.
+
+**My follow-up fix, commit `606e07fa`:**
+- Changed `upsertGraphSnapshot`'s `expectedVersion` guard from `throw new ConvexError(...)` to `return { status: "versionAdvanced", snapshotId, expectedVersion, foundVersion }`. Gave the handler an explicit `Promise<UpsertGraphSnapshotResult>` return type (same same-file circular-inference reasoning as `backfillGraphBlob`'s own annotation).
+- `backfillGraphBlob` now captures the mutation's return value (cast to `UpsertGraphSnapshotResult`, same pattern as the `getGraphEntityPage` casts) and returns the same named `"versionAdvanced"` status its own cheap action-side pre-check (Guard 3) already returns, if the mutation reports the race.
+- Updated the existing `upsertGraphSnapshot` TOCTOU test to assert the returned object instead of `.rejects.toThrow(...)`.
+- Added a new `describe("backfillGraphBlob — surfaces a race the action's own pre-check cannot see")` block — the team lead's required test — using a hand-built fake action `ctx` (only `runQuery`/`runMutation`, the correct seam for testing an `internalAction`) where the action's own reads report the pre-race version (3) but the mutation's own simulated internal check reports a later version (4), proving `backfillGraphBlob` returns a clean `versionAdvanced` status rather than an uncaught exception. A control proves the action-side early-out is an independent code path (it short-circuits before the mutation is even called when IT can see the race).
+- **Mutation-proven:** temporarily changed the `writeResult?.status === "versionAdvanced"` check to a condition that can never match; the new race test failed with `result.status === "backfilled"` instead of `"versionAdvanced"` — confirming the test is not vacuous. Reverted and re-ran green.
+- `getFunctionName` (from `convex/server`) was needed to discriminate which function reference a fake `ctx.runQuery`/`runMutation` call targets, because `internal.*` is a `Proxy` (verified against the installed package, `node_modules/convex/dist/cjs/server/api.js`'s `createApi`) that returns a **new object on every property access** — a strict `===` comparison on the function reference itself silently never matches.
+
+**Verification after the follow-up fix:** `npx tsc --noEmit` exits 0. `npx vitest run convex/graphSnapshots.test.ts`: 73 passed | 5 todo (up from 64 before either defect fix; 2d5c1158 added 7, this follow-up added 2 and converted 1 existing assertion). Full suite: 364 passed | 17 skipped files, 5105 passed | 4 skipped | 195 todo tests, 0 failed.
 
 ## Deviations from Plan
 
