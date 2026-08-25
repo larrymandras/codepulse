@@ -125,3 +125,88 @@ deterministic and green in all 8. That open item is recorded there rather than r
 - **Task 3:** watch the first 08:20 / 08:35 UTC cron firing after the deploy.
 
 **Nothing is deployed. Registering a cron in `crons.ts` does not make it live.**
+
+---
+
+## Task 2 — DEPLOY: COMPLETE (operator-run, 2026-08-25)
+
+Larry ran the deploy himself, per the plan's prohibition on the agent running it.
+
+**Command as run** (contains `--env-file`, self-hosted envfile, no `-y` needed):
+```
+npx convex deploy --env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile
+```
+
+**Pre-deploy working tree:** `M convex/_generated/api.d.ts` only — a generated file with an
+empty content diff (CRLF churn). No source shipped uncommitted. `git push origin master`
+completed first (`45767824..84fd77cc`), so origin and the deployed tree matched.
+
+**Verbatim deploy output:**
+```
+▌ Deploying code to deployment:
+▌ └─ http://127.0.0.1:3210
+✔ No large indexes are deleted by this push
+Uploading functions to Convex...
+Generating TypeScript bindings...
+Running TypeScript...
+Pushing code to your Convex deployment...
+Schema validation complete.
+Finalizing push...
+✔ Deleted table indexes:
+  [-] ideationFindings.by_dismissed   dismissed, _creationTime
+✔ Added table indexes:
+  [+] ideationFindings.by_dismissed   dismissed, createdAt, _creationTime
+  [+] ideationFindings.by_dismissedAt   dismissedAt, _creationTime
+  [+] inbox.by_closedAt   closedAt, createdAt, _creationTime
+✔ Deployed Convex functions to http://127.0.0.1:3210
+```
+
+### OPEN QUESTION 2 / ASSUMPTION A2 — ANSWERED
+
+`127-RESEARCH.md` recorded, as an explicitly open question, whether widening an index under an
+UNCHANGED name deploys as an in-place modification or as a drop-and-recreate, and said it could
+only be settled by reading a real deploy's output. It is now settled:
+
+**It is a DROP AND RECREATE.** `by_dismissed` went out as `[-] dismissed, _creationTime` and came
+back as `[+] dismissed, createdAt, _creationTime` — same name, torn down and rebuilt.
+
+**The transferable finding, which matters more than this phase.** `ideationFindings` is ~470
+rows, so the rebuild was free and invisible. On a large table the identical one-line schema edit
+is a full index drop plus backfill — exactly the class of mass operation this repo's CLAUDE.md
+records as having taken the self-hosted single-node instance down for days on 2026-07-21/22.
+A future widening on `events` or `toolExecutions` is NOT the harmless-looking change it appears
+to be in the diff.
+
+### Index-diff audit
+
+- The `Deleted table indexes:` line — which CLAUDE.md names as the ONLY announcement of a
+  destructive schema rollback — DID appear, and was inspected rather than skimmed. It contains
+  exactly one entry, `ideationFindings.by_dismissed`, which is re-added widened in the same
+  push. Nothing belonging to another session's work was dropped.
+- `✔ No large indexes are deleted by this push` passed as a separate check.
+- Three indexes added, all three expected: the widened `by_dismissed`, the new `by_dismissedAt`,
+  and `inbox.by_closedAt` (`closedAt, createdAt` — the composite that lets one index serve both
+  of the inbox janitor's steps, per D-06/R-02).
+- `Schema validation complete` — the new `inbox.closedAt` field validated against live data.
+
+### Cron registration is NOT yet confirmed — and the orchestrator's own step was wrong
+
+The plan's step asked the operator to confirm both cron names appear in the deploy output.
+**They cannot:** `convex deploy` reports functions, schema and indexes, not cron registrations.
+That was a specification error by the orchestrator, not a deploy problem.
+
+An attempt to confirm registration via `npx convex data ... _cronJobs` returned
+`There are no documents in this table.` **That result is discarded as non-discriminating**, on
+its control: a deliberately bogus table name (`_bogusTableNameXyz`) returns the IDENTICAL
+message, so the probe cannot distinguish "no rows" from "no such table". A second control
+(`ideationFindings`) returned real rows, proving the CLI works on tables it can see. The zero is
+therefore evidence of nothing.
+
+**Cron registration will be established by Task 3's first observed firing, not before.** Both
+janitors log the literal string `auto-close/prune` (`convex/inbox.ts:650`,
+`convex/ideation.ts:446`), and the cron names are `inbox-janitor` and
+`ideation-findings-janitor` (`convex/crons.ts:242`, `:261`).
+
+## Task 3 — first-run watch: PENDING
+
+Awaiting the first 08:20 / 08:35 UTC (04:20 / 04:35 ET) firing after this deploy.
