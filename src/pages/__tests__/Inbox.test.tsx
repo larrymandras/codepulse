@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { useQuery } from "convex/react";
 import type { InboxItem } from "@/components/InboxCard";
 
@@ -263,5 +263,125 @@ describe("Inbox — aggregate all-profiles card/held merge (D-12)", () => {
         "Nothing held. Focus mode and quiet hours are both off, or nothing came in while they were on."
       )
     ).toBeInTheDocument();
+  });
+});
+
+// ─── 126-06 (SWEEP-03, D-01/D-02/D-04): tab caps declare themselves ───────────
+// The observed contradiction that motivates this: sidebar badge 46 vs page
+// tabs "All 139 · Cards 130 · Held 9" simultaneously. This block proves the
+// Held tab's "N of M" is derived from the SAME api.inbox.countHeldUnacked
+// query the sidebar badge subscribes to (src/layouts/DashboardLayout.tsx),
+// not a second independently-computed number — see 126-06-PLAN.md
+// <planner_corrections> item 1 for why NOT api.inbox.listHeldUnacked.
+describe("Inbox — tab cap declarations (126-06, D-01/D-02/D-04)", () => {
+  // Page's own INBOX_LIST_LIMIT (src/pages/Inbox.tsx) — duplicated here
+  // deliberately as a literal, not imported, so this test would catch the
+  // page and the fixture drifting apart rather than silently tracking a
+  // shared constant.
+  const LIST_LIMIT = 200;
+
+  // Generates `total` inbox rows with exactly `unackedHeld` of them
+  // itemType="held" + ackedAt undefined (unacked); the rest are
+  // itemType="card". Derived programmatically so the numbers asserted below
+  // are never hand-typed against the fixture.
+  function makeInboxWindow(total: number, unackedHeld: number) {
+    const rows: Array<Record<string, unknown>> = [];
+    for (let i = 0; i < total; i++) {
+      const isHeld = i < unackedHeld;
+      rows.push({
+        _id: `row-${i}`,
+        profileId: "personal",
+        title: `Row ${i}`,
+        body: "body",
+        createdAt: Date.now() / 1000,
+        itemType: isHeld ? "held" : "card",
+        heldReason: isHeld ? "focus" : undefined,
+        // ackedAt intentionally omitted (undefined) -- every row is unacked,
+        // matching the "N of M" semantics (M is the unacked-held total, not
+        // the all-time held total).
+      });
+    }
+    return rows;
+  }
+
+  function mockInboxQueries(opts: {
+    listAll: Array<Record<string, unknown>>;
+    countHeldUnacked?: { count: number; truncated: boolean };
+  }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useQuery).mockImplementation(((...args: any[]) => {
+      if (args[0] === "inbox.listAll") return opts.listAll;
+      if (args[0] === "inbox.countHeldUnacked") return opts.countHeldUnacked;
+      return [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any);
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+  });
+
+  afterEach(() => {
+    vi.mocked(useQuery).mockReset();
+  });
+
+  test("Held tab renders the precise 'N of M' when countHeldUnacked has resolved and is untruncated", () => {
+    const window_ = makeInboxWindow(LIST_LIMIT, 9);
+    mockInboxQueries({
+      listAll: window_,
+      countHeldUnacked: { count: 46, truncated: false },
+    });
+    renderInbox();
+    expect(screen.getByText("9 of 46")).toBeInTheDocument();
+  });
+
+  test("CONTROL for the above: a truncated countHeldUnacked does NOT render '9 of 46' -- falls back to the generic floor marker (D-04)", () => {
+    const window_ = makeInboxWindow(LIST_LIMIT, 9);
+    mockInboxQueries({
+      listAll: window_,
+      countHeldUnacked: { count: 46, truncated: true },
+    });
+    renderInbox();
+    expect(screen.queryByText("9 of 46")).toBeNull();
+    expect(screen.getByText("9+")).toBeInTheDocument();
+  });
+
+  test("Cards tab renders the generic truncation marker when listAll returns exactly the page's own limit", () => {
+    const window_ = makeInboxWindow(LIST_LIMIT, 0); // all 200 rows are cards
+    mockInboxQueries({
+      listAll: window_,
+      countHeldUnacked: { count: 0, truncated: false },
+    });
+    renderInbox();
+    // "All" is also truncated in this fixture (same listAll window), so
+    // scope to the Cards tab button specifically rather than a bare
+    // screen-wide text query, which would ambiguously match both.
+    const cardsButton = screen.getByRole("button", { name: /Cards/ });
+    expect(within(cardsButton).getByText("200+")).toBeInTheDocument();
+  });
+
+  test("CONTROL for the above: no tab renders a truncation marker when listAll returns fewer rows than the page's limit", () => {
+    const window_ = makeInboxWindow(12, 3); // well under LIST_LIMIT
+    mockInboxQueries({
+      listAll: window_,
+      countHeldUnacked: { count: 3, truncated: false },
+    });
+    renderInbox();
+    // Held: precise "3 of 3" is not rendered either, since total === count
+    // (nothing more exists beyond what's already shown) -- plain "3" instead.
+    expect(screen.queryByText(/\d\+/)).toBeNull();
+    expect(screen.queryByText(/ of /)).toBeNull();
+    expect(screen.getByText("3", { selector: "span" })).toBeInTheDocument();
+  });
+
+  test("Held tab renders its plain count with no 'of M' and no marker while countHeldUnacked is unresolved (undefined)", () => {
+    const window_ = makeInboxWindow(12, 5); // under the limit, so listAll can't imply a cap either
+    mockInboxQueries({ listAll: window_, countHeldUnacked: undefined });
+    renderInbox();
+    expect(screen.getByText("5", { selector: "span" })).toBeInTheDocument();
+    expect(screen.queryByText(/ of /)).toBeNull();
+    expect(screen.queryByText("5+")).toBeNull();
   });
 });

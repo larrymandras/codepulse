@@ -137,6 +137,14 @@ function inboxRowToInboxItem(row: InboxRowDoc): InboxItem {
   };
 }
 
+// ─── Bounded list window (126-06, SWEEP-03, D-01) ─────────────────────────────
+// The page's OWN requested cap on api.inbox.listAll -- NOT a mirror of a
+// server constant (convex/inbox.ts's DEFAULT_LIST_ALL_LIMIT is a separate,
+// coincidentally-identical value). Declaring the limit here means the page
+// asks for the cap it then compares its result against, so the two cannot
+// drift out of sync -- see <planner_corrections> item 2 in 126-06-PLAN.md.
+const INBOX_LIST_LIMIT = 200;
+
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
 const RISK_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -181,8 +189,15 @@ export default function Inbox() {
   // `{ db } | any` for convex-test-free unit testing, which widens the
   // generated query's return type to `any` — explicit cast restores the
   // known Doc shape at the call site rather than editing the shared module).
-  const inboxRecords = (useQuery(api.inbox.listAll, {}) ??
+  const inboxRecords = (useQuery(api.inbox.listAll, { limit: INBOX_LIST_LIMIT }) ??
     []) as unknown as InboxRowDoc[];
+  // 126-06 (D-03/D-04): the SAME bounded query the shell's InboxCountBadge
+  // subscribes to (src/layouts/DashboardLayout.tsx) -- Convex reference-counts
+  // identical subscriptions, so this costs no additional server read. This is
+  // what makes the sidebar badge and this page's Held tab structurally
+  // incapable of disagreeing: both render off one shared subscription rather
+  // than two independently-computed numbers.
+  const heldTotal = useQuery(api.inbox.countHeldUnacked);
 
   // ─── WS: accumulate approval_request events ───────────────────────────────
   useEffect(() => {
@@ -362,6 +377,28 @@ export default function Inbox() {
     held: unreadHeld,
   };
 
+  // ─── Cap declarations for the filter tabs (126-06, SWEEP-03, D-01/D-02/D-04) ──
+  // listAll is bounded at INBOX_LIST_LIMIT; when the window comes back exactly
+  // full, more rows may exist beyond it that this page never saw.
+  const listTruncated = inboxRecords.length === INBOX_LIST_LIMIT;
+  // A precise denominator exists for Held ONLY when the shared count query has
+  // resolved AND is itself untruncated -- a truncated heldTotal is a FLOOR,
+  // and D-04 forbids propagating that cap into this page's "of M" (it must
+  // fall back to the generic marker instead, same as every other capped tab).
+  const heldTotalPrecise = heldTotal != null && heldTotal.truncated === false;
+  const totals: Partial<Record<InboxFilter, number>> = heldTotalPrecise
+    ? { held: heldTotal.count }
+    : {};
+  const truncated: Partial<Record<InboxFilter, boolean>> = {
+    all: listTruncated,
+    notifications: listTruncated,
+    cards: listTruncated,
+    held: heldTotal?.truncated === true || (listTruncated && !heldTotalPrecise),
+    // approvals/alerts come from separate, unbounded-by-this-page queries
+    // (WS accumulation + alerts.listActive) and are deliberately left
+    // unmarked -- listAll's cap says nothing about their true totals.
+  };
+
   // ─── Empty state copy ─────────────────────────────────────────────────────
   const emptyText: Record<InboxFilter, string> = {
     all: "No items. Inbox is clear.",
@@ -390,7 +427,13 @@ export default function Inbox() {
       )}
 
       {/* Filter tabs */}
-      <InboxFilterBar filter={filter} counts={counts} onChange={setFilter} />
+      <InboxFilterBar
+        filter={filter}
+        counts={counts}
+        onChange={setFilter}
+        totals={totals}
+        truncated={truncated}
+      />
 
       {/* Card list */}
       <div ref={flashRef} className="flex-1 overflow-y-auto p-4">
