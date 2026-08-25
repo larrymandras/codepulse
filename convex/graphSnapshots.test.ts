@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 
 /**
  * Pure-logic mirrors of the `graph_snapshot` ingest dispatch and receiver
@@ -13,8 +13,10 @@ import {
   sweepGraphSnapshotVersions,
   backfillGraphStoredVersions,
   GRAPH_BLOB_CHUNK_CHARS,
+  STALE_CHUNK_DELETE_CAP,
   splitGraphBlob,
   joinGraphBlobChunks,
+  upsertGraphSnapshot,
 } from "./graphSnapshots";
 
 // ---------------------------------------------------------------------------
@@ -404,6 +406,298 @@ describe("splitGraphBlob / joinGraphBlobChunks (126-02, D-06-REVISED)", () => {
     const shuffled = [rows[rows.length - 1], ...rows.slice(1, -1).reverse(), rows[0]];
     expect(joinGraphBlobChunks(shuffled)).toBe(s);
     expect(joinGraphBlobChunks(rows)).toBe(s); // same result regardless of input order
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 126, SWEEP-02, D-06-REVISED: upsertGraphSnapshot writer shape,
+// proven against a recording fake ctx modelled on makeGraphSweepCtx above
+// (sibling factory, same style, not a second unrelated harness).
+// ---------------------------------------------------------------------------
+
+/**
+ * Fake ctx for the WRITER. Models the graphSnapshots meta table and the
+ * graphSnapshotBlobChunks table, and RECORDS every insert/patch/delete — in
+ * order, in one flat log — so a test can assert on the recorded operation
+ * SHAPE and ORDER, not just the end state. Also records any insert into
+ * graphSnapshotNodes/graphSnapshotLinks (the retired legacy write path) so a
+ * restored insert loop shows up as a non-empty filter rather than a thrown
+ * error, keeping the assertion a normal `expect(...).toHaveLength(0)`.
+ */
+function makeGraphWriteCtx(opts: {
+  existingMeta?: any;
+  existingChunks?: Array<{ snapshotId: string; version: number; seq: number; chunk: string }>;
+} = {}) {
+  const ops: Array<{ type: "insert" | "patch" | "delete"; table?: string; doc?: any; id?: string; fields?: any }> = [];
+  let idCounter = 0;
+  const nextId = (prefix: string) => `${prefix}${idCounter++}`;
+
+  let meta: any = opts.existingMeta ? { _id: nextId("meta"), ...opts.existingMeta } : null;
+  let chunks: any[] = (opts.existingChunks ?? []).map((c) => ({ _id: nextId("chunk"), ...c }));
+
+  // Minimal index-range recorder: supports .eq/.lt chained the way Convex's
+  // real query builder does, and matches rows against the recorded bounds.
+  function makeChain(captured: Record<string, { op: string; value: any }>) {
+    const chain: any = {
+      eq:  (field: string, value: any) => { captured[field] = { op: "eq", value };  return chain; },
+      lt:  (field: string, value: any) => { captured[field] = { op: "lt", value };  return chain; },
+      lte: (field: string, value: any) => { captured[field] = { op: "lte", value }; return chain; },
+    };
+    return chain;
+  }
+  function matches(row: any, captured: Record<string, { op: string; value: any }>) {
+    return Object.entries(captured).every(([field, cond]) => {
+      const v = row[field];
+      if (cond.op === "eq") return v === cond.value;
+      if (cond.op === "lte") return v <= cond.value;
+      return v < cond.value; // "lt"
+    });
+  }
+
+  const ctx: any = {
+    db: {
+      insert: async (table: string, doc: any) => {
+        const id = nextId(table);
+        const row = { _id: id, ...doc };
+        ops.push({ type: "insert", table, doc: row });
+        if (table === "graphSnapshots") meta = row;
+        else if (table === "graphSnapshotBlobChunks") chunks.push(row);
+        // graphSnapshotNodes / graphSnapshotLinks: recorded in `ops` only —
+        // this is the retired legacy path, and the test asserts on `ops`
+        // filtered by table name.
+        return id;
+      },
+      patch: async (id: string, fields: any) => {
+        ops.push({ type: "patch", id, fields });
+        if (meta && meta._id === id) Object.assign(meta, fields);
+      },
+      delete: async (id: string) => {
+        ops.push({ type: "delete", id });
+        chunks = chunks.filter((c) => c._id !== id);
+      },
+      query: (table: string) => ({
+        withIndex: (_name: string, fn: any) => {
+          const captured: Record<string, { op: string; value: any }> = {};
+          fn(makeChain(captured));
+          return {
+            unique: async () => {
+              if (table !== "graphSnapshots") throw new Error(`unexpected .unique() on ${table}`);
+              return meta && matches(meta, captured) ? meta : null;
+            },
+            take: async (n: number) => {
+              if (table !== "graphSnapshotBlobChunks") throw new Error(`unexpected .take() on ${table}`);
+              return chunks.filter((c) => matches(c, captured)).slice(0, n);
+            },
+            collect: async () => {
+              throw new Error(`REGRESSION: unbounded .collect() on ${table}`);
+            },
+          };
+        },
+      }),
+    },
+  };
+
+  return { ctx, ops, getMeta: () => meta, getChunks: () => chunks };
+}
+
+/** Builds a fixture with the given node/link counts, plus 2 deliberately
+ * dangling links, so the dangling-link guard has something to drop. */
+function buildWriteFixture(nodeCount: number, linkCount: number) {
+  const nodes = Array.from({ length: nodeCount }, (_, i) => ({
+    id: `graphify:test:n${i}`,
+    label: `Node number ${i} with a realistic-length label for size estimation`,
+    type: i % 3 === 0 ? "code" : "note",
+    community: i % 5 === 0 ? null : (i % 7),
+    source: i % 2 === 0 ? "codepulse" : "astridr-repo",
+  }));
+  const links: Array<{ source: string; target: string; relation: string }> = [];
+  for (let i = 0; i < linkCount - 2; i++) {
+    links.push({
+      source: `graphify:test:n${i % nodeCount}`,
+      target: `graphify:test:n${(i + 1) % nodeCount}`,
+      relation: "imports",
+    });
+  }
+  // Deliberately dangling — endpoints not in the node set.
+  links.push({ source: "graphify:test:n0", target: "graphify:test:MISSING-TARGET", relation: "imports" });
+  links.push({ source: "graphify:test:MISSING-SOURCE", target: "graphify:test:n1", relation: "imports" });
+  return { nodes, links };
+}
+
+/** Mirrors the writer's own projection (dangling-link filter + community
+ * null/undefined coercion) so the round-trip test can assert against an
+ * independently computed expectation, then round-trips it through JSON so
+ * `undefined` fields drop out exactly as JSON.stringify would drop them. */
+function expectedWriterBlob(nodes: any[], links: any[]) {
+  const nodeIdSet = new Set(nodes.map((n) => n.id));
+  const filteredLinks = links.filter((l) => nodeIdSet.has(l.source) && nodeIdSet.has(l.target));
+  const projectedNodes = nodes.map((n) => ({
+    id: n.id,
+    label: n.label,
+    type: n.type,
+    community: n.community === null || n.community === undefined ? undefined : n.community,
+    source: n.source,
+  }));
+  return JSON.parse(JSON.stringify({ nodes: projectedNodes, links: filteredLinks }));
+}
+
+describe("upsertGraphSnapshot — writer shape (126-02, D-06-REVISED)", () => {
+  const SNAPSHOT_ID = "test-graph-126-02";
+  const { nodes, links } = buildWriteFixture(3000, 2000);
+  const args = {
+    snapshotId: SNAPSHOT_ID,
+    nodes,
+    links,
+    sources: [],
+    nodeCount: nodes.length,
+    linkCount: links.length,
+    generatedAt: 1000,
+    receivedAt: 1000,
+  };
+
+  // Run once (first ingest, no existing meta) and share across assertions —
+  // one test per property in <behavior>, per the plan.
+  let h: ReturnType<typeof makeGraphWriteCtx>;
+  let chunkInserts: Array<{ doc: any }>;
+
+  beforeAll(async () => {
+    h = makeGraphWriteCtx({});
+    await (upsertGraphSnapshot as any)._handler(h.ctx, args);
+    chunkInserts = h.ops.filter((o) => o.type === "insert" && o.table === "graphSnapshotBlobChunks") as any;
+  });
+
+  it("fixture is >= 3,000 nodes and produces more than one chunk", () => {
+    expect(nodes.length).toBeGreaterThanOrEqual(3000);
+    expect(chunkInserts.length).toBeGreaterThan(1);
+  });
+
+  it("inserts ZERO graphSnapshotNodes rows and ZERO graphSnapshotLinks rows (control: fails if either insert loop is restored)", () => {
+    const legacyNodeInserts = h.ops.filter((o) => o.type === "insert" && o.table === "graphSnapshotNodes");
+    const legacyLinkInserts = h.ops.filter((o) => o.type === "insert" && o.table === "graphSnapshotLinks");
+    expect(legacyNodeInserts).toHaveLength(0);
+    expect(legacyLinkInserts).toHaveLength(0);
+  });
+
+  it("inserted chunk rows carry seq values exactly 0..n-1, dense, no gaps", () => {
+    const seqs = chunkInserts.map((o) => o.doc.seq).sort((a, b) => a - b);
+    expect(seqs).toEqual(Array.from({ length: chunkInserts.length }, (_, i) => i));
+  });
+
+  it("every inserted chunk's length is <= GRAPH_BLOB_CHUNK_CHARS", () => {
+    expect(chunkInserts.every((o) => o.doc.chunk.length <= GRAPH_BLOB_CHUNK_CHARS)).toBe(true);
+  });
+
+  it("the meta doc written carries blobChunkCount equal to the number of chunk rows inserted", () => {
+    const metaInsert = h.ops.find((o) => o.type === "insert" && o.table === "graphSnapshots");
+    expect(metaInsert).toBeDefined();
+    expect(metaInsert!.doc.blobChunkCount).toBe(chunkInserts.length);
+  });
+
+  it("joinGraphBlobChunks(<the inserted rows>) parses to {nodes, links} exactly as the writer serialized them", () => {
+    const rows = chunkInserts.map((o) => ({ seq: o.doc.seq, chunk: o.doc.chunk }));
+    const parsed = JSON.parse(joinGraphBlobChunks(rows));
+    expect(parsed).toEqual(expectedWriterBlob(nodes, links));
+  });
+
+  it("dangling links are still dropped — a link whose target is not in the node set does not appear in the serialized blob", () => {
+    const rows = chunkInserts.map((o) => ({ seq: o.doc.seq, chunk: o.doc.chunk }));
+    const parsed = JSON.parse(joinGraphBlobChunks(rows));
+    const hasDangling = parsed.links.some(
+      (l: any) => l.target === "graphify:test:MISSING-TARGET" || l.source === "graphify:test:MISSING-SOURCE"
+    );
+    expect(hasDangling).toBe(false);
+  });
+});
+
+describe("upsertGraphSnapshot — pointer flip happens BEFORE the stale-chunk delete (126-02)", () => {
+  it("the meta write's operation index precedes the first delete's index (order, not just end state)", async () => {
+    const SNAPSHOT_ID = "test-graph-order";
+    const h = makeGraphWriteCtx({
+      existingMeta: {
+        snapshotId: SNAPSHOT_ID,
+        activeVersion: 1,
+        storedVersions: [1],
+        sources: [],
+        nodeCount: 0,
+        linkCount: 0,
+        storedNodeCount: 0,
+        storedLinkCount: 0,
+        generatedAt: 0,
+        updatedAt: 0,
+        blobChunkCount: 1,
+      },
+      existingChunks: [
+        { snapshotId: SNAPSHOT_ID, version: 1, seq: 0, chunk: "old-chunk" },
+      ],
+    });
+    const { nodes, links } = buildWriteFixture(5, 3);
+    await (upsertGraphSnapshot as any)._handler(h.ctx, {
+      snapshotId: SNAPSHOT_ID,
+      nodes,
+      links,
+      sources: [],
+      nodeCount: nodes.length,
+      linkCount: links.length,
+      generatedAt: 2000,
+      receivedAt: 2000,
+    });
+
+    const metaOpIndex = h.ops.findIndex(
+      (o) => o.type === "patch" || (o.type === "insert" && o.table === "graphSnapshots")
+    );
+    const firstDeleteIndex = h.ops.findIndex((o) => o.type === "delete");
+
+    // An END-STATE assertion (e.g. "the old chunk is gone") cannot distinguish
+    // delete-then-flip from flip-then-delete — both leave the same final rows.
+    // Only the recorded operation ORDER can catch a reordering that would
+    // otherwise let a mid-crash leave activeVersion pointing at a version
+    // whose chunks were already deleted.
+    expect(metaOpIndex).toBeGreaterThanOrEqual(0);
+    expect(firstDeleteIndex).toBeGreaterThanOrEqual(0);
+    expect(metaOpIndex).toBeLessThan(firstDeleteIndex);
+  });
+});
+
+describe("upsertGraphSnapshot — stale-chunk delete survivor set (126-02)", () => {
+  it("deletes chunks of versions OLDER than the new one; the new version's own chunks survive (control: a too-broad predicate fails this)", async () => {
+    const SNAPSHOT_ID = "test-graph-survivor";
+    const h = makeGraphWriteCtx({
+      existingMeta: {
+        snapshotId: SNAPSHOT_ID,
+        activeVersion: 1,
+        storedVersions: [1],
+        sources: [],
+        nodeCount: 0,
+        linkCount: 0,
+        storedNodeCount: 0,
+        storedLinkCount: 0,
+        generatedAt: 0,
+        updatedAt: 0,
+        blobChunkCount: 2,
+      },
+      existingChunks: [
+        { snapshotId: SNAPSHOT_ID, version: 1, seq: 0, chunk: "old-0" },
+        { snapshotId: SNAPSHOT_ID, version: 1, seq: 1, chunk: "old-1" },
+      ],
+    });
+    const { nodes, links } = buildWriteFixture(5, 3);
+    await (upsertGraphSnapshot as any)._handler(h.ctx, {
+      snapshotId: SNAPSHOT_ID,
+      nodes,
+      links,
+      sources: [],
+      nodeCount: nodes.length,
+      linkCount: links.length,
+      generatedAt: 2000,
+      receivedAt: 2000,
+    });
+
+    const survivors = h.getChunks();
+    // Every survivor belongs to the NEW version (2); none belong to the old
+    // version (1) that was seeded in.
+    expect(survivors.length).toBeGreaterThan(0);
+    expect(survivors.every((c) => c.version === 2)).toBe(true);
+    expect(survivors.some((c) => c.version === 1)).toBe(false);
   });
 });
 
