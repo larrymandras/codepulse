@@ -224,4 +224,44 @@ crons.daily(
   {}
 );
 
+// Phase 127 D-09/R-04: inbox ack-aware auto-close/prune janitor.
+// 08:00 UTC is NOT an empty slot even though no crons.daily claims it —
+// sweep-graph-snapshot-versions above is crons.interval({ hours: 1 }) and
+// therefore also fires at 08:00 UTC. R-04 moved this and its sibling
+// findings janitor below to :20/:35 to avoid that contention outright,
+// following this file's own deliberate-offset discipline, rather than
+// judging the collision unlikely.
+//
+// This cron is the ONLY thing bounding `inbox` (D-09) — the table is
+// deliberately exempt from RETENTION_DAYS because a plain _creationTime
+// cutoff would delete unacked items the operator never saw (D-01/R-02).
+// Batch-capped and cursor-seeked (convex/inbox.ts's autoCloseAndPrune),
+// same discipline as studio-trash-prune above. The first run drains a
+// known ~2,450-row backlog in roughly 13 batches.
+crons.daily(
+  "inbox-janitor",
+  { hourUTC: 8, minuteUTC: 20 },
+  internal.inbox.autoCloseAndPrune,
+  {}
+);
+
+// Phase 127 D-09/R-04: ideationFindings ack-aware auto-dismiss/prune
+// janitor. Offset 15 minutes from its sibling inbox janitor above, same
+// anti-contention discipline.
+//
+// This cron is inert by design until roughly 2026-11-16: it auto-dismisses
+// findings open past 180 days (M=180d), and the table's oldest row was
+// only 94 days old on 2026-08-21. It logs unconditionally on every
+// invocation, including zero-work runs, so a long inert stretch is
+// attributable rather than looking broken — otherwise a future reader
+// finding no deletions would reasonably conclude the cron is dead and
+// "fix" it, reproducing the exact 2026-08-21 failure this phase exists to
+// prevent.
+crons.daily(
+  "ideation-findings-janitor",
+  { hourUTC: 8, minuteUTC: 35 },
+  internal.ideation.autoCloseAndPrune,
+  {}
+);
+
 export default crons;

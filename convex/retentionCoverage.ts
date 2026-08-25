@@ -79,6 +79,15 @@ export const COVERAGE_BOUNDED_BY_CRON: Record<string, string> = {
   forgeCommands: "internal.forge.expireStaleCommands",
   alertMutes: "internal.alertMutes.cleanupExpired",
   media: "internal.media.pruneTrashBatch",
+  // Phase 127 D-09/R-02: both are auto-close-then-delete janitors, not
+  // calendar prunes, which is why they belong here rather than in
+  // RETENTION_DAYS. `inbox` keys on a dedicated `closedAt` lifecycle field
+  // — NOT the separate acknowledgement timestamp field, which two frontend
+  // surfaces render read/unread state from and which this janitor only
+  // ever reads, never writes. `ideationFindings` keys on its existing
+  // `dismissed`/`dismissedAt`.
+  inbox: "internal.inbox.autoCloseAndPrune",
+  ideationFindings: "internal.ideation.autoCloseAndPrune",
 };
 
 /** Table -> where it is bounded at WRITE time. Documented, not machine-checkable. */
@@ -163,8 +172,6 @@ export const COVERAGE_PRUNE_PROPOSED: Record<
   string,
   { rowsPerDay: number | null; proposedDays: number; note: string }
 > = {
-  inbox: { rowsPerDay: 100, proposedDays: 90, note: "DO NOT calendar-prune as-is: schema.ts:2112 has ackedAt, so a _creationTime cutoff would delete UNACKED items the operator never saw. Needs an ack-aware janitor keyed on ackedAt, the shape media.pruneTrashBatch uses for deletedAt" },
-  ideationFindings: { rowsPerDay: 5.1, proposedDays: 90, note: "DO NOT calendar-prune as-is: schema.ts:892-898 has dismissed, dismissedAt, acknowledgedAt and convertedAt - this is a TRIAGE QUEUE, so a _creationTime cutoff would delete open, unacknowledged findings. Same class as inbox; needs a dismissed-aware janitor" },
   profileMetrics: { rowsPerDay: 0, proposedDays: 90, note: "DEAD WRITER: newest row 2026-04-10, 2,540 rows frozen. Confirm the feature is retired, then drop the table rather than prune it" },
   memoryQuality: { rowsPerDay: null, proposedDays: 90, note: "eval output, append-only" },
   evalScores: { rowsPerDay: null, proposedDays: 90, note: "eval output, append-only" },
