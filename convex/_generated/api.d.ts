@@ -34,6 +34,7 @@ import type * as authAliases from "../authAliases.js";
 import type * as automation from "../automation.js";
 import type * as avatars from "../avatars.js";
 import type * as bifrost from "../bifrost.js";
+import type * as bifrostUrl from "../bifrostUrl.js";
 import type * as briefings from "../briefings.js";
 import type * as build from "../build.js";
 import type * as calendarEvents from "../calendarEvents.js";
@@ -219,6 +220,7 @@ declare const fullApi: ApiFromModules<{
   automation: typeof automation;
   avatars: typeof avatars;
   bifrost: typeof bifrost;
+  bifrostUrl: typeof bifrostUrl;
   briefings: typeof briefings;
   build: typeof build;
   calendarEvents: typeof calendarEvents;
