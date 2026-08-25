@@ -10,20 +10,24 @@ requires:
     provides: "both janitors built, tested, cron-registered; Verification B fully satisfied"
 provides:
   - "Task 1: exhaustive ackedAt consumer sweep - R-02's two-consumer premise CONFIRMED against the corpus"
-affects: ["Tasks 2 and 3 are BLOCKING operator actions - deploy and first-run watch - both unrun"]
+  - "Task 2: schema + crons DEPLOYED to the self-hosted backend; index diff read verbatim"
+  - "Open Question 2 / Assumption A2 ANSWERED: widening an index under an unchanged name is a DROP AND RECREATE"
+affects: ["Task 3 (first-run cron watch) is the one remaining BLOCKING operator action; cron registration is NOT yet confirmed"]
 
 key-files:
   created: []
   modified: []
 
 # Metrics
-completed: partial - Task 1 of 3
+completed: partial - Tasks 1 and 2 of 3; Task 3 pending the first cron firing
 ---
 
-# Phase 127 Plan 08: `ackedAt` Consumer Sweep (Task 1 of 3)
+# Phase 127 Plan 08: Consumer Sweep, Deploy, and First-Run Watch
 
-**Task 1 complete. Tasks 2 and 3 are blocking operator actions and are deliberately unrun —
-nothing has been deployed.**
+**Tasks 1 and 2 complete. The schema and both crons ARE deployed to the self-hosted backend
+(2026-08-25, operator-run). Task 3 — the first-run cron watch — is pending, and until it is
+observed, cron REGISTRATION is not confirmed; see Task 2 below for why the deploy output
+cannot establish it.**
 
 ## Task 1 — Exhaustive `ackedAt` consumer sweep
 
@@ -116,15 +120,10 @@ Green: `365 files passed | 17 skipped`, `5,159 passed | 4 skipped | 195 todo`, 0
 **1 reported `1 failed` whose identity was not captured**. Every `convex/**` test was
 deterministic and green in all 8. That open item is recorded there rather than resolved here.
 
-## Tasks 2 and 3 — BLOCKING, unrun
+## Task status as first written (superseded)
 
-- **Task 2:** deploy the schema to the self-hosted backend with
-  `npx convex deploy --env-file …selfhosted.envfile` and read the index diff verbatim,
-  specifically what it says about the widened `by_dismissed`. Larry runs this; the plan
-  explicitly forbids the agent from running it.
-- **Task 3:** watch the first 08:20 / 08:35 UTC cron firing after the deploy.
-
-**Nothing is deployed. Registering a cron in `crons.ts` does not make it live.**
+_Kept for provenance. Task 2 completed later the same day and its full record follows below._
+_Task 3 remains pending._
 
 ---
 
