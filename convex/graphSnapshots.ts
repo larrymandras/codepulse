@@ -21,8 +21,11 @@
  * and forge.listJobs (intentionally public, operational telemetry, non-secret).
  */
 
-import { internalMutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
+import { v, ConvexError } from "convex/values";
+import type { PaginationResult } from "convex/server";
 
 // ---------------------------------------------------------------------------
 // Module-level constants and pure-logic helpers
@@ -73,6 +76,29 @@ export const GRAPH_BLOB_CHUNK_CHARS = 128_000;
  * cap is meant to bound.
  */
 export const STALE_CHUNK_DELETE_CAP = 200;
+
+/**
+ * Per-invocation cap on how many chunk rows getProjectGraph will read for one
+ * version's blob. DERIVED from Convex's 16 MiB per-transaction scan ceiling,
+ * not chosen as a round number (REVIEW FIX, cross-AI review 2026-08-24,
+ * HIGH — an earlier draft said 200, which sits ABOVE the ceiling below and
+ * would make the over-cap ConvexError in getProjectGraph UNREACHABLE: the
+ * database aborts the scan before the handler ever sees row 201, the same
+ * failure shape as D-05 itself).
+ *
+ * Arithmetic: GRAPH_BLOB_CHUNK_CHARS (128,000 chars) x 4 bytes (UTF-8 worst
+ * case per character) = 512 KB worst-case per chunk row. A safety factor of
+ * 2 against the 16 MiB scan ceiling gives an 8 MiB budget, so
+ * 8 MiB / 512 KB = 16 chunks. Today's graph (~1.03 MB serialized, per
+ * D-06-REVISED's measurement) is ~9 chunks, so 16 leaves real headroom while
+ * staying provably under the ceiling even if every chunk is full and every
+ * character is 4 bytes.
+ *
+ * If a future graph genuinely needs more than 16 chunks, the fix is NOT to
+ * raise this constant — 512 KB x N must stay under the 8 MiB budget. Raising
+ * it past the scan ceiling reintroduces D-05's failure at a larger size.
+ */
+export const GRAPH_BLOB_MAX_CHUNKS = 16;
 
 /**
  * Splits a JSON string into chunks of at most `maxChars` characters each,
@@ -577,20 +603,102 @@ export const getProjectGraph = query({
 
     if (!meta) return null;  // graceful-skip: no data yet
 
-    const nodes = await ctx.db
-      .query("graphSnapshotNodes")
-      .withIndex("by_snapshot_version", (q) =>
+    // ONE bounded, seq-ordered indexed read replaces the two unbounded
+    // collect-all reads D-05 measured at 6,591 rows against the 4,096-read ceiling.
+    // by_snapshot_version_seq's trailing key IS seq, so .order("asc") here is
+    // seq-ascending — unlike convex/forge.ts's listJobLogs (by_host_job +
+    // .order("asc")), which sorts by _creationTime and is a COUNTER-EXAMPLE
+    // for this read, not a copy target: harmless for append-only log lines,
+    // silent corruption for a JSON blob whose reassembly order must be exact.
+    const rows = await ctx.db
+      .query("graphSnapshotBlobChunks")
+      .withIndex("by_snapshot_version_seq", (q) =>
         q.eq("snapshotId", snapshotId).eq("version", meta.activeVersion)
       )
-      .collect();
+      .order("asc")
+      .take(GRAPH_BLOB_MAX_CHUNKS + 1);
 
-    const links = await ctx.db
-      .query("graphSnapshotLinks")
-      .withIndex("by_snapshot_version", (q) =>
-        q.eq("snapshotId", snapshotId).eq("version", meta.activeVersion)
-      )
-      .collect();
+    // FIRST, before any zero-row handling (REVIEW FIX, cross-AI review
+    // 2026-08-24, HIGH): a meta doc that CLAIMS chunks exist
+    // (blobChunkCount > 0) but returns zero rows is corruption, not absence —
+    // total chunk loss, the worst case. Throwing here instead of returning
+    // null keeps that distinguishable from the genuinely-no-data case below.
+    // The absence of the FIELD is what licenses the null path, not the
+    // absence of rows.
+    if (meta.blobChunkCount !== undefined && meta.blobChunkCount > 0 && rows.length === 0) {
+      throw new ConvexError(
+        `getProjectGraph: snapshotId "${snapshotId}" version ${meta.activeVersion} claims ` +
+          `blobChunkCount ${meta.blobChunkCount} but zero chunk rows were found — total chunk loss.`
+      );
+    }
 
+    // A version written before Phase 126's chunked writer, or one not yet
+    // backfilled, has no blobChunkCount field at all — that is genuinely "no
+    // data in this shape yet" and takes the SAME graceful-skip path a missing
+    // meta doc takes. CodeVaultGraph already has a state for that; throwing
+    // here would blank the page for a condition expected during rollout.
+    if (rows.length === 0 && meta.blobChunkCount === undefined) {
+      return null;
+    }
+
+    // The chunk read is bounded too (take(CAP + 1)) — replacing one unbounded
+    // read with another would just move the cliff to a larger graph size.
+    if (rows.length > GRAPH_BLOB_MAX_CHUNKS) {
+      throw new ConvexError(
+        `getProjectGraph: snapshotId "${snapshotId}" version ${meta.activeVersion} returned ` +
+          `more than GRAPH_BLOB_MAX_CHUNKS (${GRAPH_BLOB_MAX_CHUNKS}) chunk rows.`
+      );
+    }
+
+    // Missing-chunk detector: the meta doc's count is the independent source
+    // of truth for how many chunks THIS version should have.
+    if (meta.blobChunkCount !== undefined && rows.length !== meta.blobChunkCount) {
+      throw new ConvexError(
+        `getProjectGraph: snapshotId "${snapshotId}" version ${meta.activeVersion} expected ` +
+          `${meta.blobChunkCount} chunk rows but found ${rows.length}.`
+      );
+    }
+
+    // Belt AND braces on ordering: dense-from-0 check here, plus
+    // joinGraphBlobChunks sorts on seq again below. A gap must name its
+    // cause rather than surface as a JSON.parse throw or a plausible-looking
+    // short graph.
+    const sortedSeqs = rows.map((r) => r.seq).sort((a, b) => a - b);
+    for (let i = 0; i < sortedSeqs.length; i++) {
+      if (sortedSeqs[i] !== i) {
+        throw new ConvexError(
+          `getProjectGraph: snapshotId "${snapshotId}" version ${meta.activeVersion} is missing ` +
+            `chunk seq ${i} (chunk sequence has a gap).`
+        );
+      }
+    }
+
+    // Typed explicitly, not left as `unknown[]` — ProjectGraphData
+    // (src/hooks/useProjectGraph.ts) derives its type from getProjectGraph's
+    // OWN inferred return type, so an untyped parsed blob here would widen
+    // `nodes`/`links` to `unknown[]` for every downstream consumer
+    // (CodeVaultGraph.tsx, ToolGalaxy.tsx — both out of scope to edit) even
+    // though the runtime shape is unchanged from what the old two collect-all
+    // reads returned.
+    let parsed: {
+      nodes: Array<{ id: string; label: string; type: string; community?: number; source: string }>;
+      links: Array<{ source: string; target: string; relation: string }>;
+    };
+    try {
+      parsed = JSON.parse(joinGraphBlobChunks(rows));
+    } catch (err) {
+      // Unwrapped, a JSON.parse throw is a plain Error and reaches the
+      // client as redacted "Server Error" (CLAUDE.md), telling the operator
+      // nothing. Re-throw as ConvexError so .data survives redaction.
+      throw new ConvexError(
+        `getProjectGraph: snapshotId "${snapshotId}" version ${meta.activeVersion} — failed to ` +
+          `parse rejoined blob from ${rows.length} chunk(s): ` +
+          `${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+
+    // Passthrough — plan 126-02's writer serialized {nodes, links} in exactly
+    // this return shape, so no re-mapping is needed here.
     return {
       snapshotId:      meta.snapshotId,
       sources:         meta.sources,
@@ -599,18 +707,8 @@ export const getProjectGraph = query({
       storedNodeCount: meta.storedNodeCount,
       storedLinkCount: meta.storedLinkCount,
       generatedAt:     meta.generatedAt,
-      nodes: nodes.map((n) => ({
-        id:        n.nodeId,
-        label:     n.label,
-        type:      n.type,
-        community: n.community,
-        source:    n.source,
-      })),
-      links: links.map((l) => ({
-        source:   l.source,
-        target:   l.target,
-        relation: l.relation,
-      })),
+      nodes: parsed.nodes,
+      links: parsed.links,
     };
   },
 });
@@ -659,5 +757,272 @@ export const listSnapshots = query({
   handler: async (ctx) => {
     const rows = await ctx.db.query("graphSnapshots").collect();
     return rows.map(projectSnapshotRow);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// One-shot backfill (Phase 126, SWEEP-02, D-06-REVISED) — internal-only.
+//
+// upsertGraphSnapshot retired the graphSnapshotNodes/graphSnapshotLinks
+// writes as of this same phase, so the version active on the live
+// deployment at deploy time was written by the OLD writer: it has entity
+// rows but ZERO graphSnapshotBlobChunks rows, so getProjectGraph's new
+// chunk-based read would return null for it (or throw, if a stale
+// blobChunkCount ever claimed otherwise) until Ástríðr's nightly
+// graph:snapshot cron next runs. This backfill rebuilds the active version
+// through the REAL production writer (upsertGraphSnapshot) instead of
+// re-implementing chunking, so it cannot drift from the writer and it
+// exercises the exact code path plan 126-02 built.
+// ---------------------------------------------------------------------------
+
+/**
+ * Page size for backfillGraphBlob's paginated reads of the legacy entity
+ * tables. Clamped INSIDE getGraphEntityPage's handler, never trusted from the
+ * caller — this is an internalQuery, but an internal function's argument can
+ * still be widened by a future caller, and the 4,096-read ceiling does not
+ * care who called it.
+ */
+const BACKFILL_PAGE_SIZE = 1000;
+
+/**
+ * Returns the meta doc for a snapshotId (default astridr-project-graph), or
+ * null. One row read. internalQuery — used only by backfillGraphBlob, not a
+ * public surface.
+ */
+export const getGraphMetaForBackfill = internalQuery({
+  args: { snapshotId: v.optional(v.string()) },
+  handler: async (ctx, { snapshotId = "astridr-project-graph" }): Promise<Doc<"graphSnapshots"> | null> => {
+    return await ctx.db
+      .query("graphSnapshots")
+      .withIndex("by_snapshotId", (q) => q.eq("snapshotId", snapshotId))
+      .unique();
+  },
+});
+
+/**
+ * One bounded page of legacy entity rows (graphSnapshotNodes or
+ * graphSnapshotLinks) for a given (snapshotId, version), via
+ * by_snapshot_version + .paginate(). Used only by backfillGraphBlob, which
+ * pages through an entire version's rows a bounded slice at a time rather
+ * than in one transaction — the same reason sweepGraphSnapshotVersions above
+ * bounds its reads instead of .collect()-ing a whole version.
+ */
+export const getGraphEntityPage = internalQuery({
+  args: {
+    snapshotId: v.string(),
+    version:    v.number(),
+    kind:       v.union(v.literal("nodes"), v.literal("links")),
+    cursor:     v.union(v.string(), v.null()),
+    numItems:   v.number(),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<PaginationResult<Doc<"graphSnapshotNodes">> | PaginationResult<Doc<"graphSnapshotLinks">>> => {
+    // Clamp here — never trust the caller's number, even our own action's.
+    const numItems = Math.max(1, Math.min(args.numItems, BACKFILL_PAGE_SIZE));
+    if (args.kind === "nodes") {
+      return await ctx.db
+        .query("graphSnapshotNodes")
+        .withIndex("by_snapshot_version", (q) =>
+          q.eq("snapshotId", args.snapshotId).eq("version", args.version)
+        )
+        .paginate({ numItems, cursor: args.cursor });
+    }
+    return await ctx.db
+      .query("graphSnapshotLinks")
+      .withIndex("by_snapshot_version", (q) =>
+        q.eq("snapshotId", args.snapshotId).eq("version", args.version)
+      )
+      .paginate({ numItems, cursor: args.cursor });
+  },
+});
+
+/**
+ * One-shot backfill: rebuilds the active version's chunked blob for a
+ * snapshotId whose meta doc predates Phase 126's chunked writer.
+ *
+ * IDEMPOTENCE AND VERSION SAFETY — three mandatory guards (REVIEW FIX,
+ * cross-AI review 2026-08-24, HIGH). An earlier draft's only no-op condition
+ * was "zero entity rows AND zero chunk rows", which is unsafe now that
+ * upsertGraphSnapshot has stopped writing entity rows: a re-run after a
+ * successful backfill (or after the producer's next nightly ingest) would
+ * find zero entity rows but non-zero chunks, the AND would be false, and the
+ * action would proceed with EMPTY accumulators — publishing an EMPTY version
+ * over the live graph with no error. Re-running a backfill after an
+ * apparently-successful run is a likely operator action, not an exotic one.
+ *
+ *   1. alreadyChunked no-op — if the active meta already has blobChunkCount
+ *      > 0, return without writing anything. This is what makes a re-run safe.
+ *   2. noEntityRows no-op — never publish a graph with zero accumulated
+ *      nodes, regardless of how that state was reached.
+ *   3. versionAdvanced no-op — captures activeVersion as sourceVersion before
+ *      paging, then re-reads the meta doc immediately before publishing and
+ *      requires activeVersion === sourceVersion. If a producer advanced the
+ *      pointer while this action was paging, publishing the stale entity
+ *      data as a NEWER version would silently roll the graph backwards.
+ *
+ * Every path — success or no-op — returns a NAMED status, never a bare
+ * success, so the operator running this from the CLI has a result to read
+ * rather than inferring one from silence.
+ *
+ * Run once, after deploying:
+ *   npx convex run graphSnapshots:backfillGraphBlob '{}' --env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile
+ *
+ * FLAG, NOT A REDESIGN: the reconstructed upsertGraphSnapshot call carries
+ * roughly 1 MB of node/link data in one mutation argument. If Convex's
+ * argument-size limit rejects it on the live run, that is plan 126-09's
+ * finding to make, not a reason to redesign this backfill here.
+ *
+ * Do NOT "fix" an argument-size failure by splitting the call per source.
+ * upsertGraphSnapshot does not merge into an existing version — it computes
+ * newVersion = activeVersion + 1, replaces `sources` wholesale with the
+ * call's own argument, and flips activeVersion to the new version on every
+ * call. N per-source calls would therefore create N versions, each holding
+ * exactly ONE source, with the final active version containing only the
+ * LAST source — the others silently gone, with no error and no truncation
+ * flag. If the argument limit is genuinely hit, the only safe shape is a
+ * staged protocol that writes every source under one target version and
+ * flips activeVersion only after all of them land — that is a new plan, not
+ * an improvisation here.
+ */
+// Explicit return type on backfillGraphBlob's handler (below), NOT tidiness:
+// this internalAction calls other exports of THIS SAME FILE via
+// internal.graphSnapshots.*, and TypeScript's generated `internal` namespace
+// type is built from every export in the module, including this one. Without
+// a declared return type, inferring backfillGraphBlob's type requires fully
+// resolving `internal.graphSnapshots`, which requires backfillGraphBlob's own
+// (not-yet-inferred) type — a circular inference (TS7022/TS7023). Declaring
+// the type breaks the cycle; gatewayQuota.ts's pollAndStore avoids this only
+// because it has no branch returning a value, so its inferred type is void.
+type BackfillGraphBlobResult = {
+  status: "noMetaDoc" | "alreadyChunked" | "noEntityRows" | "versionAdvanced" | "backfilled";
+  snapshotId: string;
+  sourceVersion: number | undefined;
+  nodeCount: number;
+  linkCount: number;
+  pages: number;
+  blobChunkCount: number;
+};
+
+export const backfillGraphBlob = internalAction({
+  args: { snapshotId: v.optional(v.string()) },
+  handler: async (ctx, { snapshotId = "astridr-project-graph" }): Promise<BackfillGraphBlobResult> => {
+    const meta = await ctx.runQuery(internal.graphSnapshots.getGraphMetaForBackfill, { snapshotId });
+    if (!meta) {
+      return { status: "noMetaDoc", snapshotId, sourceVersion: undefined, nodeCount: 0, linkCount: 0, pages: 0, blobChunkCount: 0 };
+    }
+
+    // Guard 1: already chunked — no-op. Makes a re-run safe.
+    if (meta.blobChunkCount !== undefined && meta.blobChunkCount > 0) {
+      return {
+        status: "alreadyChunked",
+        snapshotId,
+        sourceVersion: meta.activeVersion,
+        nodeCount: meta.storedNodeCount,
+        linkCount: meta.storedLinkCount,
+        pages: 0,
+        blobChunkCount: meta.blobChunkCount,
+      };
+    }
+
+    const sourceVersion = meta.activeVersion;
+    let pages = 0;
+
+    // Page nodes to completion.
+    const nodes: Array<{ id: string; label: string; type: string; community?: number; source: string }> = [];
+    {
+      let cursor: string | null = null;
+      for (;;) {
+        // Cast, not a narrowing bug worked around: getGraphEntityPage's
+        // declared return type is the UNION of both tables' PaginationResult
+        // (it must be, to break the circular-inference issue explained at
+        // its declaration), but this call site's own kind: "nodes" literal
+        // is what the handler branches on, so the actual runtime shape here
+        // IS the nodes variant.
+        const page = (await ctx.runQuery(
+          internal.graphSnapshots.getGraphEntityPage,
+          { snapshotId, version: sourceVersion, kind: "nodes", cursor, numItems: BACKFILL_PAGE_SIZE }
+        )) as PaginationResult<Doc<"graphSnapshotNodes">>;
+        pages++;
+        for (const row of page.page) {
+          nodes.push({
+            id:        row.nodeId,
+            label:     row.label,
+            type:      row.type,
+            community: row.community,
+            source:    row.source,
+          });
+        }
+        if (page.isDone) break;
+        cursor = page.continueCursor;
+      }
+    }
+
+    // Guard 2: never publish an empty graph.
+    if (nodes.length === 0) {
+      return { status: "noEntityRows", snapshotId, sourceVersion, nodeCount: 0, linkCount: 0, pages, blobChunkCount: 0 };
+    }
+
+    // Page links to completion.
+    const links: Array<{ source: string; target: string; relation: string }> = [];
+    {
+      let cursor: string | null = null;
+      for (;;) {
+        // Same cast rationale as the nodes loop above — kind: "links" here
+        // is what makes the runtime shape the links variant.
+        const page = (await ctx.runQuery(internal.graphSnapshots.getGraphEntityPage, {
+          snapshotId,
+          version: sourceVersion,
+          kind: "links",
+          cursor,
+          numItems: BACKFILL_PAGE_SIZE,
+        })) as PaginationResult<Doc<"graphSnapshotLinks">>;
+        pages++;
+        for (const row of page.page) {
+          links.push({ source: row.source, target: row.target, relation: row.relation });
+        }
+        if (page.isDone) break;
+        cursor = page.continueCursor;
+      }
+    }
+
+    // Guard 3: expected-version check, re-read immediately before publishing.
+    const currentMeta = await ctx.runQuery(internal.graphSnapshots.getGraphMetaForBackfill, { snapshotId });
+    if (!currentMeta || currentMeta.activeVersion !== sourceVersion) {
+      return {
+        status: "versionAdvanced",
+        snapshotId,
+        sourceVersion,
+        nodeCount: nodes.length,
+        linkCount: links.length,
+        pages,
+        blobChunkCount: 0,
+      };
+    }
+
+    await ctx.runMutation(internal.graphSnapshots.upsertGraphSnapshot, {
+      snapshotId,
+      nodes,
+      links,
+      sources:     meta.sources,
+      nodeCount:   meta.nodeCount,
+      linkCount:   meta.linkCount,
+      generatedAt: meta.generatedAt,
+      receivedAt:  Date.now() / 1000, // epoch SECONDS — this repo's telemetry convention
+    });
+
+    // Re-read once more to report the blobChunkCount actually written.
+    const finalMeta = await ctx.runQuery(internal.graphSnapshots.getGraphMetaForBackfill, { snapshotId });
+
+    return {
+      status: "backfilled",
+      snapshotId,
+      sourceVersion,
+      nodeCount: nodes.length,
+      linkCount: links.length,
+      pages,
+      blobChunkCount: finalMeta?.blobChunkCount ?? 0,
+    };
   },
 });
