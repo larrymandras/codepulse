@@ -13,6 +13,7 @@ import {
   sweepGraphSnapshotVersions,
   backfillGraphStoredVersions,
   GRAPH_BLOB_CHUNK_CHARS,
+  GRAPH_BLOB_MAX_CHUNKS,
   STALE_CHUNK_DELETE_CAP,
   splitGraphBlob,
   joinGraphBlobChunks,
@@ -1069,5 +1070,140 @@ describe("backfillGraphStoredVersions — probes, never scans", () => {
       h.restore();
     }
     expect(h.deleted).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SWEEP-02 correctness guards, added by the orchestrator 2026-08-25 after a
+// cross-AI review found two HIGH defects that every existing test passed over.
+// ---------------------------------------------------------------------------
+
+/** A small, normally-sized writer fixture, local to these guard tests. */
+function normalArgs() {
+  return {
+    snapshotId: "guard-normal",
+    nodes: Array.from({ length: 5 }, (_, i) => ({
+      id: `n${i}`, label: `node ${i}`, type: "file", community: null, source: "repo",
+    })),
+    links: [{ source: "n0", target: "n1", relation: "imports" }],
+    sources: [{
+      source: "repo", kind: "graphify", nodeCount: 5, linkCount: 1,
+      emittedNodeCount: 5, emittedLinkCount: 1, truncated: false,
+    }],
+    nodeCount: 5, linkCount: 1, generatedAt: 1, receivedAt: 1,
+  };
+}
+
+describe("upsertGraphSnapshot — writer-side chunk cap (SWEEP-02 guard)", () => {
+  /** Few nodes, enormous labels: crosses the chunk cap without building a
+   *  100k-element fixture. 20 x ~130k chars ~= 2.6 MB -> >16 chunks. */
+  function oversizedArgs() {
+    const big = "x".repeat(130_000);
+    return {
+      snapshotId: "cap-test",
+      nodes: Array.from({ length: 20 }, (_, i) => ({
+        id: `n${i}`, label: big, type: "file", community: null, source: "repo",
+      })),
+      links: [],
+      sources: [{
+        source: "repo", kind: "graphify", nodeCount: 20, linkCount: 0,
+        emittedNodeCount: 20, emittedLinkCount: 0, truncated: false,
+      }],
+      nodeCount: 20, linkCount: 0, generatedAt: 1, receivedAt: 1,
+    };
+  }
+
+  it("CONTROL: the oversized fixture really does exceed the cap (otherwise the test below is vacuous)", () => {
+    const a = oversizedArgs();
+    const blob = JSON.stringify({
+      nodes: a.nodes.map((n) => ({
+        id: n.id, label: n.label, type: n.type, community: n.community, source: n.source,
+      })),
+      links: [],
+    });
+    expect(splitGraphBlob(blob).length).toBeGreaterThan(GRAPH_BLOB_MAX_CHUNKS);
+  });
+
+  it("THROWS instead of publishing a blob the reader would reject", async () => {
+    const h = makeGraphWriteCtx({});
+    await expect(
+      (upsertGraphSnapshot as any)._handler(h.ctx, oversizedArgs())
+    ).rejects.toThrow(/GRAPH_BLOB_MAX_CHUNKS/);
+  });
+
+  it("leaves the PRIOR version completely untouched — the half that separates 'rejected safely' from 'rejected after damage'", async () => {
+    const priorChunks = [
+      { snapshotId: "cap-test", version: 7, seq: 0, chunk: '{"nodes":[],"links":[]}' },
+    ];
+    const h = makeGraphWriteCtx({
+      existingMeta: { snapshotId: "cap-test", activeVersion: 7, blobChunkCount: 1, storedVersions: [7] },
+      existingChunks: priorChunks,
+    });
+
+    await expect(
+      (upsertGraphSnapshot as any)._handler(h.ctx, oversizedArgs())
+    ).rejects.toThrow();
+
+    // Nothing written, nothing deleted, pointer unmoved.
+    expect(h.ops.filter((o) => o.type === "insert")).toHaveLength(0);
+    expect(h.ops.filter((o) => o.type === "delete")).toHaveLength(0);
+    expect(h.ops.filter((o) => o.type === "patch")).toHaveLength(0);
+    expect(h.getMeta().activeVersion).toBe(7);
+    expect(h.getChunks()).toHaveLength(1);
+  });
+
+  it("CONTROL: a normally-sized blob still publishes (proves the guard is not simply refusing everything)", async () => {
+    const h = makeGraphWriteCtx({});
+    await (upsertGraphSnapshot as any)._handler(h.ctx, normalArgs());
+    expect(
+      h.ops.filter((o) => o.type === "insert" && o.table === "graphSnapshotBlobChunks").length
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe("upsertGraphSnapshot — expectedVersion TOCTOU guard (SWEEP-02)", () => {
+  it("THROWS when activeVersion moved since the backfill read it, without writing anything", async () => {
+    // The backfill paged against version 3; a producer ingest advanced it to 4
+    // before the mutation ran. Publishing now would roll the graph backwards.
+    const h = makeGraphWriteCtx({
+      existingMeta: { snapshotId: "toctou", activeVersion: 4, blobChunkCount: 1, storedVersions: [4] },
+      existingChunks: [{ snapshotId: "toctou", version: 4, seq: 0, chunk: '{"nodes":[],"links":[]}' }],
+    });
+
+    await expect(
+      (upsertGraphSnapshot as any)._handler(h.ctx, {
+        ...normalArgs(), snapshotId: "toctou", expectedVersion: 3,
+      })
+    ).rejects.toThrow(/expected activeVersion 3 but found 4/);
+
+    expect(h.ops.filter((o) => o.type === "insert")).toHaveLength(0);
+    expect(h.ops.filter((o) => o.type === "patch")).toHaveLength(0);
+    expect(h.ops.filter((o) => o.type === "delete")).toHaveLength(0);
+    expect(h.getMeta().activeVersion).toBe(4);
+  });
+
+  it("CONTROL: publishes normally when expectedVersion MATCHES — so the guard is not refusing every backfill", async () => {
+    const h = makeGraphWriteCtx({
+      existingMeta: { snapshotId: "toctou", activeVersion: 3, blobChunkCount: 1, storedVersions: [3] },
+      existingChunks: [{ snapshotId: "toctou", version: 3, seq: 0, chunk: '{"nodes":[],"links":[]}' }],
+    });
+
+    await (upsertGraphSnapshot as any)._handler(h.ctx, {
+      ...normalArgs(), snapshotId: "toctou", expectedVersion: 3,
+    });
+
+    expect(
+      h.ops.filter((o) => o.type === "insert" && o.table === "graphSnapshotBlobChunks").length
+    ).toBeGreaterThan(0);
+  });
+
+  it("CONTROL: the normal producer path (no expectedVersion) is unaffected by the guard", async () => {
+    const h = makeGraphWriteCtx({
+      existingMeta: { snapshotId: "plain", activeVersion: 9, blobChunkCount: 1, storedVersions: [9] },
+    });
+    await (upsertGraphSnapshot as any)._handler(h.ctx, { ...normalArgs(), snapshotId: "plain" });
+    expect(
+      h.ops.filter((o) => o.type === "insert" && o.table === "graphSnapshotBlobChunks").length
+    ).toBeGreaterThan(0);
   });
 });

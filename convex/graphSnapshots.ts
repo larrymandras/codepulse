@@ -220,6 +220,16 @@ export const upsertGraphSnapshot = internalMutation({
     linkCount:   v.float64(),
     generatedAt: v.float64(),
     receivedAt:  v.float64(),
+    // TOCTOU guard for the one-shot backfill (SWEEP-02). When present, this
+    // mutation re-reads the meta row INSIDE ITS OWN TRANSACTION and refuses to
+    // write if `activeVersion` has moved. An action cannot do this: its
+    // `runQuery` check and its `runMutation` write are two separate
+    // transactions, so a producer ingest can land between them, and the
+    // mutation would then read the NEWER version, increment it, and publish
+    // the backfill's stale legacy data as the newest snapshot — precisely the
+    // backwards-roll the check exists to prevent. Optional, so the normal
+    // producer path is unaffected.
+    expectedVersion: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
     // 1. Read existing meta doc.
@@ -229,6 +239,22 @@ export const upsertGraphSnapshot = internalMutation({
       .unique();
 
     // 2. Compute new monotonic version.
+    // TOCTOU guard, enforced INSIDE this transaction (see the arg's comment).
+    // `existing` was read by this mutation, so comparing against it here is
+    // atomic with the writes below in a way an action-side pre-check is not.
+    if (
+      args.expectedVersion !== undefined &&
+      (existing?.activeVersion ?? 0) !== args.expectedVersion
+    ) {
+      throw new ConvexError(
+        `graphSnapshots: refusing to publish ${args.snapshotId} — expected ` +
+          `activeVersion ${args.expectedVersion} but found ` +
+          `${existing?.activeVersion ?? 0}. A producer ingest advanced the ` +
+          `version while the backfill was paging; publishing now would roll ` +
+          `the graph backwards to stale legacy data.`
+      );
+    }
+
     const newVersion = (existing?.activeVersion ?? 0) + 1;
 
     // 3. Build Set of incoming node ids for dangling-link guard (D-05).
@@ -273,6 +299,35 @@ export const upsertGraphSnapshot = internalMutation({
 
     // 6. Split the blob and insert one graphSnapshotBlobChunks row per chunk.
     const blobChunks = splitGraphBlob(blob);
+
+    // WRITER-SIDE CAP (SWEEP-02 correctness guard). Before this existed,
+    // GRAPH_BLOB_MAX_CHUNKS was enforced ONLY by the reader (`getProjectGraph`
+    // takes CAP + 1 and throws above CAP), so the writer would happily store
+    // 17+ chunks, flip `activeVersion` to them, and then delete the PRIOR
+    // version's chunks. Every subsequent read would throw, with the only
+    // rollback data already gone — turning an oversized ingest into a
+    // user-visible /tool-galaxy outage, the exact failure this phase exists to
+    // remove.
+    //
+    // Throwing HERE, before any insert, leaves the existing activeVersion and
+    // its chunks untouched: the ingest fails and the previous graph keeps
+    // serving. A failed ingest is strictly better than an unreadable one.
+    //
+    // If this ever trips legitimately, the fix is NOT to raise the constant —
+    // it is derived from Convex's 16 MiB per-transaction scan ceiling
+    // (512 KB worst-case per chunk x safety factor 2 = 8 MiB = 16 chunks), and
+    // raising it past that reintroduces D-05's read-ceiling breach in a new
+    // form. A larger graph needs a staged storage/read protocol instead.
+    if (blobChunks.length > GRAPH_BLOB_MAX_CHUNKS) {
+      throw new ConvexError(
+        `graphSnapshots: refusing to publish ${args.snapshotId} — the ` +
+          `serialized blob needs ${blobChunks.length} chunks, above ` +
+          `GRAPH_BLOB_MAX_CHUNKS (${GRAPH_BLOB_MAX_CHUNKS}). The reader would ` +
+          `reject it, so publishing would break /tool-galaxy. The previous ` +
+          `version is untouched and still serving.`
+      );
+    }
+
     for (let seq = 0; seq < blobChunks.length; seq++) {
       await ctx.db.insert("graphSnapshotBlobChunks", {
         snapshotId: args.snapshotId,
@@ -1010,6 +1065,12 @@ export const backfillGraphBlob = internalAction({
       linkCount:   meta.linkCount,
       generatedAt: meta.generatedAt,
       receivedAt:  Date.now() / 1000, // epoch SECONDS — this repo's telemetry convention
+      // The REAL version guard. The `runQuery` check above is a cheap early-out
+      // only — it and this `runMutation` are separate transactions, so a
+      // producer ingest can land between them. Passing the expected version
+      // makes the mutation re-check it inside its own transaction and refuse
+      // to publish if it moved.
+      expectedVersion: sourceVersion,
     });
 
     // Re-read once more to report the blobChunkCount actually written.
