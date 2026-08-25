@@ -368,3 +368,11 @@ convex/inbox.ts` empty, zero mutation markers) and restored-green after
 (`convex/inbox.ts:435` unchanged, 25/25 passing).
 
 **Status:** Task 1 complete, gap closed. Task 2's operator checkpoint remains Larry's to sign off.
+
+## Task 2 — operator checkpoint: APPROVED
+
+Larry reviewed the four flips and the closure and replied "approved" on 2026-08-25, after the
+gap was closed and re-proven. Task 1 and Task 2 are both complete; plan 127-07 is closed.
+
+Verification B is now fully satisfied: all four carve-out guards have a test that catches their
+deletion, each demonstrated by a genuine assertion failure rather than assumed.
