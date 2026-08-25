@@ -1,62 +1,96 @@
 # Deferred Items — Phase 127
 
-## An intermittent full-suite failure exists, and its identity is NOT captured
+## The intermittent full-suite failure — IDENTIFIED 2026-08-25
 
-This entry has been wrong twice. Both corrections are kept, because the way each was wrong is
-the reusable part.
+This entry was wrong twice before being settled by measurement. All three versions are kept,
+because the way each was wrong is the reusable part.
 
 ### Version 1 (plans 127-04, 127-05) — WRONG
 
-Both plans logged `src/components/voice/AvatarAura.browser.test.tsx` as a **pre-existing,
-unrelated repo defect**, attributed to commit `828a5b08` (Phase 193) via
-`git log --oneline -1 -- <path>`.
+Both plans logged `src/components/voice/AvatarAura.browser.test.tsx` as a pre-existing repo
+defect attributed to commit `828a5b08` (Phase 193), via `git log --oneline -1 -- <path>`.
 
-Two errors, both worth carrying forward:
+- A negative result is a claim about the probe: both observations came from inside git
+  worktrees while multiple executors ran concurrently.
+- `git log -1 -- <path>` answers "who last touched this file", never "why does it fail". Two
+  executors reached the same wrong attribution independently; their agreement read as
+  corroboration and was not.
 
-1. **A negative result is a claim about the probe, not the system.** Both observations were made
-   inside git worktrees while multiple executors ran concurrently.
-2. **`git log -1 -- <path>` answers "who last touched this file", never "why does it fail".**
-   Both executors reached the same wrong attribution independently. Their agreement read as
-   corroboration and was not — two probes sharing a defect agree exactly as readily as two
-   correct ones.
+### Version 2 (orchestrator) — ALSO WRONG, and it named the wrong suspect
 
-### Version 2 (orchestrator, first correction) — ALSO TOO STRONG
+Version 2 measured the browser test passing on main and concluded "nothing is broken". Then,
+after a failure did appear on main, version 2b named `AvatarAura.browser.test.tsx` as "the most
+plausible candidate" on the grounds that it is the only browser-mode test — while explicitly
+flagging that circumstantial fit is not identification.
 
-Version 2 said the test "passes on the merged main checkout" and concluded "nothing is broken,
-no action required." The first half was true and the conclusion was not, because it generalised
-from two clean runs.
+**The hedge was correct and the suspect was still wrong.** Being right about the epistemics did
+not make the guess right.
 
-### Version 3 — what is actually measured, as of 2026-08-25
+### Version 3 — IDENTIFIED by capture
 
-| Condition | Result |
+**The capture mechanism already existed and had simply never been pointed at this.**
+`scripts/soak-vitest.mjs` (Phase 113, D-09, adversarially hardened) repeats a command N times,
+writes one durable append-only line per iteration, and stops and captures full output on the
+first non-PASS, distinguishing FAIL / TIMEOUT / harness ERROR. An earlier version of this entry
+called for "building the capture mechanism" — that was deferred work proposed against a tool the
+repo already had.
+
+Run: `node scripts/soak-vitest.mjs --iterations 12 --log <path> --command "npx vitest run"`.
+**Reproduced on iteration 1** and captured.
+
+**The failing test is NOT the browser test. It is:**
+
+```
+FAIL  |unit| src/App.test.tsx > App lazy routes (Phase 106 Plan 04, DEBT-03)
+      > resolves '/memory' past its lazy boundary and renders the page
+TestingLibraryElementError: Unable to find role="heading" and name "Memory"
+```
+
+The shell (`DashboardLayout`) rendered; the lazily-imported page never mounted within the wait.
+
+### Measurements
+
+| Condition | `/memory` test duration |
 |---|---|
-| `npm test` full suite, main checkout | **7 of 8 runs clean; 1 run reported `1 failed`** |
-| identity of that 1 failure | **NOT CAPTURED — unknown** |
-| `npx vitest run --project browser` alone, main checkout | **6 of 6 clean** |
-| `AvatarAura.browser.test.tsx` alone, main checkout | 1 file / 3 tests passed |
-| full suite inside worktrees, concurrent executors | failed in 127-04, 127-05, 127-07; passed in 127-06 |
+| `src/App.test.tsx` alone | **499 ms** |
+| full suite under load, passing run 1 | **2,516 ms** |
+| full suite under load, passing run 2 | **1,916 ms** |
+| full suite, the FAILING run | **23,610 ms** (wait window is 20,000 ms) |
 
-The failing run took **83s against a ~50s baseline**, i.e. it was the run under heaviest load.
+The suite run that failed took 81.7 s against a ~50 s baseline.
 
-**What this supports:** a failure that appears only under concurrent load and never in
-isolation. `AvatarAura.browser.test.tsx` is the ONLY browser-mode test (its own `browser`
-project in `vitest.config.ts`, launching a real chromium instance and vite server), which makes
-it the most plausible candidate for an intermittent *import* failure under contention.
+**This is a hard stall, not a marginally tight window.** A typical loaded run is ~2 s and the
+failure is >20 s — roughly 10×, not a gradual creep. That matters for the fix: the wait was
+ALREADY widened from testing-library's 1 s default to 20 s (`src/App.test.tsx:168`,
+`LAZY_ROUTE_WAIT_MS`), with a comment naming loaded full-suite runs as the reason. Widening it a
+third time would be the third pass at the same non-fix and would not obviously help against an
+unbounded stall.
 
-**What this does NOT establish, and must not be written as if it did:** that the one main-tree
-failure WAS that file. The run was not captured. Circumstantial fit is not identification, and
-this entry has already been rewritten twice for exactly that class of over-claim.
+### Open lead, explicitly NOT established
 
-### Action required
+`src/App.test.tsx` mocks five heavy render libraries (`react-globe.gl`, `@react-three/fiber`,
+`@react-three/drei`, `recharts`, `@xyflow/react`) but does NOT mock `react-force-graph-2d`,
+which `/memory` reaches via `Memory.tsx` → `ObsidianGraph` → `ForceGraphCanvas`
+(`src/components/graph/ForceGraphCanvas.tsx:9`), 1.7 MB on disk plus `d3-force-3d`. That is a
+real inconsistency with the file's own convention and with this repo's documented per-file
+mocking pattern.
 
-**Build the capture mechanism rather than write a fourth note.** This symptom has now been seen
-four times across two environments; a rule written down three times has already failed as a
-rule. The next full-suite run that fails should archive its log automatically so the failing
-test is named instead of inferred. Until then this is an OPEN, unidentified intermittent
-failure — not a known-benign one.
+**It is NOT demonstrated to be the cause.** In isolation the whole `/memory` case resolves in
+499 ms including that import, so the import is not intrinsically expensive. Adding the mock is a
+plausible mitigation, not a diagnosed fix, and must not be shipped as though it were one.
 
-**Does it block the Phase 127 deploy?** Assessment, for the operator to accept or reject: no.
-127-08 deploys `convex/` schema and crons. Every `convex/**` test is deterministic and was green
-in all 8 full-suite runs plus every targeted run. The intermittent failure has never once
-implicated a `convex/` file. That is a judgement about scope, not a claim that the failure is
-harmless.
+A second, also-unestablished hypothesis: a single `npm test` invocation runs BOTH the jsdom
+`unit` project and a `browser` project that launches a real chromium instance
+(`vitest.config.ts`). That launch is a bursty resource event and could plausibly starve jsdom
+workers — which would tie together both observed symptoms (the browser test's own import failure
+inside worktrees, and this stall on main). Untested.
+
+### Status
+
+**OPEN.** Identified, not fixed, and deliberately not patched by timeout-widening. Out of Phase
+127's scope — it touches `src/App.test.tsx`, which no Phase 127 plan owns, and no `convex/**`
+test has ever been implicated. Every `convex/**` test was deterministic and green across all 8+
+full-suite runs plus every targeted run.
+
+Reproduction is now cheap and repeatable, so the next session can start from a capture rather
+than a guess.
