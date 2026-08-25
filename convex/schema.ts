@@ -2384,10 +2384,27 @@ export default defineSchema({
     // never a green one — no signal must not read as "up".
     containerName: v.optional(v.string()),
     archived: v.optional(v.boolean()),
+    // Launcher ranking. These exist so the command palette can order links by
+    // what actually gets opened instead of by hand-maintained `order` — the
+    // difference between a hub that survives 200 links and one that doesn't.
+    //
+    // OPTIONAL, unlike `prompts.usageCount` (:2282) which is required. That is
+    // not an inconsistency to tidy up: `prompts` was greenfield when it shipped,
+    // whereas `links` already holds rows written before this field existed, and
+    // a required field would reject every one of them at deploy time. Absent
+    // means zero — see comparePaletteLinks in src/lib/bifrostPaletteRank.ts,
+    // where absent must coerce to 0 and NOT to the positive-infinity sentinel
+    // `order` uses in compareLinks. The two fields sort by opposite rules.
+    usageCount: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_category", ["category"])
+    // No `by_usage` index on purpose. `bifrost.list` collects the whole table
+    // and sorts in memory because the hub is curated and small; an index would
+    // add write amplification on every open for a read path that never filters
+    // on it. Revisit only if `list` ever grows a server-side ranked query.
     .index("by_order", ["order"]),
 
   // Phase 119 Loom (D-01). Curated pipelines: what the system is DESIGNED to
