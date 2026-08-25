@@ -3,64 +3,89 @@ id: TODO-automation-page-placeholder-cards-and-invalid-expression
 status: pending
 planted: 2026-08-21
 planted_during: Phase 124 — operator hit it during the 124-11 checkpoint while visiting /automation, one of the five routes that moved domain in the regroup
-trigger_when: Next Automation- or cron-touching phase. Cosmetically severe (every schedule reads as broken) but no evidence yet that the crons themselves are failing — that is the first thing to establish.
-scope: Unknown until investigated — two symptoms, plausibly one cause, not established
-source: src/pages/Automation.tsx; observed live on /automation
-resolves_phase: null
-last_reviewed: 2026-08-21
+trigger_when: Next Automation- or Convex-transport-touching phase. No longer cosmetically severe (the parse half is fixed); the remaining half is a real ~9-10s perceived load latency on first page visit.
+scope: NARROWED 2026-08-24 (126-03, D-07 Task 2) — the "Invalid expression" half is FIXED (see below). Only the stat-card half remains, and it is now measured, not merely observed.
+source: src/pages/Automation.tsx; convex/automation.ts:135-157 (cronSummary); measured live against the self-hosted deployment
+resolves_phase: 126 (parse half only)
+last_reviewed: 2026-08-24
 ---
 
-# `/automation` — 3 of 4 stat cards never resolve, all 12 schedules read "Invalid expression"
+# `/automation` stat cards resolve after a ~9-10s COLD SUBSCRIPTION delay, not never — mechanism unconfirmed
 
-## What was observed (2026-08-21, live, operator screenshot)
+## RESOLVED 2026-08-24 (Phase 126-03, D-09/D-10): the "Invalid expression" half
 
-Two distinct symptoms on one page:
+`CRON_SCHEDULES[].interval` is a human-readable label by design ("Every 5 min", "Daily
+03:00 UTC"); `Automation.tsx` was assigning it into a field literally named `expression`,
+which `CronJobList.tsx` then ran through a 5-field cron parser that rejected all twelve.
+Fixed by gating the parser (and the row's now-also-dead edit affordance, D-10) behind
+`isValidCron()`. See `126-03-SUMMARY.md`. **Do not re-open this half.**
 
-**1. Stat cards.** Four tiles across the top. The first renders correctly —
-`CONFIGURED SCHEDULES / 12`. The other three render as **purple skeleton placeholder
-bars** that never resolve into values.
+## STILL OPEN: the three stat cards ("Runs (1h)", "Failed (1h)", "Avg Duration")
 
-**2. Every cron row says "Invalid expression".** All twelve schedules render their
-interval followed by that string:
+### What was observed originally (2026-08-21, live, operator screenshot)
 
+Four tiles across the top. The first renders correctly — `CONFIGURED SCHEDULES / 12`
+(a static constant, not a query). The other three render as **purple skeleton
+placeholder bars** that appeared, to a glance, to never resolve.
+
+### Measured 2026-08-24 (126-03 Task 2, D-07) — they DO resolve, after a fixed delay
+
+**(a) The query itself is fast and healthy, read-only, live self-hosted deployment:**
 ```
-stale sessions            Every 5 min    Invalid expression
-alert evaluation          Every 1 min    Invalid expression
-metric rollup             Every 5 min    Invalid expression
-docker poll               Every 2 min    Invalid expression
-supabase poll             Every 1 hour   Invalid expression
-llm cost rollup           Every 10 min   Invalid expression
-stale agents              Every 10 min   Invalid expression
-profile summary           Every 15 min   Invalid expression
-memory prune              Daily          Invalid expression
-purge old telemetry events Daily 03:00 UTC Invalid expression
+npx convex run automation:cronSummary '{}' --env-file C:/Users/mandr/convex-selfhost/selfhosted.envfile
+{ "avgDurationMs": 1433.8125, "failed": 0, "succeeded": 16, "totalJobs": 12, "totalRuns": 16 }
 ```
+Returned in well under a second from the CLI. **This rules out a read-ceiling breach or a
+slow/throwing query** — the candidate `.collect()` mechanism named in 126-PATTERNS.md was
+not confirmed; do not re-propose bounding `cronSummary` without new evidence.
 
-Note the interval text ("Every 5 min", "Daily 03:00 UTC") renders correctly *beside* the
-error, so the page has the schedule data — something downstream of that is failing to
-parse or format it.
+**(b) Browser instrumentation (Playwright, WS-frame-level, correlated by queryId) shows a
+precise, reproducible pattern across 3 independent page loads (2 dev, 1 production build
+with StrictMode's double-invoke ruled out):**
 
-## NOT caused by Phase 124
+- A query already subscribed elsewhere in the same session (`automation:recentCrons` with
+  `{}` args — pre-warmed by the shell-level `useNavCounts`/`useCommandPaletteSearch` hooks,
+  see `src/hooks/useNavCounts.ts:22`, `src/hooks/useCommandPaletteSearch.ts:30`) delivers
+  its first value in **25-43ms**.
+- The four queries genuinely new to the session — `automation:cronSummary`,
+  `automation:recentCrons {limit:200}`, `automation:recentHeartbeats {limit:30}`,
+  `automation:recentJobs {limit:100}` — deliver their first value **simultaneously**
+  (within 4ms of each other, despite querying four different tables at different
+  complexities) after a delay that measured **9028ms, 9117ms, and 8752-8775ms** across
+  three separate page loads.
+- **Decisive control:** navigating away from `/automation` and back within the *same*
+  WebSocket session made the identical four queries resolve in **4ms** (queryId
+  re-subscribed at t+13051ms, updated at t+13055ms) — i.e. once warm, instant. Cold vs.
+  warm is the discriminator, not query cost, not StrictMode (production build reproduces
+  the ~9s delay identically with no double-subscribe churn), not table size.
 
-`git log --grep="(124-" -- src/pages/Automation.tsx` returns **0 commits**. The regroup
-moved this page into the System domain, which is how the operator came to open it.
+### What this measurement does NOT establish
 
-## NOT INVESTIGATED
+**The mechanism behind the ~9s cold-subscription delay is unconfirmed.** It is not a
+per-query computation cost (all four resolve together regardless of complexity), not a
+dev-mode artifact (reproduces in a production build), and not explained by anything in
+`convex/automation.ts`. Candidates not yet tested: a fixed poll/sync interval in the
+self-hosted backend's reactivity engine for brand-new subscriptions vs. push-on-write for
+already-watched queries; a per-connection subscription-registration cost; something
+specific to this self-hosted instance vs. Convex Cloud. **Do not guess between these
+without a new measurement** — see next probe.
 
-No root cause established. Deliberately not guessed. Two things worth checking first:
+### Next probe
 
-1. **Is this display-only, or are the crons actually not running?** That is the question
-   that sets the severity, and it is answerable without touching the page — check whether
-   the jobs have recent execution records. A page that renders "Invalid expression" over
-   healthy crons is cosmetic; a page correctly reporting that twelve schedules failed to
-   parse is an outage.
-2. **Are the two symptoms one cause or two?** The three dead tiles suggest queries that
-   never resolve; the parse errors suggest a formatter. They may be independent. Do not
-   assume one fix covers both — and if they *are* one cause, the tile that DOES render is
-   the control that tells you which input differs.
+- Instrument the self-hosted backend's own logs/source (`convex-backend` container) around
+  a fresh `ModifyQuerySet` Add for a genuinely new udfPath+args pair, to see what it is
+  waiting on for ~9s before the first push.
+- Test the identical WS-level probe (Playwright + queryId correlation, method already
+  built and reusable — see 126-03-SUMMARY.md for the script) against a **different**
+  self-hosted deployment or a Convex Cloud deployment, to isolate whether this is
+  self-hosted-specific.
+- Once the mechanism is known, decide whether a fix belongs in the app (e.g. pre-warming
+  `automation:cronSummary` at shell level the way `recentCrons {}` already is) or is a
+  backend/deployment-level characteristic to accept and document.
 
-## Cheap first probe
+### Severity re-assessment
 
-Enumerate the distinct values actually reaching the formatter before assuming what shape
-it expects. A hand-written expectation about the cron-expression format is a claim about
-the parser, not about the data.
+Not a correctness bug and not unbounded-read risk. It is a real ~9-10 second wait before
+an operator sees the three summary tiles populate on first visit to `/automation` in a
+session — long enough that a glance-and-leave visit (exactly what produced the original
+2026-08-21 screenshot) reads as "broken" when it is actually "slow to arrive."
