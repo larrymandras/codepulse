@@ -192,6 +192,20 @@ export function joinGraphBlobChunks(chunks: Array<{ seq: number; chunk: string }
  * flip would let a mid-crash leave activeVersion pointing at a version whose
  * chunks are already gone.
  */
+// Explicit return type on upsertGraphSnapshot's handler (below): once it can
+// return a value (the TOCTOU guard result, not just implicit undefined),
+// backfillGraphBlob's own call site needs a declared shape to check against
+// without re-triggering the same same-file circular-inference issue
+// documented at BackfillGraphBlobResult below.
+type UpsertGraphSnapshotResult =
+  | {
+      status: "versionAdvanced";
+      snapshotId: string;
+      expectedVersion: number;
+      foundVersion: number;
+    }
+  | undefined;
+
 export const upsertGraphSnapshot = internalMutation({
   args: {
     snapshotId:  v.string(),
@@ -231,7 +245,7 @@ export const upsertGraphSnapshot = internalMutation({
     // producer path is unaffected.
     expectedVersion: v.optional(v.float64()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<UpsertGraphSnapshotResult> => {
     // 1. Read existing meta doc.
     const existing = await ctx.db
       .query("graphSnapshots")
@@ -242,17 +256,28 @@ export const upsertGraphSnapshot = internalMutation({
     // TOCTOU guard, enforced INSIDE this transaction (see the arg's comment).
     // `existing` was read by this mutation, so comparing against it here is
     // atomic with the writes below in a way an action-side pre-check is not.
+    //
+    // RETURNED, not thrown (review correction, 2026-08-25): this mutation is
+    // called from backfillGraphBlob via ctx.runMutation. A throw here would
+    // propagate as an UNCAUGHT exception through that calling ACTION —
+    // defeating backfillGraphBlob's own "every path returns a named status,
+    // never a bare success" contract, and handing the operator a raw thrown
+    // error instead of a clean {status: "versionAdvanced", ...} result. The
+    // writer-side chunk-cap guard below (step 6) stays a THROW deliberately:
+    // it protects the NORMAL producer ingest path, which has no action
+    // wrapper to convert an exception into a named status, and a failed
+    // ingest leaving the previous graph untouched is exactly the intended
+    // behavior there.
     if (
       args.expectedVersion !== undefined &&
       (existing?.activeVersion ?? 0) !== args.expectedVersion
     ) {
-      throw new ConvexError(
-        `graphSnapshots: refusing to publish ${args.snapshotId} — expected ` +
-          `activeVersion ${args.expectedVersion} but found ` +
-          `${existing?.activeVersion ?? 0}. A producer ingest advanced the ` +
-          `version while the backfill was paging; publishing now would roll ` +
-          `the graph backwards to stale legacy data.`
-      );
+      return {
+        status: "versionAdvanced",
+        snapshotId: args.snapshotId,
+        expectedVersion: args.expectedVersion,
+        foundVersion: existing?.activeVersion ?? 0,
+      };
     }
 
     const newVersion = (existing?.activeVersion ?? 0) + 1;
@@ -1042,7 +1067,15 @@ export const backfillGraphBlob = internalAction({
       }
     }
 
-    // Guard 3: expected-version check, re-read immediately before publishing.
+    // Guard 3 (CHEAP EARLY-OUT ONLY — not what is relied upon, per the
+    // review correction). This re-read and the runMutation call below are
+    // still two separate transactions, so a producer ingest landing in the
+    // gap between THIS check and the mutation's OWN internal read would
+    // sail past it undetected. It exists purely to skip the paging-result
+    // write in the common case where the version has obviously already
+    // moved, saving a round trip — the REAL guard is inside
+    // upsertGraphSnapshot's own transaction (its expectedVersion check),
+    // exercised via the returned status handled just below.
     const currentMeta = await ctx.runQuery(internal.graphSnapshots.getGraphMetaForBackfill, { snapshotId });
     if (!currentMeta || currentMeta.activeVersion !== sourceVersion) {
       return {
@@ -1056,7 +1089,12 @@ export const backfillGraphBlob = internalAction({
       };
     }
 
-    await ctx.runMutation(internal.graphSnapshots.upsertGraphSnapshot, {
+    // Cast, not a narrowing bug worked around — same rationale as
+    // getGraphEntityPage's call sites above: upsertGraphSnapshot's declared
+    // return type must stay independent of this action's own type (to avoid
+    // the same same-file circular-inference issue), so its result is typed
+    // via UpsertGraphSnapshotResult and cast here.
+    const writeResult = (await ctx.runMutation(internal.graphSnapshots.upsertGraphSnapshot, {
       snapshotId,
       nodes,
       links,
@@ -1065,13 +1103,30 @@ export const backfillGraphBlob = internalAction({
       linkCount:   meta.linkCount,
       generatedAt: meta.generatedAt,
       receivedAt:  Date.now() / 1000, // epoch SECONDS — this repo's telemetry convention
-      // The REAL version guard. The `runQuery` check above is a cheap early-out
-      // only — it and this `runMutation` are separate transactions, so a
-      // producer ingest can land between them. Passing the expected version
-      // makes the mutation re-check it inside its own transaction and refuse
-      // to publish if it moved.
+      // THE REAL version guard (Guard 3's actual enforcement point). Guard 3
+      // above is only a cheap early-out; this is what upsertGraphSnapshot
+      // checks INSIDE its own transaction, atomically with the writes it
+      // guards — the only place a check against a producer's concurrent
+      // ingest can actually be atomic.
       expectedVersion: sourceVersion,
-    });
+    })) as UpsertGraphSnapshotResult;
+
+    // The mutation's own transaction found the version had moved since Guard
+    // 3's read (the race Guard 3 itself cannot see) — return the SAME named
+    // status Guard 3 returns above, rather than letting an exception (there
+    // is none here; upsertGraphSnapshot returns, it does not throw, for
+    // exactly this reason) or a silent bad publish reach the operator.
+    if (writeResult?.status === "versionAdvanced") {
+      return {
+        status: "versionAdvanced",
+        snapshotId,
+        sourceVersion,
+        nodeCount: nodes.length,
+        linkCount: links.length,
+        pages,
+        blobChunkCount: 0,
+      };
+    }
 
     // Re-read once more to report the blobChunkCount actually written.
     const finalMeta = await ctx.runQuery(internal.graphSnapshots.getGraphMetaForBackfill, { snapshotId });

@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import { getFunctionName } from "convex/server";
+import { internal } from "./_generated/api";
 
 /**
  * Pure-logic mirrors of the `graph_snapshot` ingest dispatch and receiver
@@ -18,6 +20,7 @@ import {
   splitGraphBlob,
   joinGraphBlobChunks,
   upsertGraphSnapshot,
+  backfillGraphBlob,
 } from "./graphSnapshots";
 
 // ---------------------------------------------------------------------------
@@ -1162,20 +1165,30 @@ describe("upsertGraphSnapshot — writer-side chunk cap (SWEEP-02 guard)", () =>
 });
 
 describe("upsertGraphSnapshot — expectedVersion TOCTOU guard (SWEEP-02)", () => {
-  it("THROWS when activeVersion moved since the backfill read it, without writing anything", async () => {
+  it("RETURNS a versionAdvanced status (not a throw) when activeVersion moved since the backfill read it, without writing anything", async () => {
     // The backfill paged against version 3; a producer ingest advanced it to 4
     // before the mutation ran. Publishing now would roll the graph backwards.
+    //
+    // Asserts a RETURNED status, not a thrown error (review correction,
+    // 2026-08-25): this mutation is called from backfillGraphBlob via
+    // ctx.runMutation, and a throw here would propagate as an uncaught
+    // exception through that action, defeating backfillGraphBlob's own
+    // "every path returns a named status" contract.
     const h = makeGraphWriteCtx({
       existingMeta: { snapshotId: "toctou", activeVersion: 4, blobChunkCount: 1, storedVersions: [4] },
       existingChunks: [{ snapshotId: "toctou", version: 4, seq: 0, chunk: '{"nodes":[],"links":[]}' }],
     });
 
-    await expect(
-      (upsertGraphSnapshot as any)._handler(h.ctx, {
-        ...normalArgs(), snapshotId: "toctou", expectedVersion: 3,
-      })
-    ).rejects.toThrow(/expected activeVersion 3 but found 4/);
+    const result = await (upsertGraphSnapshot as any)._handler(h.ctx, {
+      ...normalArgs(), snapshotId: "toctou", expectedVersion: 3,
+    });
 
+    expect(result).toEqual({
+      status: "versionAdvanced",
+      snapshotId: "toctou",
+      expectedVersion: 3,
+      foundVersion: 4,
+    });
     expect(h.ops.filter((o) => o.type === "insert")).toHaveLength(0);
     expect(h.ops.filter((o) => o.type === "patch")).toHaveLength(0);
     expect(h.ops.filter((o) => o.type === "delete")).toHaveLength(0);
@@ -1205,5 +1218,151 @@ describe("upsertGraphSnapshot — expectedVersion TOCTOU guard (SWEEP-02)", () =
     expect(
       h.ops.filter((o) => o.type === "insert" && o.table === "graphSnapshotBlobChunks").length
     ).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// backfillGraphBlob (the ACTION) — a race the action's OWN pre-check cannot
+// see (SWEEP-02, review correction 2026-08-25).
+//
+// The tests above exercise upsertGraphSnapshot's handler directly, in
+// isolation. They cannot prove what backfillGraphBlob itself DOES when the
+// race actually happens, because in the real failure mode the action's own
+// pre-check (Guard 3) reads the SAME pre-race version everything else saw —
+// it is the mutation's OWN internal re-read, a separate transaction, that
+// catches a producer ingest landing in the gap between them. A test that
+// only drives upsertGraphSnapshot directly cannot distinguish "the mutation
+// guard works" from "the action correctly surfaces what the guard reports",
+// and the second property is what this describe block proves.
+//
+// Simulated here with a hand-built fake ctx exposing only runQuery/
+// runMutation — the correct seam for testing an internalAction, which has no
+// direct ctx.db access of its own. getFunctionName(fnRef) discriminates
+// which function reference is being called, because `internal.*` is a Proxy
+// that returns a NEW object on every property access (verified against
+// node_modules/convex/dist/cjs/server/api.js's createApi) — a strict `===`
+// comparison on the function reference itself would silently never match.
+// ---------------------------------------------------------------------------
+
+describe("backfillGraphBlob — surfaces a race the action's own pre-check cannot see (SWEEP-02)", () => {
+  /** Builds a fake action ctx where the two runQuery reads the action makes
+   * (initial meta lookup + Guard 3's early-out re-read) both see version 3 —
+   * the same version the backfill paged against — but the mutation's OWN
+   * internal check (simulated here, not the real upsertGraphSnapshot) sees a
+   * DIFFERENT, later version 4. This is exactly what a producer ingest
+   * landing between the action's pre-check and the mutation's own
+   * transaction would look like from the outside. */
+  function makeRacingBackfillCtx() {
+    const runMutationCalls: unknown[] = [];
+    const ctx: any = {
+      runQuery: async (fnRef: unknown, args: any) => {
+        const name = getFunctionName(fnRef as any);
+        if (name === getFunctionName(internal.graphSnapshots.getGraphMetaForBackfill)) {
+          return {
+            snapshotId: args.snapshotId,
+            activeVersion: 3,
+            blobChunkCount: undefined, // not yet chunked -- eligible to backfill
+            sources: [],
+            nodeCount: 1,
+            linkCount: 0,
+            storedNodeCount: 1,
+            storedLinkCount: 0,
+            generatedAt: 1,
+          };
+        }
+        if (name === getFunctionName(internal.graphSnapshots.getGraphEntityPage)) {
+          if (args.kind === "nodes" && args.cursor === null) {
+            return {
+              page: [{ nodeId: "n0", label: "l0", type: "file", community: undefined, source: "repo" }],
+              isDone: true,
+              continueCursor: "",
+            };
+          }
+          return { page: [], isDone: true, continueCursor: "" };
+        }
+        throw new Error(`TEST BUG: unexpected runQuery ${name}`);
+      },
+      runMutation: async (fnRef: unknown, args: any) => {
+        runMutationCalls.push(args);
+        const name = getFunctionName(fnRef as any);
+        if (name === getFunctionName(internal.graphSnapshots.upsertGraphSnapshot)) {
+          // The REAL race: this mutation's own transaction sees version 4 —
+          // NOT the version 3 every runQuery call above reported — modelling
+          // a producer ingest that landed after the action's checks ran but
+          // before this mutation's own read. Mirrors upsertGraphSnapshot's
+          // real expectedVersion guard: return, do not throw.
+          const trueCurrentVersion = 4;
+          if (args.expectedVersion !== undefined && args.expectedVersion !== trueCurrentVersion) {
+            return {
+              status: "versionAdvanced",
+              snapshotId: args.snapshotId,
+              expectedVersion: args.expectedVersion,
+              foundVersion: trueCurrentVersion,
+            };
+          }
+          throw new Error("TEST BUG: fixture should always hit the versionAdvanced branch");
+        }
+        throw new Error(`TEST BUG: unexpected runMutation ${name}`);
+      },
+    };
+    return { ctx, runMutationCalls };
+  }
+
+  it("returns versionAdvanced (not an uncaught throw) when only the mutation's own transaction detects the moved version", async () => {
+    const { ctx, runMutationCalls } = makeRacingBackfillCtx();
+
+    const result = await (backfillGraphBlob as any)._handler(ctx, {});
+
+    expect(result.status).toBe("versionAdvanced");
+    expect(result.sourceVersion).toBe(3);
+    // The mutation WAS attempted (this is the race path, not the cheap
+    // action-side early-out short-circuiting first) — proving the action's
+    // own Guard 3 pre-check passed (it also saw version 3) and it was the
+    // mutation's internal guard that caught the race and reported it back.
+    expect(runMutationCalls).toHaveLength(1);
+  });
+
+  it("CONTROL: the action-side early-out fires BEFORE calling the mutation when the race is visible to it too (proves the two guards are independent, not the same code path)", async () => {
+    let sawEarlyMeta = true;
+    const runMutationCalls: unknown[] = [];
+    const ctx: any = {
+      runQuery: async (fnRef: unknown, args: any) => {
+        const name = getFunctionName(fnRef as any);
+        if (name === getFunctionName(internal.graphSnapshots.getGraphMetaForBackfill)) {
+          // First call (initial meta lookup) reports version 3; by the time
+          // Guard 3's own re-read runs, this fixture ALREADY shows the moved
+          // version — the race is visible to the action's own cheap
+          // pre-check this time, not just the mutation's.
+          const version = sawEarlyMeta ? 3 : 4;
+          sawEarlyMeta = false;
+          return {
+            snapshotId: args.snapshotId,
+            activeVersion: version,
+            blobChunkCount: undefined,
+            sources: [], nodeCount: 1, linkCount: 0, storedNodeCount: 1, storedLinkCount: 0, generatedAt: 1,
+          };
+        }
+        if (name === getFunctionName(internal.graphSnapshots.getGraphEntityPage)) {
+          if (args.kind === "nodes" && args.cursor === null) {
+            return {
+              page: [{ nodeId: "n0", label: "l0", type: "file", community: undefined, source: "repo" }],
+              isDone: true,
+              continueCursor: "",
+            };
+          }
+          return { page: [], isDone: true, continueCursor: "" };
+        }
+        throw new Error(`TEST BUG: unexpected runQuery ${name}`);
+      },
+      runMutation: async (fnRef: unknown, args: any) => {
+        runMutationCalls.push(args);
+        throw new Error("TEST BUG: the action-side early-out should have returned before this ran");
+      },
+    };
+
+    const result = await (backfillGraphBlob as any)._handler(ctx, {});
+
+    expect(result.status).toBe("versionAdvanced");
+    expect(runMutationCalls).toHaveLength(0);
   });
 });
