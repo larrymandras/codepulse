@@ -608,6 +608,55 @@ describe("inbox janitor: carve-out — held excluded even when acked (unconditio
   });
 });
 
+describe("inbox janitor: carve-out - shouldDeleteClosed's held guard, covered INDEPENDENTLY of shouldAutoClose (127-07 flip 4)", () => {
+  // WHY THIS EXISTS. Plan 127-07's mutation-testing control deleted the
+  // `itemType !== "held"` guard from shouldDeleteClosed and ALL 24 tests in
+  // this file stayed green. The guard was real, deliberate defense-in-depth
+  // (see its docstring in inbox.ts) and had zero coverage: every other held
+  // fixture here leaves closedAt undefined - the "held excluded even when
+  // acked" test above even ASSERTS it stays undefined - so the delete step's
+  // index range never returned a held row, and shouldDeleteClosed was never
+  // reached with one.
+  //
+  // That made the guard invisible to the suite and therefore deletable by a
+  // future reader as apparently-dead code. It is not dead: it is what keeps
+  // the two steps independently correct if shouldAutoClose is ever edited to
+  // let a held row acquire closedAt. held is what focus_digest.py consumes.
+  //
+  // The fixture below is the one shape no other test in this file builds: a
+  // held row that ALREADY carries closedAt, past the grace window.
+  it("a held row that already carries closedAt past the grace window survives the delete step, while an identical non-held row is deleted", async () => {
+    const nowSec = NOW;
+    const closedLongAgo = nowSec - FOUR_HUNDRED_DAYS_SEC;
+    const rows = [
+      { _id: "held-preclosed", itemType: "held", priority: "normal", createdAt: closedLongAgo, ackedAt: undefined, closedAt: closedLongAgo },
+      { _id: "card-preclosed", itemType: "card", priority: "normal", createdAt: closedLongAgo, ackedAt: undefined, closedAt: closedLongAgo },
+    ];
+    const mock = makeInboxJanitorMockCtx(rows);
+
+    await autoCloseAndPruneHandler(mock.ctx, { step: "deleting", cursor: 0, batchesDone: 0 }, nowSec);
+
+    // (1) BOTH rows are returned by the by_closedAt range. This is the half
+    // that makes the test discriminating: if the query itself excluded held,
+    // the survival assertion below would pass with the guard deleted, which
+    // is exactly the false pass this test exists to prevent.
+    expect(mock.takeResults).toHaveLength(1);
+    expect(mock.takeResults[0].map((r: any) => r._id).sort()).toEqual([
+      "card-preclosed",
+      "held-preclosed",
+    ]);
+
+    // (2) Only shouldDeleteClosed separates them.
+    expect(mock.rowExists("held-preclosed")).toBe(true);
+    expect(mock.deletes).not.toContain("held-preclosed");
+
+    // (3) The paired control - without it, a handler that deletes nothing at
+    // all would pass (1) and (2).
+    expect(mock.rowExists("card-preclosed")).toBe(false);
+    expect(mock.deletes).toContain("card-preclosed");
+  });
+});
+
 describe("inbox janitor: cursor advances on skip — an all-excluded batch still advances (D-08, Verification C)", () => {
   // held is ~2.7% of the unacked population in production, so an
   // all-skipped batch is normal operation, not a rare edge case — a stalled
