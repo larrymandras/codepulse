@@ -493,7 +493,21 @@ describe("Suite 10 — loadMountedSet fails closed", () => {
     const mountSourceDir = mkRoot("workspace-scan-mount-");
     try {
       const composeFile = join(dir, "docker-compose.yml");
-      const mountSourceForward = mountSourceDir.replace(/\\/g, "/");
+      // PLATFORM-INDEPENDENT FIXTURE (2026-08-25). This was
+      // `mountSourceDir.replace(/\\/g, "/")`, i.e. a REAL temp dir -- which is
+      // `C:/Users/.../Temp/...` on Windows but `/tmp/...` on Linux.
+      // `resolveComposeSource` (hooks/workspaceClassifier.mjs:186) deliberately
+      // returns null for a "/"-leading, non-drive-absolute path, treating it as
+      // a container-internal posix path rather than a host path. That rule is
+      // correct for this Windows-targeted tool, but it made this CONTROL fail on
+      // the Linux CI runner -- the classifier was behaving exactly as designed
+      // and the FIXTURE was wrong.
+      //
+      // `loadMountedSet` only PARSES the source; it never stats it. So a
+      // synthetic drive-absolute path exercises the real code path identically
+      // on every runner. `mountSourceDir` is still created and cleaned up so the
+      // rest of the fixture's shape is unchanged.
+      const mountSourceForward = "C:/Example/workspace-scan-mount-src";
       writeFileSync(
         composeFile,
         `services:\n  app:\n    volumes:\n      - ${mountSourceForward}:/app/data\n`
@@ -519,7 +533,20 @@ describe("Suite 11 — access is applied", () => {
       const root = { id: "fixture", path: dir };
       const config = makeConfig({ roots: [{ id: "fixture", path: dir, department: "Personal" }] });
 
-      const mountedNormalized = dir.replace(/\\/g, "/").toLowerCase();
+      // PLATFORM-CORRECT NORMALIZATION (2026-08-25). This unconditionally
+      // lowercased, which only matches what `resolveAccess` does when the
+      // platform is win32 -- `lowerIfWin32` (hooks/workspaceClassifier.mjs:37-39)
+      // folds case ONLY there. On the Linux runner the scanned path kept its
+      // original case while this fixture was lowercased, so nothing matched and
+      // the row came back "local-only".
+      //
+      // `walkRoot` takes no platform in its deps, so the fixture is normalized
+      // the same way the production code will normalize the path it compares
+      // against. The property under test -- that access reflects the mountedSet
+      // -- then holds on either platform, which is the point of the test.
+      const foldCase = (p) =>
+        process.platform === "win32" ? p.toLowerCase() : p;
+      const mountedNormalized = foldCase(dir.replace(/\\/g, "/"));
       const { rollup: rollupReachable } = walkAndRollup(root, config, new Set([mountedNormalized]));
       const rowReachable = rollupReachable.dirs.find((d) => d.dirPath === "");
       expect(rowReachable.access).toBe("astridr-reachable");
@@ -543,7 +570,23 @@ describe("Suite 11 — access is applied", () => {
 // readdirSync/statSync (never injected fakes) — the whole point is exercising what the OS
 // actually reports for a reparse point on this system, not a synthetic stand-in for it.
 // =========================================================================================
-describe("Suite 12 — a real filesystem cycle (Windows junction) terminates and is bounded", () => {
+// WINDOWS-ONLY BY NECESSITY (2026-08-25). This suite builds a REAL on-disk
+// directory cycle with `cmd /c mklink /J`, an NTFS junction. There is no Linux
+// equivalent invoked here, so the whole suite cannot run on the CI runner and
+// was failing there.
+//
+// This is the one case in this file where SKIPPING is the honest answer rather
+// than a cover-up: the other two failures were fixtures that assumed Windows
+// semantics and were fixed to be platform-correct, but a junction is an OS
+// feature that simply does not exist on the runner. A skip names that; a
+// rewrite would test something else entirely and quietly stop testing the
+// cycle guard.
+//
+// It still runs in full on Windows, where the guard it protects actually
+// matters -- `fs.Stats.ino` collapsing on NTFS FileIds above MAX_SAFE_INTEGER
+// is a Windows-specific defect this cycle guard exists to catch.
+describe.skipIf(process.platform !== "win32")(
+  "Suite 12 — a real filesystem cycle (Windows junction) terminates and is bounded", () => {
   it("walkRoot terminates against a real on-disk junction loop, counts it, and still finds the sibling shareable file (control)", () => {
     const dir = mkRoot("workspace-scan-cycle-");
     try {
