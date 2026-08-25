@@ -127,7 +127,7 @@ Returned in well under a second. No error, no read-limit or timeout text.
 - Updated `.planning/todos/pending/automation-page-placeholder-cards-and-invalid-expression.md` in place: marked the D-09/D-10 half RESOLVED (pointing at this plan), narrowed the remaining scope to the stat-card cold-subscription finding, embedded the full verbatim measurements above, and named a concrete next probe (inspect the self-hosted backend's subscription pipeline directly, or compare against a different self-hosted instance / Convex Cloud to isolate whether the ~9s is instance-specific).
 - `npm test`: 365 test files passed, 17 skipped (382 total); 5100 tests passed, 195 todo, **0 failed**. `npx tsc --noEmit` exits 0.
 - **SWEEP-05 is PARTIAL.** The "Invalid expression" and dead-edit-affordance halves (D-09/D-10) are closed. The stat-card half is measured, not fixed -- an honest partial per the plan's own instruction that a plausible fix on unsettled evidence is the wrong outcome here.
-- No `convex/` file was modified by this plan at all (Task 1/1b are frontend-only), so there is nothing to flag for plan 126-08's deploy audit.
+- No `convex/` file was modified by this plan at all (Task 1/1b are frontend-only), so there is nothing to flag for plan 126-09's deploy audit.
 
 ## Task Commits
 
@@ -177,7 +177,7 @@ None. No deploy was performed or required -- this plan modified no `convex/` fil
 
 - The `/automation` "Invalid expression" symptom and its dead edit affordance are fully closed.
 - The stat-card cold-subscription finding is handed forward via the updated todo, with a concrete next probe (self-hosted backend log/source inspection, or a cross-deployment comparison) rather than a guess. No downstream plan in this phase depends on the stat cards resolving faster.
-- `git diff --stat` confirms no `convex/` change from this plan -- nothing to add to plan 126-08's deploy-audit expectations.
+- `git diff --stat` confirms no `convex/` change from this plan -- nothing to add to plan 126-09's deploy-audit expectations.
 
 ---
 *Phase: 126-page-body-and-convex-read-defect-sweep*
