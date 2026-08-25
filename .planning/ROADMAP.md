@@ -941,6 +941,18 @@ Plans:
 - Two items above are deliberately NOT root-caused and say so in their own files. Planning must not convert a hypothesis into a task description that reads as a diagnosis.
 - The `inbox.listHeldUnacked` fix must NOT cap the shared query — `convex/inboxIngest.ts:174` consumes it server-side for `focus_digest.py` and needs the true unbounded set. Separate the two questions instead.
 
+**UI hint**: yes — but **no UI-SPEC.md was written for this phase, deliberately** (Larry,
+2026-08-24, at the plan-phase UI gate; planned with `--skip-ui`). Phase 126 is a DEFECT SWEEP over
+existing pages and builds no new surface: its frontend items are a truncation marker, a row-overlap
+fix, a 4px overflow class and a test-evidence fix. This matches the same precedent recorded for
+phases 110/113/115/117/119/122 above, and contrasts with 124/125 which DO build new surface and
+each have their own UI-SPEC. **Recorded here because `phase-state.json` cannot distinguish a
+deliberate skip from an unperformed check** — its `execute-phase` entry reads
+`{ready: true, missing: []}` with `isFrontend: true` and no SPEC in the artifact inventory, which
+is the same "gate reporting green while skipping the check" shape as
+[[gsd-coverage-gates-selfskip-on-phase-prefix]]. Surfaced by a peer session's adversarial review,
+2026-08-25.
+
 **Plans**: 9 plans in 4 waves
 
 **Grouping rationale.** The three Convex items share ONE operator deploy, so every backend plan
