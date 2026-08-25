@@ -209,3 +209,73 @@ janitors log the literal string `auto-close/prune` (`convex/inbox.ts:650`,
 ## Task 3 — first-run watch: PENDING
 
 Awaiting the first 08:20 / 08:35 UTC (04:20 / 04:35 ET) firing after this deploy.
+
+---
+
+## Task 3 — PRE-FIRING BASELINE captured 2026-08-25 22:44 UTC (18:44 ET)
+
+### The first Task 3 attempt used the WRONG PROBE, and it returned a convincing false negative
+
+The operator ran the orchestrator-supplied command
+`cmd /c "docker logs convex-backend --since 12h 2>&1" | Select-String "auto-close/prune"`
+and it returned **nothing**. Two independent defects, either of which alone would have produced
+that empty result and made a healthy deployment look broken:
+
+1. **It was not yet time.** The check ran at 22:44 UTC on 2026-08-25. The crons fire at
+   08:20 / 08:35 UTC — i.e. 2026-08-26, ~9.5 hours later. Nothing had fired because nothing was
+   due. The orchestrator's own instructions said "tomorrow morning after 04:35 ET" but the
+   command was run the same evening, and the empty output is indistinguishable from failure.
+2. **`docker logs` is the wrong surface entirely.** Container stdout carries only HTTP/infra
+   lines (`convex-cloud-http`, `common::http`, `stats_middleware`). Convex **function**
+   `console.log` output does not appear there. Verified by reading
+   `docker logs convex-backend --tail 30` directly: every line is an HTTP request log. So even
+   AFTER the crons fire, that grep would return empty forever. The operator would have run a
+   permanently-dead probe and read its silence as a failed deploy.
+
+`npx convex logs` was also tried and is unsuitable as a one-shot: it STREAMS and produced zero
+bytes before being killed, rather than printing history and exiting.
+
+### The replacement probe asserts on ROWS, not on a log line
+
+The log line is a proxy. The real observable is whether rows acquired `closedAt` /
+`dismissedAt`. `npx convex run --inline-query` is sandboxed and read-only (it "can only read
+data and cannot modify the database or access the network"), so it can be pointed at live
+production safely.
+
+**Baseline, with controls, all measured 2026-08-25 22:44 UTC — BEFORE any firing:**
+
+| Probe | Result |
+|---|---|
+| `inbox` rows carrying `closedAt`, via `by_closedAt` | **0** |
+| CONTROL — `inbox` sample rows exist | **3** (`card`, `card`, `held`); first row `closedAt === undefined` |
+| `ideationFindings` rows carrying `dismissedAt`, via `by_dismissedAt` | **0** |
+| CONTROL — `ideationFindings` sample rows exist | **3**, all `dismissed: false` |
+
+The controls are what make the two zeros meaningful: the probe demonstrably returns rows when
+rows exist, so a zero is a real zero and not a broken query.
+
+**This baseline also independently verifies the deploy.** Both `by_closedAt` and
+`by_dismissedAt` were USED successfully by these queries against the live deployment. The deploy
+output asserted the indexes were added; this is the first evidence they are actually live and
+queryable, which is a different claim.
+
+### Nightly restart does not collide with the cron window
+
+`ConvexNightlyRestart` (Windows scheduled task, State `Ready`, `LastTaskResult 0`) runs at
+**02:00 ET**; next run 2026-08-26 02:00. The crons fire at 04:20 / 04:35 ET, ~2h20m later, so
+the janitors' first run happens against a freshly restarted backend rather than one at the top
+of its memory climb. Container uptime at baseline was "Up 17 hours (healthy)", consistent with
+the 02:00 ET restart today.
+
+**Memory at baseline:** 20.78 GiB / 64 GiB (32.47%), CPU 113.71%, after ~16.7h uptime — about
+1.24 GiB/h, at or slightly above the ~0.17-1.04 GiB/h range recorded in
+`110-MEMORY-EVIDENCE.md`. Noted, not acted on; the 02:00 restart clears it before the janitors
+run.
+
+### Task 3 remains PENDING
+
+Expected at the next reading, after 04:35 ET on 2026-08-26:
+- `inbox` rows carrying `closedAt` should become **non-zero** (the janitor's first real action).
+- `ideationFindings` rows carrying `dismissedAt` should stay **0** — inert by design until
+  roughly 2026-11-16. A zero there is CORRECT, and is the outcome R-01's mandatory log line
+  exists to distinguish from dead-on-arrival.
