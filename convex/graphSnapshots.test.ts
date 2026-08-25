@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { getFunctionName } from "convex/server";
 import { internal } from "./_generated/api";
+import { ConvexError } from "convex/values";
 
 /**
  * Pure-logic mirrors of the `graph_snapshot` ingest dispatch and receiver
@@ -21,6 +22,8 @@ import {
   joinGraphBlobChunks,
   upsertGraphSnapshot,
   backfillGraphBlob,
+  getProjectGraph,
+  getGraphEntityPage,
 } from "./graphSnapshots";
 
 // ---------------------------------------------------------------------------
@@ -1364,5 +1367,544 @@ describe("backfillGraphBlob — surfaces a race the action's own pre-check canno
 
     expect(result.status).toBe("versionAdvanced");
     expect(runMutationCalls).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 126, SWEEP-02, plan 126-08: getProjectGraph's CHUNKED READ — the
+// three properties 126-VALIDATION.md requires (round-trip fidelity, READ
+// COST, seq ORDERING), each with a control that could have come out the
+// other way. A test asserting only "the graph rejoined correctly" would pass
+// just as happily against the unbounded two-.collect() path D-05 measured at
+// 6,591 rows against Convex's 4,096-read ceiling — every test below is
+// written so that is specifically NOT true of it.
+// ---------------------------------------------------------------------------
+
+const READ_SNAPSHOT_ID = "test-graph-126-08-read";
+
+function buildReadMeta(over: any = {}) {
+  return {
+    snapshotId: READ_SNAPSHOT_ID,
+    activeVersion: 1,
+    sources: [],
+    nodeCount: 0,
+    linkCount: 0,
+    storedNodeCount: 0,
+    storedLinkCount: 0,
+    generatedAt: 1000,
+    updatedAt: 1000,
+    ...over,
+  };
+}
+
+/**
+ * Realistically sized reader fixture: 4,001 nodes / 2,590 links — the EXACT
+ * node/link counts D-05 measured live (`graphSnapshots:listSnapshots`,
+ * 2026-08-24: nodeCount 4001, linkCount 2590, 6,591 rows read against the
+ * 4,096-read ceiling). Used so the read-cost test below has the number it
+ * replaces to contrast against, not a bare threshold with no meaning
+ * attached (126-08-PLAN.md planner correction 2). A 3-row toy fixture would
+ * pass against almost any reader; this one serializes to several hundred KB
+ * across multiple chunks (see the "fixture sanity" test for the exact
+ * figures this run produced), the same order of magnitude as the live graph
+ * (planner correction 1).
+ */
+function buildReadFixture() {
+  const nodeCount = 4001;
+  const linkCount = 2590;
+  const nodes = Array.from({ length: nodeCount }, (_, i) => ({
+    id: `graphify:test:n${i}`,
+    label: `Node number ${i} representing a realistic file path segment for size estimation purposes`,
+    type: i % 3 === 0 ? "code" : "note",
+    community: i % 5 === 0 ? undefined : (i % 7),
+    source: i % 2 === 0 ? "codepulse" : "astridr-repo",
+  }));
+  const links = Array.from({ length: linkCount }, (_, i) => ({
+    source: `graphify:test:n${i % nodeCount}`,
+    target: `graphify:test:n${(i + 1) % nodeCount}`,
+    relation: "imports",
+  }));
+  const blob = JSON.stringify({ nodes, links });
+  const chunkRows = splitGraphBlob(blob).map((chunk, seq) => ({ seq, chunk }));
+  return { nodes, links, blob, parsed: JSON.parse(blob) as { nodes: typeof nodes; links: typeof links }, chunkRows };
+}
+
+/**
+ * Fake ctx for getProjectGraph. Models the graphSnapshots meta table
+ * (`.withIndex(...).unique()`) and the graphSnapshotBlobChunks table
+ * (`.withIndex(...).order(...).take(n)`), and RECORDS every read issued —
+ * table, index name, equality/comparison bounds, order direction, take
+ * limit — the same idiom convex/alertsCountBounded.test.ts uses to assert on
+ * the query a handler ISSUED, not merely the rows it returned. THROWS on
+ * withIndex(...).collect(), exactly as makeGraphSweepCtx (above, this file)
+ * already does for the sweep's entity tables — a regression here must fail
+ * loudly, not merely slowly.
+ *
+ * Chunk rows are served in EXACTLY the array order passed in `chunks` —
+ * deliberately NOT pre-sorted by seq — so a fixture can separate insertion
+ * order from seq order, which the ordering describe block below depends on.
+ */
+function makeGraphReadCtx(opts: { meta?: any; chunks?: Array<{ seq: number; chunk: string }> }) {
+  const meta = opts.meta ?? null;
+  const chunks = opts.chunks ?? [];
+  let rowsRead = 0;
+  const reads: Array<{
+    table: string;
+    index: string;
+    bounds: Array<[string, string, unknown]>;
+    order: string | null;
+    limit: number | null;
+  }> = [];
+
+  const ctx: any = {
+    db: {
+      query: (table: string) => ({
+        withIndex: (index: string, cb?: (q: any) => any) => {
+          const bounds: Array<[string, string, unknown]> = [];
+          const q: any = {};
+          for (const op of ["eq", "lt", "lte", "gt", "gte"]) {
+            q[op] = (field: string, value: unknown) => {
+              bounds.push([op, field, value]);
+              return q;
+            };
+          }
+          if (cb) cb(q);
+          const rec = { table, index, bounds, order: null as string | null, limit: null as number | null };
+          const chain: any = {
+            unique: async () => {
+              if (table !== "graphSnapshots") throw new Error(`unexpected .unique() on ${table}`);
+              reads.push(rec);
+              if (meta) rowsRead += 1;
+              return meta;
+            },
+            order: (dir: string) => {
+              rec.order = dir;
+              return chain;
+            },
+            take: async (n: number) => {
+              if (table !== "graphSnapshotBlobChunks") throw new Error(`unexpected .take() on ${table}`);
+              rec.limit = n;
+              const served = chunks.slice(0, n);
+              reads.push(rec);
+              rowsRead += served.length;
+              return served;
+            },
+            collect: async () => {
+              throw new Error(`REGRESSION: unbounded .collect() on ${table}`);
+            },
+          };
+          return chain;
+        },
+      }),
+    },
+  };
+
+  return { ctx, reads, readCount: () => rowsRead };
+}
+
+describe("getProjectGraph — round-trip fidelity, with two controls that must fail (126-08, property 1)", () => {
+  const fixture = buildReadFixture();
+
+  it("fixture sanity: realistically sized relative to D-06-REVISED's ~1.03 MB / ~9-chunk measurement, not a 3-row toy", () => {
+    expect(fixture.blob.length).toBeGreaterThan(500_000);
+    expect(fixture.chunkRows.length).toBeGreaterThan(1);
+  });
+
+  it("round-trips: nodes and links are deep-equal to what was serialized (assert on the VALUE, not the absence of a throw)", async () => {
+    const meta = buildReadMeta({ blobChunkCount: fixture.chunkRows.length });
+    const h = makeGraphReadCtx({ meta, chunks: fixture.chunkRows });
+    const result = await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    expect(result).not.toBeNull();
+    expect(result!.nodes).toEqual(fixture.parsed.nodes);
+    expect(result!.links).toEqual(fixture.parsed.links);
+  });
+
+  it("CONTROL: a corrupted chunk (the blob's own trailing '}' removed — a structural delimiter, not a string-value character) raises a named ConvexError, not a plausible graph", async () => {
+    // REVIEW FIX (cross-AI review 2026-08-24, MEDIUM): dropping a character
+    // from inside a JSON STRING VALUE (e.g. "node123" -> "node13") leaves
+    // syntactically valid JSON, so JSON.parse would succeed on a corrupted-
+    // but-plausible graph and this control would silently pass against a
+    // broken reader. Removing the object's own closing '}' cannot parse.
+    const meta = buildReadMeta({ blobChunkCount: fixture.chunkRows.length });
+    const lastIdx = fixture.chunkRows.length - 1;
+    const lastChunk = fixture.chunkRows[lastIdx].chunk;
+    const offset = lastChunk.length - 1;
+    const removedChar = lastChunk[offset];
+    // Fixture sanity: the character actually removed IS the blob's closing
+    // brace, at the blob's own final offset.
+    expect(removedChar).toBe("}");
+    expect(fixture.blob[fixture.blob.length - 1]).toBe("}");
+
+    const corrupted = fixture.chunkRows.map((r, i) =>
+      i === lastIdx ? { seq: r.seq, chunk: lastChunk.slice(0, offset) } : r
+    );
+    const h = makeGraphReadCtx({ meta, chunks: corrupted });
+
+    let caught: unknown;
+    try {
+      await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ConvexError);
+    // Assert on .data (planner correction 5), not a message-string match — a
+    // plain Error here would redact to "Server Error" client-side
+    // (CLAUDE.md).
+    expect((caught as InstanceType<typeof ConvexError>).data).toMatch(/failed to parse rejoined blob/);
+
+    // THE LIMIT OF THIS CONTROL, stated honestly (planner correction 1):
+    // JSON.parse succeeding proves only that the rejoined BYTES are
+    // well-formed JSON, not that they are the exact bytes the writer
+    // produced. Detecting a valid-but-altered blob (e.g. a swapped character
+    // inside a string value) would require a stored checksum, which this
+    // phase does NOT add — this control catches STRUCTURAL corruption only.
+  });
+
+  it("CONTROL: a truncated chunk SET (last row missing, blobChunkCount unchanged) raises ConvexError naming both counts, not a shorter graph", async () => {
+    const meta = buildReadMeta({ blobChunkCount: fixture.chunkRows.length });
+    const truncated = fixture.chunkRows.slice(0, -1);
+    const h = makeGraphReadCtx({ meta, chunks: truncated });
+
+    let caught: unknown;
+    try {
+      await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ConvexError);
+    const data = (caught as InstanceType<typeof ConvexError>).data;
+    expect(data).toMatch(
+      new RegExp(`expected ${fixture.chunkRows.length} chunk rows but found ${truncated.length}`)
+    );
+  });
+
+  it("total chunk loss: blobChunkCount > 0 but ZERO rows returned raises ConvexError, distinguished from the graceful-skip null path below", async () => {
+    const meta = buildReadMeta({ blobChunkCount: fixture.chunkRows.length });
+    const h = makeGraphReadCtx({ meta, chunks: [] });
+    let caught: unknown;
+    try {
+      await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ConvexError);
+    expect((caught as InstanceType<typeof ConvexError>).data).toMatch(/total chunk loss/);
+  });
+});
+
+describe("getProjectGraph — READ COST (126-08, property 2)", () => {
+  const fixture = buildReadFixture();
+
+  it("reads exactly meta(1) + chunk-row-count docs — far below the 4,096-read ceiling and the 6,591-row figure it replaces", async () => {
+    const meta = buildReadMeta({ blobChunkCount: fixture.chunkRows.length });
+    const h = makeGraphReadCtx({ meta, chunks: fixture.chunkRows });
+    await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+
+    // Asserted bound: 1 (meta) + chunk-row count. D-05 measured the OLD
+    // two-.collect() path at 6,591 rows (4,001 nodes + 2,590 links) against
+    // Convex's 4,096-read ceiling — this fixture uses those EXACT counts, so
+    // the contrast below is apples-to-apples, not a bare threshold with no
+    // reference figure attached (planner correction 2).
+    expect(h.readCount()).toBe(fixture.chunkRows.length + 1);
+    expect(h.readCount()).toBeLessThan(6591);
+    expect(h.readCount()).toBeLessThan(4096);
+  });
+});
+
+describe("getProjectGraph — the chunk read is issued through the RIGHT index (126-08, review fix)", () => {
+  // The ordering tests below exercise joinGraphBlobChunks's SORT. Because the
+  // reader sorts in JS anyway, a reader that selected the WRONG INDEX would
+  // still pass them — the helper repairs its input, masking the
+  // misselection (cross-AI review 2026-08-24, MEDIUM). This test asserts on
+  // the RECORDED query itself (convex/alertsCountBounded.test.ts's idiom:
+  // table, index, bounds, order, limit), not on the rejoined value, so a
+  // wrong index cannot hide behind a correct rejoin. Its control (run as a
+  // mutation proof, recorded verbatim in the SUMMARY rather than kept as a
+  // second permanent test): point the reader at "by_snapshot_version"
+  // instead of "by_snapshot_version_seq" and confirm THIS test goes RED
+  // while the round-trip/ordering tests above and below stay GREEN — proving
+  // those tests could not have caught the misselection on their own.
+  it("issues exactly one take() read against graphSnapshotBlobChunks via by_snapshot_version_seq, eq(snapshotId, version), order asc, limit GRAPH_BLOB_MAX_CHUNKS + 1", async () => {
+    const fixture = buildReadFixture();
+    const meta = buildReadMeta({ blobChunkCount: fixture.chunkRows.length });
+    const h = makeGraphReadCtx({ meta, chunks: fixture.chunkRows });
+    await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+
+    const chunkRead = h.reads.find((r) => r.table === "graphSnapshotBlobChunks");
+    expect(chunkRead).toBeDefined();
+    expect(chunkRead!.index).toBe("by_snapshot_version_seq");
+    expect(chunkRead!.bounds).toEqual([
+      ["eq", "snapshotId", READ_SNAPSHOT_ID],
+      ["eq", "version", meta.activeVersion],
+    ]);
+    expect(chunkRead!.order).toBe("asc");
+    expect(chunkRead!.limit).toBe(GRAPH_BLOB_MAX_CHUNKS + 1);
+  });
+});
+
+describe("getProjectGraph — return contract (126-08)", () => {
+  it("returns exactly the pre-change key set — Object.keys(...).sort() comparison", async () => {
+    const fixture = buildReadFixture();
+    const meta = buildReadMeta({ blobChunkCount: fixture.chunkRows.length });
+    const h = makeGraphReadCtx({ meta, chunks: fixture.chunkRows });
+    const result = await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    expect(Object.keys(result!).sort()).toEqual(
+      [
+        "generatedAt", "linkCount", "links", "nodeCount", "nodes",
+        "snapshotId", "sources", "storedLinkCount", "storedNodeCount",
+      ].sort()
+    );
+  });
+});
+
+describe("getProjectGraph — graceful skip (126-08)", () => {
+  it("a meta doc with NO blobChunkCount field and zero chunk rows returns null, not a throw", async () => {
+    const meta = buildReadMeta({}); // blobChunkCount absent entirely
+    const h = makeGraphReadCtx({ meta, chunks: [] });
+    const result = await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    expect(result).toBeNull();
+  });
+
+  it("no meta doc at all also returns null", async () => {
+    const h = makeGraphReadCtx({ meta: null, chunks: [] });
+    const result = await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    expect(result).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getProjectGraph — chunk ORDERING is by seq, not insertion/creation order
+// (126-08, property 3). convex/forge.ts's listJobLogs (126-CONTEXT.md's
+// PRECEDENT QUALIFIED note) sorts by _creationTime, which coincides with seq
+// closely enough for append-only log lines that this repo has never needed
+// to close the gap there. For a JSON blob split across chunks the two are
+// NOT interchangeable: a race, retry, or future batched insert could reorder
+// _creationTime while seq stays correct, and reassembling in the wrong order
+// produces a JSON.parse throw at best and a plausible TRUNCATED GRAPH at
+// worst — neither of which names its cause.
+// ---------------------------------------------------------------------------
+
+describe("getProjectGraph — chunk ORDERING is by seq, not insertion order (126-08, property 3)", () => {
+  const smallBlob = JSON.stringify({
+    nodes: Array.from({ length: 40 }, (_, i) => ({ id: `n${i}`, label: `node ${i}`, type: "file", source: "repo" })),
+    links: [{ source: "n0", target: "n1", relation: "imports" }],
+  });
+  const maxChars = Math.ceil(smallBlob.length / 5); // exactly 5 chunks
+  const seqOrderedRows = splitGraphBlob(smallBlob, maxChars).map((chunk, seq) => ({ seq, chunk }));
+  // Insertion order 3,1,4,0,2 vs seq order 0,1,2,3,4 — deliberately DIFFERENT
+  // (126-08-PLAN.md planner correction 3): a fixture where they coincide
+  // would pass even against a reader that silently sorts by _creationTime.
+  const insertionOrderRows = [
+    seqOrderedRows[3], seqOrderedRows[1], seqOrderedRows[4], seqOrderedRows[0], seqOrderedRows[2],
+  ];
+
+  it("fixture sanity: exactly 5 chunks; insertion order (3,1,4,0,2) differs from seq order (0,1,2,3,4)", () => {
+    expect(seqOrderedRows.length).toBe(5);
+    expect(insertionOrderRows.map((r) => r.seq)).toEqual([3, 1, 4, 0, 2]);
+    expect(insertionOrderRows.map((r) => r.seq)).not.toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it("reassembles correctly when rows are served in INSERTION order, not seq order (simulates the listJobLogs/_creationTime shape) — control proving the fixture exercises the hazard", async () => {
+    const meta = buildReadMeta({ blobChunkCount: insertionOrderRows.length });
+    const h = makeGraphReadCtx({ meta, chunks: insertionOrderRows });
+    const result = await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    expect(result).not.toBeNull();
+    const expected = JSON.parse(smallBlob);
+    expect(result!.nodes).toEqual(expected.nodes);
+    expect(result!.links).toEqual(expected.links);
+  });
+});
+
+describe("getProjectGraph — seq DENSITY guard, the gap case (126-08, property 3)", () => {
+  it("a gap in seq (rows 0,1,3 with blobChunkCount=3) raises ConvexError naming the missing seq — not a JSON.parse error, not a truncated graph", async () => {
+    const meta = buildReadMeta({ blobChunkCount: 3 });
+    const gapped = [
+      { seq: 0, chunk: '{"nodes":[' },
+      { seq: 1, chunk: '],"links":[]}' },
+      { seq: 3, chunk: "" }, // gap at seq 2; row COUNT still matches blobChunkCount=3
+    ];
+    const h = makeGraphReadCtx({ meta, chunks: gapped });
+    let caught: unknown;
+    try {
+      await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ConvexError);
+    expect((caught as InstanceType<typeof ConvexError>).data).toMatch(/missing chunk seq 2/);
+  });
+});
+
+describe("getProjectGraph — OVER-CAP guard (126-08)", () => {
+  it("more than GRAPH_BLOB_MAX_CHUNKS rows raises ConvexError naming the cap — bounding the NEW read, so the fix does not just replace one unbounded read with another", async () => {
+    const overCapCount = GRAPH_BLOB_MAX_CHUNKS + 1;
+    const meta = buildReadMeta({ blobChunkCount: overCapCount });
+    const overCapChunks = Array.from({ length: overCapCount }, (_, seq) => ({ seq, chunk: "" }));
+    const h = makeGraphReadCtx({ meta, chunks: overCapChunks });
+    let caught: unknown;
+    try {
+      await (getProjectGraph as any)._handler(h.ctx, { snapshotId: READ_SNAPSHOT_ID });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(ConvexError);
+    expect((caught as InstanceType<typeof ConvexError>).data).toMatch(
+      new RegExp(`GRAPH_BLOB_MAX_CHUNKS \\(${GRAPH_BLOB_MAX_CHUNKS}\\)`)
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getGraphEntityPage — the backfill's internal page-size clamp (126-08).
+// ---------------------------------------------------------------------------
+
+describe("getGraphEntityPage — internal clamp (126-08, backfill paging)", () => {
+  const PAGE_SNAPSHOT = "test-graph-126-08-page";
+  // BACKFILL_PAGE_SIZE is a module-private constant in graphSnapshots.ts
+  // (not exported); its value (1000) is asserted below rather than assumed.
+  const BACKFILL_PAGE_SIZE = 1000;
+
+  /** Fake ctx.db for a single .paginate() call: records the numItems it was
+   *  asked to serve (post-clamp, since the clamp runs INSIDE the handler
+   *  before this is ever called) and returns exactly that many rows (or
+   *  fewer if the underlying set is smaller). */
+  function makePaginateCtx(totalRows: number) {
+    const rows = Array.from({ length: totalRows }, (_, i) => ({
+      _id: `r${i}`, nodeId: `n${i}`, label: `n${i}`, type: "file", source: "repo",
+    }));
+    const recordedNumItems: number[] = [];
+    const ctx: any = {
+      db: {
+        query: (_table: string) => ({
+          withIndex: (_index: string, _cb: (q: any) => any) => ({
+            paginate: async ({ numItems, cursor }: { numItems: number; cursor: string | null }) => {
+              recordedNumItems.push(numItems);
+              const start = cursor ? Number(cursor) : 0;
+              const page = rows.slice(start, start + numItems);
+              return { page, isDone: start + page.length >= rows.length, continueCursor: String(start + page.length) };
+            },
+          }),
+        }),
+      },
+    };
+    return { ctx, recordedNumItems };
+  }
+
+  it("clamps a numItems FAR ABOVE the internal cap down to BACKFILL_PAGE_SIZE", async () => {
+    const { ctx, recordedNumItems } = makePaginateCtx(5000);
+    const page = await (getGraphEntityPage as any)._handler(ctx, {
+      snapshotId: PAGE_SNAPSHOT, version: 1, kind: "nodes", cursor: null, numItems: 999_999,
+    });
+    expect(recordedNumItems[0]).toBe(BACKFILL_PAGE_SIZE); // clamped, not the caller's 999,999
+    expect(page.page.length).toBeLessThanOrEqual(BACKFILL_PAGE_SIZE);
+  });
+
+  it("CONTROL: a numItems BELOW the cap is NOT clamped — proves the test above measures a clamp, not a hardcoded constant", async () => {
+    const { ctx, recordedNumItems } = makePaginateCtx(5000);
+    const page = await (getGraphEntityPage as any)._handler(ctx, {
+      snapshotId: PAGE_SNAPSHOT, version: 1, kind: "nodes", cursor: null, numItems: 250,
+    });
+    expect(recordedNumItems[0]).toBe(250);
+    expect(page.page.length).toBe(250);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// backfillGraphBlob — argument reconstruction (126-08). Reuses the same
+// runQuery/runMutation stub + getFunctionName-identity dispatch seam the
+// concurrent TOCTOU-guard tests above already established for this exact
+// action (they were already in this file when this plan started — see the
+// SUMMARY's disclosure note).
+// ---------------------------------------------------------------------------
+
+describe("backfillGraphBlob — reconstructs upsertGraphSnapshot's arguments correctly (126-08)", () => {
+  function makeBackfillArgCtx() {
+    const runMutationCalls: any[] = [];
+    const META = {
+      snapshotId: "argtest",
+      activeVersion: 5,
+      blobChunkCount: undefined,
+      sources: [{
+        source: "repo", kind: "graphify", nodeCount: 2, linkCount: 1,
+        emittedNodeCount: 2, emittedLinkCount: 1, truncated: false,
+      }],
+      nodeCount: 2,
+      linkCount: 1,
+      storedNodeCount: 2,
+      storedLinkCount: 1,
+      generatedAt: 1234.5,
+    };
+    const ctx: any = {
+      runQuery: async (fnRef: unknown, args: any) => {
+        const name = getFunctionName(fnRef as any);
+        if (name === getFunctionName(internal.graphSnapshots.getGraphMetaForBackfill)) {
+          return META;
+        }
+        if (name === getFunctionName(internal.graphSnapshots.getGraphEntityPage)) {
+          if (args.kind === "nodes" && args.cursor === null) {
+            return {
+              page: [
+                { nodeId: "graphify:test:a", label: "A", type: "code", community: 3, source: "repo" },
+                { nodeId: "graphify:test:b", label: "B", type: "code", community: undefined, source: "repo" },
+              ],
+              isDone: true,
+              continueCursor: "",
+            };
+          }
+          if (args.kind === "links" && args.cursor === null) {
+            return {
+              page: [{ source: "graphify:test:a", target: "graphify:test:b", relation: "imports" }],
+              isDone: true,
+              continueCursor: "",
+            };
+          }
+          return { page: [], isDone: true, continueCursor: "" };
+        }
+        throw new Error(`TEST BUG: unexpected runQuery ${name}`);
+      },
+      runMutation: async (fnRef: unknown, args: any) => {
+        const name = getFunctionName(fnRef as any);
+        if (name === getFunctionName(internal.graphSnapshots.upsertGraphSnapshot)) {
+          runMutationCalls.push(args);
+          return undefined; // normal path — version matched, no versionAdvanced status
+        }
+        throw new Error(`TEST BUG: unexpected runMutation ${name}`);
+      },
+    };
+    return { ctx, runMutationCalls, META };
+  }
+
+  it("maps nodeId -> id, carries sources/nodeCount/linkCount/generatedAt from the meta doc verbatim, and receivedAt in epoch seconds", async () => {
+    const before = Date.now() / 1000;
+    const { ctx, runMutationCalls, META } = makeBackfillArgCtx();
+
+    await (backfillGraphBlob as any)._handler(ctx, { snapshotId: "argtest" });
+    const after = Date.now() / 1000;
+
+    expect(runMutationCalls).toHaveLength(1);
+    const call = runMutationCalls[0];
+
+    // nodeId -> id mapping — the entity row's stored field name (nodeId)
+    // differs from the writer's expected node shape (id).
+    expect(call.nodes).toEqual([
+      { id: "graphify:test:a", label: "A", type: "code", community: 3, source: "repo" },
+      { id: "graphify:test:b", label: "B", type: "code", community: undefined, source: "repo" },
+    ]);
+    expect(call.links).toEqual([{ source: "graphify:test:a", target: "graphify:test:b", relation: "imports" }]);
+
+    // Carried verbatim from the meta doc — not recomputed, not re-derived.
+    expect(call.sources).toEqual(META.sources);
+    expect(call.nodeCount).toBe(META.nodeCount);
+    expect(call.linkCount).toBe(META.linkCount);
+    expect(call.generatedAt).toBe(META.generatedAt);
+
+    // Epoch SECONDS, not milliseconds — bounded by two Date.now()/1000 reads
+    // taken immediately around the call.
+    expect(call.receivedAt).toBeGreaterThanOrEqual(before);
+    expect(call.receivedAt).toBeLessThanOrEqual(after);
+
+    // The TOCTOU guard's own argument — proves the action passes the SAME
+    // version it paged against, not a re-read one.
+    expect(call.expectedVersion).toBe(META.activeVersion);
   });
 });
