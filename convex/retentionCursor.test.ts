@@ -217,6 +217,68 @@ describe("partitionBatchForPrune — Phase 110 D-02 predicate-aware batch split"
   });
 });
 
+describe("partitionBatchForPrune — Phase 127 optional cursor-field extractor", () => {
+  it("regression control: default path (no extractor) is unchanged for every existing case, and lastCursorValue mirrors lastCreationTime", () => {
+    const batch = fakeBatch(5);
+    const result = partitionBatchForPrune(batch);
+    expect(result.toDelete).toEqual(batch);
+    expect(result.lastCreationTime).toBe(batch[batch.length - 1]._creationTime);
+    expect(result.lastCursorValue).toBe(result.lastCreationTime);
+  });
+
+  it("regression control: an all-skipped default-path batch still reports a non-null lastCreationTime, and lastCursorValue matches it", () => {
+    const batch = fakeBatch(BATCH_SIZE);
+    const result = partitionBatchForPrune(batch, () => false);
+    expect(result.toDelete).toHaveLength(0);
+    expect(result.lastCreationTime).toBe(batch[BATCH_SIZE - 1]._creationTime);
+    expect(result.lastCursorValue).toBe(result.lastCreationTime);
+  });
+
+  it("regression control: an empty default-path batch reports both lastCreationTime and lastCursorValue as null", () => {
+    const result = partitionBatchForPrune([]);
+    expect(result.lastCreationTime).toBeNull();
+    expect(result.lastCursorValue).toBeNull();
+  });
+
+  it("extractor path: lastCursorValue is the extracted field of the LAST iterated doc, independent of lastCreationTime", () => {
+    const batch = [
+      { _id: "a", _creationTime: 100, createdAt: 5_000 },
+      { _id: "b", _creationTime: 200, createdAt: 6_000 },
+      { _id: "c", _creationTime: 300, createdAt: 7_000 },
+    ];
+    const result = partitionBatchForPrune(batch, undefined, (doc) => doc.createdAt);
+    expect(result.lastCursorValue).toBe(7_000);
+    expect(result.lastCreationTime).toBe(300);
+    expect(result.lastCursorValue).not.toBe(result.lastCreationTime);
+  });
+
+  it("D-08's trap: an all-skipped batch with an extractor still reports a non-null lastCursorValue equal to the last doc's extracted field", () => {
+    const batch = [
+      { _id: "a", _creationTime: 100, createdAt: 5_000 },
+      { _id: "b", _creationTime: 200, createdAt: 6_000 },
+      { _id: "c", _creationTime: 300, createdAt: 7_000 },
+    ];
+    const result = partitionBatchForPrune(
+      batch,
+      () => false,
+      (doc) => doc.createdAt
+    );
+    expect(result.toDelete).toEqual([]);
+    expect(result.lastCursorValue).toBe(7_000);
+    expect(result.lastCursorValue).not.toBeNull();
+  });
+
+  it("empty batch with an extractor: both lastCreationTime and lastCursorValue are null", () => {
+    const result = partitionBatchForPrune(
+      [] as Array<{ _id: string; _creationTime: number; createdAt: number }>,
+      undefined,
+      (doc) => doc.createdAt
+    );
+    expect(result.lastCreationTime).toBeNull();
+    expect(result.lastCursorValue).toBeNull();
+  });
+});
+
 describe("resolveRotationStart — Phase 110 D-05/D-06 rotation-start resolution", () => {
   it("returns the raw value for an in-range integer", () => {
     expect(resolveRotationStart(5, 14)).toBe(5);

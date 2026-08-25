@@ -137,20 +137,36 @@ export function planNextPruneStep(args: PlanPruneStepArgs): PruneStep {
  *
  * The fix: a predicate-skipped doc still ADVANCES the cursor. `lastCreationTime` is set from every
  * doc iterated, deleted or skipped, so it always reflects the batch's true high-water mark.
+ *
+ * ## Phase 127: an optional application-field cursor extractor
+ *
+ * Both new ack-aware janitors (`inbox`, `ideationFindings`) cursor on an application field
+ * (`createdAt`, `closedAt`, `dismissedAt`) rather than `_creationTime` — the field their own
+ * cutoff/range queries are keyed on. Hand-rolling a second copy of this loop per janitor would
+ * silently reintroduce the exact "a skipped row never advances the cursor" defect this module
+ * exists to fix, just on a different field. So `partitionBatchForPrune` takes an optional third
+ * argument, `cursorField`, and returns a third key, `lastCursorValue`, computed from EVERY
+ * iterated doc (deleted or skipped) exactly like `lastCreationTime` already is — falling back to
+ * `doc._creationTime` when no extractor is supplied, so `lastCursorValue === lastCreationTime`
+ * for every existing caller. This is purely additive: `lastCreationTime`'s meaning and the
+ * existing two-argument call site (`retention.ts:352`) are both unchanged.
  */
 export function partitionBatchForPrune<T extends { _id: unknown; _creationTime: number }>(
   batch: readonly T[],
-  predicate?: (doc: T) => boolean
-): { toDelete: T[]; lastCreationTime: number | null } {
+  predicate?: (doc: T) => boolean,
+  cursorField?: (doc: T) => number
+): { toDelete: T[]; lastCreationTime: number | null; lastCursorValue: number | null } {
   const toDelete: T[] = [];
   let lastCreationTime: number | null = null;
+  let lastCursorValue: number | null = null;
   for (const doc of batch) {
     if (!predicate || predicate(doc)) {
       toDelete.push(doc);
     }
     lastCreationTime = doc._creationTime;
+    lastCursorValue = cursorField ? cursorField(doc) : doc._creationTime;
   }
-  return { toDelete, lastCreationTime };
+  return { toDelete, lastCreationTime, lastCursorValue };
 }
 
 /** What an overhang probe could determine about a table's un-pruned backlog. */
