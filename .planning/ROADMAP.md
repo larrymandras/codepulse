@@ -1005,14 +1005,34 @@ Plans:
 
 Plans:
 
+**Wave 1**
+
 - [ ] 127-01-PLAN.md — generalize `partitionBatchForPrune`'s cursor field; add `inbox.closedAt` + `by_closedAt`, widen `by_dismissed`, add `by_dismissedAt` (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 127-02-PLAN.md — `internal.inbox.autoCloseAndPrune`: two-step auto-close/delete chain (wave 2)
 - [ ] 127-03-PLAN.md — `internal.ideation.autoCloseAndPrune`, incl. R-01's mandatory inert-run log (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 127-04-PLAN.md — inbox janitor tests: Verifications A, B, C, D + R-02's never-patches-`ackedAt` guard (wave 3)
 - [ ] 127-05-PLAN.md — ideation janitor tests: Verifications A, B, C, D + R-01's log assertion (wave 3)
 - [ ] 127-06-PLAN.md — two `crons.daily()` registrations at 08:20/08:35 UTC + the D-09 coverage-bucket move (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 127-07-PLAN.md — Verification B's manual mutation-testing control: delete each guard, confirm the outcome flips (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 127-08-PLAN.md — `ackedAt` consumer sweep, [BLOCKING] Convex schema deploy + index-diff read, Verification F first-run watch (wave 5)
+
+**Cross-cutting constraints:**
+
+- Neither step ever reads unbounded: every read is `.take(200)`, cursor-seeked, and the chain is batch-capped (D-02)
+- Both steps run inside ONE self-rescheduling chain under ONE batch budget carried across the phase transition (D-02)
+- Batch size is 200 and the per-chain cap is 100, with the arithmetic re-derived inline against the 4,096-READ ceiling this deployment actually enforces — never the 16,000/32,000 figures on Convex's published limits page (D-07)
 
 ---
 
