@@ -541,19 +541,37 @@ describe("defaultDestPath: short by design", () => {
 
 describe("this module is NOT a stub — the specific way its donor is broken", () => {
   const modulePath = path.join(process.cwd(), "hooks", "studioFal.mjs");
-  const veoPath = path.join(
-    os.homedir(),
-    ".claude/skills/mandras_made_skills/caught_on_camera/src/ai/veo.ts".split("/").join(path.sep)
-  );
+  /**
+   * In-repo CONTROL fixture (2026-08-25). Replaces a read of
+   * `~/.claude/skills/.../caught_on_camera/src/ai/veo.ts`, which exists on the
+   * authoring machine and NEVER on a CI runner. That single external read was
+   * the sole cause of a permanently red master build: these suites passed
+   * locally (71/71) and failed with ENOENT in CI for weeks.
+   *
+   * A skip-on-absence guard was considered and REJECTED. `veo.ts` was not
+   * incidental here, it WAS the control that proves the patterns below can
+   * match anything at all. Skipping it would have turned CI green while
+   * silently downgrading the `not.toMatch(...)` assertions into zeros from
+   * patterns never shown to match -- a vacuous pass. The original code said so
+   * itself: "fail rather than silently downgrading to an unproven assertion."
+   *
+   * A literal fixture keeps that guarantee with no external dependency, and is
+   * shaped after the real stub markers it stands in for.
+   */
+  const STUB_MARKER_CONTROL = [
+    "// TODO: implement full fal.ai queue/poll cycle:",
+    "throw new Error('veo.generateClip not implemented - TODO: fal.ai queue/poll cycle');",
+  ].join(String.fromCharCode(10));
 
   it("contains no `not implemented` throw and no TODO marker, with veo.ts as the CONTROL proving the pattern finds them", () => {
     const src = fs.readFileSync(modulePath, "utf-8");
 
     // CONTROL FIRST. A zero from a pattern that has never been shown to match
-    // anything is a claim about the pattern, not about the file.
-    const veo = fs.readFileSync(veoPath, "utf-8");
-    expect(veo).toMatch(/not implemented/);
-    expect(veo).toMatch(/TODO/);
+    // anything is a claim about the pattern, not about the file. The control is
+    // now an in-repo literal (STUB_MARKER_CONTROL) instead of a file on the
+    // authoring machine -- see its comment for why skipping was rejected.
+    expect(STUB_MARKER_CONTROL).toMatch(/not implemented/);
+    expect(STUB_MARKER_CONTROL).toMatch(/TODO/);
 
     // Now the subject, using the SAME patterns.
     expect(src).not.toMatch(/not implemented/);

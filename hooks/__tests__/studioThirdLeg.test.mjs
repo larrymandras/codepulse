@@ -355,19 +355,38 @@ describe("source hygiene: no stub markers, with a control proving the pattern fi
     expect(specs.every((s) => s.startsWith("node:"))).toBe(true);
   });
 
+  /**
+   * In-repo CONTROL fixture (2026-08-25). Replaces a read of
+   * `~/.claude/skills/.../caught_on_camera/src/ai/veo.ts`, which exists on the
+   * authoring machine and NEVER on a CI runner. That single external read was
+   * the sole cause of a permanently red master build: these suites passed
+   * locally (71/71) and failed with ENOENT in CI for weeks.
+   *
+   * A skip-on-absence guard was considered and REJECTED. `veo.ts` was not
+   * incidental here, it WAS the control that proves the patterns below can
+   * match anything at all. Skipping it would have turned CI green while
+   * silently downgrading the `not.toMatch(...)` assertions into zeros from
+   * patterns never shown to match -- a vacuous pass. The original code said so
+   * itself: "fail rather than silently downgrading to an unproven assertion."
+   *
+   * A literal fixture keeps that guarantee with no external dependency, and is
+   * shaped after the real stub markers it stands in for.
+   */
+  const STUB_MARKER_CONTROL = [
+    "// TODO: implement full fal.ai queue/poll cycle:",
+    "throw new Error('veo.generateClip not implemented - TODO: fal.ai queue/poll cycle');",
+  ].join(String.fromCharCode(10));
+
   it("contains no unimplemented-stub marker — CONTROL: the same patterns DO find them in veo.ts", () => {
     const patterns = [/not\s+implemented/i, /\bTODO\b/];
     for (const p of patterns) expect(p.test(SRC)).toBe(false);
 
-    const control = path.join(
-      os.homedir(),
-      ".claude/skills/mandras_made_skills/caught_on_camera/src/ai/veo.ts"
-    );
-    // The control is what makes the zeros above mean something. If it is missing,
-    // fail rather than silently downgrading to an unproven assertion.
-    expect(fs.existsSync(control)).toBe(true);
-    const ctl = fs.readFileSync(control, "utf8");
-    expect(patterns.some((p) => p.test(ctl))).toBe(true);
+    // The control is what makes the zeros above mean something. It is now an
+    // in-repo literal (STUB_MARKER_CONTROL) rather than a file on the authoring
+    // machine, so it cannot go missing on a CI runner. Tightened from .some() to
+    // .every(): EVERY pattern must be shown capable of matching, otherwise one
+    // dead pattern could hide behind a live one.
+    expect(patterns.every((p) => p.test(STUB_MARKER_CONTROL))).toBe(true);
   });
 
   it("carries no HTTP-client shape borrowed from leg 2 — asserted on CODE, not on prose", () => {
