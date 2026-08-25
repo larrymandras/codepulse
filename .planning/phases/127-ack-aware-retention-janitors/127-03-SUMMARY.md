@@ -121,3 +121,13 @@ None — no external service configuration required. Note per `127-01-SUMMARY.md
 ---
 *Phase: 127-ack-aware-retention-janitors*
 *Completed: 2026-08-25*
+
+## Self-Check
+
+- `convex/ideation.ts` — FOUND, modified in `028351aa` and `23c08008`.
+- `.planning/phases/127-ack-aware-retention-janitors/127-03-SUMMARY.md` — FOUND, added in `659349ba`.
+- Commit `028351aa` — FOUND in `git log --oneline`.
+- Commit `23c08008` — FOUND in `git log --oneline`.
+- Commit `659349ba` — FOUND in `git log --oneline`.
+
+## Self-Check: PASSED
