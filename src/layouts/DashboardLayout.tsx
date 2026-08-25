@@ -131,18 +131,34 @@ function BadgeUnavailableDot({ label }: { label: string }) {
 // of the sidebar; a throw during SidebarContent's own render would bubble
 // past any boundary wrapping only a piece of its returned JSX (Task 3).
 function InboxCountBadge() {
-  // D-10 (amended 2026-08-21): listHeldUnacked — not the per-profile inbox
-  // read (needs a profileId the shell doesn't have) or listAll (caps at 200
-  // against 2,777 live rows). Counts unacked `held` rows only — 46 live at
-  // planning time.
-  const held = useQuery(api.inbox.listHeldUnacked);
+  // D-03/D-04 (126-06, SWEEP-01): countHeldUnacked, not listHeldUnacked —
+  // a count-only, by_itemType-indexed, HELD_COUNT_SCAN_CAP+1-bounded read
+  // returning {count, truncated}. listHeldUnacked's unbounded .collect() ran
+  // on EVERY route (this component is in the shell), shipping up to 2,001
+  // full inbox row objects (title/body/profileId) the badge only ever called
+  // .length on — the same every-route DoS risk convex/alerts.ts's
+  // countBySeverity/ALERT_COUNT_SCAN_CAP already closed for the sibling
+  // Alerts badge (Phase 124, D-13). listHeldUnacked itself is deliberately
+  // left alone: convex/inboxIngest.ts:174 (inboxReadHeldUnacked httpAction)
+  // still calls it directly to feed focus_digest.py, which needs the TRUE
+  // unbounded unacked-held set — capping the shared query would silently
+  // truncate that cross-repo consumer with no error.
+  const result = useQuery(api.inbox.countHeldUnacked);
   // D-12 state 1: unresolved -> nothing. `== null` also treats the mocked
   // `null` this repo's test suite uses for "not yet resolved" as unresolved
   // (Convex itself only ever returns `undefined` while loading; the mock
   // shape is test-only, per this task's own action text).
-  if (held == null) return null;
-  const count = held.length;
+  if (result == null) return null;
+  const { count, truncated } = result;
   if (count === 0) return null; // D-12 state 3: never a visible zero
+
+  // D-04: truncated means `count` is a FLOOR on the true unacked-held total,
+  // not the total — declare the cap visually AND to assistive tech, the same
+  // honesty rule AlertsCountBadge's `truncated` branch below already applies.
+  const displayLabel = truncated ? `${count}+` : `${count}`;
+  const a11yLabel = truncated
+    ? `at least ${count} unread in Inbox`
+    : `${count} unread in Inbox`;
   return (
     <Badge
       className={cn(
@@ -150,9 +166,9 @@ function InboxCountBadge() {
         BADGE_DATA_TYPE,
         "bg-(--surface-3) text-(--foreground) border border-(--hairline)",
       )}
-      aria-label={`${count} unread in Inbox`}
+      aria-label={a11yLabel}
     >
-      {count}
+      {displayLabel}
     </Badge>
   );
 }

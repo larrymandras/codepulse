@@ -53,7 +53,9 @@ vi.mock("../../../convex/_generated/api", () => ({
     // `undefined` and InboxCountBadge/AlertsCountBadge throw on module
     // access before ever reaching the D-12 undefined-guard — every badge
     // test would fail with a TypeError, not a useful assertion.
-    inbox: { listHeldUnacked: "inbox:listHeldUnacked" },
+    // 126-06 (D-03/D-04): InboxCountBadge swapped listHeldUnacked for the
+    // bounded countHeldUnacked — see the reference-string dispatch below.
+    inbox: { countHeldUnacked: "inbox:countHeldUnacked" },
     alerts: { countBySeverity: "alerts:countBySeverity" },
   },
 }));
@@ -377,7 +379,7 @@ describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 0
     alertsThrows?: boolean;
   }) {
     vi.mocked(useQuery).mockImplementation(((ref: unknown) => {
-      if (ref === "inbox:listHeldUnacked") return opts.inbox;
+      if (ref === "inbox:countHeldUnacked") return opts.inbox;
       if (ref === "alerts:countBySeverity") {
         if (opts.alertsThrows) throw new Error("simulated countBySeverity failure");
         return opts.alerts;
@@ -393,13 +395,13 @@ describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 0
   });
 
   it("renders no Inbox badge when the resolved count is 0 — never a visible zero (D-12 state 3)", () => {
-    mockBadgeQueries({ inbox: [] });
+    mockBadgeQueries({ inbox: { count: 0, truncated: false } });
     renderLayout();
     expect(screen.queryByLabelText(/unread in Inbox/)).not.toBeInTheDocument();
   });
 
   it("renders the Inbox count with a domain-naming aria-label when > 0 (D-12 state 2)", () => {
-    mockBadgeQueries({ inbox: [{ _id: "1" }, { _id: "2" }, { _id: "3" }] });
+    mockBadgeQueries({ inbox: { count: 3, truncated: false } });
     renderLayout();
     // Desktop <aside> and the mobile drawer <aside> both mount SidebarContent
     // (same shared-instance shape asserted elsewhere in this file), so every
@@ -407,6 +409,14 @@ describe("DashboardLayout sidebar count badges (D-10/D-12/D-13, Phase 124 Plan 0
     const badges = screen.getAllByLabelText("3 unread in Inbox");
     expect(badges.length).toBe(2);
     for (const badge of badges) expect(badge).toHaveTextContent("3");
+  });
+
+  it("renders a truncated Inbox count as {n}+ with an 'at least' accessible label, never a complete-looking integer (126-06, D-04)", () => {
+    mockBadgeQueries({ inbox: { count: 2000, truncated: true } });
+    renderLayout();
+    const badges = screen.getAllByLabelText("at least 2000 unread in Inbox");
+    expect(badges.length).toBe(2);
+    for (const badge of badges) expect(badge).toHaveTextContent("2000+");
   });
 
   it("renders the Alerts total with a domain-naming aria-label when > 0 (D-12 state 2)", () => {
