@@ -247,18 +247,18 @@ describe("D-09 access — suite 15: resolveAccess descendant match, sibling-pref
   const mounted = new Set(["c:/example/repo/codepulse"]);
 
   it("CONTROL — a real descendant is astridr-reachable", () => {
-    expect(resolveAccess("C:/Example/repo/codepulse/src", mounted)).toBe(
+    expect(resolveAccess("C:/Example/repo/codepulse/src", mounted, "win32")).toBe(
       "astridr-reachable"
     );
   });
 
   it("a sibling-prefix directory is NOT treated as a descendant", () => {
-    expect(resolveAccess("C:/Example/repo/codepulse-old", mounted)).toBe("local-only");
+    expect(resolveAccess("C:/Example/repo/codepulse-old", mounted, "win32")).toBe("local-only");
   });
 
   it("an empty or absent mounted set fails closed to local-only", () => {
-    expect(resolveAccess("C:/Example/repo/codepulse", new Set())).toBe("local-only");
-    expect(resolveAccess("C:/Example/repo/codepulse", null)).toBe("local-only");
+    expect(resolveAccess("C:/Example/repo/codepulse", new Set(), "win32")).toBe("local-only");
+    expect(resolveAccess("C:/Example/repo/codepulse", null, "win32")).toBe("local-only");
   });
 });
 
@@ -267,7 +267,7 @@ describe("D-09 access — suite 16: object-form volume entries", () => {
     expect(
       parseComposeVolumeEntry(
         { type: "bind", source: "C:/Example/bind-src", target: "/x" },
-        {}
+        { platform: "win32" }
       )
     ).toBe("c:/example/bind-src");
   });
