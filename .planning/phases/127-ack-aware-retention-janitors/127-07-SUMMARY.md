@@ -311,3 +311,60 @@ None.
 ---
 *Phase: 127-ack-aware-retention-janitors*
 *Completed: 2026-08-25*
+
+---
+
+## Flip 4 gap CLOSED (orchestrator, same session, 2026-08-25)
+
+Larry reviewed the checkpoint and chose "add the missing test now". The gap this plan found is
+resolved; 127-08 is no longer blocked by it.
+
+**Independent re-verification of the finding first.** Before acting, the orchestrator confirmed
+the root cause against the code rather than accepting the report:
+- `convex/inbox.ts:434-436` — `shouldDeleteClosed` is `return row.itemType !== "held";`, an
+  explicit second guard whose own docstring says it is kept "rather than relying solely on the
+  invariant".
+- No fixture in `convex/inbox.test.ts` seeded a `held` row carrying `closedAt`; the
+  "held excluded even when acked" test at :526 explicitly asserts held rows stay
+  `closedAt: undefined`.
+- `grep shouldDeleteClosed convex/inbox.test.ts` → no direct unit test.
+All three confirmed. The finding was correct.
+
+**The fix** — commit `9cd949fd`, `test(127-04): cover shouldDeleteClosed's held guard`, landing
+in `convex/inbox.test.ts` per this plan's own routing (127-04 owns that file). It builds the one
+fixture shape the file lacked: a `held` row that ALREADY carries `closedAt`, past the grace
+window, paired with an identical non-held row.
+
+The test asserts in three parts, and part (1) is what makes it discriminating:
+1. BOTH rows are returned by the `by_closedAt` range. Without this, the survival assertion would
+   pass even with the guard deleted — the same false pass this test exists to prevent.
+2. Only the held row survives; it is not in `mock.deletes`.
+3. The paired non-held row IS deleted — without this control, a handler that deletes nothing at
+   all would satisfy (1) and (2).
+
+**Flip 4 re-run, and it now flips.** The mutation was repeated with the guard replaced by
+`return true;` (syntactically valid, so the red is an assertion failure and not a collection
+error):
+
+```
+AssertionError: expected false to be true // Object.is equality
+ ❯ convex/inbox.test.ts:650:46
+    650|     expect(mock.rowExists("held-preclosed")).toBe(true);
+ Test Files  1 failed (1)
+      Tests  1 failed | 24 passed (25)
+```
+
+The janitor's own stdout in that run reads `acted on 2 row(s)` where a correct run acts on 1 —
+the held row was deleted, which is precisely the production failure the guard prevents.
+Note that the other 24 tests stayed GREEN under the mutation, independently reproducing this
+plan's original finding.
+
+**Isolation note.** Both the original four flips and this re-run were performed in throwaway git
+worktrees, never in the shared checkout. This plan's threat model (T-127-24) manages the risk of
+a concurrent session's `convex deploy` or `docker compose up --build` shipping deliberately
+broken source by keeping each flip short; worktree isolation removes that risk instead of
+managing it. The main checkout was verified unmutated during the flip (`git diff --stat
+convex/inbox.ts` empty, zero mutation markers) and restored-green after
+(`convex/inbox.ts:435` unchanged, 25/25 passing).
+
+**Status:** Task 1 complete, gap closed. Task 2's operator checkpoint remains Larry's to sign off.
