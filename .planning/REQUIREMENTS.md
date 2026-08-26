@@ -106,9 +106,35 @@ requirement table, and needs the same treatment.
 
 ### Genuinely open
 
-2. 🔴 **MISSION-02 humanized tool activity.** No job↔tool join key in telemetry.
-   `astridr/tools/cancel_job.py` takes a `job_id` argument, but that is a tool parameter,
-   not a join key between job records and tool-execution records. Unchanged.
+2. 🟡 **MISSION-02 humanized tool activity — RE-CHARACTERISED 2026-08-26. The join key
+   EXISTS; it is simply not captured on the job side.**
+
+   The note said "no job↔tool join key exists in astridr". That is not accurate:
+
+   - `convex/schema.ts` `toolExecutions` already carries `traceId` and `round`, documented
+     as "per-call trace/turn-number join keys, populated when the row originates from
+     Ástríðr's `tool_executed` runtime event".
+   - `astridr/agent/loop.py:2346` sends `"traceId": get_trace_context()` on EVERY tool
+     execution.
+   - `astridr/agent/loop.py:1028` sets `set_trace_context(str(uuid.uuid4()))` ONCE per
+     agent-loop run, as a `contextvars` token — so it propagates to everything that run
+     does. A background subagent job dispatches a loop, therefore **all of one job's tool
+     executions already share a single `traceId`.**
+
+   What is missing is the other end: nothing records which `traceId` belongs to which
+   `job_id`. `grep -rn trace_id` over `astridr/tools/delegate_task.py` and
+   `astridr/automation/subagent_jobs.py` returns nothing.
+
+   **The unblock, and its hazard.** Add `traceId` to the `subagent_job` envelope (the same
+   shape as the `submittedAt` fix, astridr `e435f71a`), then CodePulse joins
+   `subagentJobs.traceId` → `toolExecutions.traceId`. **But `loop.py:1033` resets the trace
+   token in a `finally`**, so capturing `get_trace_context()` at terminal-emit time — the
+   obvious implementation — may read `None` or a neighbouring run's trace. It has to be
+   captured INSIDE the job's loop scope and carried out, and any test must assert a real
+   trace value rather than merely that the field is present, or a silent `None` passes.
+
+   Not attempted here: that lifetime subtlety makes it a planned change, not an end-of-session
+   improvisation. Sized as small, with a named failure mode.
 3. 🔴 **`message_routed` routed but unsurfaced.** The backend exists and is tested
    (`convex/messageRoutes.ts`, resolver coverage in `convex/runtimeIngest.test.ts:1443`),
    and `messageRoutes.ts:19` states plainly that it "has no UI this phase". Needs its own
