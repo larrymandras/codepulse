@@ -32,7 +32,7 @@ The unanimous 3-model kill list plus three defects verified in live code. These 
 - [x] **POLISH-01** — Operator sees no instance of the banned decoration anywhere in the app: `hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, per-item nav glow (`nav-active-shadow`/`nav-hover-shadow`), decorative pulse dots, cyan scrollbar glow, violet search pill. *(Unanimous across all three model proposals — the strongest signal in the comparison.)*
 - [x] **POLISH-02** — The E-Stop control holds fixed geometry and never wraps or reflows at any viewport width.
 - [x] **POLISH-03** — A destructive action is confirmed in a **dialog**, never a toast. *(`Tasks.tsx:144-145` puts a destructive confirm in a toast today — a toast can be missed or auto-dismissed, so it cannot carry a decision.)*
-- [~] **POLISH-04 (PARTIAL)** — No surface asserts a figure that has no emitter behind it. *(`HeroStatsBar.tsx:161-168` renders a fabricated Integrations row and carries a literal "simulation" comment. Same honesty rule that governed v14.0's MISSION-03.)*
+- [x] **POLISH-04** — No surface asserts a figure that has no emitter behind it. *(`HeroStatsBar.tsx:161-168` renders a fabricated Integrations row and carries a literal "simulation" comment. Same honesty rule that governed v14.0's MISSION-03.)*
 - [x] **POLISH-05** — Status badges follow the quiet law: only **Failed** renders filled; everything else is quiet. Status vocabulary is unified to Running / Succeeded / Failed / Cancelled.
 - [x] **POLISH-06** — The sidebar and Settings no longer collide at 900px.
 
@@ -55,9 +55,9 @@ Where the milestone's leverage is: 200+ components inherit from shared primitive
 
 The two moments that make the console feel like itself. Deliberately last — they sit on top of the token and shell work.
 
-- [ ] **SIGNAL-01** — The aurora-textured Signal Horizon renders as a 2px shell line carrying event packets, turns crimson on **every page** when E-Stop arms, and eases back through amber over ~2.6s on disarm. Static or hidden under reduced-motion and in `readable`.
+- [x] **SIGNAL-01** — The aurora-textured Signal Horizon renders as a 2px shell line carrying event packets, turns crimson on **every page** when E-Stop arms, and eases back through amber over ~2.6s on disarm. Static or hidden under reduced-motion and in `readable`.
 - [x] **SIGNAL-02** — A Pulse ECG canvas hero replaces the synthetic "SYSTEM LOAD" bar, driven by real events over a 60s window, reading its colours from tokens via `getComputedStyle`. One component, no Recharts — the entry-chunk budget holds.
-- [ ] **SIGNAL-03** — Ástríðr's serif voice is trialled on **exactly one** surface (Briefings or Insights) and evaluated before any app-wide commit. *(Explicitly not a global font change in this milestone.)*
+- [x] **SIGNAL-03** — Ástríðr's serif voice is trialled on **exactly one** surface (Briefings or Insights) and evaluated before any app-wide commit. *(Explicitly not a global font change in this milestone.)*
 
 ## Accessibility (A11Y) — SEED-006
 
@@ -139,7 +139,7 @@ R-IDs) would over-fragment one cohesive mechanism.
   `priority === "money"` blocks silent closure only. *(D-01, D-02, D-03, D-05, D-06, D-07, D-08,
   R-02, R-03, R-04. Serves phase criteria 1–3. `ackedAt` keeps its exclusive "a human saw this"
   meaning — the two live frontend consumers that read it are unaffected by construction.)*
-- [~] **JANITOR-02** — `ideationFindings` stops growing without bound:
+- [x] **JANITOR-02** — `ideationFindings` stops growing without bound:
   `internal.ideation.autoCloseAndPrune` runs on a live daily cron, auto-dismisses open findings
   older than 180d except `severity` in {critical, high}, and deletes 90d past dismissal — same
   bounded/cursor-seeked/batch-capped shape. It **logs that it ran and matched nothing**, because
@@ -206,7 +206,7 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | POLISH-01 | Phase 120 | Complete |
 | POLISH-02 | Phase 120 | Complete |
 | POLISH-03 | Phase 120 | Complete |
-| POLISH-04 | Phase 120 | Partial — 3 fabrication residues assigned to 122/125, see 120-FABRICATION-INVENTORY.md |
+| POLISH-04 | Phase 120 | Complete — closed 2026-08-26 by re-reading the CODE, not the inventory. All 3 residues Phase 120 handed off are gone: no `System Load` / `100 - errorRate*2` and no interpolated `text-${...}` class remain in `HeroStatsBar.tsx` (173 lines, so the greps were live), and `VitalsRail.tsx:144` now binds the Convex dot to a real `useConvexConnectionState()` subscription — the exact fix the inventory had recorded as BLOCKED ("no component calls `useConvex().connectionState()`"). |
 | POLISH-05 | Phase 120 | Complete |
 | POLISH-06 | Phase 120 | Complete |
 | DEBT-08 | Phase 121 | Complete |
@@ -220,9 +220,9 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | A11Y-03 | Phase 123 | Complete — live gated-server evidence 2026-08-20, `123-CLOSEOUT.md` §12 |
 | SHELL-01 | Phase 124 | Complete |
 | SHELL-02 | Phase 124 | Complete |
-| SIGNAL-01 | Phase 125 | Partial — the 2px shell line, fail-closed state machine (125-04), event packets and every-route mount (125-08) are built and tested; "turns crimson on every page when E-Stop arms" is proven only against a dev-only simulation stub so far — the real cross-repo `estop_state` emitter's wire-up proof is 125-12's job |
+| SIGNAL-01 | Phase 125 | Complete — the note this cell used to carry was STALE. 125-13 supplied exactly the proof it said was missing: the operator armed E-Stop from a terminal (`{"active":true}` confirmed independently) and `data-horizon-state` read critical on `/`, `/briefings` and `/live-run`, resting before and after — the same probe both directions, so the readings discriminate rather than defaulting. Criterion 1 FAILED on first observation (the armed horizon measured 3px and the operator, actively looking, did not see it) and passed after the fix in `ad68fed8`. Not a dev-only stub. |
 | SIGNAL-02 | Phase 125 | Complete |
-| SIGNAL-03 | Phase 125 | Partial — trial built and shipped (125-05, real italic face self-hosted and chunk-isolated); the requirement's own text ("evaluated before any app-wide commit") is not satisfied until 125-10's blocking operator checkpoint records the adopt/reject/revisit verdict |
+| SIGNAL-03 | Phase 125 | Complete — the condition this cell itself named has been met. 125-10's blocking operator checkpoint RAN and recorded its verdict — `revisit`, with the operator's verbatim words, in `125-SERIF-TRIAL.md`. The requirement asks for a trial on exactly one surface AND an evaluation before any app-wide commit, and explicitly does NOT ask for adoption. All three hold: one surface, verdict recorded, no app-wide font change. `revisit` is an evaluation outcome, not a missing one — the trial surface carries no authored prose (all 50 briefings are templated telemetry), so the checkpoint could not pose its own question, and that is itself the recorded finding. |
 | SWEEP-01 | Phase 126 | Complete |
 | SWEEP-02 | Phase 126 | Complete |
 | SWEEP-03 | Phase 126 | Complete |
@@ -231,7 +231,7 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | SWEEP-06 | Phase 126 | Complete |
 | SWEEP-07 | Phase 126 | Complete |
 | JANITOR-01 | Phase 127 | Complete |
-| JANITOR-02 | Phase 127 | Partial |
+| JANITOR-02 | Phase 127 | Complete — closed 2026-08-26 on DURABLE evidence, after the log-line route proved unrecoverable. The function-log buffer retains only ~4 minutes (measured: a `--history 40000` pull returned 1,705 lines spanning 07:04:56–07:09:07 ET, ~425 lines/min), so the 08:35 UTC firing was already gone. The `_scheduled_functions` system table retains a full WEEK (oldest entry 2026-08-19 12:33 UTC) and carries `ideation.js:autoCloseAndPrune` with `state: success` at **08:35:22 UTC** — the `ideation-findings-janitor` cron time. Combined with 127-05's MUTATION PROOF that the log line fires unconditionally (moving the `console.log` behind an `actedCount > 0` guard turned that test red), ran-to-success entails logged-that-it-matched-nothing. The janitor was NOT invoked by hand to manufacture this: `convex/ideation.ts:460-462` states only the nightly cron may reach it (T-127-13 — it reaches an irreversible delete), and that was honoured. |
 | JANITOR-03 | Phase 127 | Complete |
 
 **Coverage: 30/30 v15.0 requirements mapped, 100%. No orphans, no duplicates.** (20 through Phase 125, plus SWEEP-01..07 derived at Phase 126 planning time, 2026-08-24, one per todo in that phase's ROADMAP scope table, plus JANITOR-01..03 derived at Phase 127 planning time, 2026-08-25, one per table-janitor plus the coverage-bucket move.)
@@ -269,8 +269,10 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 > - `SWEEP-07` — `e2e/polish-geometry.spec.ts:357,372` waits on `SystemChip` and refuses to
 >   report a measurement it cannot honestly take.
 >
-> The four remaining `Partial` entries (`POLISH-04`, `SIGNAL-01`, `SIGNAL-03`, `JANITOR-02`)
-> are deliberate, each with its reason recorded. They were NOT touched by this pass.
+> The four `Partial` entries that remained after this pass (`POLISH-04`, `SIGNAL-01`, `SIGNAL-03`,
+> `JANITOR-02`) were closed separately later the same day — see each row's own cell for the
+> evidence. Three of the four turned out to be STALE NOTES rather than open work: the work had
+> landed and nobody had updated the cell.
 
 ---
 
