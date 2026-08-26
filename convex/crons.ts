@@ -47,6 +47,14 @@ crons.daily(
 // RE-ENABLED below — its candidate-selection read was bounded by the
 // storedVersions field landing 2026-08-16. Do not re-add it here.
 //
+// REVIEWED 2026-08-21 — this marker is what the astridr health watchdog's
+// convex_disabled_crons probe reads. It used to key on age-since-DISABLED,
+// which only grows, so it could never pass without re-enabling these crons —
+// the one action that would redeploy the retry-storm incident. It now measures
+// how long since the DECISION was last re-checked. Re-measure the two claims
+// below (retention still catching up; alertRules still empty) and bump this
+// date; do not bump it without re-measuring.
+//
 // Status of the two still listed, measured 2026-08-21 — BOTH are currently
 // no-ops, so neither is urgent:
 //   - markStaleArchived only SETS `archived: true`; convex/retention.ts already
