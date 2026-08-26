@@ -131,7 +131,7 @@ own Verification B mutation-testing pass) plus one for the coverage-bucket move,
 makes part of this phase rather than a follow-up. A finer per-decision split (11 D-IDs + 4
 R-IDs) would over-fragment one cohesive mechanism.
 
-- [ ] **JANITOR-01** — `inbox` stops growing without bound: `internal.inbox.autoCloseAndPrune`
+- [x] **JANITOR-01** — `inbox` stops growing without bound: `internal.inbox.autoCloseAndPrune`
   runs on a live daily cron, stamps a dedicated `closedAt` field (**never** `ackedAt`) on
   non-carved-out rows older than 30d and on rows a human already acked, and permanently deletes
   rows 14d past closure — bounded `.take()`, cursor-seeked, batch-capped, with the cursor
@@ -139,19 +139,30 @@ R-IDs) would over-fragment one cohesive mechanism.
   `priority === "money"` blocks silent closure only. *(D-01, D-02, D-03, D-05, D-06, D-07, D-08,
   R-02, R-03, R-04. Serves phase criteria 1–3. `ackedAt` keeps its exclusive "a human saw this"
   meaning — the two live frontend consumers that read it are unaffected by construction.)*
-- [ ] **JANITOR-02** — `ideationFindings` stops growing without bound:
+- [~] **JANITOR-02** — `ideationFindings` stops growing without bound:
   `internal.ideation.autoCloseAndPrune` runs on a live daily cron, auto-dismisses open findings
   older than 180d except `severity` in {critical, high}, and deletes 90d past dismissal — same
   bounded/cursor-seeked/batch-capped shape. It **logs that it ran and matched nothing**, because
   at M=180d it matches zero rows until roughly 2026-11-16 and that log line is the only thing
   distinguishing correct-and-dormant from dead-on-arrival. *(D-01, D-02, D-04, D-05, D-06, D-07,
   D-08, R-01, R-03, R-04. Serves phase criteria 1 and 3.)*
-- [ ] **JANITOR-03** — Both tables leave `COVERAGE_PRUNE_PROPOSED` for
+- [x] **JANITOR-03** — Both tables leave `COVERAGE_PRUNE_PROPOSED` for
   `COVERAGE_BOUNDED_BY_CRON` naming their janitor, and `retentionCoverage.test.ts:130-142`'s
   machine check against comment-stripped `crons.ts` passes — so if either cron is ever commented
   out, the suite goes red instead of the table growing unwatched. *(D-09. Serves phase criterion
   1. This is the ratchet built after `sweepGraphSnapshotVersions` sat disabled for 29 days while
   every coverage list still looked complete.)*
+
+> **JANITOR-02 is PARTIAL, deliberately, and was NOT flipped green at phase close.**
+> The janitor is built, tested, deployed and cron-registered in the same `crons.ts` as
+> `inbox-janitor`, which demonstrably fired at 2026-08-26 08:20:53 UTC. But this
+> requirement's own text makes the inert-run log line the decisive observable — "that log
+> line is the only thing distinguishing correct-and-dormant from dead-on-arrival" — and it
+> has NOT been observed. It is a Convex FUNCTION log, absent from `docker logs`, and the
+> janitor leaves no data trace until roughly 2026-11-16 by design. Sibling-cron success is
+> strong indirect evidence, not observation. Closing this to Complete requires the Convex
+> dashboard's function-log view, or a streaming `npx convex logs` held across an 08:35 UTC
+> firing.
 
 **Deliberately out of scope, fenced by decision:** capping `inbox.listHeldUnacked` or
 `dismissAllCards` (D-11 — Phase 126 owns them, and `convex/inboxIngest.ts` needs the true
@@ -219,9 +230,9 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | SWEEP-05 | Phase 126 | Pending |
 | SWEEP-06 | Phase 126 | Pending |
 | SWEEP-07 | Phase 126 | Pending |
-| JANITOR-01 | Phase 127 | Pending |
-| JANITOR-02 | Phase 127 | Pending |
-| JANITOR-03 | Phase 127 | Pending |
+| JANITOR-01 | Phase 127 | Complete |
+| JANITOR-02 | Phase 127 | Partial |
+| JANITOR-03 | Phase 127 | Complete |
 
 **Coverage: 30/30 v15.0 requirements mapped, 100%. No orphans, no duplicates.** (20 through Phase 125, plus SWEEP-01..07 derived at Phase 126 planning time, 2026-08-24, one per todo in that phase's ROADMAP scope table, plus JANITOR-01..03 derived at Phase 127 planning time, 2026-08-25, one per table-janitor plus the coverage-bucket move.)
 
