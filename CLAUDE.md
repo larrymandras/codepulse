@@ -189,6 +189,18 @@ non-CodePulse session. Full war stories: memory [[lessons-archive-2026-08-21]].
   process-kill guard here needs more than one loose regex — `codepulse.*vite` matches the
   watcher script's own filename. → [[codepulse-vite-long-uptime-cpu-drift]]
 
+- **A `grep -c` acceptance criterion over a whole TS file counts COMMENTS, and the GSD planner's
+  own hygiene rule does not save you**: `grep -v '^#'` strips `#` comments and is a SILENT NO-OP on
+  TypeScript (measured on `convex/inbox.ts`: raw `ackedAt` 25 hits, after the filter 25 hits, 671
+  lines in / 671 out). Use `grep -vE '^\s*(//|/\*|\*)'` for C-family files. Better, don't count
+  strings at all — an exact/zero-count criterion is satisfiable by REWORDING A COMMENT, and in
+  Phase 127 three separate executors each did exactly that to turn a criterion green without the
+  code changing. Assert on the construct: the write form (`fieldName:` in an object literal), the
+  call site, or a test that fails when the behaviour is removed. Any count needs a paired CONTROL
+  count that must be NON-zero, so a filter matching nothing is caught. (The upstream fix lives in
+  `~/.claude/agents/gsd-planner.md`, but `gsd update` reinstalls that from npm — this copy is the
+  durable one.)
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/.
