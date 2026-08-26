@@ -201,6 +201,37 @@ non-CodePulse session. Full war stories: memory [[lessons-archive-2026-08-21]].
   `~/.claude/agents/gsd-planner.md`, but `gsd update` reinstalls that from npm — this copy is the
   durable one.)
 
+- **Convex `.filter()` runs AFTER the read — it does NOT bound an index scan.**
+  `withIndex("by_x")` with no range callback plus `.filter(q => q.gte(...))` reads the WHOLE
+  table and discards rows in JS. Found live in `automation.cronSummary` 2026-08-26: 20 rows
+  were actually needed in the window while an unbounded probe over the same table died with
+  `SystemTimeoutError: too many system operations`. That was `/automation`'s ~9s cold resolve,
+  which Phase 126 had recorded as "mechanism explicitly NOT established". Push the bound INTO
+  the index: `withIndex("by_x", q => q.gte("x", cutoff))`. Same shape still open at
+  `convex/briefings.ts:181-190` (harmless at 40 rows, no plain `detectedAt` index).
+- **A bounded-read guard must assert on the RECORDED QUERY, never on the returned rows.** A
+  surviving `.collect()` returns identical results on a small fixture, so results cannot
+  discriminate — only the recorded limit can. See `alertsCountBounded.test.ts`,
+  `bifrostListBounded.test.ts`, `automationCronSummaryBounded.test.ts`. Mutation-proof it: the
+  right shape is SOME tests going red while the behavioural ones stay green.
+- **`npm test` must run the `unit` and `browser` vitest projects SEQUENTIALLY.** Running them
+  concurrently destabilises the jsdom workers: measured at one commit in one worktree,
+  `--project unit` passed 10/10 while both-together failed on iteration 1. It surfaces as two
+  unrelated-looking symptoms — an `App.test.tsx` lazy-route stall on the main tree, and an
+  `AvatarAura.browser` "Failed to fetch dynamically imported module" inside worktrees — and
+  neither occurs without the browser project. CI's second step must be `--project unit`, not a
+  bare `vitest run` (which re-runs browser a second time AND concurrently).
+- **A milestone close moves `.planning/phases/<slug>` to `.planning/milestones/vX.Y-phases/`,
+  which breaks any test hardcoding the old path.** `tokenSweep.ratchet.test.ts` went red for a
+  reason unrelated to tokens, and it escaped because the close was tagged and pushed from a
+  green run taken BEFORE the close commit. Re-run the suite AFTER a close, and resolve phase
+  dirs across both the active and archived locations rather than repointing the literal.
+- **Requirement status decays and nobody re-derives it.** At v15.0's close, 8 requirements read
+  `Pending` on phases already marked Complete, 3 of 4 `Partial` cells were stale notes
+  describing work that had landed, and 6 of 9 carried-forward v14.0 items were wrong (4 already
+  done, 2 describing blockers since solved). Every one was resolved by reading the CODE, so the
+  information was always available. **Close requirements at PHASE close, against the code** —
+  and treat any carried-forward list as suspect until re-derived.
 ## graphify
 
 This project has a knowledge graph at graphify-out/.
