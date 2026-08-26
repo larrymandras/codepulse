@@ -1,5 +1,31 @@
 # Milestones
 
+## v15.0 "Borealis Console" Premium UI Overhaul (Shipped: 2026-08-26)
+
+**Phases completed:** 8 phases (120-127), 87 plans / 87 summaries
+**Timeline:** 2026-08-17 -> 2026-08-26 (9 days) | 539 commits since the `v14.0` tag | suite 365 files, 5,159 passed, 0 failed
+**Requirements:** **30/30** (POLISH, TOKEN, SHELL, SIGNAL, A11Y, DEBT, SWEEP-01..07, JANITOR-01..03)
+**Verification:** **3 of 8** phases carry a VERIFICATION.md (120, 121, 124) - counted on disk. See the audit; this is a real gap, not a rounding.
+**Milestone audit:** `milestones/v15.0-MILESTONE-AUDIT.md` - closed BY HAND, no `gsd-sdk milestone.complete`, REQUIREMENTS extracted not deleted.
+
+**Key accomplishments:**
+
+1. **Token & contrast rebake** - the full 4-themes x 5-pages contrast matrix measured against a keyless server and recorded, with a frozen BEFORE control and two re-captures after the ramp and an aria regression.
+2. **Accessibility remediation** - the violations that measurement sized.
+3. **Shell & information architecture** - nav registry extracted so `DashboardLayout` and `CommandPalette` both read it without importing each other; header zones measured on the real rendered page.
+4. **Signature layers** - Signal Horizon (fail-closed state machine, crimson on every page when E-Stop arms, proven live by an operator), Pulse ECG canvas hero replacing a synthetic "SYSTEM LOAD" figure, and a one-surface serif voice trial.
+5. **Page body & Convex read defect sweep** - `/tool-galaxy` collapsed from 6,591 row reads against a 4,096-read ceiling to ONE indexed query over a chunked blob; verified live at 4,011 nodes / 2,664 links from 8 chunk reads.
+6. **Ack-aware retention janitors** - `inbox` and `ideationFindings` bounded at last, keyed on the operator's own acknowledgement rather than calendar age; first live run closed 588 rows with 0 `held` and 0 unacked-`money` rows touched.
+
+**Known gaps:**
+
+- Only 3 of 8 phases carry a phase-level VERIFICATION.md. The other five carry strong per-plan evidence in their SUMMARYs (live operator verification, a live deploy with its index diff read verbatim, a mutation-testing control) but no phase-level artifact.
+- 8 requirements sat at `Pending` and 3 of 4 `Partial` cells were stale notes at close prep - all reconciled against the CODE at close, but the drift itself is the finding: a phase close should re-derive its own requirements.
+- An intermittent `src/App.test.tsx` lazy-route stall is identified and mitigated (~3x faster under load, 10/10 clean soak) but its stall mechanism is not proven gone.
+- `/automation` stat cards resolve at ~9s cold; mechanism explicitly not established (D-07).
+
+---
+
 ## v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board (Shipped: 2026-08-17)
 
 **Phases completed:** 12 phases (108–119), 86 plans / 86 summaries, cross-repo (codepulse + astridr-repo)

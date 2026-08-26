@@ -289,6 +289,41 @@ memory is exactly what that entry warns against.)*
 - 602 commits since the `v13.0` tag; suite grew to 4654 passing / 0 failing.
 - The expensive work was not building — it was proving. Nine defective checks in one phase, three corrupted state writes, and a stale audit all consumed budget that planning had allocated to features.
 
+## Milestone: v15.0 — "Borealis Console" Premium UI Overhaul
+
+**Shipped 2026-08-26.** 8 phases (120–127), 87 plans, 30/30 requirements, 539 commits.
+
+### What worked
+
+- **Measure before planning.** 122 sized the contrast problem across the full theme × page
+  matrix before 123 fixed anything, and retired the one figure (234 violations) everyone had
+  been planning against — it was one cell of the matrix, counted at a different unit.
+- **Live verification caught what tests structurally could not.** 125-13's operator check found
+  that every automated assertion passed against a 3px alarm nobody could see. The tests were
+  correct; they asserted the state attribute. "The state is critical" and "an operator can see
+  the alarm" are different properties, and only the second is what the criterion promised.
+- **Mutation testing found an unguarded guard.** 127-07 deleted four carve-outs; three flipped
+  their tests red and one left all 24 green. That fourth guard protected the rows
+  `focus_digest.py` consumes, read as redundant, and nothing would have caught its deletion.
+- **Controls that could fail.** The habit of pairing every zero with a control that must be
+  non-zero repeatedly changed conclusions rather than confirming them — a `_cronJobs` probe, a
+  `cronExecutions` probe and a `convex function-spec` probe were each discarded as
+  non-discriminating *before* their zeros were reported as findings.
+
+### What to change
+
+- **Close requirements at phase close, not milestone close.** 8 requirements sat `Pending`
+  while their phases read Complete, and 3 of 4 `Partial` cells were stale notes describing work
+  that had already landed. Every one was resolved by reading the code — which means the
+  information was available all along and simply nobody looked.
+- **Stop writing acceptance criteria as string counts.** Three executors in one phase satisfied
+  criteria by rewording comments. The planner's own hygiene rule prescribed a filter that is a
+  silent no-op on TypeScript, so it was followed faithfully and did nothing.
+- **Check the repo before proposing to build a mechanism.** Three separate items were carried
+  as open from notes and were already fixed or already existed in the tree.
+- **Write phase-level VERIFICATION.md.** 3 of 8 is the weakest coverage of any recent milestone
+  and it is only defensible because the per-plan evidence happened to be unusually strong.
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
