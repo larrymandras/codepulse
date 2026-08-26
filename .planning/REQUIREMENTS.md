@@ -69,7 +69,7 @@ requirement table, and needs the same treatment.
    comment lists `"running"` as a valid value — CodePulse would store a `running` row if one
    were ever sent. Only `emit_subagent_job_terminal` (terminal-only by construction) stops it.
 
-   **Duration — still genuinely blocked, and measured live 2026-08-26:**
+   **Duration — EMITTER FIXED 2026-08-26, awaiting a live row. Measured before the fix:**
    `subagentJobs` holds 7 rows; **7 of 7 have `submittedAt === finishedAt`** and **0 have a
    derivable duration**. Statuses present are `failed`, `cancelled`, `completed` — all
    terminal, consistent with terminal-only emission. Cause: `emit_subagent_job_terminal`
@@ -77,13 +77,29 @@ requirement table, and needs the same treatment.
    hardcodes `finishedAt: datetime.now(...)`; CodePulse's upsert then falls back to
    `finishedAt`/now, producing the synthetic copy.
 
-   **What closing it would take** (NOT done — this is implementing the deferred SEED-007
-   feature, not an audit fix): add a `submitted_at` parameter to the emitter, supply it at
-   its three call sites (`subagent_jobs.py:266`, `tools/cancel_job.py:149`,
-   `tools/delegate_task.py:574`), and update the §2.31 telemetry contract in
-   `docs/astridr-contract.md`. CodePulse's ingest already reads
-   `d.submitted_at ?? d.submittedAt`, so no CodePulse change is needed. It would fix
-   durations going forward only — the 7 existing rows stay synthetic.
+   **DONE 2026-08-26 — astridr `e435f71a`.** `emit_subagent_job_terminal` gained a
+   `submitted_at` parameter, supplied at all three call sites: `delegate_task` captures a
+   float twin at the SAME instant it writes the row's `submitted_at` (threaded through
+   `_run_and_deliver`), while `cancel_job` and the orphan boot-sweep read it off the
+   Supabase row they already hold. Contract §2.31 rewritten and changelogged as 1.7.1.
+   No CodePulse change was needed — its ingest already reads
+   `d.submitted_at ?? d.submittedAt`.
+
+   Emitted **ABSENT, never null**, when unknown: Convex `v.optional()` accepts a missing
+   field but rejects JSON null, and astridr 168-06 Bug 2 records one null field poisoning a
+   whole ingest batch. Existing consumers keep their fallback, so it is not a breaking change.
+
+   That emitter had **zero test coverage** before this, despite being the only path a
+   background job's terminal state reaches CodePulse. Six tests added; the duration one
+   asserts `finishedAt > submittedAt` — the property this requirement actually wants — rather
+   than mere field presence, because a `submittedAt` equal to `finishedAt` would satisfy a
+   presence check while leaving duration underivable, which is exactly the state the 7 live
+   rows are in. Mutation-proven: removing the field fails with `KeyError: 'submittedAt'`.
+
+   **STILL NOT TICKABLE.** The fix works GOING FORWARD only — the 7 existing rows stay
+   synthetic. MISSION-01 closes when a subagent job runs and produces a row with
+   `finishedAt > submittedAt`. Until then this is built-but-unconfirmed, and the checkbox
+   stays down (it has been auto-re-ticked by tooling twice and reverted twice).
 
    **Still do not tick MISSION-01's checkbox** (auto-re-ticked by tooling twice, reverted
    twice). It is genuinely Partial: one half shipped, one half open.
