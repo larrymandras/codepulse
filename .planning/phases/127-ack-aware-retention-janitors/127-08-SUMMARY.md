@@ -279,3 +279,96 @@ Expected at the next reading, after 04:35 ET on 2026-08-26:
 - `ideationFindings` rows carrying `dismissedAt` should stay **0** — inert by design until
   roughly 2026-11-16. A zero there is CORRECT, and is the outcome R-01's mandatory log line
   exists to distinguish from dead-on-arrival.
+
+---
+
+## Task 3 — FIRST-RUN WATCH: the inbox janitor fired and worked (2026-08-26 09:05 UTC)
+
+Measured 44 minutes after the 08:20 UTC firing, using the row-level probe established in the
+baseline above — not the log grep, which was the wrong surface.
+
+### The firing
+
+| Probe | Baseline (2026-08-25 22:44 UTC) | After firing (2026-08-26 09:05 UTC) |
+|---|---|---|
+| `inbox` rows carrying `closedAt` | **0** | **588** |
+| `ideationFindings` rows carrying `dismissedAt` | **0** | **0** (correct — inert by design) |
+| CONTROL — `inbox` sample rows | 3 | 3 |
+| CONTROL — `ideationFindings` sample rows | 3 | 3 |
+
+The controls held in both directions, so neither the 588 nor the 0 is a broken probe.
+
+**The `closedAt` stamp is `1787732453.002` = 2026-08-26 08:20:53 UTC** — the `inbox-janitor`
+cron time exactly. The cron fired on schedule.
+
+### The chain behaved exactly as designed
+
+Three distinct stamps, three seconds apart, with these per-batch counts:
+
+| Stamp (UTC) | Rows stamped |
+|---|---|
+| 08:20:53.002 | 198 |
+| 08:20:56.005 | 200 |
+| 08:20:59.007 | 190 |
+| **total** | **588** |
+
+- The 3-second spacing is `INBOX_JANITOR_RESCHEDULE_MS = 3000`. The self-rescheduling chain is
+  real, observed in production, not just in tests.
+- `INBOX_JANITOR_BATCH_SIZE` is 200 and the middle batch is exactly 200 — the batch cap binds.
+- The chain used **3 of its 100-batch budget** and stopped. A descending query confirms the
+  newest stamp IS `08:20:59.007`, i.e. it stopped because it ran out of work, not because it
+  hit `INBOX_JANITOR_MAX_BATCHES`.
+- **Batch 1 read 200 rows and stamped 198.** Two rows were carved out and skipped while the
+  cursor still advanced — the D-08 property `partitionBatchForPrune` exists to guarantee,
+  happening for real on live data.
+
+### The carve-outs hold ON LIVE DATA — the result that matters most
+
+| Live assertion | Result |
+|---|---|
+| `held` rows carrying `closedAt` | **0** |
+| unacked `money` rows carrying `closedAt` | **0** |
+
+Plan 127-07's mutation control proved these carve-outs were *test-protected*. This proves they
+are *actually correct in production*. `held` is what Ástríðr's `focus_digest.py` consumes; a
+leak here was the phase's headline risk.
+
+### The delete step correctly did nothing
+
+`closedAt` was stamped 44 minutes ago and the grace window (`INBOX_CLOSED_GRACE_SEC`) is 14
+days, so no row is eligible for deletion yet. Zero deletions is the correct outcome, not a
+failure. The first real deletions are due ~2026-09-09.
+
+### T-127-28 (first backlog drain OOMing the single-node backend) did NOT materialise
+
+- `docker ps`: `Up 3 hours (healthy)` — consistent with the 02:00 ET / 06:00 UTC
+  `ConvexNightlyRestart`, i.e. no crash-restart.
+- Memory sampled over 60s: **20.17 → 20.18 → 20.18 GiB / 64 GiB**. Flat, not climbing.
+- CPU: 0.02% / 109% / 1.59% across those samples — ordinary bursty ingest, not a spin.
+
+An observation recorded WITHOUT a conclusion: memory read 20.78 GiB at ~16.7h uptime yesterday
+and 20.17 GiB at ~3h uptime today. Two points is not a trend, but they are more consistent with
+a plateau near 20 GiB than with the linear 0.17-1.04 GiB/h climb recorded in
+`110-MEMORY-EVIDENCE.md`. Not investigated here; not claimed.
+
+### What is NOT confirmed: the ideation janitor's own firing
+
+`ideation-findings-janitor` (08:35 UTC) leaves **no data trace by design** — 0 of 470 findings
+are dismissed and the auto-dismiss threshold is 180 days, so a correct run changes nothing until
+roughly 2026-11-16. Its only evidence is R-01's mandatory log line, and that is a Convex
+FUNCTION log, which does not appear in `docker logs` (container stdout carries HTTP/infra lines
+only, verified directly).
+
+Two probes were tried and both correctly discarded:
+- `_cronJobs` via `convex data` — **non-discriminating**: a deliberately bogus table name
+  returns the identical "no documents" message.
+- `cronExecutions` — a real table, but it holds **Ástríðr's** cron feed (`reminder:nudge`,
+  `watch:pulse`, `skill_health:daily`). Convex-side `crons.ts` registrations never write there,
+  so an absence would have meant nothing.
+
+**What IS established:** `inbox-janitor` fired on schedule from the same `crons.ts`, deployed in
+the same push, so cron registration demonstrably works. That is strong indirect evidence for its
+sibling and is NOT the same as observing it. Direct confirmation requires the Convex dashboard's
+function-log view or a streaming `npx convex logs` held across a firing.
+
+## Plan 127-08: COMPLETE (Tasks 1, 2, 3)
