@@ -47,16 +47,46 @@ requirement table, and needs the same treatment.
    `113-FLAKE-EVIDENCE.md`. The cause was never identified and that is the recorded
    disposition, not an open task.
 
-### Premise needs re-checking
+### Re-measured 2026-08-26 — MISSION-01 is HALF DONE, and its blocker note was wrong
 
-1. ⚠️ **MISSION-01 duration + orphan recovery.** The blocker was stated as "no `running`
-   row can arrive". astridr now *has* a running state — `astridr/automation/jobs.py:71`
-   (`_VALID_STATUSES`), `:168` (stamps `started_at` on `running`), and
-   `astridr/automation/mission_pipeline.py:571` (sets a mission to `running`). What is
-   NOT verified is whether that state is EMITTED to CodePulse's mission ingest, which is
-   the claim that actually matters. Internal status is not telemetry. **Still do not tick
-   MISSION-01's checkbox** (auto-re-ticked by tooling twice, reverted twice) until the
-   emission path is measured.
+1. **MISSION-01 duration + orphan recovery — orphan recovery SHIPPED, duration still open.**
+
+   The v14.0 note said no `running` row can arrive, "which makes the orphan clause vacuous
+   rather than merely unbuilt". That reasoning is now outdated: the orphan path never needed
+   a `running` row.
+
+   **Orphan recovery — DONE, in astridr, after the v14.0 assessment was written.**
+   `astridr/automation/subagent_jobs.py:230` `_boot_sweep()` marks orphaned running+queued
+   rows failed and calls `_notify_orphan()` for each; `_notify_orphan` (`:250`) mirrors the
+   terminal `failed` state to Convex via `emit_subagent_job_terminal(..., status="failed",
+   error="lost to restart — resubmit?")`. Its own docstring names the exact symptom the
+   requirement describes: without it "CodePulse's JobsPanel showed the job stuck at
+   'running' forever". Shipped as astridr 168-06 Bug 5. So "a job lost to a restart renders
+   as failed, never silently as still-running" **is satisfied**.
+
+   Also corrected: the gate is EMITTER-side, not ingest-side. `convex/runtimeIngest.ts`
+   passes `status: d.status ?? "unknown"` straight through and the `subagentJobs` schema
+   comment lists `"running"` as a valid value — CodePulse would store a `running` row if one
+   were ever sent. Only `emit_subagent_job_terminal` (terminal-only by construction) stops it.
+
+   **Duration — still genuinely blocked, and measured live 2026-08-26:**
+   `subagentJobs` holds 7 rows; **7 of 7 have `submittedAt === finishedAt`** and **0 have a
+   derivable duration**. Statuses present are `failed`, `cancelled`, `completed` — all
+   terminal, consistent with terminal-only emission. Cause: `emit_subagent_job_terminal`
+   (`astridr/automation/subagent_jobs.py:56`) has **no `submitted_at` parameter** at all and
+   hardcodes `finishedAt: datetime.now(...)`; CodePulse's upsert then falls back to
+   `finishedAt`/now, producing the synthetic copy.
+
+   **What closing it would take** (NOT done — this is implementing the deferred SEED-007
+   feature, not an audit fix): add a `submitted_at` parameter to the emitter, supply it at
+   its three call sites (`subagent_jobs.py:266`, `tools/cancel_job.py:149`,
+   `tools/delegate_task.py:574`), and update the §2.31 telemetry contract in
+   `docs/astridr-contract.md`. CodePulse's ingest already reads
+   `d.submitted_at ?? d.submittedAt`, so no CodePulse change is needed. It would fix
+   durations going forward only — the 7 existing rows stay synthetic.
+
+   **Still do not tick MISSION-01's checkbox** (auto-re-ticked by tooling twice, reverted
+   twice). It is genuinely Partial: one half shipped, one half open.
 
 ### Genuinely open
 
