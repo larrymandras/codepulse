@@ -97,9 +97,24 @@ requirement table, and needs the same treatment.
    (`convex/messageRoutes.ts`, resolver coverage in `convex/runtimeIngest.test.ts:1443`),
    and `messageRoutes.ts:19` states plainly that it "has no UI this phase". Needs its own
    UI design pass (D-13).
-7. 🔴 **Nyquist coverage partial.** Confirmed on disk: `117-bifrost-link-hub` and
-   `119-loom-curated-pipelines` exist with **no VALIDATION.md**. 109, 112, 113 and 114 do
-   each carry one (their coverage is partial, not absent).
+7. ✅ **Nyquist coverage — CLOSED 2026-08-26.** `117-VALIDATION.md` and
+   `119-VALIDATION.md` written retroactively. Root cause of the absence: both phases
+   shipped via `/gsd-quick` and produced no `PLAN.md` files, so there was no per-task map
+   to build — structural, not an oversight.
+
+   The audit was not paperwork. It found a REAL gap and closed it: `bifrost:list` runs on
+   EVERY route and its `LINK_LIST_SCAN_CAP` bound had no test (control: the same grep for
+   `ALERT_COUNT_SCAN_CAP` finds `alertsCountBounded.test.ts`, so the check discriminates).
+   `convex/bifrostListBounded.test.ts` now guards it, mutation-proven — reverting to
+   `.collect()` fails 2 of 5 while the other 3 stay green, which is the point: results are
+   identical on a small fixture and only the recorded limit discriminates.
+
+   Both documents record what remains rather than claiming completeness. **Phase 119 has
+   NO automated coverage of its own** — `convex/loom.ts`, `convex/loomHttp.ts`,
+   `src/pages/Loom.tsx` and `hooks/loom-emit.mjs` are all untested, each absence paired
+   with a control. The notable one is the bearer-gated `POST /loom/event`: nothing tests
+   the gate, and nothing would catch `upsertPipeline`/`recordStepEvent` (verified
+   `internalMutation` at `loom.ts:149,:247`) being reverted to public `mutation`.
 9. 🔴 **Cross-repo, astridr — a RETIRED host is an unconditional CORS origin on the
    DEPLOYED branch.** Measured 2026-08-26:
 
