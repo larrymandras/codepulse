@@ -106,35 +106,38 @@ requirement table, and needs the same treatment.
 
 ### Genuinely open
 
-2. 🟡 **MISSION-02 humanized tool activity — RE-CHARACTERISED 2026-08-26. The join key
-   EXISTS; it is simply not captured on the job side.**
+2. 🔴 **MISSION-02 humanized tool activity — genuinely blocked. MY 2026-08-26 MORNING
+   RE-CHARACTERISATION WAS WRONG AND IS RETRACTED HERE.**
 
-   The note said "no job↔tool join key exists in astridr". That is not accurate:
+   Earlier today I rewrote this item to say "the join key EXISTS; it is simply not captured on
+   the job side" and sized the unblock as small. That was over-optimistic. I saw `traceId` on
+   `toolExecutions` rows and inferred it could be captured job-side without checking the
+   contextvar's PROPAGATION DIRECTION. Checked properly:
 
-   - `convex/schema.ts` `toolExecutions` already carries `traceId` and `round`, documented
-     as "per-call trace/turn-number join keys, populated when the row originates from
-     Ástríðr's `tool_executed` runtime event".
-   - `astridr/agent/loop.py:2346` sends `"traceId": get_trace_context()` on EVERY tool
-     execution.
-   - `astridr/agent/loop.py:1028` sets `set_trace_context(str(uuid.uuid4()))` ONCE per
-     agent-loop run, as a `contextvars` token — so it propagates to everything that run
-     does. A background subagent job dispatches a loop, therefore **all of one job's tool
-     executions already share a single `traceId`.**
+   - **`traceId` is structurally unavailable to the job.** `astridr/agent/loop.py:1028` sets it
+     INSIDE the sub-agent's own task and resets it in a `finally` at `:1033`. A `contextvars`
+     token set in a nested task does not propagate outward to the parent, so
+     `get_trace_context()` at terminal-emit time reads the CALLER's context (or `None`) — never
+     the sub-agent's. This is not a race that careful ordering fixes; the value is simply not
+     there to read.
+   - **`sessionId` is not a per-job key.** `astridr/tools/delegate_task.py:184` documents
+     `_session_id` as the "originating routing context" — the CALLER's session, shared by every
+     job dispatched from that chat. `convex/schema.ts`'s `subagentJobs` has no `sessionId` field
+     at all. Joining on it would give "tools used in this session", not "tools used by this job".
 
-   What is missing is the other end: nothing records which `traceId` belongs to which
-   `job_id`. `grep -rn trace_id` over `astridr/tools/delegate_task.py` and
-   `astridr/automation/subagent_jobs.py` returns nothing.
+   **So the original v14.0 note — "No job↔tool join key exists in astridr" — was accurate, and
+   the requirement is correctly deferred to SEED-007.**
 
-   **The unblock, and its hazard.** Add `traceId` to the `subagent_job` envelope (the same
-   shape as the `submittedAt` fix, astridr `e435f71a`), then CodePulse joins
-   `subagentJobs.traceId` → `toolExecutions.traceId`. **But `loop.py:1033` resets the trace
-   token in a `finally`**, so capturing `get_trace_context()` at terminal-emit time — the
-   obvious implementation — may read `None` or a neighbouring run's trace. It has to be
-   captured INSIDE the job's loop scope and carried out, and any test must assert a real
-   trace value rather than merely that the field is present, or a silent `None` passes.
+   The real unblock is a plumbing change, not a field addition: the sub-agent's loop has to
+   RETURN its trace id outward through the `_dispatch` boundary (`delegate_task.py:398`) so
+   `_run_and_deliver` can put it in the envelope. That crosses the sub-agent result type and
+   belongs in a planned astridr phase.
 
-   Not attempted here: that lifetime subtlety makes it a planned change, not an end-of-session
-   improvisation. Sized as small, with a named failure mode.
+   **Lesson recorded against myself:** this is the fourth time today a confident claim about
+   this planning corpus turned out wrong in one direction or the other. Both the original note
+   and my correction were asserted from a partial read. A join key existing on ONE side of a
+   join is not a join key.
+
 3. 🔴 **`message_routed` routed but unsurfaced.** The backend exists and is tested
    (`convex/messageRoutes.ts`, resolver coverage in `convex/runtimeIngest.test.ts:1443`),
    and `messageRoutes.ts:19` states plainly that it "has no UI this phase". Needs its own
