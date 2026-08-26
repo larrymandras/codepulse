@@ -138,8 +138,14 @@ export const cronSummary = query({
     const oneHourAgo = Date.now() / 1000 - 3600;
     const recent = await ctx.db
       .query("cronExecutions")
-      .withIndex("by_timestamp")
-      .filter((q) => q.gte(q.field("timestamp"), oneHourAgo))
+      // BOUNDED at the INDEX, not after the read. `.filter()` in Convex runs on rows
+      // ALREADY READ, so the previous form -- withIndex("by_timestamp") with no range
+      // plus .filter(gte timestamp) -- scanned the ENTIRE cronExecutions table and
+      // discarded almost all of it in JS. Measured 2026-08-26: 20 rows fall in the last
+      // hour, while a probe reading the table unbounded died with
+      // `SystemTimeoutError: too many system operations`. This is the defect class
+      // SWEEP-01 exists to remove.
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", oneHourAgo))
       .collect();
     const failed = recent.filter((r) => !r.success);
     const avgDurationMs =
