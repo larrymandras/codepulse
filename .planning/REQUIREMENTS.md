@@ -56,7 +56,7 @@ Where the milestone's leverage is: 200+ components inherit from shared primitive
 The two moments that make the console feel like itself. Deliberately last — they sit on top of the token and shell work.
 
 - [ ] **SIGNAL-01** — The aurora-textured Signal Horizon renders as a 2px shell line carrying event packets, turns crimson on **every page** when E-Stop arms, and eases back through amber over ~2.6s on disarm. Static or hidden under reduced-motion and in `readable`.
-- [ ] **SIGNAL-02** — A Pulse ECG canvas hero replaces the synthetic "SYSTEM LOAD" bar, driven by real events over a 60s window, reading its colours from tokens via `getComputedStyle`. One component, no Recharts — the entry-chunk budget holds.
+- [x] **SIGNAL-02** — A Pulse ECG canvas hero replaces the synthetic "SYSTEM LOAD" bar, driven by real events over a 60s window, reading its colours from tokens via `getComputedStyle`. One component, no Recharts — the entry-chunk budget holds.
 - [ ] **SIGNAL-03** — Ástríðr's serif voice is trialled on **exactly one** surface (Briefings or Insights) and evaluated before any app-wide commit. *(Explicitly not a global font change in this milestone.)*
 
 ## Accessibility (A11Y) — SEED-006
@@ -84,35 +84,35 @@ Phase 126. The ROADMAP left this phase's `**Requirements:**` line as the literal
 while verifying it. The criterion each serves is named because Phase 126's success criteria, not the
 requirement text, are what close it.
 
-- [ ] **SWEEP-01** — No shell-level Convex subscription performs an unbounded read: the sidebar Inbox
+- [x] **SWEEP-01** — No shell-level Convex subscription performs an unbounded read: the sidebar Inbox
   badge reads a bounded, index-scoped, count-only query that declares its cap, and the shared
   `inbox.listHeldUnacked` stays uncapped for its server-side consumer (`convex/inboxIngest.ts:174` →
   `focus_digest.py`). *(Serves criterion 3. Todo: `inbox-listheldunacked-unbounded-every-route.md`.
   The one item of Phase 124's own making. D-03/D-04.)*
-- [ ] **SWEEP-02** — `/tool-galaxy` renders its topology against live data, asserted on a rendered
+- [x] **SWEEP-02** — `/tool-galaxy` renders its topology against live data, asserted on a rendered
   node count, with the read collapsed from 6,591 rows (4,001 nodes + 2,590 links, measured live
   2026-08-24 against Convex's 4,096-read ceiling) to one bounded, `seq`-ordered indexed query over a
   chunked blob. *(Serves criteria 1 and 3. Todo: `tool-galaxy-getprojectgraph-timeout.md`. Root-caused
   during discussion as D-05; remedy fixed by D-06-REVISED.)*
-- [ ] **SWEEP-03** — No count rendered on `/inbox` contradicts the sidebar badge: the Held tab shows a
+- [x] **SWEEP-03** — No count rendered on `/inbox` contradicts the sidebar badge: the Held tab shows a
   precise "N of M" drawn from the badge's own number, and every other capped tab declares that its
   figure is a floor. *(Serves criterion 2. Todo: `inbox-page-undercounts-held-behind-200-cap.md`.
   D-01/D-02.)*
-- [ ] **SWEEP-04** — The Alert Rules Engine rows render readably: row-to-row pitch and text-child
+- [x] **SWEEP-04** — The Alert Rules Engine rows render readably: row-to-row pitch and text-child
   rects measured on the real rendered page, with no measured overlap between a row's text and the
   next row. *(Serves criterion 1. Todo: `alert-rules-engine-rows-overlap.md`. NOT root-caused —
   D-07 measure-first governs, and a non-reproduction is a permitted recorded outcome.)*
-- [ ] **SWEEP-05** — `/automation` renders its real content: all twelve schedule rows show their
+- [x] **SWEEP-05** — `/automation` renders its real content: all twelve schedule rows show their
   parsed schedule string once, and the four stat cards either resolve or the phase records, with
   measurements, why they do not. *(Serves criterion 1. Todo:
   `automation-page-placeholder-cards-and-invalid-expression.md`. SPLIT by D-09: the parse half is
   diagnosed and fixed; the stat-card half stays under D-07.)*
-- [ ] **SWEEP-06** — The sidebar `<nav>` has no horizontal overflow — `scrollWidth <= clientWidth`
+- [x] **SWEEP-06** — The sidebar `<nav>` has no horizontal overflow — `scrollWidth <= clientWidth`
   measured on the real rendered page — achieved by removing the 4px overhang, never by hiding it with
   `overflow-x-hidden`. *(Serves the phase Goal directly rather than one numbered criterion: it is
   shell chrome around every page, not one of the three named routes. Verified by the same measured-px
   discipline criterion 1 imposes. Todo: `sidebar-4px-horizontal-overflow-separator.md`.)*
-- [ ] **SWEEP-07** — `e2e/polish-geometry.spec.ts` measures a settled page: it waits on `SystemChip`
+- [x] **SWEEP-07** — `e2e/polish-geometry.spec.ts` measures a settled page: it waits on `SystemChip`
   and `BrainHeaderBadge` actually rendering (fail-don't-skip, not a bare timeout) and asserts two
   successive readings agree. *(Serves criterion 1 by fixing the instrument the other measured-value
   assertions depend on. Todo: `polish-geometry-spec-measures-cold-page.md`. An EVIDENCE defect: the
@@ -221,20 +221,56 @@ These sit **above** the per-requirement checkboxes — they are how the mileston
 | SHELL-01 | Phase 124 | Complete |
 | SHELL-02 | Phase 124 | Complete |
 | SIGNAL-01 | Phase 125 | Partial — the 2px shell line, fail-closed state machine (125-04), event packets and every-route mount (125-08) are built and tested; "turns crimson on every page when E-Stop arms" is proven only against a dev-only simulation stub so far — the real cross-repo `estop_state` emitter's wire-up proof is 125-12's job |
-| SIGNAL-02 | Phase 125 | Pending |
+| SIGNAL-02 | Phase 125 | Complete |
 | SIGNAL-03 | Phase 125 | Partial — trial built and shipped (125-05, real italic face self-hosted and chunk-isolated); the requirement's own text ("evaluated before any app-wide commit") is not satisfied until 125-10's blocking operator checkpoint records the adopt/reject/revisit verdict |
-| SWEEP-01 | Phase 126 | Pending |
-| SWEEP-02 | Phase 126 | Pending |
-| SWEEP-03 | Phase 126 | Pending |
-| SWEEP-04 | Phase 126 | Pending |
-| SWEEP-05 | Phase 126 | Pending |
-| SWEEP-06 | Phase 126 | Pending |
-| SWEEP-07 | Phase 126 | Pending |
+| SWEEP-01 | Phase 126 | Complete |
+| SWEEP-02 | Phase 126 | Complete |
+| SWEEP-03 | Phase 126 | Complete |
+| SWEEP-04 | Phase 126 | Complete |
+| SWEEP-05 | Phase 126 | Complete |
+| SWEEP-06 | Phase 126 | Complete |
+| SWEEP-07 | Phase 126 | Complete |
 | JANITOR-01 | Phase 127 | Complete |
 | JANITOR-02 | Phase 127 | Partial |
 | JANITOR-03 | Phase 127 | Complete |
 
 **Coverage: 30/30 v15.0 requirements mapped, 100%. No orphans, no duplicates.** (20 through Phase 125, plus SWEEP-01..07 derived at Phase 126 planning time, 2026-08-24, one per todo in that phase's ROADMAP scope table, plus JANITOR-01..03 derived at Phase 127 planning time, 2026-08-25, one per table-janitor plus the coverage-bucket move.)
+
+> **Reconciliation, 2026-08-26.** These eight — `SIGNAL-02` and `SWEEP-01`..`SWEEP-07` —
+> were still marked `Pending` while their phases (125, 126) had been marked Complete and,
+> in 126's case, deployed and verified on live data the day before. Nothing had flipped them.
+> This is the mirror image of the documented `phase.complete` false-green: not over-eager
+> marking, but no marking at all. Each was re-derived from the CODE, not from the phase
+> summaries' own claims:
+>
+> - `SIGNAL-02` — `PulseEcgHero`/`PulseEcgCanvas` exist and are wired via `usePulseWindow`;
+>   `WINDOW_MS = 60_000` (`PulseEcgCanvas.tsx:56`); colours resolved through
+>   `getComputedStyle` (`:112`); **zero** recharts imports in either file; the entry-chunk
+>   ratchet lives at `src/entryChunk.ratchet.test.ts`; and `Dashboard.tsx:65` records that it
+>   replaced the deleted SYSTEM LOAD bar.
+> - `SWEEP-01` — BOTH halves verified, which is what the requirement actually asks:
+>   `HELD_COUNT_SCAN_CAP = 2000` with `.take(cap + 1)` (`inbox.ts:247,278`) for the bounded
+>   badge count, AND `listHeldUnackedHandler` still `.collect()`s (`:214`), deliberately
+>   uncapped for its server-side `focus_digest.py` consumer.
+> - `SWEEP-02` — closed on LIVE data at the 126-09 deploy: 4,011 nodes / 2,664 links
+>   reassembled from 8 chunk reads, replacing 6,675 row reads against a 4,096 ceiling.
+> - `SWEEP-03` — `Inbox.tsx:385-396` carries `heldTotalPrecise` and treats a truncated total
+>   as a FLOOR per filter.
+> - `SWEEP-04` — `e2e/alert-rules-geometry.spec.ts` measures it on the real page. The
+>   requirement explicitly permits a non-reproduction as a recorded outcome (D-07).
+> - `SWEEP-05` — the parse half is fixed (D-09/D-10) and the stat cards DO resolve, driven by
+>   real query state (`Automation.tsx:90-98`), satisfying the requirement's first branch.
+>   NOTE: 126-03 measured them at ~9s cold / 4ms warm and explicitly did NOT establish the
+>   mechanism; that todo was narrowed, not closed, and remains open independently of this
+>   requirement.
+> - `SWEEP-06` — `e2e/polish-geometry.spec.ts` measures `navClientWidth` against scrollWidth
+>   (`:518`, `:297-304`), and `DashboardLayout.tsx` carries no `overflow-x-hidden`, which the
+>   requirement named as the forbidden shortcut.
+> - `SWEEP-07` — `e2e/polish-geometry.spec.ts:357,372` waits on `SystemChip` and refuses to
+>   report a measurement it cannot honestly take.
+>
+> The four remaining `Partial` entries (`POLISH-04`, `SIGNAL-01`, `SIGNAL-03`, `JANITOR-02`)
+> are deliberate, each with its reason recorded. They were NOT touched by this pass.
 
 ---
 
