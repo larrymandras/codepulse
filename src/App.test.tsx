@@ -70,6 +70,16 @@ vi.mock('react-globe.gl', () => ({
   default: () => <div data-testid="mock-globe" />,
 }));
 
+// react-force-graph-2d (1.7MB on disk) reaches this file through the /memory
+// lazy route: Memory.tsx -> ObsidianGraph -> ForceGraphCanvas. It was the only
+// heavy render library NOT mocked here while five others were, which is the
+// inconsistency this closes. ForceGraphCanvas guards its ref use
+// (`if (!fg) return`, ForceGraphCanvas.tsx:163), so a stub that never sets the
+// ref is safe.
+vi.mock('react-force-graph-2d', () => ({
+  default: () => <div data-testid="mock-force-graph-2d" />,
+}));
+
 // Mock Three.js / R3F to avoid WebGL issues
 vi.mock('@react-three/fiber', () => ({
   Canvas: ({ children }: { children: React.ReactNode }) => <div data-testid="mock-canvas">{children}</div>,
