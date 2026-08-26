@@ -120,18 +120,58 @@ describe("planning drift ratchet — REQUIREMENTS.md must not contradict ROADMAP
     ).toEqual([]);
   });
 
-  it("every requirement's phase exists in the roadmap (no orphan mappings)", () => {
-    const orphans = reqs
-      .filter((r) => !phases.has(r.phase))
-      .map((r) => `${r.id} -> Phase ${r.phase} (no such phase row in ROADMAP.md)`);
+  it("no requirement in the CURRENT milestone's phase range is orphaned", () => {
+    // CODEX ADVERSARIAL REVIEW, 2026-08-26 — CONFIRMED AND FIXED.
+    //
+    // This assertion was originally `orphans.length < reqs.length`, i.e. it only
+    // failed when EVERY requirement was orphaned. Codex pointed out that a single
+    // mistyped phase number therefore slips through — AND that the orphan then
+    // escapes the Pending-on-Complete check above, because that check filters on
+    // `phases.get(r.phase) === "Complete"`, which is undefined for an orphan.
+    //
+    // Verified by mutation, not taken on trust: pointing JANITOR-01 at Phase 999
+    // AND setting it to Pending passed all three tests. A hole in the exact check
+    // this file exists to perform.
+    //
+    // The correct partition, measured rather than assumed: ROADMAP.md's progress
+    // table holds ONLY the current milestone's phases (120-127 today). Every
+    // archived milestone is 100% orphaned BY DESIGN — v4/v5/v8/v9/v10/v11/v14
+    // total 103 rows, all unjoinable, because their phase rows were removed when
+    // they closed. v15.0 is the only archive with 0 orphans, and only because it
+    // just closed. So orphaning is not a defect in general — it is a defect
+    // WITHIN the range the roadmap still describes.
+    const roadmapPhases = [...phases.keys()];
+    const minRoadmapPhase = Math.min(...roadmapPhases);
+    const liveFile = join(PLANNING, "REQUIREMENTS.md");
 
-    // Archived milestones can predate the current ROADMAP progress-table format, so
-    // this is reported as a soft signal rather than a hard gate: it fails only if
-    // EVERY requirement is orphaned, which means the parser broke, not the docs.
+    const mustJoin = reqs.filter(
+      (r) => r.phase >= minRoadmapPhase || r.file === liveFile
+    );
+    const orphans = mustJoin
+      .filter((r) => !phases.has(r.phase))
+      .map(
+        (r) =>
+          `${r.id} -> Phase ${r.phase} (no such phase in ROADMAP.md; ` +
+          `current milestone starts at Phase ${minRoadmapPhase})`
+      );
+
     expect(
-      orphans.length,
-      `all ${reqs.length} requirements are orphaned — PHASE_ROW almost certainly stopped ` +
-        `matching ROADMAP.md's format:\n  ${orphans.slice(0, 5).join("\n  ")}`
-    ).toBeLessThan(reqs.length);
+      orphans,
+      "A requirement inside the current milestone's phase range, or in the LIVE " +
+        "REQUIREMENTS.md, must map to a real ROADMAP phase - otherwise it is invisible " +
+        "to the Pending-on-Complete check above and can carry a stale status forever. " +
+        "Fix the phase number; do not exempt the row. Offenders: " +
+        orphans.join("; ")
+    ).toEqual([]);
+  });
+
+  it("the orphan check has rows in range to examine — it cannot pass vacuously", () => {
+    const minRoadmapPhase = Math.min(...phases.keys());
+    const inRange = reqs.filter((r) => r.phase >= minRoadmapPhase);
+    expect(
+      inRange.length,
+      `no requirement maps into the current milestone range (>= Phase ${minRoadmapPhase}), ` +
+        "so the orphan assertion above is checking nothing"
+    ).toBeGreaterThan(0);
   });
 });
