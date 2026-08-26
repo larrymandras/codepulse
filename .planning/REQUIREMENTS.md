@@ -20,16 +20,68 @@ moved verbatim to [milestones/v15.0-REQUIREMENTS.md](milestones/v15.0-REQUIREMEN
 
 ---
 
-## Carried forward from v14.0 (still open, not scoped into v15.0)
+## Carried forward from v14.0 — AUDITED 2026-08-26
 
-Items 5 (CR-01) and the accessibility half have been **absorbed** into this milestone as DEBT-08 and A11Y-01..03 respectively; the rest stay open.
+Every item below was re-checked against the CODE on 2026-08-26, not carried on trust.
+**Four of the nine were already resolved or were accepted decisions**, and one has a
+premise that may no longer hold. That is the same drift that left 8 v15.0 requirements
+sitting at `Pending` on Complete phases — a carried-forward list decays exactly like a
+requirement table, and needs the same treatment.
 
-1. **MISSION-01 duration + orphan recovery** → SEED-007. Blocked on data shape, not effort: no `running` row can arrive. **Do not tick MISSION-01's checkbox** — auto-re-ticked by tooling twice, reverted twice.
-2. **MISSION-02 humanized tool activity** → SEED-007. No job↔tool join key exists in astridr.
-3. **`message_routed` routed but unsurfaced** — needs its own UI design pass (D-13). *Candidate to fold into SHELL/TOKEN work if capacity allows, but not scoped.*
-4. **`links` has no recorded retention decision** — `bifrost.ts:53` does an unbounded `.collect()` on the public `list` query. Low practical risk (operator-curated).
-5. ~~`llm-analytics-rollup` CR-01~~ → **absorbed as DEBT-08**.
-6. **`detectCredentialValue` rule C** still cannot see a colon-joined token as one run; rule A covers the realistic shape by name, so this is deliberate.
-7. **Nyquist coverage partial** — 109/112/113/114 partial, 117/119 have no VALIDATION.md.
-8. **DEBT-06 remains latent** — the intermittent `Chat.test.tsx` failure was closed *guarded*, never root-caused; instrumentation ships the next occurrence's diagnosis.
-9. **Cross-repo, astridr:** `feature/brain-swap` → `main` divergence; `web.py` on the deployed branch still carries a decommissioned-host CORS default removed on `main`.
+### Resolved / accepted — no action
+
+4. ✅ **`links` retention + unbounded read — COMPLETE.** Both halves are closed.
+   `convex/bifrost.ts:85` reads `.take(LINK_LIST_SCAN_CAP + 1)`, and its own comment at
+   `:66` records that it *was* an unbounded `.collect()`. The missing retention decision
+   has been recorded too: `links` sits in `COVERAGE_KEEP_FOREVER`
+   (`convex/retentionCoverage.ts:120`, "curated links").
+5. ✅ **`llm-analytics-rollup` CR-01** → absorbed as DEBT-08.
+6. ✅ **`detectCredentialValue` rule C — ACCEPTED, not open work.** The item's own text
+   says rule A covers the realistic shape by name and the gap "is deliberate". Recorded
+   as a decision so it stops reading as a to-do.
+8. ✅ **DEBT-06 — CLOSED GUARDED, and 113-05's note about it is stale.**
+   `113-05-SUMMARY.md` says DEBT-06 stays Pending because "113-06 has not run".
+   113-06 DID run: `113-06-SUMMARY.md` records a tiered soak of **80 clean full-suite
+   iterations, zero reproductions**, closed GUARDED and confirmed by Larry at the Task 3
+   checkpoint, with the honest "NOT root-caused" sentence placed in
+   `113-FLAKE-EVIDENCE.md`. The cause was never identified and that is the recorded
+   disposition, not an open task.
+
+### Premise needs re-checking
+
+1. ⚠️ **MISSION-01 duration + orphan recovery.** The blocker was stated as "no `running`
+   row can arrive". astridr now *has* a running state — `astridr/automation/jobs.py:71`
+   (`_VALID_STATUSES`), `:168` (stamps `started_at` on `running`), and
+   `astridr/automation/mission_pipeline.py:571` (sets a mission to `running`). What is
+   NOT verified is whether that state is EMITTED to CodePulse's mission ingest, which is
+   the claim that actually matters. Internal status is not telemetry. **Still do not tick
+   MISSION-01's checkbox** (auto-re-ticked by tooling twice, reverted twice) until the
+   emission path is measured.
+
+### Genuinely open
+
+2. 🔴 **MISSION-02 humanized tool activity.** No job↔tool join key in telemetry.
+   `astridr/tools/cancel_job.py` takes a `job_id` argument, but that is a tool parameter,
+   not a join key between job records and tool-execution records. Unchanged.
+3. 🔴 **`message_routed` routed but unsurfaced.** The backend exists and is tested
+   (`convex/messageRoutes.ts`, resolver coverage in `convex/runtimeIngest.test.ts:1443`),
+   and `messageRoutes.ts:19` states plainly that it "has no UI this phase". Needs its own
+   UI design pass (D-13).
+7. 🔴 **Nyquist coverage partial.** Confirmed on disk: `117-bifrost-link-hub` and
+   `119-loom-curated-pipelines` exist with **no VALIDATION.md**. 109, 112, 113 and 114 do
+   each carry one (their coverage is partial, not absent).
+9. 🔴 **Cross-repo, astridr — a RETIRED host is an unconditional CORS origin on the
+   DEPLOYED branch.** Measured 2026-08-26:
+
+   - `feature/brain-swap` (deployed, 953 commits ahead of `main`):
+     `prod_origin = os.environ.get("CODEPULSE_ORIGIN", "https://tidy-whale-981.convex.site")`
+     then `allowed_origins = [prod_origin, ...]` — added **unconditionally**.
+   - `main`: `os.environ.get("CODEPULSE_ORIGIN", "").strip()` with
+     `if prod_origin and prod_origin != "*": allowed_origins.insert(0, prod_origin)` —
+     empty default, conditional.
+
+   `tidy-whale-981` is the retired cloud Convex deployment, frozen 2026-07-15. A
+   decommissioned Convex subdomain can be re-allocated, which would hand a third party a
+   valid CORS origin against the agent backend. The fix is to port `main`'s form to the
+   deployed branch; it is small, but it changes a running service's CORS policy in another
+   repo and belongs to an astridr session, not a CodePulse one.
