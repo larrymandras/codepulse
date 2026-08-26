@@ -18,5 +18,11 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npx tsc --noEmit
       - run: npx vite build
+      # The two projects run SEQUENTIALLY and the second is scoped to `unit`.
+      # A bare `npx vitest run` here would re-run the browser project a second
+      # time AND run it concurrently with the jsdom workers. Measured 2026-08-26:
+      # at the same commit, in the same worktree, `--project unit` passed 10/10
+      # while both-projects-together failed on iteration 1. The browser project is
+      # required to reproduce the instability; unit-only never showed it.
       - run: npx vitest run --project browser
-      - run: npx vitest run
+      - run: npx vitest run --project unit

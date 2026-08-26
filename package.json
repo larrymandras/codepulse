@@ -2,20 +2,23 @@
   "name": "codepulse",
   "version": "0.1.0",
   "private": true,
-  "description": "CodePulse — Ástríðr runtime telemetry backend (Convex)",
+  "description": "CodePulse \u2014 \u00c1str\u00ed\u00f0r runtime telemetry backend (Convex)",
   "scripts": {
     "dev": "vite",
     "dev:backend": "npx convex dev",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run --project unit && vitest run --project browser",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
     "test:e2e:authed": "playwright test --project=chromium-authed",
     "dev:noauth": "vite --port 5181 --strictPort --host 127.0.0.1",
     "test:e2e:noauth": "playwright test",
     "test:e2e:noauth:help": "echo 'dev:noauth / test:e2e:noauth: npm run-script defaults to cmd.exe on Windows, which cannot parse an inline VAR= assignment, so the empty assignment must be issued at the invocation instead: VITE_CLERK_PUBLISHABLE_KEY= npm run dev:noauth  (and)  PW_BASE_URL=http://localhost:5181 npm run test:e2e:noauth -- issued from GIT BASH, never PowerShell (PS 5.1 deletes an env var assigned an empty string, silently leaving the Clerk gate live). Start dev:noauth in its own terminal FIRST -- playwright.config.ts webServer is hardcoded to 5173 and will report itself healthy while these tests target 5181. dev:noauth pins --host 127.0.0.1, overriding vite.config.ts server.host:true, because that config-level wide bind would otherwise expose this AUTH-DISABLED server on the tailnet/LAN -- never drop that flag. These specs exercise navigation only, not the Clerk auth gate.'",
-    "deploy": "npx convex deploy && npx vite build"
+    "deploy": "npx convex deploy && npx vite build",
+    "test:unit": "vitest run --project unit",
+    "test:browser": "vitest run --project browser",
+    "test:watch": "vitest --project unit"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",

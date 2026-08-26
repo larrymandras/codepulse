@@ -70,21 +70,49 @@
  */
 import { describe, it, expect, afterAll } from "vitest";
 import { execFileSync } from "node:child_process";
-import {
-  readFileSync,
-  existsSync,
-  readdirSync,
-  writeFileSync,
-  unlinkSync,
-} from "node:fs";
+import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as ts from "typescript";
 
 const REPO_ROOT = process.cwd();
-const PHASE_DIR = join(
-  REPO_ROOT,
-  ".planning/phases/122-tokens-primitives-contrast-measurement"
-);
+const PHASE_SLUG = "122-tokens-primitives-contrast-measurement";
+
+/**
+ * Resolve the phase directory in BOTH the active and the archived location.
+ *
+ * This was hardcoded to `.planning/phases/<slug>` and broke the moment milestone
+ * v15.0 was closed on 2026-08-26: the close moves phase directories to
+ * `.planning/milestones/v15.0-phases/<slug>`, so this suite went red for a reason
+ * that had nothing to do with tokens. A milestone close is a NORMAL, recurring
+ * event, so resolving both locations is the fix rather than repointing the literal
+ * at the archive and waiting for the next close to break it again.
+ *
+ * Throws with both attempted paths if neither exists — a silently-missing ledger
+ * directory would make every assertion below pass VACUOUSLY, which is the failure
+ * mode this ratchet exists to prevent.
+ */
+function resolvePhaseDir(): string {
+  const candidates = [
+    join(REPO_ROOT, ".planning/phases", PHASE_SLUG),
+    ...(existsSync(join(REPO_ROOT, ".planning/milestones"))
+      ? readdirSync(join(REPO_ROOT, ".planning/milestones"))
+          .filter((d) => d.endsWith("-phases"))
+          .map((d) => join(REPO_ROOT, ".planning/milestones", d, PHASE_SLUG))
+      : []),
+  ];
+  const found = candidates.find((p) => existsSync(p));
+  if (!found) {
+      throw new Error(
+        "tokenSweep ratchet: phase dir " +
+          PHASE_SLUG +
+          " not found. Tried: " +
+          candidates.join(", ")
+      );
+  }
+  return found;
+}
+
+const PHASE_DIR = resolvePhaseDir();
 
 // ---------------------------------------------------------------------------
 // git grep helpers -- the sole population source for every bucket below.
