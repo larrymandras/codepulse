@@ -57,3 +57,9 @@ docs/gsd-progress-snapshot.log
 docs/gsd-overnight-checkpoint-*.json
 docs/gsd-overnight-report-*.md
 docs/gsd-overnight-supervisor.log
+
+# Generated progress-report output (reports/progress-daily.log and the dated
+# progress-YYYY-MM-DD.md it dry-runs). Regenerated per run, local-only -- found
+# untracked at the v15.0 wrap 2026-08-26 and verified clean (6 lines, zero secret
+# matches) before being ignored rather than committed.
+reports/
