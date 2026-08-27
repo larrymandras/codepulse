@@ -122,6 +122,7 @@ import type * as messageRoutes from "../messageRoutes.js";
 import type * as metrics from "../metrics.js";
 import type * as migrations from "../migrations.js";
 import type * as missionControl from "../missionControl.js";
+import type * as missionWatch from "../missionWatch.js";
 import type * as modelPricing from "../modelPricing.js";
 import type * as navCounts from "../navCounts.js";
 import type * as notifications from "../notifications.js";
@@ -307,6 +308,7 @@ declare const fullApi: ApiFromModules<{
   metrics: typeof metrics;
   migrations: typeof migrations;
   missionControl: typeof missionControl;
+  missionWatch: typeof missionWatch;
   modelPricing: typeof modelPricing;
   navCounts: typeof navCounts;
   notifications: typeof notifications;

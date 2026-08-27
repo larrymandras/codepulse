@@ -714,10 +714,17 @@ export const getDigestAlerts = internalQuery({
     since: v.float64(),
   },
   handler: async (ctx, args) => {
+    // `by_acknowledged` is ["acknowledged","createdAt"], so the `since` bound
+    // belongs INSIDE the index rather than in a post-read `.filter()`. The
+    // .take(100) already capped the result, but with the filter applied after
+    // the read the scan still walked past every unacknowledged alert older than
+    // `since` looking for 100 that qualified — so a backlog of old unacked
+    // alerts made this progressively more expensive while returning fewer rows.
     return await ctx.db
       .query("alerts")
-      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
-      .filter((q) => q.gte(q.field("createdAt"), args.since))
+      .withIndex("by_acknowledged", (q) =>
+        q.eq("acknowledged", false).gte("createdAt", args.since)
+      )
       .order("desc")
       .take(100);
   },

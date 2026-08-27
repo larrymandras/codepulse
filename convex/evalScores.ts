@@ -722,14 +722,21 @@ export const getCandidateSessionsInternal = internalQuery({
   args: { dayStart: v.float64() },
   handler: async (ctx, { dayStart }) => {
     const dayEnd = dayStart + 86400;
+    // The day window is pushed INTO by_status, never applied as a post-read
+    // `.filter()`. Convex's `.filter()` runs on rows ALREADY READ, so the old
+    // shape read every completed session ever (1,575 measured 2026-08-27) and
+    // kept one day's worth. `by_status` is ["status","lastEventAt"], so the
+    // range narrows the index behind the status equality rather than replacing
+    // it. This was a byte-for-byte clone of the same defect in
+    // `briefings.getDailyDigestDataInternal`; `boundedReads.ratchet.test.ts`
+    // now fails on any new instance of the shape.
     const sessions = await ctx.db
       .query("sessions")
-      .withIndex("by_status", (q) => q.eq("status", "completed"))
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("lastEventAt"), dayStart),
-          q.lt(q.field("lastEventAt"), dayEnd)
-        )
+      .withIndex("by_status", (q) =>
+        q
+          .eq("status", "completed")
+          .gte("lastEventAt", dayStart)
+          .lt("lastEventAt", dayEnd)
       )
       .collect();
 

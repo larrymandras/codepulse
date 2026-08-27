@@ -20,8 +20,8 @@ and item 6's markup half (needs an enumeration nobody has done).*
 - **Milestone v15.0 "Borealis Console" is SHIPPED, closed and tagged** (`v15.0`). 8 phases
   (120–127), 87 plans, 30/30 requirements, phases archived to `.planning/milestones/v15.0-phases/`.
 - **There is no active milestone.** Next is either planning v16.0 or the list below.
-- `npm test` → 376 files / 5,341 passed / 0 failed, then browser 3 passed. `npx tsc --noEmit`
-  exit 0. CI and Gitleaks green on `7a782bfa`.
+- `npm test` → 379 files / 5,367 passed / 0 failed, then browser 3 passed. `npx tsc --noEmit`
+  exit 0. CI and Gitleaks ran green on every commit pushed in this session.
 - **`npm test` is now SEQUENTIAL** (`--project unit` then `--project browser`). Do not "simplify"
   it back to a bare `vitest run` — running the two projects concurrently is the measured cause of
   an intermittent suite failure (unit-only passed 10/10 at the same commit where both-together
@@ -72,9 +72,27 @@ npx convex run --env-file C:\Users\mandr\convex-selfhost\selfhosted.envfile --in
 still 7 rows, meaning no new background job has run since. Status is correctly recorded `PARTIAL`
 in `MILESTONES.md`, `PROJECT.md`, `REQUIREMENTS.md` and this file; nothing has auto-ticked it.
 
-**Do not tick MISSION-01's checkbox before that probe returns non-zero.** Tooling has auto-ticked
-it twice and it was reverted twice. Note also that astridr's `e435f71a` only reaches production on
-the next rebuild, which is an operator action.
+**You no longer have to remember this.** `convex/missionWatch.ts` + the `mission-01-watch` cron
+(daily, 09:10 UTC) run the same check server-side and raise ONE alert on `/alerts` the first time a
+row shows a real duration. Idempotent on `source: "mission-watch:MISSION-01"` via the
+`alerts.by_source` index, so a daily cron cannot become a daily nag — and acknowledging the alert
+does not re-arm it.
+
+It uses `finishedAt > submittedAt`, deliberately stricter than the `!==` in the probe above: a row
+finishing before it was submitted is a clock anomaly, not evidence the plumbing works.
+
+**Do not tick MISSION-01's checkbox before that probe returns non-zero, and note the watcher will
+not tick it either.** Tooling auto-ticked it twice and it was reverted twice; a watcher that also
+mutates status is how that happens a third time. It notifies; a human decides. astridr's
+`e435f71a` also only reaches production on the next rebuild, which is an operator action.
+
+*Verification boundary, stated rather than implied:* the watcher is mutation-proved at the unit
+level (16 tests; "never raises" turns 5 red, "always raises" turns 4 red, so both directions bite)
+and was run live against the real 7 rows, correctly returning `not-yet` and writing nothing. What
+is NOT proven in production is the insert path — `convex run --inline-query` is sandboxed
+read-only, so forcing the positive path would have meant deploying throwaway code and writing a
+synthetic row to a live table. Cron registration is inferred from a successful deploy, not
+measured; the Convex dashboard's crons view is where to confirm it.
 
 ### 3. Loom coverage — ✅ DONE (2026-08-27, `7a782bfa`)
 
@@ -134,6 +152,28 @@ surviving unbounded read returns identical digest numbers on a small fixture, so
 discriminate. Pattern: `briefingsDigestBounded.test.ts`, `automationCronSummaryBounded.test.ts`,
 `messageRoutesBounded.test.ts`.
 
+**The class is now ratcheted.** `convex/boundedReads.ratchet.test.ts` scans every non-test
+`convex/*.ts` for a RANGE comparison (`gte`/`gt`/`lte`/`lt`) inside a post-read `.filter()` and
+fails on any new one. Running it for the first time found two more instances nobody had spotted,
+both now fixed:
+
+- **`evalScores.ts:725`** was a byte-for-byte clone of the sessions defect — same table, same
+  `by_status` index, same post-read range, same `.collect()`, same 1,575 rows.
+- **`webhookDelivery.ts:719`** filtered `createdAt` post-read while `by_acknowledged` is
+  `["acknowledged","createdAt"]`. `.take(100)` capped the result, but the scan still walked past
+  every older unacknowledged alert looking for 100 that qualified — so a backlog made it
+  progressively more expensive while returning fewer rows.
+
+Two remain, allowlisted with reasons in the test: `briefings.ts` listBriefings (4 — `.paginate()`,
+not `.collect()`, and no index at all) and `forge.ts` claimCommands (1 — `expiresAt` is not a field
+of `by_host_status_created`, so the range genuinely cannot be pushed in; `.take(10)` bounds it).
+
+It deliberately does NOT flag a bare `.withIndex("name")` with no range callback: 127 of those
+exist and most are correct (a bare index plus `.order("desc").take(50)` is properly bounded).
+Flagging them would produce a ratchet that cries wolf 127 times, which is a ratchet nobody keeps.
+**Known limitation:** it therefore cannot catch "someone deleted an index bound without adding a
+filter" — that shape has no distinguishing signature.
+
 ### 5. MISSION-02 — genuinely blocked, and do not re-litigate it cheaply
 
 The v14.0 note says "no job↔tool join key exists in astridr". **That note is correct.** On
@@ -171,16 +211,30 @@ test pins that distinction. Guard: `src/hooks/usePrivacyMask.test.tsx`. Mutation
 directions: reverting the gate to `enabled` alone turns 9 tests red, and forcing it always-on turns
 3 red, so over-masking is caught too.
 
-**⚠ STILL OPEN — the markup half.** `data-sensitive` has exactly TWO consumers, both in
-`MessageRoutingSummary.tsx`. Screenshot mode's `visibility: hidden` rule therefore still hides
-almost nothing anywhere in the app. Closing it means enumerating every element that renders PII
-and marking it — and **nobody has ever enumerated that list**. That is the unknown, and it is why
-this half was not swept blind: guessing at the set would produce a mechanism that looks complete
-and is not, which is the same failure as the one above.
+**⚠ STILL OPEN — the markup half.** `data-sensitive` appears on exactly ONE element in source
+(the sender label in `MessageRoutingSummary.tsx`, rendered once per channel). Screenshot mode's
+`visibility: hidden` rule therefore still hides almost nothing anywhere in the app. Closing it
+means enumerating every element that renders PII and marking it — and **nobody has ever enumerated
+that list**. That is the unknown, and it is why this half was not swept blind: guessing at the set
+would produce a mechanism that looks complete and is not, which is the same failure as the one
+above.
+
+`src/dataSensitiveCoverage.ratchet.test.ts` makes the number monotonic — coverage can only go up,
+never silently down. It cannot tell you what is missing; nothing can, until someone makes the list.
+Raise `MIN_CONSUMERS` when you mark more elements.
+
+*That ratchet is itself a cautionary tale worth keeping.* Its first version counted every
+occurrence of the string `data-sensitive` and set the floor at 2. It passed — and then a mutation
+test deleted the actual attribute and it STILL passed, because the component contains two
+*comments* naming the attribute while explaining it. The floor was met by prose alone. It now
+strips comment lines and counts only the attribute form (`data-sensitive=`), and carries a test
+asserting that distinction. This is the exact trap `codepulse/CLAUDE.md` already warns about — "an
+exact/zero-count criterion is satisfiable by REWORDING A COMMENT" — and it still got written. Only
+mutating the thing the guard must catch exposed it.
 
 Note the JS fix alone changes behaviour app-wide: anything routed through `mask`/`maskText`/
 `redact` now masks at demo and screenshot levels where it previously did not. Full suite green
-(5,341 passed) and `tsc` clean after the change, so no consumer depended on the old behaviour.
+(5,367 passed) and `tsc` clean after the change, so no consumer depended on the old behaviour.
 
 ## Disclosure
 

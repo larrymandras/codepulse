@@ -272,4 +272,26 @@ crons.daily(
   {}
 );
 
+// MISSION-01 watcher. The requirement is built on both halves but cannot be
+// closed by writing code: the astridr duration fix works going forward only, so
+// it closes when a real background job first produces a `subagentJobs` row with
+// `finishedAt > submittedAt`. That could be tomorrow or next month, and until
+// now the only thing tracking it was a paragraph in a handoff doc — i.e. a
+// human remembering.
+//
+// Raises exactly ONE alert when the condition flips, keyed on an idempotency
+// source so a daily cron cannot become a daily nag. It does NOT tick the
+// requirement: GSD tooling auto-ticked MISSION-01 twice and it was reverted
+// both times, and a watcher that also mutates status is how that happens again.
+//
+// 09:10 UTC is chosen because it is unoccupied — 09:00 is taken and the 08:xx
+// slots are contended (see the janitors above). The work is one indexed point
+// read plus, at most once ever, one insert.
+crons.daily(
+  "mission-01-watch",
+  { hourUTC: 9, minuteUTC: 10 },
+  internal.missionWatch.checkMission01,
+  {}
+);
+
 export default crons;
