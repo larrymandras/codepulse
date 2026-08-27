@@ -119,6 +119,20 @@ function main() {
       failures.push(`${file}: status: absorbed but no absorbed_by field present`);
     }
 
+    // The reverse coupling, and the one that actually protects this plan's goal
+    // (found by the phase-128 adversarial mutation gate). Without it, a seed whose
+    // content genuinely became scoped requirements -- absorbed_by naming REAL ids --
+    // could be flipped back to `dormant` and this checker still printed OK. `dormant`
+    // is exactly what /gsd-new-milestone's seed scan re-proposes as NEW work, so that
+    // silent reversion IS the duplicate-planning failure this plan exists to prevent.
+    // A seed that names what absorbed it cannot also be awaiting proposal.
+    if (status === "dormant" && absorbedBy.length > 0) {
+      failures.push(
+        `${file}: status: dormant but absorbed_by names ${absorbedBy.length} requirement(s) ` +
+          `(${absorbedBy.join(", ")}) - an absorbed seed must not be re-proposable as new work`
+      );
+    }
+
     // Referential integrity check applies to EVERY seed carrying absorbed_by,
     // regardless of status (the SEED-007 case: the field appears on a
     // status: shipped seed).
