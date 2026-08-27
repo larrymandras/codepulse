@@ -6,7 +6,7 @@ planted_during: Phase 124 — found by gsd-verifier while independently re-deriv
 trigger_when: BEFORE e2e/polish-geometry.spec.ts is used as a measurement source again — i.e. any phase that re-opens header or sidebar geometry. It is not urgent as a test (it passes correctly today); it is urgent as EVIDENCE.
 scope: Trivial (one task) — add an explicit settle or wait on the two components
 source: e2e/polish-geometry.spec.ts; src/layouts/DashboardLayout.tsx (SystemChip, BrainHeaderBadge)
-resolves_phase: null
+resolves_phase: 132
 last_reviewed: 2026-08-21
 ---
 

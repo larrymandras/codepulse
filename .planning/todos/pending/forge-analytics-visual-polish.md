@@ -6,7 +6,7 @@ planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement) — raised
 trigger_when: The next Forge- or Analytics-touching phase in v15.0, or a dedicated visual-polish phase. Pairs naturally with the Forge column-clipping todo — same page, same sitting.
 scope: Small-to-medium (two independent visual treatments; the chart one may be a charting-library config rather than a token change)
 source: Operator screenshots 2026-08-19 under Matrix Emerald at 1920px; traced against the pre-phase blob 001c1e73
-resolves_phase: null
+resolves_phase: 131
 last_reviewed: 2026-08-19
 ---
 

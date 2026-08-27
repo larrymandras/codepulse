@@ -6,7 +6,7 @@ planted_during: Phase 121 (Analytics Query Resilience) — surfaced during 121-0
 trigger_when: Next Analytics- or Dashboard-touching phase, OR the next time an operator reports empty panels / "no data yet" on a page whose backend demonstrably holds data. Not a live outage on its own — Phase 121's boundaries contain it to the individual panels.
 scope: Medium (one phase — per-query triage keyed on table row count, NOT a mechanical sweep of every .collect())
 source: Observed live 2026-08-18 against the self-hosted backend; convex/analytics.ts, convex/metrics.ts
-resolves_phase: null
+resolves_phase: 129
 last_reviewed: 2026-08-18
 ---
 

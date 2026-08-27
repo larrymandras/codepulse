@@ -6,7 +6,7 @@ planted_during: Phase 124 — operator hit it during the 124-11 checkpoint while
 trigger_when: Next Convex-touching phase, batched with the other Convex items so they share ONE operator deploy. /tool-galaxy is fully non-functional today, so this is the highest-value of the three.
 scope: Medium (one plan) — bound the read; may need an index or a precomputed snapshot rather than a cap
 source: convex/graphSnapshots.ts (getProjectGraph); observed live on /tool-galaxy
-resolves_phase: null
+resolves_phase: 128
 last_reviewed: 2026-08-21
 ---
 

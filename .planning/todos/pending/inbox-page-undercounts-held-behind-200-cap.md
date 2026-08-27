@@ -6,7 +6,7 @@ planted_during: Phase 124 — surfaced when the new sidebar badge (46) and the /
 trigger_when: Next /inbox-touching phase, batched with the other Convex items so they share ONE operator deploy
 scope: Small-to-medium (one plan) — decide what /inbox's tab counts should MEAN, then make the read match
 source: src/pages/Inbox.tsx:130,317-362; convex/inbox.ts:173,187
-resolves_phase: null
+resolves_phase: 130
 last_reviewed: 2026-08-21
 ---
 

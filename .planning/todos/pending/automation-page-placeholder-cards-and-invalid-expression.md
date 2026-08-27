@@ -6,7 +6,7 @@ planted_during: Phase 124 — operator hit it during the 124-11 checkpoint while
 trigger_when: Next Automation- or Convex-transport-touching phase. No longer cosmetically severe (the parse half is fixed); the remaining half is a real ~9-10s perceived load latency on first page visit.
 scope: NARROWED 2026-08-24 (126-03, D-07 Task 2) — the "Invalid expression" half is FIXED (see below). Only the stat-card half remains, and it is now measured, not merely observed.
 source: src/pages/Automation.tsx; convex/automation.ts:135-157 (cronSummary); measured live against the self-hosted deployment
-resolves_phase: 126 (parse half only)
+resolves_phase: 128
 last_reviewed: 2026-08-24
 ---
 

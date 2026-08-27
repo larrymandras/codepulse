@@ -6,7 +6,7 @@ planted_during: Phase 125 (Signature Layers) — plan 125-05, after a Codex adve
 trigger_when: Either failure recurs, OR a phase is scoped to test-infrastructure/isolation work. NOT a fit for a quick pickup — there is nothing to debug until a reproduction rate exists, and establishing one costs repeated ~50s full-suite runs
 scope: Small-to-medium — two observed failures, each unreproduced, in TWO DIFFERENT vitest projects with two different mechanisms. Diagnosis is measurement-first, not fix-first
 source: Measured 2026-08-24. codepulse failure observed once by plan 125-05's executor; astridr-repo analog logged by that repo's phase 195-03. Orchestrator re-ran the full codepulse suite independently — did not reproduce
-resolves_phase: null
+resolves_phase: 136
 last_reviewed: 2026-08-24
 ---
 

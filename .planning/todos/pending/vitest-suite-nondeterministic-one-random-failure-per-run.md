@@ -1,3 +1,9 @@
+---
+id: TODO-vitest-suite-nondeterministic-one-random-failure-per-run
+status: pending
+resolves_phase: 136
+---
+
 # Vitest suite is non-deterministic — ~1 random test fails per full run
 
 **Found:** 2026-08-20, during astridr-repo Phase 192's post-merge gate (cross-repo phase).

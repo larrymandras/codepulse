@@ -6,7 +6,7 @@ planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement) — surfac
 trigger_when: Next Phase 190 / KnowledgeGraph work, or the next time CI reports an unexplained single-test failure in src/pages/KnowledgeGraph.test.tsx. Owned by the phase-190 workstream, not by 122.
 scope: Small (one test's async synchronisation)
 source: Measured 2026-08-19 on codepulse master; 6 isolated runs of the unmodified tree
-resolves_phase: null
+resolves_phase: 136
 last_reviewed: 2026-08-19
 ---
 

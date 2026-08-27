@@ -6,7 +6,7 @@ planted_during: Phase 126 execution — surfaced independently by a peer session
 trigger_when: Before the next frontend phase is planned or executed, or any time `phase-state.json`'s `ready`/`missing` fields are used to decide whether a phase may proceed. Not urgent for 126 (its skip was a deliberate, now-recorded operator decision) — urgent as a GATE, because the field reads green for every phase regardless.
 scope: Small — either make the validator encode the check, or stop presenting `missing: []` as if it were a verdict
 source: `.planning/phases/*/phase-state.json`; the gsd-sdk readiness validator
-resolves_phase: null
+resolves_phase: 138
 last_reviewed: 2026-08-25
 ---
 

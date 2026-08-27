@@ -6,7 +6,7 @@ planted_during: Phase 124 (Shell & Information Architecture) — found by the ph
 trigger_when: The next Convex-touching phase, batched with the other two Convex items below so they share ONE operator deploy. Not a live outage — 46 rows today, contained by its own error boundary.
 scope: Small (one plan) — add a bounded query, point the badge at it, leave the shared query alone
 source: convex/inbox.ts:206-214; src/layouts/DashboardLayout.tsx:137; convex/inboxIngest.ts:174
-resolves_phase: null
+resolves_phase: 128
 last_reviewed: 2026-08-21
 ---
 

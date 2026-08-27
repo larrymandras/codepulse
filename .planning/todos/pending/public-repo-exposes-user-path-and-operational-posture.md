@@ -6,7 +6,7 @@ planted_during: Phase 126 planning — surfaced by a Codex adversarial review of
 trigger_when: Before the next decision about what `.planning/` and `CLAUDE.md` contain, or immediately if the repo gains a collaborator, the tailnet gains a device that is not Larry's, or any credential VALUE is ever committed. Not urgent as a leak — no secrets are exposed — but it is a standing decision that has never actually been made.
 scope: Unknown until the decision is made — ranges from one `.gitignore` line to a repo-visibility change. Sanitizing 272 files is NOT recommended without a reason better than tidiness.
 source: repo-wide; `CLAUDE.md`, `.planning/**`, `html-out/`
-resolves_phase: null
+resolves_phase: 138
 last_reviewed: 2026-08-24
 ---
 

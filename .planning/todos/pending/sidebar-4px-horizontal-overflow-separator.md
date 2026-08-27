@@ -6,7 +6,7 @@ planted_during: Phase 124 — spotted by the orchestrator in the operator's own 
 trigger_when: Any shell- or DashboardLayout-touching phase. Frontend-only, no deploy, one class.
 scope: Trivial (one task) — but pick the remedy deliberately, see below
 source: src/layouts/DashboardLayout.tsx:458,463
-resolves_phase: null
+resolves_phase: 131
 last_reviewed: 2026-08-21
 ---
 

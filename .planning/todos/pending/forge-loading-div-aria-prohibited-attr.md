@@ -6,7 +6,7 @@ planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement) — presen
 trigger_when: Phase 123 (A11Y-02). IMPORTANT — A11Y-02's success criterion is written as "no wcag2a/wcag2aa violations", which does cover this rule, but the phase is framed throughout as CONTRAST remediation. This one is markup, not colour, and will be missed if 123 is planned as a colour-only sweep.
 scope: Trivial (one element; add a permitting role, or expose the label through a status element)
 source: Measured in all four Forge cells of every A11Y-01 capture, 2026-08-19; src/components/forge/ForgeJobList.tsx:174
-resolves_phase: null
+resolves_phase: 128
 last_reviewed: 2026-08-19
 ---
 

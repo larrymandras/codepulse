@@ -6,7 +6,7 @@ planted_during: Phase 124 — operator raised it unprompted during the 124-11 ch
 trigger_when: Next /alerts- or AlertRulesEngine-touching phase. Purely visual, no data loss, but the rules list is effectively unreadable.
 scope: Small (one plan) once root-caused — but it is NOT root-caused, and that needs live DOM measurement first
 source: src/components/AlertRulesEngine.tsx:75,108-109,205,218-219,388; observed live on /alerts
-resolves_phase: null
+resolves_phase: 131
 last_reviewed: 2026-08-21
 ---
 

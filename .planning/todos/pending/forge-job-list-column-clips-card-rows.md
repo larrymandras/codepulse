@@ -6,7 +6,7 @@ planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement) — surfac
 trigger_when: Next Forge- or page-layout-touching phase in v15.0. Not urgent — the page is usable and the clipped text is metadata, not the job prompt. Do NOT fold into a token/sweep phase; this is page layout, not what a surface reads from.
 scope: Small (one plan — the card header row inside a fixed-width master column)
 source: Observed live 2026-08-19 at http://localhost:5173/forge, 1920px viewport; src/pages/ForgePage.tsx:175
-resolves_phase: null
+resolves_phase: 131
 last_reviewed: 2026-08-19
 ---
 

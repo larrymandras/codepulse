@@ -6,7 +6,7 @@ planted_during: Phase 123 (Accessibility Remediation) — plan 123-09, D-16's mi
 trigger_when: A follow-up phase scoped to accessibility/ARIA remediation beyond opacity-modifier contrast — this is NOT a fit for 123-11/123-12 (contrast-only sweeps) or for a quick pickup, since 7 of 8 flagged rule categories have no file:line triage yet
 scope: Large — 96 objects / 966 nodes across 42 routes, 7 of 8 rule categories entirely un-triaged to source
 source: Measured 2026-08-20 by plan 123-08 (140/188 cells) + its orchestrator addendum (the remaining 48/188 cells, dev-server-gap recovery). Operator decision recorded in 123-CRITERION-DECISION.md.
-resolves_phase: null
+resolves_phase: 133
 last_reviewed: 2026-08-20
 ---
 

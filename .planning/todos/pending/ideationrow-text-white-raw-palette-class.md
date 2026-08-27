@@ -6,7 +6,7 @@ planted_during: Phase 123 (Accessibility Remediation), plan 123-10 (D-05 status-
 trigger_when: Any future accessibility/token sweep phase that includes raw-palette-class remediation. Not this plan's defect class — 123-10 fixes token-pair contrast (bg-(--status-*) text-(--foreground)); this is a raw Tailwind palette class, never a CSS custom property.
 scope: Trivial (3 call sites, one file, one substitution each)
 source: Read live during 123-10's Task 2 (src/components/IdeationRow.tsx:27-31, SEVERITY_CLASSES), 2026-08-20
-resolves_phase: null
+resolves_phase: 131
 last_reviewed: 2026-08-20
 ---
 
