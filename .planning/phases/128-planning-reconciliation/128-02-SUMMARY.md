@@ -64,7 +64,7 @@ flake filings) are recorded as explicit D-07 live-measurement deferrals rather t
 - **Completed:** 2026-08-27
 - **Tasks:** 3 (Task 1: 7 statically-settleable verdicts; Task 2: 6 deferrals; Task 3: apply to
   todo files + build the structural guard)
-- **Files modified:** 17 (1 ledger created, 1 checker script created, 3 todos moved
+- **Files modified:** 15 (1 ledger created, 1 checker script created, 3 todos moved
   pending→completed, 10 todos updated in place)
 
 ## Accomplishments
