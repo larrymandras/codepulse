@@ -137,7 +137,15 @@ function main() {
     // regardless of status (the SEED-007 case: the field appears on a
     // status: shipped seed).
     for (const id of absorbedBy) {
-      if (!reqText.includes(id)) {
+      // WR-02 (phase-128 code review): `includes` is an UNANCHORED substring match, so a
+      // typo that is a prefix of a real ID validated silently. Demonstrated live against
+      // this corpus: "COST-0", "COCKPIT-0" and "BOARD-0" all pass includes() by matching
+      // COST-04 / COCKPIT-01 / BOARD-01, while "NOPE-99" correctly fails both ways. Anchor
+      // on a word start and forbid a trailing id character so the match is the WHOLE id.
+      const idPattern = new RegExp(
+        `\\b${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`
+      );
+      if (!idPattern.test(reqText)) {
         failures.push(
           `${file}: absorbed_by lists "${id}", which does not appear in .planning/REQUIREMENTS.md`
         );

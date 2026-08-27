@@ -23,7 +23,7 @@
 // phase-state.json:NNN citations count as substantive.)
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { join, dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -135,7 +135,14 @@ for (const file of pendingFiles) {
   } else {
     const deferMatch = section.match(DEFER_RE);
     const cites = [...section.matchAll(CITE_RE)];
-    const resolvableCite = cites.find((m) => existsSync(resolve(REPO_ROOT, m[1])));
+    // WR-03 (phase-128 code review): the citation pattern permits `../`, so confine the
+    // resolved path to the checkout. A citation pointing outside this repository cannot be
+    // evidence about this repository, so it must not count as resolvable.
+    const withinRepo = (rel) => {
+      const abs = resolve(REPO_ROOT, rel);
+      return abs === REPO_ROOT || abs.startsWith(REPO_ROOT + sep);
+    };
+    const resolvableCite = cites.find((m) => withinRepo(m[1]) && existsSync(resolve(REPO_ROOT, m[1])));
 
     const hasValidDeferral = deferMatch && roadmapPhases.has(deferMatch[1]);
     const hasResolvableCite = Boolean(resolvableCite);
@@ -160,7 +167,10 @@ for (const file of pendingFiles) {
     } else {
       if (inScope) evidenceBacked++;
       const substantive = cites.filter(
-        (m) => existsSync(resolve(REPO_ROOT, m[1])) && m[1] !== ".planning/REQUIREMENTS.md"
+        (m) =>
+          withinRepo(m[1]) &&
+          existsSync(resolve(REPO_ROOT, m[1])) &&
+          m[1] !== ".planning/REQUIREMENTS.md"
       );
       if (inScope && substantive.length === 0) weakEvidence.push(file);
     }

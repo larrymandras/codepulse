@@ -44,7 +44,7 @@
  */
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const THIS_FILE = fileURLToPath(import.meta.url);
@@ -101,6 +101,8 @@ function main() {
   const legacyPendingAnomalies = [];
   const deadCitations = [];
   const outOfRangeCitations = [];
+  const escapingCitations = [];
+  const unreadableCitations = [];
 
   for (const file of files) {
     totalCompleted++;
@@ -142,7 +144,16 @@ function main() {
 
     for (const { rel, line } of citations) {
       citationsChecked++;
-      const abs = join(REPO_ROOT, rel);
+      // WR-03 (phase-128 code review): the citation pattern permits `../`, so a citation
+      // can name a path OUTSIDE the repository. This checker runs in CI on pull_request and
+      // the line-count read below would otherwise disclose the length of an arbitrary
+      // readable file. A citation that escapes the checkout is not evidence about this
+      // repo, so reject it rather than follow it.
+      const abs = resolve(REPO_ROOT, rel);
+      if (abs !== REPO_ROOT && !abs.startsWith(REPO_ROOT + sep)) {
+        escapingCitations.push({ file, citation: rel });
+        continue;
+      }
       if (!existsSync(abs)) {
         deadCitations.push({ file, citation: rel });
         continue;
@@ -152,7 +163,16 @@ function main() {
       // checks is decorative -- so bound it against the cited file's real length.
       // Split on "\n" only: a trailing "\r" rides along on each element and does not
       // change the COUNT, so this is CRLF-safe without needing a regex.
-      const lineCount = readFileSync(abs, "utf8").split("\n").length;
+      // A citation may resolve to a DIRECTORY (e.g. one literally named "x.md"), where
+      // readFileSync throws EISDIR. An unreadable citation is a bad citation, not a crash:
+      // report it so the checker still produces a diagnostic.
+      let lineCount;
+      try {
+        lineCount = readFileSync(abs, "utf8").split("\n").length;
+      } catch (err) {
+        unreadableCitations.push({ file, citation: rel, reason: err.code ?? String(err) });
+        continue;
+      }
       if (line < 1 || line > lineCount) {
         outOfRangeCitations.push({ file, citation: `${rel}:${line}`, lineCount });
       }
@@ -188,6 +208,22 @@ function main() {
     console.error(`FAIL: ${deadCitations.length} unresolvable citation(s):`);
     for (const d of deadCitations) {
       console.error(`  - ${d.file}: cites "${d.citation}", which does not exist on disk`);
+    }
+  }
+
+  if (escapingCitations.length > 0) {
+    failed = true;
+    console.error(`FAIL: ${escapingCitations.length} citation(s) resolving OUTSIDE the repository:`);
+    for (const e of escapingCitations) {
+      console.error(`  - ${e.file}: cites "${e.citation}", which escapes the checkout`);
+    }
+  }
+
+  if (unreadableCitations.length > 0) {
+    failed = true;
+    console.error(`FAIL: ${unreadableCitations.length} citation(s) that could not be read:`);
+    for (const u of unreadableCitations) {
+      console.error(`  - ${u.file}: cites "${u.citation}" (${u.reason})`);
     }
   }
 

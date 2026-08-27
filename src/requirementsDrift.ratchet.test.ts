@@ -346,7 +346,10 @@ interface FreshnessOracle {
  *   - stamp SHA does not resolve -> offender
  *   - `completionCommitFor` unresolvable -> offender, naming why
  *   - stamp is a strict ancestor of the completion commit -> STALE offender
- *   - stamp equals the completion commit -> NOT an offender (recorded in the closing commit itself)
+ *   - stamp IS the completion commit -> NOT an offender (recorded in the closing commit
+ *     itself). Identity is decided by string equality OR mutual ancestry, never by string
+ *     equality alone: completionCommitFor returns a full 40-char SHA while the documented
+ *     stamp convention is abbreviated, and for one commit those strings differ.
  *   - stamp is a descendant of the completion commit -> NOT an offender (re-derived afterward)
  *   - neither is an ancestor of the other -> offender, unrelated-history
  */
@@ -402,7 +405,18 @@ function stalePartialOffenders(
 
     if (stampSha === completionSha) continue; // fresh: recorded IN the closing commit itself
 
+    // WR-01 (phase-128 code review). String equality alone is NOT commit identity here:
+    // completionCommitFor returns a full 40-char SHA, the documented stamp convention is
+    // 7 chars, and for the same commit those differ. Without the mutual-ancestry test
+    // below, the ancestry probe would then answer "stamp is an ancestor of completion" --
+    // true, because a commit is its own ancestor -- and report the most common FRESH case
+    // (re-derived at phase close, stamped the documented way) as STALE.
     const stampIsAncestorOfCompletion = oracle.isAncestor(stampSha, completionSha);
+    const completionIsAncestorOfStamp = oracle.isAncestor(completionSha, stampSha);
+    if (stampIsAncestorOfCompletion && completionIsAncestorOfStamp) {
+      continue; // same commit, expressed at two different SHA lengths
+    }
+
     if (stampIsAncestorOfCompletion) {
       offenders.push(
         `${r.id} (Phase ${r.phase}): STALE — stamp ${stampSha} is an ancestor of completion ` +
@@ -413,7 +427,6 @@ function stalePartialOffenders(
       continue;
     }
 
-    const completionIsAncestorOfStamp = oracle.isAncestor(completionSha, stampSha);
     if (completionIsAncestorOfStamp) continue; // fresh: re-derived AFTER the phase shipped
 
     offenders.push(
@@ -699,6 +712,44 @@ describe("statusWord: a decorated status cell must not vanish from the check", (
     const qa01 = collectRequirements().find((r) => r.id === "QA-01");
     expect(qa01, "QA-01 not found in the corpus -- has v8.0-REQUIREMENTS.md moved?").toBeDefined();
     expect(qa01!.status).toBe("Partial");
+  });
+});
+
+describe("WR-01: an abbreviated stamp AT the completion commit is FRESH, not stale", () => {
+  // Found by the phase-128 code review. Dormant only because the live in-range Partial
+  // population is zero -- it would have misfired the first time anyone stamped a cell the
+  // way this file's own header tells them to.
+
+  it("short stamp + full completion SHA of the SAME commit -> no offender", () => {
+    const req = fakeReq({ statusCell: "Partial — x (re-derived a1b2c3d)" });
+    const phases = new Map<number, PhaseInfo>([[req.phase, { status: "Complete", completedDate: "-" }]]);
+    const full = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
+    const oracle = makeOracle({
+      completionCommitFor: () => ({ sha: full }),
+      isAncestor: () => true, // git answers true in BOTH directions for one commit
+    });
+    expect(stalePartialOffenders([req], phases, oracle)).toEqual([]);
+  });
+
+  it("CONTROL: a genuinely older stamp is still STALE, so the fix does not blanket-pass", () => {
+    const req = fakeReq({ statusCell: "Partial — x (re-derived aaaaaa1)" });
+    const phases = new Map<number, PhaseInfo>([[req.phase, { status: "Complete", completedDate: "-" }]]);
+    const oracle = makeOracle({
+      completionCommitFor: () => ({ sha: "cccccc1" }),
+      isAncestor: (a, b) => a === "aaaaaa1" && b === "cccccc1", // directional, not mutual
+    });
+    const offenders = stalePartialOffenders([req], phases, oracle);
+    expect(offenders).toHaveLength(1);
+    expect(offenders[0].toLowerCase()).toContain("stale");
+  });
+
+  it("REAL GIT: this repo's short HEAD and full HEAD are mutually ancestral but not equal", () => {
+    // The empirical fact the fix rests on, asserted rather than assumed.
+    const full = execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).trim();
+    const short = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).trim();
+    expect(short).not.toBe(full);
+    expect(gitIsAncestor(short, full)).toBe(true);
+    expect(gitIsAncestor(full, short)).toBe(true);
   });
 });
 
