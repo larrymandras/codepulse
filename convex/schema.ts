@@ -1279,7 +1279,16 @@ export default defineSchema({
     detectedAt: v.float64(),            // epoch seconds
   })
     .index("by_metric_detected", ["metric", "detectedAt"])
-    .index("by_severity", ["severity", "detectedAt"]),
+    .index("by_severity", ["severity", "detectedAt"])
+    // Bare time-range index. The two above both put `detectedAt` SECOND, so
+    // neither can bound a query that filters on time alone —
+    // `getDailyDigestDataInternal`'s anomaly count was reading the whole table
+    // and discarding in JS because of exactly that. Ranging per severity
+    // instead would have avoided this index, but `severity` is `v.string()`
+    // above, not a union: only a comment documents "warning" | "critical", so
+    // an enumerated query would silently drop a future third severity from the
+    // count. An index cannot be forgotten the way an enumeration can.
+    .index("by_detectedAt", ["detectedAt"]),
 
   memoryQuality: defineTable({
     evaluatedAt: v.float64(),           // epoch seconds

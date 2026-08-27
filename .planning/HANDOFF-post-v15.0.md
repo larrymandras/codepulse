@@ -10,15 +10,17 @@ On 2026-08-26 an audit found 8 requirements marked `Pending` on phases already s
 There is now a ratchet for the first class (`src/requirementsDrift.ratchet.test.ts`), but it only
 catches `Pending`-on-`Complete`. Everything else still needs a code read.
 
-*Last revised 2026-08-27. Items 1 and 3 are now DONE — kept below with their outcomes rather than
-deleted, because "why is there no X" is the question a fresh session asks next.*
+*Last revised 2026-08-27. Items 1, 3 and 4 are DONE and item 6 is half done — all kept below with
+their outcomes rather than deleted, because "why is there no X" is the question a fresh session
+asks next. What genuinely remains: item 2 (waiting on a live row, not on work), item 5 (blocked),
+and item 6's markup half (needs an enumeration nobody has done).*
 
 ## Current state
 
 - **Milestone v15.0 "Borealis Console" is SHIPPED, closed and tagged** (`v15.0`). 8 phases
   (120–127), 87 plans, 30/30 requirements, phases archived to `.planning/milestones/v15.0-phases/`.
 - **There is no active milestone.** Next is either planning v16.0 or the list below.
-- `npm test` → 374 files / 5,323 passed / 0 failed, then browser 3 passed. `npx tsc --noEmit`
+- `npm test` → 376 files / 5,341 passed / 0 failed, then browser 3 passed. `npx tsc --noEmit`
   exit 0. CI and Gitleaks green on `7a782bfa`.
 - **`npm test` is now SEQUENTIAL** (`--project unit` then `--project browser`). Do not "simplify"
   it back to a bare `vitest run` — running the two projects concurrently is the measured cause of
@@ -95,43 +97,42 @@ the latter on Windows), or the result depends on operator machine state.
 **Not covered, stated rather than left silent:** loom-emit's 10s AbortController timeout path.
 `TIMEOUT_MS` is a module constant with no injection point, so exercising it costs a real 10s wait.
 
-### 4. Unbounded reads in `getDailyDigestDataInternal` — TWO instances, not one
+### 4. Unbounded reads in `getDailyDigestDataInternal` — ✅ DONE (2026-08-27)
 
-`convex/briefings.ts`. Re-measured 2026-08-27. The previous version of this handoff named only the
-`anomalyEvents` case; there is a second, larger one in the same function.
+`convex/briefings.ts`. There were THREE instances of the class in this one query, not the one
+originally recorded. All are fixed and deployed; guard is
+`convex/briefingsDigestBounded.test.ts`.
 
-**(a) `sessions` — `briefings.ts:156-165`. The bigger one, and a PURE CODE FIX.**
-`withIndex("by_status", q => q.eq("status","completed"))` with no range, then a post-read
-`.filter()` on `lastEventAt`, then `.collect()`. Measured: **1,575 completed sessions**, all read
-on every digest run to keep one day's worth. An unbounded probe over this table returned
-`SystemTimeoutError: too many system operations` — the same signature the `cronSummary` defect
-produced. **`by_status` is `["status","lastEventAt"]`**, so the bound pushes straight in with no
-schema change:
+- **(a) `sessions`** — the big one. `withIndex("by_status", q => q.eq("status","completed"))` with
+  no range, post-read `.filter()` on `lastEventAt`, `.collect()`. Measured **1,575 completed rows
+  read on every digest run** to keep one day's worth. Fixed by pushing both edges into
+  `by_status` (already `["status","lastEventAt"]`) — no schema change. Before/after control run
+  live: both shapes return **11 rows**, so results are identical, but the new one READS 11 where
+  the old read 1,575.
+- **(b) `aggregates`** — was half-bounded (`gte` in the index, `lt` post-read). `bucket_start` is
+  the last field of `by_type_period_bucket`, so both edges now push in.
+- **(c) `anomalyEvents`** — had no range at all. Needed a real schema change: `by_severity` is
+  `["severity","detectedAt"]` and `by_metric_detected` is `["metric","detectedAt"]`, so
+  `detectedAt` is SECOND in both and neither can bound a bare time range. Added
+  `.index("by_detectedAt", ["detectedAt"])`. Ranging per severity would have avoided the index but
+  was rejected: `severity` is `v.string()`, not a union — only a comment documents
+  `"warning" | "critical"` — so an enumerated query would silently drop a future third severity
+  from the count. **An index cannot be forgotten the way an enumeration can.**
 
-```ts
-.withIndex("by_status", (q) =>
-  q.eq("status", "completed").gte("lastEventAt", dayStart).lt("lastEventAt", dayEnd))
-```
+Deploy output confirmed both signals: `✔ No indexes are deleted by this push` and
+`✔ Added table indexes: [+] anomalyEvents.by_detectedAt`. The live query returns real data
+(`totalCost` 2.71, `anomalyCount` 0, sessions and findings populated).
 
-**(b) `aggregates` — `briefings.ts:168-176`.** Half-bounded already: the `gte` is inside the index,
-only the `lt` is post-read. The index bound does the heavy lifting; low priority.
+Consumers: `briefings.ts:404` and `emailDigest.ts:213`.
 
-**(c) `anomalyEvents` — `briefings.ts:180-190`.** `withIndex("by_severity")` with no range plus a
-post-read `.filter()` on `detectedAt`, then `.collect()`. Measured **40 rows** (severities:
-`critical` 16, `warning` 24). Harmless today. Both available indexes put `detectedAt` SECOND
-(`by_severity` is `["severity","detectedAt"]`, `by_metric_detected` is `["metric","detectedAt"]`),
-so a bare time range needs a new `by_detectedAt` index — schema change and deploy. Ranging per
-severity instead would avoid that, but `severity` is `v.string()`, not a union — only a comment
-documents the two values — so an enumerated fix would silently drop a future third severity from
-the count.
+Units are consistent throughout — `detectedAt` is epoch SECONDS (`schema.ts:1279`) and
+`dayEnd = dayStart + 86400`. The guard has a test pinning that, because a millisecond bound would
+put the window in 1970 and read as "no activity today" rather than as a failure.
 
-Both consumers: `briefings.ts:404` and `emailDigest.ts:213`.
-
-Units check out: `detectedAt` is epoch SECONDS (`schema.ts:1279`) and `dayEnd = dayStart + 86400`,
-so the comparison is consistent — not the vacuous-cutoff trap.
-
-Guard pattern for any fix: `convex/automationCronSummaryBounded.test.ts` or
-`convex/messageRoutesBounded.test.ts`. Assert on the recorded query, never the returned rows.
+**If you add another read here:** assert on the RECORDED QUERY, never the returned rows. A
+surviving unbounded read returns identical digest numbers on a small fixture, so the values cannot
+discriminate. Pattern: `briefingsDigestBounded.test.ts`, `automationCronSummaryBounded.test.ts`,
+`messageRoutesBounded.test.ts`.
 
 ### 5. MISSION-02 — genuinely blocked, and do not re-litigate it cheaply
 
@@ -148,31 +149,38 @@ that — see `REQUIREMENTS.md` item 2 for the full retraction. Both facts:
 The real unblock is plumbing the trace id out through the `_dispatch` boundary
 (`delegate_task.py:398`), which crosses the sub-agent result type. Plan it; don't improvise it.
 
-### 6. The privacy levels are decorative app-wide
+### 6. The privacy levels — JS gate FIXED, markup half still open
 
-Found 2026-08-27 while building item 1. Not fixed — scoped work, recorded here on purpose.
+Found 2026-08-27 while building item 1. Both halves of the mechanism were inert; one is now fixed.
 
-`PrivacyContext` carries TWO independent pieces of state, and almost nothing reads the second:
-
+`PrivacyContext` carries TWO independent pieces of state:
 - `setLevel` (`src/contexts/PrivacyContext.tsx:59-66`) writes **only** `level`. It never touches
-  `enabled`. So a user who picks Screenshot from the default off state still has
+  `enabled`. So a user who picks Demo or Screenshot from the default off state still has
   `enabled === false`.
-- `usePrivacyMask`'s `mask`, `maskText` and `redact` (`src/hooks/usePrivacyMask.ts`) all gate on
-  `enabled` alone. In screenshot mode they therefore redact **nothing**.
+- Every `usePrivacyMask` helper gated on `enabled` alone, so at demo/screenshot level they masked
+  **nothing**.
 - The CSS half — `.privacy-demo [data-sensitive] { filter: blur(4px) }` and
   `.privacy-screenshot [data-sensitive] { visibility: hidden }` at `src/index.css:649-661` — keys
   off a `data-sensitive` attribute that had **zero consumers** anywhere in `src/`.
-  `MessageRoutingSummary.tsx` is now the first and only one.
 
-So both halves of the mechanism were inert: the JS gate never fires at demo/screenshot level, and
-the CSS rule had nothing to select. Item 1 fixed this for `maskHandle` only (gated on
-`enabled || level !== "off"`, element marked `data-sensitive`) because that element renders real
-PII. The rest is untouched — `mask`/`maskText`/`redact` have many call sites and changing them
-app-wide is its own piece of work.
+**✅ Fixed (2026-08-27):** `usePrivacyMask` now derives one `masking` flag —
+`enabled || level !== "off"` — and `mask`, `maskText`, `maskFilePath`, `redact` and `maskHandle`
+all gate on it. The per-setting toggles (`maskPaths`/`maskEmails`/`maskKeys`/`maskIps`) still gate
+their own rule, so `masking` widens WHEN masking applies without overriding WHICH rules apply — a
+test pins that distinction. Guard: `src/hooks/usePrivacyMask.test.tsx`. Mutation-proved in both
+directions: reverting the gate to `enabled` alone turns 9 tests red, and forcing it always-on turns
+3 red, so over-masking is caught too.
 
-If you take it: the shape is (i) make the three helpers level-aware, and (ii) find what screenshot
-mode was ever meant to hide and mark those elements `data-sensitive`. Part (ii) is the unknown —
-nobody has enumerated it.
+**⚠ STILL OPEN — the markup half.** `data-sensitive` has exactly TWO consumers, both in
+`MessageRoutingSummary.tsx`. Screenshot mode's `visibility: hidden` rule therefore still hides
+almost nothing anywhere in the app. Closing it means enumerating every element that renders PII
+and marking it — and **nobody has ever enumerated that list**. That is the unknown, and it is why
+this half was not swept blind: guessing at the set would produce a mechanism that looks complete
+and is not, which is the same failure as the one above.
+
+Note the JS fix alone changes behaviour app-wide: anything routed through `mask`/`maskText`/
+`redact` now masks at demo and screenshot levels where it previously did not. Full suite green
+(5,341 passed) and `tsc` clean after the change, so no consumer depended on the old behaviour.
 
 ## Disclosure
 

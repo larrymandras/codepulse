@@ -152,19 +152,36 @@ export const getDailyDigestDataInternal = internalQuery({
   handler: async (ctx, { dayStart }) => {
     const dayEnd = dayStart + 86400;
 
-    // (a) Today's completed sessions
+    // ------------------------------------------------------------------
+    // Every read below bounds the day window INSIDE its index. Convex's
+    // `.filter()` runs on rows ALREADY READ — it does not bound the scan — so
+    // the previous `withIndex(...)` + `.filter(range)` + `.collect()` shape
+    // read the whole slice and discarded in JS. Guarded by
+    // `briefingsDigestBounded.test.ts`, which asserts on the RECORDED QUERY:
+    // a surviving unbounded read returns identical digest numbers on a small
+    // fixture, so the values cannot tell the two apart.
+    //
+    // All three columns are epoch SECONDS, matching `dayStart`/`dayEnd`.
+    // ------------------------------------------------------------------
+
+    // (a) Today's completed sessions. `by_status` is ["status","lastEventAt"],
+    // so the range narrows the index behind the status equality — it does not
+    // replace it. Measured 2026-08-27 before this bound: 1,575 completed rows
+    // read on every digest run to keep one day's worth, and an unbounded probe
+    // over the table returned `SystemTimeoutError: too many system operations`.
     const completedSessions = await ctx.db
       .query("sessions")
-      .withIndex("by_status", (q) => q.eq("status", "completed"))
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("lastEventAt"), dayStart),
-          q.lt(q.field("lastEventAt"), dayEnd)
-        )
+      .withIndex("by_status", (q) =>
+        q
+          .eq("status", "completed")
+          .gte("lastEventAt", dayStart)
+          .lt("lastEventAt", dayEnd)
       )
       .collect();
 
-    // (b) Daily cost from aggregates
+    // (b) Daily cost from aggregates. `bucket_start` is the LAST field of
+    // by_type_period_bucket, so both edges push in. Only the `gte` did before;
+    // half a bound still read every bucket after dayStart, forever forward.
     const costRows = await ctx.db
       .query("aggregates")
       .withIndex("by_type_period_bucket", (q) =>
@@ -172,20 +189,21 @@ export const getDailyDigestDataInternal = internalQuery({
           .eq("metric_type", "cost")
           .eq("period", "hourly")
           .gte("bucket_start", dayStart)
+          .lt("bucket_start", dayEnd)
       )
-      .filter((q) => q.lt(q.field("bucket_start"), dayEnd))
       .collect();
     const totalCost = costRows.reduce((sum, r) => sum + r.value, 0);
 
-    // (c) Anomaly events count for today (use by_severity index, filter by detectedAt)
+    // (c) Anomaly events count for today, through the dedicated
+    // `by_detectedAt` index. `by_severity` and `by_metric_detected` both put
+    // `detectedAt` second, so neither could bound a bare time range — this read
+    // previously had no range at all. Ranging per severity would have avoided
+    // the new index but `severity` is `v.string()`, so a future third value
+    // would silently vanish from the count.
     const anomalyRows = await ctx.db
       .query("anomalyEvents")
-      .withIndex("by_severity")
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("detectedAt"), dayStart),
-          q.lt(q.field("detectedAt"), dayEnd)
-        )
+      .withIndex("by_detectedAt", (q) =>
+        q.gte("detectedAt", dayStart).lt("detectedAt", dayEnd)
       )
       .collect();
     const anomalyCount = anomalyRows.length;
