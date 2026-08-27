@@ -1097,7 +1097,12 @@ handed off or left alone.
   2. SEED-005, SEED-006, and SEED-007's `submittedAt` half read `shipped` in their seed files, each citing the commit/phase that shipped them.
   3. `.planning/REQUIREMENTS.md` no longer carries a "Carried forward from v14.0" list — each of its nine items resolves to a v16.0 requirement ID or a dated out-of-scope entry, no unowned note survives.
   4. `requirementsDrift.ratchet.test.ts` is extended to fail when a phase is marked Complete while a mapped requirement reads `Pending` OR carries a stale `Partial` note — proven by a mutation that sets exactly that state and watching the test go red, then reverting.
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
+- [ ] 128-01-PLAN.md - re-derive the five "already fixed" claims RECON-01 rests on; close or keep each with file:line evidence
+- [ ] 128-02-PLAN.md - re-derive the other 13 pending todos; evidence to keep open, explicit live-measurement deferrals where code cannot settle it
+- [ ] 128-03-PLAN.md - re-derive all 9 seed statuses (absorbed/shipped) and audit the 9 dissolved carried-forward items
+- [ ] 128-04-PLAN.md - extend requirementsDrift.ratchet.test.ts with the SHA-ancestry stale-Partial check (D-03a) and its controls, incl. the same-day case a date comparison would pass
+- [ ] 128-05-PLAN.md - give CI the git history the ancestry comparison needs, then prove the ratchet red/green against the real planning files
 
 ### Phase 129: Dashboard Unbounded Read & Ratchet Coverage
 **Goal**: The Dashboard route and its ratchet guard both stop being blind to unbounded full-table scans.
@@ -1421,7 +1426,7 @@ execute in any order relative to each other.
 
 | Phase | Milestone | Plans Complete | Status | Completed | Notes |
 |-------|-----------|----------------|--------|-----------|-------|
-| 128. Planning Reconciliation | v16.0 | 0/TBD | Not started | - | |
+| 128. Planning Reconciliation | v16.0 | 0/5 | Not started | - | |
 | 129. Dashboard Unbounded Read & Ratchet Coverage | v16.0 | 0/TBD | Not started | - | |
 | 130. Inbox Count Reconciliation | v16.0 | 0/TBD | Not started | - | |
 | 131. UI Polish Sweep | v16.0 | 0/TBD | Not started | - | |

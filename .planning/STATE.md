@@ -8,7 +8,7 @@ last_activity: 2026-08-27 - ROADMAP.md created (30 phases, 128-157) for v16.0 Te
 progress:
   total_phases: 30
   completed_phases: 0
-  total_plans: 0
+  total_plans: 5
   completed_plans: 0
   percent: 0
 ---

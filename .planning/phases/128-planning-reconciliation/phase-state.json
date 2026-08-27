@@ -1,0 +1,41 @@
+{
+  "phase": 128,
+  "phaseName": "planning-reconciliation",
+  "created": "2026-08-27T18:25:36.137Z",
+  "history": [
+    {
+      "timestamp": "2026-08-27T18:25:36.137Z",
+      "command": "plan-phase",
+      "ready": false,
+      "missing": [
+        "UI-SPEC.md"
+      ]
+    },
+    {
+      "timestamp": "2026-08-27T18:26:10.387Z",
+      "command": "plan-phase",
+      "ready": false,
+      "missing": [
+        "UI-SPEC.md"
+      ]
+    }
+  ],
+  "lastCheck": "2026-08-27T18:26:10.387Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "128-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "128-DISCUSSION-LOG.md"
+      ]
+    }
+  }
+}
