@@ -28,8 +28,12 @@
  *
  *   2. For every completed todo whose `closed_by` names `128-01` specifically, every
  *      `path:line` citation inside its `## Resolution (...)` section must resolve to a real
- *      file on disk. A closure that cites a path that does not exist is unverifiable — the
- *      same failure mode as closing on "I looked and it seemed fine."
+ *      file on disk, AND the cited line number must fall inside that file. A closure that
+ *      cites a path that does not exist is unverifiable — the same failure mode as closing
+ *      on "I looked and it seemed fine." A path that resolves while its line number does not
+ *      is the quieter version of the same thing, so both are enforced.
+ *      NOTE the residual limit: this proves the line EXISTS, not that it says what the
+ *      verdict claims. Only a human or a reviewer agent reading the line can establish that.
  *
  * Prints the population examined (total completed files, count closed by 128-01, count of
  * citations checked) and exits non-zero if the citation count is zero — a checker that
@@ -70,8 +74,15 @@ function extractResolutionSection(text) {
 /** Extracts unique `path:line` citations from a text block. Mirrors the pattern used by
  * this plan's Task 1 verify command. */
 function extractCitations(text) {
-  const cites = [...text.matchAll(/([\w./-]+\.(?:ts|tsx|md|mjs)):(\d+)/g)].map((m) => m[1]);
-  return [...new Set(cites)];
+  const seen = new Set();
+  const cites = [];
+  for (const m of text.matchAll(/([\w./-]+\.(?:ts|tsx|md|mjs)):(\d+)/g)) {
+    const key = `${m[1]}:${m[2]}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cites.push({ rel: m[1], line: Number(m[2]) });
+  }
+  return cites;
 }
 
 function main() {
@@ -89,6 +100,7 @@ function main() {
   const missingFrontmatter = [];
   const legacyPendingAnomalies = [];
   const deadCitations = [];
+  const outOfRangeCitations = [];
 
   for (const file of files) {
     totalCompleted++;
@@ -128,11 +140,21 @@ function main() {
     const resolutionText = extractResolutionSection(text);
     const citations = extractCitations(resolutionText);
 
-    for (const rel of citations) {
+    for (const { rel, line } of citations) {
       citationsChecked++;
       const abs = join(REPO_ROOT, rel);
       if (!existsSync(abs)) {
         deadCitations.push({ file, citation: rel });
+        continue;
+      }
+      // A path that resolves proves the FILE exists; it says nothing about the line.
+      // In a phase whose whole currency is file:line evidence, a line number nobody
+      // checks is decorative -- so bound it against the cited file's real length.
+      // Split on "\n" only: a trailing "\r" rides along on each element and does not
+      // change the COUNT, so this is CRLF-safe without needing a regex.
+      const lineCount = readFileSync(abs, "utf8").split("\n").length;
+      if (line < 1 || line > lineCount) {
+        outOfRangeCitations.push({ file, citation: `${rel}:${line}`, lineCount });
       }
     }
   }
@@ -166,6 +188,14 @@ function main() {
     console.error(`FAIL: ${deadCitations.length} unresolvable citation(s):`);
     for (const d of deadCitations) {
       console.error(`  - ${d.file}: cites "${d.citation}", which does not exist on disk`);
+    }
+  }
+
+  if (outOfRangeCitations.length > 0) {
+    failed = true;
+    console.error(`FAIL: ${outOfRangeCitations.length} citation(s) naming a line outside the cited file:`);
+    for (const o of outOfRangeCitations) {
+      console.error(`  - ${o.file}: cites "${o.citation}", but that file has only ${o.lineCount} line(s)`);
     }
   }
 
