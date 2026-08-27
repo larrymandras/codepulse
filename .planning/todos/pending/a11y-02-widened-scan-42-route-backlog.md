@@ -7,7 +7,7 @@ trigger_when: A follow-up phase scoped to accessibility/ARIA remediation beyond 
 scope: Large — 96 objects / 966 nodes across 42 routes, 7 of 8 rule categories entirely un-triaged to source
 source: Measured 2026-08-20 by plan 123-08 (140/188 cells) + its orchestrator addendum (the remaining 48/188 cells, dev-server-gap recovery). Operator decision recorded in 123-CRITERION-DECISION.md.
 resolves_phase: 133
-last_reviewed: 2026-08-20
+last_reviewed: 2026-08-27
 ---
 
 # A11Y-02's criterion held at 20 cells — the other 42 routes' violations, sized
@@ -120,3 +120,33 @@ design (`text-primary/NN`, `text-muted-foreground/NN`, `text-(--token)/NN`) — 
 button-name/label/select-name/aria-*/link-in-text-block/scrollable-region-focusable are markup and
 ARIA-attribute fixes, a different work category, and this phase's plans were not built to do a
 fresh axe-to-source triage pass on top of the contrast sweep already scoped.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06/D-07. This claim splits into a
+settleable-by-code half and a live-measurement half, and the two do not share a verdict:
+
+**Settled (by reading code):** `.planning/REQUIREMENTS.md:77-79` — `A11Y-03`: "The 42-route
+violation backlog is triaged to source. 96 objects / 966 nodes measured 2026-08-20, with 7 of 8
+rule categories carrying no `file:line` triage at all. Sizing the un-triaged categories is task
+1" — a verbatim match to this todo's own framing and figures, confirming A11Y-03
+(`.planning/REQUIREMENTS.md:253`, `Phase 133 | Pending`) now owns the triage exactly as this todo
+anticipated. The referenced measurement artifacts still exist on disk (relocated, not deleted, by
+the v15.0 milestone close): `.planning/milestones/v15.0-phases/123-accessibility-remediation/123-CONTRAST-RESULT.md`,
+`123-CONTRAST-RESULT-ADDENDUM.md`, `123-CRITERION-DECISION.md` all confirmed present.
+
+**Not settleable (requires live measurement, per D-07):** whether the 96 objects/966 nodes figure
+still holds TODAY is a live-DOM/axe-scan property, not a code property — re-establishing it
+requires re-running `e2e/theme-contrast.spec.ts` against a live `dev:noauth` server (command given
+in this todo's own "Derivation commands" section), which reading source cannot substitute for.
+`REQUIRES LIVE MEASUREMENT — deferred to Phase 133`. This todo's own CRITICAL section already
+names the specific reason the figure may have moved (Ideation's theme-unstable 474-node reading,
+55% of the button-name total) — re-affirmed here as the first thing Phase 133 must re-check, not
+settled by this session.
+
+**Verdict: SPLIT.** The ownership half is CONFIRMED CURRENT; the population half REQUIRES LIVE
+MEASUREMENT — deferred to Phase 133. This todo stays in `pending/` (D-06: the population-holds-
+today claim is unverified by reading, so it cannot be closed on that basis). Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 7.
+`resolves_phase: 133` confirmed against `.planning/REQUIREMENTS.md:253`
+(`A11Y-03 | Phase 133 | Pending`).

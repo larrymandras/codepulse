@@ -7,7 +7,7 @@ trigger_when: The next Forge- or Analytics-touching phase in v15.0, or a dedicat
 scope: Small-to-medium (two independent visual treatments; the chart one may be a charting-library config rather than a token change)
 source: Operator screenshots 2026-08-19 under Matrix Emerald at 1920px; traced against the pre-phase blob 001c1e73
 resolves_phase: 131
-last_reviewed: 2026-08-19
+last_reviewed: 2026-08-27
 ---
 
 # Forge selected-row and single-series charts read as saturated slabs
@@ -60,3 +60,19 @@ explicit "single provider" summary treatment. Decide by role, not by palette.
 
 All three are Forge-page work and should be scheduled together; fixing them one at a time means
 three separate visual re-checks with the operator.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06/D-07. Both complaints are
+rendered-appearance judgements ("reads as a slab", "occupies most of the panel") depending on
+token color values, chart-library layout, and screen composition together — not determinable from
+class strings or component code alone. Context only (not evidence of presence or absence):
+`src/components/forge/ForgeJobList.tsx` still contains `isSelected ? "bg-accent border-l-2
+border-primary" : ""` at the line this todo cites, and `LlmProviderPanel.tsx`'s wrapper is still
+`bg-card/50`, both re-read this session — cited for continuity only, not as proof the visual
+complaint is still live.
+
+**REQUIRES LIVE MEASUREMENT — deferred to Phase 131.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 9.
+`resolves_phase: 131` confirmed against `.planning/REQUIREMENTS.md:251`
+(`FIX-08 | Phase 131 | Pending`).

@@ -7,7 +7,7 @@ trigger_when: Next Phase 190 / KnowledgeGraph work, or the next time CI reports 
 scope: Small (one test's async synchronisation)
 source: Measured 2026-08-19 on codepulse master; 6 isolated runs of the unmodified tree
 resolves_phase: 136
-last_reviewed: 2026-08-19
+last_reviewed: 2026-08-27
 ---
 
 # `GLXY-02: the all-on-screen branch logs requested/resolved counts` is flaky (~17%)
@@ -62,3 +62,21 @@ The test file's most recent commit is `db9dced6 feat(190-08)` — phase-190 work
 session. Deliberately NOT fixed here: editing another workstream's live test file mid-flight risks
 colliding with uncommitted work, and a 17% flake is not a Phase 122 gate failure. Phase 122's own
 full-suite gates were re-run and are green.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06/D-07. `.planning/REQUIREMENTS.md:99`
+states the flake family is "Four separate filings that are ONE family" — the fourth lives outside
+this repo (`test-isolation-full-suite-only-failures.md`'s own body names the astridr-repo analog);
+of the three filed here, this one and `vitest-suite-nondeterministic-one-random-failure-per-run.md`
+both name the SAME concrete failure — `KnowledgeGraph.test.tsx`'s GLXY-02 assertion — observed
+from two different vantage points. This todo's own investigation already read the emitting code
+(`src/pages/KnowledgeGraph.tsx:824-825`, re-confirmed present this session) and established the
+log line the test expects IS emitted — the defect is that the branch is not always reached before
+the assertion runs, an async-timing race that a source read cannot reproduce; establishing whether
+it still fires needs N repeated live runs (this todo's own six-run methodology).
+
+**REQUIRES LIVE MEASUREMENT — deferred to Phase 136.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 11.
+`resolves_phase: 136` confirmed against `.planning/REQUIREMENTS.md:259`
+(`FLAKE-01 | Phase 136 | Pending`).

@@ -7,7 +7,7 @@ trigger_when: Next Forge- or page-layout-touching phase in v15.0. Not urgent —
 scope: Small (one plan — the card header row inside a fixed-width master column)
 source: Observed live 2026-08-19 at http://localhost:5173/forge, 1920px viewport; src/pages/ForgePage.tsx:175
 resolves_phase: 131
-last_reviewed: 2026-08-19
+last_reviewed: 2026-08-27
 ---
 
 # Forge job-list column clips its card header rows
@@ -69,3 +69,19 @@ files under `src/`, and `index.html` is not under `src/`, so it was never a cand
 This is tracked separately from this todo's layout defect — raised to the operator during Phase
 122 wave 3 for a scope call, since it falls inside the phase's stated goal (sweep raw palette
 classes) but outside its measured population.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06/D-07. This todo's own investigation
+already ruled out every code-level candidate (fixed-width class unchanged since pre-Phase-122, no
+responsive-override regression, no column-level overflow) and concluded the defect is that "the
+card header row has no wrapping or truncation strategy for a 280px container" — a
+rendered-content-overflow-at-a-given-viewport claim that depends on real (variable-length) job
+names/workspace chips at 1920px, which a static class read cannot settle. Context only:
+`src/pages/ForgePage.tsx:175`'s master-column classes, re-read this session, are unchanged from
+this todo's transcription.
+
+**REQUIRES LIVE MEASUREMENT — deferred to Phase 131.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 10.
+`resolves_phase: 131` confirmed against `.planning/REQUIREMENTS.md:250`
+(`FIX-07 | Phase 131 | Pending`).
