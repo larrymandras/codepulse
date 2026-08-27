@@ -22,7 +22,9 @@ ship) or move them back to `pending/` (if it did not).
 entirely**, using older vocabulary (`status: resolved`, `status: closed-fixed`,
 `status: closed-accepted-by-design`, a bare `resolved:` date field, no `closed_by:` at all):
 `118-detectcredentialvalue-misses-fal-key.md`, `flaky-workspacescan-deep-tree.md`,
-`114-clerk-bounce-tracking-and-dev-keys.md`, `onboarding-modal-blocks-app.md`, plus the two
+`114-clerk-bounce-tracking-and-dev-keys.md`, `onboarding-modal-blocks-app.md`,
+`85-focus-centering-and-kg-effect-robustness.md` (which carries no `status:` field at all --
+a third sub-case, distinct from both the modern triple and the two anomalies), plus the two
 `status: pending` anomalies above. `checks/closed-todos.mjs` does not enforce the strict triple
 against these — only against todos that carry a `closed_by:` field at all. Retroactively
 normalizing all seven to the modern convention is a reasonable future-phase cleanup, not this
