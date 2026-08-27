@@ -116,7 +116,7 @@ A reminder due 60s in the past was created (`source:"dashboard"`), then the real
 
 ```
 17:20:39  reminder_nudge.scan_complete  nudged=0        (before it existed)
-17:25:40  proactive.alert_sent          channel_id=telegram chat_id=7815748065
+17:25:40  proactive.alert_sent          channel_id=telegram chat_id=<redacted-operator-chat-id>
 17:25:40  reminder_nudge.sent           id=kx7t8re… profile=personal
 17:25:40  reminder_nudge.scan_complete  nudged=1  failed=[]
 17:30:39  reminder_nudge.scan_complete  nudged=0        ← dedupe holds
