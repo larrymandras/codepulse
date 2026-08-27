@@ -33,7 +33,7 @@ key-decisions:
 requirements-completed: [RECON-04]
 
 # Metrics
-duration: ~20min
+duration: ~12min
 completed: 2026-08-27
 ---
 
@@ -45,9 +45,14 @@ commit-backed red/green mutation — not just the fake-oracle fixtures 128-04 sh
 
 ## Performance
 
-- **Duration:** ~20 min (measured from first task commit `ee6ac6b5` at 18:04:39-04:00 to final
-  task commit `d18ebe9a` at 18:16:10-04:00; exact wall-clock session start was not separately
-  captured before file reads began)
+- **Duration:** ~12 min of committed work — 11m31s from first task commit `ee6ac6b5`
+  (18:04:39-04:00) to final task commit `d18ebe9a` (18:16:10-04:00), or 14m13s to the branch
+  tip `b3d1a8b7` (18:18:52-04:00). Exact wall-clock session start was not separately captured
+  before file reads began, so this is a lower bound on total elapsed time, not a measurement
+  of it.
+  (CORRECTED 2026-08-27: this line originally read "~20 min" while citing those same two
+  timestamps, which subtract to 11m31s. Found by the phase-128 adversarial claims audit.
+  Nothing else in this SUMMARY depended on the figure.)
 - **Tasks:** 2/2
 - **Files modified:** 2 (`.github/workflows/ci.yml`, plus the new
   `128-RATCHET-EVIDENCE.md`)
