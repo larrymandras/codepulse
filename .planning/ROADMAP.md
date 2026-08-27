@@ -1053,7 +1053,7 @@ handed off or left alone.
 
 **Phase summary:**
 
-- [ ] **Phase 128 — Planning Reconciliation** — close already-fixed todos/seeds against the code and dissolve the stale carried-forward list
+- [x] **Phase 128 — Planning Reconciliation** — close already-fixed todos/seeds against the code and dissolve the stale carried-forward list (completed 2026-08-27)
 - [ ] **Phase 129 — Dashboard Unbounded Read & Ratchet Coverage** — bound `/`'s `events`/`discoveredTools` reads and close the ratchet's blind spot
 - [ ] **Phase 130 — Inbox Count Reconciliation** — make the `/inbox` tab count and sidebar badge agree
 - [ ] **Phase 131 — UI Polish Sweep** — IdeationRow tokens, sidebar overflow, alert row overlap, Forge column clipping, Forge chart saturation
@@ -1098,11 +1098,11 @@ handed off or left alone.
   3. `.planning/REQUIREMENTS.md` no longer carries a "Carried forward from v14.0" list — each of its nine items resolves to a v16.0 requirement ID or a dated out-of-scope entry, no unowned note survives.
   4. `requirementsDrift.ratchet.test.ts` is extended to fail when a phase is marked Complete while a mapped requirement reads `Pending` OR carries a stale `Partial` note — proven by a mutation that sets exactly that state and watching the test go red, then reverting.
 **Plans**: 5 plans in 3 waves
-- [ ] 128-01-PLAN.md - re-derive the five "already fixed" claims RECON-01 rests on; close or keep each with file:line evidence
-- [ ] 128-02-PLAN.md - re-derive the other 13 pending todos; evidence to keep open, explicit live-measurement deferrals where code cannot settle it
-- [ ] 128-03-PLAN.md - re-derive all 9 seed statuses (absorbed/shipped) and audit the 9 dissolved carried-forward items
-- [ ] 128-04-PLAN.md - extend requirementsDrift.ratchet.test.ts with the SHA-ancestry stale-Partial check (D-03a) and its controls, incl. the same-day case a date comparison would pass
-- [ ] 128-05-PLAN.md - give CI the git history the ancestry comparison needs, then prove the ratchet red/green against the real planning files
+- [x] 128-01-PLAN.md - re-derive the five "already fixed" claims RECON-01 rests on; close or keep each with file:line evidence
+- [x] 128-02-PLAN.md - re-derive the other 13 pending todos; evidence to keep open, explicit live-measurement deferrals where code cannot settle it
+- [x] 128-03-PLAN.md - re-derive all 9 seed statuses (absorbed/shipped) and audit the 9 dissolved carried-forward items
+- [x] 128-04-PLAN.md - extend requirementsDrift.ratchet.test.ts with the SHA-ancestry stale-Partial check (D-03a) and its controls, incl. the same-day case a date comparison would pass
+- [x] 128-05-PLAN.md - give CI the git history the ancestry comparison needs, then prove the ratchet red/green against the real planning files
 
 ### Phase 129: Dashboard Unbounded Read & Ratchet Coverage
 **Goal**: The Dashboard route and its ratchet guard both stop being blind to unbounded full-table scans.
@@ -1426,7 +1426,7 @@ execute in any order relative to each other.
 
 | Phase | Milestone | Plans Complete | Status | Completed | Notes |
 |-------|-----------|----------------|--------|-----------|-------|
-| 128. Planning Reconciliation | v16.0 | 0/5 | Not started | - | |
+| 128. Planning Reconciliation | v16.0 | 5/5 | Complete | 2026-08-27 | Completed 2026-08-27. 5/5 plans. **Progress row and STATE counters set BY HAND** -- `gsd-sdk query phase.complete 128` returned `roadmap_updated: true`, `state_updated: true`, `warnings: []` while leaving this row at `0/5 | Not started`, `completed_phases` at 0 and `percent` at 0; only the checklist checkbox above and the REQUIREMENTS marks were actually written. Judged by diff against a pre-call snapshot, not by the payload. Every plan passed an adversarial gate (mutation tester + claims auditor; a runtime prover ran on the first three) which found **11 real defects**, and a code review found **3 more** -- all 14 fixed, each proven red-then-green against a control. Five were guards that could not fail on the defect they were written to catch: `closed-todos.mjs` discarded the line number it captured; `open-todos.mjs` silently reclassified a corrupted deferral as evidence-backed and had no zero-population guard; `seed-status.mjs` let an absorbed seed revert to `dormant`, the exact re-proposal failure the plan exists to prevent; and `gitIsShallow` had no test at all. The code review then caught a live logic bug in the new ratchet: commit identity was decided by string equality while `completionCommitFor` returns a full 40-char SHA and the documented stamp convention is 7 chars, so the most common FRESH case would have reported STALE. RECON-04's live assertion is **vacuous today by disclosure** (46 Pending rows, 0 Partial); discrimination is carried by an injected fake-oracle table, real-git fixtures, and one live red/green mutation against the real planning files with a byte-identical restore. All three `checks/*.mjs` now run under `npm test` and CI via `src/planningChecks.ratchet.test.ts`, and `ci.yml` gained `fetch-depth: 0`, guarded by a js-yaml-parsing test since nothing previously guarded that single line. Verification: `128-VERIFICATION.md` (passed, 4/4). Review: `128-REVIEW.md` (0 Critical, 3 Warning). |
 | 129. Dashboard Unbounded Read & Ratchet Coverage | v16.0 | 0/TBD | Not started | - | |
 | 130. Inbox Count Reconciliation | v16.0 | 0/TBD | Not started | - | |
 | 131. UI Polish Sweep | v16.0 | 0/TBD | Not started | - | |

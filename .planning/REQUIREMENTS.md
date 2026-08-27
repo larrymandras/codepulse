@@ -30,17 +30,17 @@ as its top finding — and it found one defect nobody had filed at all (FIX-01).
 The already-fixed work whose documentation still reads `pending`. This is bookkeeping against
 code, not development.
 
-- [ ] **RECON-01**: Every pending todo that is already fixed in code is moved to `completed/`
+- [x] **RECON-01**: Every pending todo that is already fixed in code is moved to `completed/`
       with the `file:line` proving it, or is confirmed still-open with evidence. Eight are known
       already-fixed: `/tool-galaxy` timeout, `/automation` stat cards, `inbox.listHeldUnacked`,
       Forge loading-div ARIA, unbounded analytics scans, plus the three seeds below.
-- [ ] **RECON-02**: Seed statuses reflect reality — SEED-005 (shipped v14.0), SEED-006 (shipped
+- [x] **RECON-02**: Seed statuses reflect reality — SEED-005 (shipped v14.0), SEED-006 (shipped
       v15.0) and SEED-007's `submittedAt` half (shipped astridr `e435f71a`) are marked shipped
       rather than dormant.
-- [ ] **RECON-03**: The "Carried forward from v14.0" list is dissolved — each of its nine items
+- [x] **RECON-03**: The "Carried forward from v14.0" list is dissolved — each of its nine items
       is either a v16.0 requirement below or an explicit, dated out-of-scope entry. No item
       survives as an unowned note.
-- [ ] **RECON-04**: A phase cannot be marked Complete while any requirement it maps to still
+- [x] **RECON-04**: A phase cannot be marked Complete while any requirement it maps to still
       reads `Pending`. `requirementsDrift.ratchet.test.ts` already catches that one direction;
       extend it to the `Partial`-cell staleness that the v15.0 audit found in 3 of 4 cells.
 
@@ -237,10 +237,10 @@ Every v16.0 requirement maps to exactly one phase. 46/46 mapped, zero orphans.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RECON-01 | Phase 128 | Pending |
-| RECON-02 | Phase 128 | Pending |
-| RECON-03 | Phase 128 | Pending |
-| RECON-04 | Phase 128 | Pending |
+| RECON-01 | Phase 128 | Complete |
+| RECON-02 | Phase 128 | Complete |
+| RECON-03 | Phase 128 | Complete |
+| RECON-04 | Phase 128 | Complete |
 | FIX-01 | Phase 129 | Pending |
 | FIX-02 | Phase 129 | Pending |
 | FIX-03 | Phase 130 | Pending |
