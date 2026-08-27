@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v16.0
 milestone_name: Terminal Zero - Full Stack Close-Out
-status: planning
-last_updated: "2026-08-27T18:30:00.000Z"
-last_activity: 2026-08-27 - ROADMAP.md created (30 phases, 128-157) for v16.0 Terminal Zero
+status: executing
+last_updated: "2026-08-27T19:02:29.562Z"
+last_activity: 2026-08-27 -- Phase 128 execution started
 progress:
   total_phases: 30
   completed_phases: 0
@@ -68,20 +68,23 @@ Resume file (historical, v15.0 -- moved by the milestone close): .planning/miles
 
 - Milestone **v16.0 "Terminal Zero"** is scoped and being roadmapped. It spans THREE
   repositories: `codepulse`, `C:\Users\mandr\forge`, and `C:\Users\mandr\astridr-repo`.
+
 - **Dependency order is real, not padding.** Forge v4.0 Phases 22-26 (ending in the permission
   relay) gate SEED-004's Inbox/composer; the astridr MISSION-02 trace-id plumbing gates
   SEED-002's Mission Control board.
+
 - `.planning/HANDOFF-post-v15.0.md` remains accurate for the five items it lists and carries the
   file:line evidence for each. Read it before trusting any status in REQUIREMENTS.md or ROADMAP.md.
+
 - **Do not tick MISSION-01's checkbox** until a real background job produces a `subagentJobs` row
   with `finishedAt > submittedAt`. Tooling has auto-ticked it twice and it was reverted twice; the
   `mission-01-watch` cron notifies but deliberately does not mutate status.
 
 ## Current Position
 
-Phase: 128 of 157 (Planning Reconciliation) — roadmap created, not yet planned
-Plan: — (Phase 128 has no plans yet)
-Status: planning
-Next step: /gsd-plan-phase 128 (roadmap created; no plans yet)
-Last activity: 2026-08-27 - ROADMAP.md created (30 phases, 128-157) for v16.0 Terminal Zero
+Phase: 128 (planning-reconciliation) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 128
+Next step: /gsd-execute-phase 128 (5 plans in 3 waves)
+Last activity: 2026-08-27 -- Phase 128 execution started
 Last session: 2026-08-27T18:30:00.000Z
