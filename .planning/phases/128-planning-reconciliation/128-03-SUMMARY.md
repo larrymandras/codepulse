@@ -210,3 +210,13 @@ requiring action from this plan:
 ---
 *Phase: 128-planning-reconciliation*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/128-planning-reconciliation/128-SEED-RECONCILIATION.md`
+- FOUND: `.planning/phases/128-planning-reconciliation/checks/seed-status.mjs`
+- FOUND: `.planning/phases/128-planning-reconciliation/128-03-SUMMARY.md`
+- FOUND commit `bbfa1a0b` (Task 1)
+- FOUND commit `0aa7e2e7` (Task 2)
+- FOUND commit `6e14986c` (Task 3)
+- FOUND commit `2afb59bd` (this SUMMARY)
