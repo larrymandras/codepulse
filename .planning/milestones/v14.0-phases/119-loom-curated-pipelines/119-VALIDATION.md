@@ -82,16 +82,31 @@ BOTH `recordStepEvent` and `upsertPipeline` are `internalMutation` and that `loo
 
 ## Nyquist verdict
 
+> **CORRECTION 2026-08-27 (Phase 128, RECON-03).** The verdict and the three "still
+> uncovered" items below were accurate when written on 2026-08-26 and are NOT accurate now.
+> Commit `7a782bfa` (2026-08-27, "test(loom): close the three coverage gaps from
+> 119-VALIDATION.md") added all three files: `convex/loom.test.ts` (40 tests),
+> `src/pages/Loom.test.tsx` (24), `hooks/__tests__/loomEmit.test.mjs` (22) — 86 total,
+> 1480 insertions. Verified by re-running each file and by `git log --diff-filter=A`,
+> which shows that commit as the one that ADDED each. The superseded text is amended in
+> place below rather than deleted, so this record still shows what was true when written.
+>
+> Nyquist verdict as of 2026-08-27: **AUTOMATED.** The remaining manual-only claim no
+> longer holds.
+
 **MANUAL-ONLY, IMPROVED.** The security-weighted endpoint is now covered (row 5). Phase 119's live verification was genuinely strong — real emits, real deploy
 output, asserted on rendered content rather than absence of error — but it is entirely
 non-repeatable. Regression sampling is now **partial**: a change to `convex/loomHttp.ts` or to
 the `internalMutation` hardening in `convex/loom.ts` IS caught by `npm test`, but a change to
 `convex/loom.ts`'s query surface, `src/pages/Loom.tsx` or `hooks/loom-emit.mjs` still is not.
+**That last clause is superseded** — see the CORRECTION above; all three are covered as of
+2026-08-27.
 
 **Remaining, in priority order:**
 1. ~~`convex/loomHttp.test.ts`~~ — **DONE 2026-08-26**, 13 tests, mutation-proven.
-2. `convex/loom.test.ts` — the query/mutation surface. Still uncovered.
-3. `src/pages/Loom.test.tsx` — mock `@xyflow/react` per this repo's per-file convention.
-   Still uncovered.
-4. `hooks/loom-emit.mjs` — still uncovered, though `hooks/**/*.test.mjs` is already in the
-   `unit` project's include glob, so a test file would be collected the moment one exists.
+2. ~~`convex/loom.test.ts` — the query/mutation surface.~~ — **DONE 2026-08-27** (`7a782bfa`), 40 tests.
+3. ~~`src/pages/Loom.test.tsx` — mock `@xyflow/react` per this repo's per-file
+   convention.~~ — **DONE 2026-08-27** (`7a782bfa`), 24 tests.
+4. ~~`hooks/loom-emit.mjs` — though `hooks/**/*.test.mjs` is already in the `unit`
+   project's include glob, so a test file would be collected the moment one exists.~~ —
+   **DONE 2026-08-27** (`7a782bfa`), 22 tests in `hooks/__tests__/loomEmit.test.mjs`.
