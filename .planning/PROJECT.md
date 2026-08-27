@@ -8,29 +8,88 @@ Multi-provider operational command center for Ástríðr AI assistant. React 19 
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
-## Current Milestone: v15.0 "Borealis Console" Premium UI Overhaul
+## Current Milestone: v16.0 "Terminal Zero" — Full Stack Close-Out
 
-**Goal:** Make CodePulse look and feel genuinely premium — calm layered matte surfaces, colour spent only on state, two signature layers (aurora Signal Horizon + Pulse ECG hero), Ástríðr's serif voice — while raising usability through honest states, quiet badges, a 3-zone header and a 4-domain sidebar. Started 2026-08-17 via `/gsd-new-milestone`, consuming the `MILESTONE-CONTEXT.md` prepared 2026-08-07.
+**Goal:** Drive CodePulse, Forge and the astridr-side dependencies to zero open items — every
+filed defect fixed, every stale planning artifact reconciled against the code, and the Claude
+Code terminal eliminated as a required surface — so the stack can be handed off or left alone.
+Started 2026-08-27 via `/gsd-new-milestone`, scoped from a live code sweep rather than from the
+filed seed/todo statuses (8 of 18 pending todos and 3 of 7 seeds proved already-shipped).
 
-**Target features:**
+**Target features (in dependency order):**
 
-- **Quick wins + verified defect fixes** — the unanimous 3-model kill list (`hover:scale-[1.01]`, glitch-text, matrix-bg, CRT-by-default, per-item nav glow, decorative pulse dots, cyan scrollbar glow, violet search pill); fixed-geometry E-Stop; toast restyle; quiet badge law; the 900px sidebar/Settings collision; plus three code-verified defects — the fabricated Integrations row (`HeroStatsBar.tsx:161-168`, which carries a literal "simulation" comment), a destructive confirm living in a toast (`Tasks.tsx:144-145`), and `--status-ok` being identical to `--primary` (`index.css:139/165`).
-- **Tokens + primitives** — layered surface tokens (`--surface-0/1/2/3`, `--hairline`) across all 5 themes; the three-hue-owner law (cyan = machine, violet = Ástríðr only, `--status-*` = state); motion tokens; shared primitives with six explicit states (loading / ready / empty / stale / unavailable / error).
-- **Shell + IA** — 48px 3-zone header; 232px sidebar regrouped into 4 collapsible domains via a pure `navRegistry.ts` regroup with **no route changes**.
-- **Signature layers** — aurora-textured Signal Horizon, Pulse ECG canvas hero replacing the synthetic SYSTEM LOAD bar, and the Ástríðr serif voice trialled on **one** surface before any app-wide commit.
-- **WCAG-AA contrast remediation (SEED-006)** — pulled in because this milestone redefines the token palette across all 5 themes; fixing contrast separately would mean doing the token work twice, or re-baking known violations into the new palette. **Sizing is task 1** — 234 violations on the cyan Dashboard alone is *one cell of a 4×5 matrix*, and the true total is unmeasured. Do not plan against 234.
-- **CR-01 analytics rollup** — **DELIVERED as DEBT-08 by Phase 121 (2026-08-18).** `costByModel` and `providerBreakdown` moved onto the `aggregates` rollups with bounded `.order("desc").take(ROLLUP_READ_CAP)` reads. *(Corrected 2026-08-18: this bullet also listed `latencyOverTime` as migrating. Per `121-CONTEXT.md` D-06 it was DELETED instead — zero consumers, and no `latency` rollup exists or was added — along with `costByProvider`. Both were uncredentialed unbounded 30-day `.collect()`s over a keep-forever table, so removing them is a net reduction in public attack surface.)* The dependency this bullet describes is now discharged: a single `useQuery` throw no longer unmounts the React tree, so Phase 122's six-state tile can render an honest `unavailable` state. Phase 121 made that POSSIBLE; it deliberately did not build the tile, and tiles today still render `0` rather than `unavailable` when their query fails — that honesty gap is TOKEN-04's.
+1. **Planning reconciliation** — close the already-fixed todos and stale seeds against the code,
+   and make requirement status re-derive at PHASE close. This is v15.0's top retrospective
+   finding: `/tool-galaxy`, `/automation`, `inbox.listHeldUnacked`, the Forge loading-div ARIA
+   attribute and every `analytics.ts` read were all fixed while their todos still read `pending`.
+2. **CodePulse defect sweep** — `convex/metrics.ts:19`'s fully unbounded `events` `.collect()`
+   (found 2026-08-27; `boundedReads.ratchet.test.ts` cannot see it by design, since it flags only
+   a range comparison inside a post-read `.filter()`), the `/inbox` undercount (page counts off a
+   200-cap while the badge scans to 2000), `IdeationRow`'s raw `text-white` x3, the sidebar 4px
+   horizontal overflow, Alert Rules row overlap, Forge column clipping, Forge/Analytics saturated
+   slabs, and `polish-geometry.spec.ts`'s cold-page measurement.
+3. **A11Y-02 route backlog** — 96 objects / 966 nodes across 42 routes, with 7 of 8 rule
+   categories still un-triaged to source.
+4. **Privacy markup** — make the PII-element enumeration nobody has made, mark them
+   `data-sensitive`, and raise `MIN_CONSUMERS` off 1. The JS gate is already fixed; this is the
+   markup half, and it was deliberately not swept blind.
+5. **Test determinism** — the four filings (KnowledgeGraph `GLXY-02`, `JobsPanel`, `App.test`
+   `/memory` lazy-route hang, and the test-isolation todo) treated as ONE family,
+   measurement-first. Establishing a reproduction rate precedes any fix.
+6. **Process decisions** — `phase-state.json`'s `missing: []` currently reads green for every
+   phase regardless, so it is not a gate; and the public-repo posture has never actually been
+   decided.
+7. **Forge v4.0 completion** *(gates 11)* — Phases 22-26: worktree-per-session, WS attach +
+   stdin write, the permission-relay research spike, session UI, and the permission relay
+   implementation itself.
+8. **astridr phases** *(gates 10)* — MISSION-02's trace-id plumbing out through the `_dispatch`
+   boundary, the `tidy-whale-981` CORS origin on the deployed `feature/brain-swap` branch, and
+   MISSION-01's live-row confirmation.
+9. **SEED-003 cache-aware cost pricing** — independent of everything above; makes the cost
+   surfaces trustworthy as absolute dollars rather than relative trends.
+10. **SEED-002 Mission Control jobs board** — the live board Phase 111 deferred, unblocked by
+    item 8's MISSION-02 plumbing.
+11. **SEED-004 Project Lifecycle Cockpit** — all five components (dispatch composer + unified
+    session Inbox, Project Factory, Projects view, ship gates, tailnet cockpit), unblocked by
+    item 7's permission relay.
 
 **Key context / constraints:**
 
-- Variant B "Borealis blend" was chosen as the design winner on 2026-08-07, and **everything was held for v15.0** — nothing was pulled into v14.0. The validated design law (12 decisions, CSS patterns, motion tokens, kill list) lives in `Skill("sketch-findings-codepulse")`; the working reference implementation is `.planning/sketches/001-dashboard-quiet-control-room/index.html`.
-- **Enhance the token architecture, don't replace it.** 5 themes via `data-theme`; `readable` stays effect-free; everything gated on `prefers-reduced-motion`.
-- shadcn/Radix/Tailwind-4/Lucide only — no new UI frameworks. Entry-chunk discipline holds (the canvas hero is one component, no Recharts).
-- **Prefer upgrading shared primitives over per-page rewrites** — 200+ components inherit.
-- `/chat` is the in-repo north star and its easing is the house easing. Do not regress it.
-- Continues phase numbering from v14.0 (108–119) → **Phases 120+**.
+- **Three repositories.** codepulse + `C:\Users\mandr\forge` + `C:\Users\mandr\astridr-repo`.
+  Items 7 and 8 must land before 10 and 11 can start — that ordering is a real dependency chain,
+  not padding. Realistically 25-35 phases; v14.0 was 12 and v15.0 was 8.
+- **Forge v4.0 is EXECUTING, not shipped** (verified 2026-08-27: `forge/.planning/STATE.md` reads
+  `status: executing`; Phase 21 has 9 plans and 1 summary; Phases 22-26 have no directories).
+  Forge Phase 26 IS the permission relay that SEED-004's Inbox consumes.
+- **`npm test` stays SEQUENTIAL** (`--project unit` then `--project browser`). Running the two
+  projects concurrently is the measured cause of suite flakiness.
+- **Convex deploys must name `--env-file`**; watch the output for `Deleted table indexes:`.
+- **All three repos are shared checkouts with a concurrent session.** Stage by explicit path,
+  never `git add -A`. A rebuild or deploy ships the WORKING TREE, so it carries whatever the other
+  session left there.
+- **codepulse is PUBLIC.** Fixtures reproduce the SHAPE of live identifiers, never the values.
 
-> **Prepared 2026-08-07, started 2026-08-17.** Requirements + roadmap in REQUIREMENTS.md + ROADMAP.md.
+> **Scoped 2026-08-27 from a live code sweep.** Requirements + roadmap in REQUIREMENTS.md +
+> ROADMAP.md. Continues phase numbering from v15.0 (120-127) -> **Phases 128+**.
+
+## Prior Milestone (shipped 2026-08-26, tagged `v15.0`): v15.0 "Borealis Console" Premium UI Overhaul
+
+**Goal:** Make CodePulse look and feel genuinely premium — calm layered matte surfaces, colour
+spent only on state, two signature layers (aurora Signal Horizon + Pulse ECG hero), Ástríðr's
+serif voice — while raising usability through honest states, quiet badges, a 3-zone header and a
+4-domain sidebar.
+
+**Outcome:** 8 phases (120-127), 87 plans / 87 summaries, **30/30 requirements Complete**, 539
+commits since the `v14.0` tag. Delivered the full 4-themes x 5-pages contrast matrix measured
+against a keyless server, the accessibility remediation that measurement sized, the nav-registry
+extraction, the Signal Horizon fail-closed state machine, the Pulse ECG canvas hero, a
+`/tool-galaxy` collapse from 6,591 row reads to ONE indexed query over a chunked blob, and
+ack-aware retention janitors for `inbox` and `ideationFindings`.
+
+**Known gaps at close (carried into v16.0):** only 3 of 8 phases carry a phase-level
+VERIFICATION.md; 8 requirements sat at `Pending` on Complete phases and 3 of 4 `Partial` cells
+were stale notes — all reconciled against the code at close, but the drift itself is the finding
+and is why v16.0 opens with planning reconciliation.
 
 ## Prior Milestone (shipped 2026-08-17, tagged `v14.0`): v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board
 
