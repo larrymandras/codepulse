@@ -1,4 +1,4 @@
-﻿# Roadmap: CodePulse Command Center
+# Roadmap: CodePulse Command Center
 
 ## Milestones
 
@@ -12,9 +12,10 @@
 - ✅ **v11.0 Skills Command Center — Full Lifecycle & Launch** — Phases 97-100 (**shipped 2026-07-25**, 22/22 requirements; tagged `v11.0`) — real skill intake, full lifecycle mutations (archive/restore/move/delete), skill launch/dispatch to Chat/Forge-agent/Ástríðr, control-surface UX — cross-repo Forge daemon executor — [archive](milestones/v11.0-ROADMAP.md) · [audit](milestones/v11.0-MILESTONE-AUDIT.md)
 - ✅ **v12.0 Personal Productivity — Reminders & Calendar** — Phases 101-102 (**shipped 2026-07-23**, 10/10 plans; tagged `v12.0`) — profile-segmented reminders (personal/business/consulting) with bidirectional CodePulse↔Ástríðr sync, recurrence, proactive nudges, and a read-only Google Calendar overlay per profile — cross-repo (codepulse + astridr-repo) — [archive](milestones/v12.0-ROADMAP.md)
 - ✅ **v13.0 Brain-Swap Control, Cost Intelligence & Consolidation** — Phases 103-107 (**shipped 2026-08-06**, 53 plans, 14/15 requirements — BSC-01 PARTIAL by design) — CodePulse control surface for Ástríðr's on-the-fly reasoning-engine swap, per-model cost intelligence + budget alerts, tool/trace observability, and a consolidation/hardening pass — [archive](milestones/v13.0-ROADMAP.md)
-- ✅ **v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board** — Phases 108-113 (**in progress**, formalized 2026-08-06) — closes BSC-01's deferred per-agent axis (cross-repo astridr emitter + scoped `swap.set`), Convex durability (aggregates pruning, retention verification, memory-growth root cause), a frontend-only mission board, telemetry-coverage closure, and a small-debt sweep
-- ✅ **v15.0 "Borealis Console" Premium UI Overhaul** — Phases 120-127 (**shipped 2026-08-26**) — 87 plans, 30/30 requirements; token/contrast rebake, accessibility remediation, shell IA, signature layers, Convex read defect sweep, ack-aware retention janitors
-- 📋 **Queued: Project Lifecycle Cockpit** (version TBD, after Borealis or merged at planning time) — Mission Control Slice 3 (dispatch composer + unified session Inbox) + Project Factory (New Project wizard → `C:\dev` + GitHub + relayed GSD kickoff) + Projects lifecycle view (Active/Archived/Scrapped tiers; archive/restore/scrap/purge with safety preflights) + ship gates + tailnet cockpit — **gated on Forge v4.0 Interactive Sessions** — brief: [seeds/SEED-004-project-lifecycle-cockpit.md](seeds/SEED-004-project-lifecycle-cockpit.md), full spec in vault `runbooks/agentic-os-project-runbook.md`; formalize via `/gsd-new-milestone` when Forge v4.0 lands
+- ✅ **v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board** — Phases 108-119 (**shipped 2026-08-17**, 86 plans, 15/17 requirements — MISSION-01 PARTIAL, MISSION-02 reassigned to SEED-007) — closes BSC-01's deferred per-agent axis (cross-repo astridr emitter + scoped `swap.set`), Convex durability (aggregates pruning, retention verification, memory-growth root cause), a frontend-only mission board, telemetry-coverage closure, and a small-debt sweep — [archive](milestones/v14.0-ROADMAP.md) *(corrected 2026-08-27 at v16.0 roadmapping — this line previously read "Phases 108-113" / "in progress", stale since 2026-08-17)*
+- ✅ **v15.0 "Borealis Console" Premium UI Overhaul** — Phases 120-127 (**shipped 2026-08-26**) — 87 plans, 30/30 requirements; token/contrast rebake, accessibility remediation, shell IA, signature layers, Convex read defect sweep, ack-aware retention janitors — [archive](milestones/v15.0-ROADMAP.md)
+- 🚧 **v16.0 "Terminal Zero" — Full Stack Close-Out** — Phases 128-157 (**in progress**, started 2026-08-27) — three repositories (codepulse + `C:\Users\mandr\forge` + `C:\Users\mandr\astridr-repo`); planning reconciliation, defect/a11y/privacy/flake/gate sweeps, cache-aware cost pricing, Forge v4.0 completion (Phases 22-26, the permission relay), and the full Project Lifecycle Cockpit (SEED-004) it gates. Absorbs the queued Cockpit item below.
+- ✅ ~~Queued: Project Lifecycle Cockpit~~ — **absorbed into v16.0 2026-08-27** as COCKPIT-01..06 (Phases 140-142, 155-157); no longer a separate queued item. Brief: [seeds/SEED-004-project-lifecycle-cockpit.md](seeds/SEED-004-project-lifecycle-cockpit.md).
 
 ## Phases
 
@@ -1036,4 +1037,421 @@ Plans:
 
 ---
 
-*Last updated: 2026-08-17 — **v15.0 "Borealis Console" Premium UI Overhaul roadmapped**: 6 phases (120–125) derived from the milestone's 20 requirements — 100% coverage, zero orphans, zero duplicates. Continues phase numbering from v14.0 (108–119). Awaiting `/gsd:plan-phase 120`.*
+## v16.0 "Terminal Zero" — Full Stack Close-Out — 🚧 IN PROGRESS (started 2026-08-27)
+
+> **Started 2026-08-27** via `/gsd-new-milestone`, scoped from a live code sweep rather than
+> the filed seed/todo statuses (8 of 18 pending todos and 3 of 7 seeds proved already-shipped
+> at scoping). Continues phase numbering from v15.0 (120–127) → **Phases 128–157**.
+> Spans three repositories: `codepulse` (default), `C:\Users\mandr\forge`, and
+> `C:\Users\mandr\astridr-repo` — phase headings below name the owning repo when it
+> is not codepulse.
+
+**Milestone goal:** Drive CodePulse, Forge and the astridr-side dependencies to zero open
+items — every filed defect fixed, every stale planning artifact reconciled against the
+code, and the Claude Code terminal eliminated as a required surface — so the stack can be
+handed off or left alone.
+
+**Phase summary:**
+
+- [ ] **Phase 128 — Planning Reconciliation** — close already-fixed todos/seeds against the code and dissolve the stale carried-forward list
+- [ ] **Phase 129 — Dashboard Unbounded Read & Ratchet Coverage** — bound `/`'s `events`/`discoveredTools` reads and close the ratchet's blind spot
+- [ ] **Phase 130 — Inbox Count Reconciliation** — make the `/inbox` tab count and sidebar badge agree
+- [ ] **Phase 131 — UI Polish Sweep** — IdeationRow tokens, sidebar overflow, alert row overlap, Forge column clipping, Forge chart saturation
+- [ ] **Phase 132 — Settled-Page E2E Geometry Measurement** — make `polish-geometry.spec.ts` measure a settled page, not a cold one
+- [ ] **Phase 133 — Accessibility Violation Triage** — triage all 8 rule categories of the 42-route backlog to `file:line`
+- [ ] **Phase 134 — Accessibility Remediation & Exception Recording** — fix or dated-exception every triaged violation; make the axe suite fail rather than pass vacuously
+- [ ] **Phase 135 — Privacy Markup — PII Enumeration & Coverage** — enumerate every PII-rendering element, mark it `data-sensitive`, raise the coverage floor
+- [ ] **Phase 136 — Flaky Test Reproduction & Root Cause** — reproduction rate + proven mechanism for the four filed flaky-test instances
+- [ ] **Phase 137 — Full-Suite Determinism Verification** — prove 10 consecutive sequential full-suite runs are identical
+- [ ] **Phase 138 — Process Integrity Gates** — make `phase-state.json`'s missing-check real, decide the public-repo posture, gate every push on a disclosure scan
+- [ ] **Phase 139 — Cache-Aware Cost Pricing** — distinguish cache-write/cache-read/uncached token rates and reconcile against a real invoice
+- [ ] **Phase 140 — Projects Lifecycle View** — `/projects` card grid with lifecycle tiers, search/sort, per-card live status
+- [ ] **Phase 141 — Destructive Lifecycle Guardrails** — archive/scrap refuse on unpushed/uncommitted/secret-bearing state; Purge is the only true destroy
+- [ ] **Phase 142 — Tailnet Cockpit Access** — CodePulse usable as a mobile cockpit over the tailnet, independent of the Inbox
+- [ ] **Phase 143 — XREPO: Sub-Agent Trace-ID Plumbing** *(repo: astridr-repo)* — plumb a sub-agent's trace id out through the `_dispatch` boundary
+- [ ] **Phase 144 — XREPO: Deployed CORS Origin Fix** *(repo: astridr-repo)* — port `main`'s conditional CORS form onto the deployed `feature/brain-swap` branch
+- [ ] **Phase 145 — XREPO: Mission-01 Live Row Confirmation** *(repo: astridr-repo)* — close MISSION-01 on a real `subagentJobs` row with `finishedAt > submittedAt`
+- [ ] **Phase 146 — Mission Board Live Cards** — `/missions` renders live per-mission cards with real cost/duration/status
+- [ ] **Phase 147 — Mission Board Humanized Tool Activity** — humanized per-mission tool activity, joined via Phase 143's trace id
+- [ ] **Phase 148 — Mission Board HITL Gated Steps** — awaiting-confirm cards resolved through the existing approval-block contract
+- [ ] **Phase 149 — Forge: Foundation Completion** *(repo: forge)* — finish Forge Phase 21's remaining 8 plans (Session Lifecycle & Resume)
+- [ ] **Phase 150 — Forge: Worktree-per-Session** *(repo: forge)* — each session runs in its own isolated git worktree
+- [ ] **Phase 151 — Forge: WS Attach + Stdin Write** *(repo: forge)* — attach to a live session over WebSocket and write its stdin
+- [ ] **Phase 152 — Forge: Permission-Relay Research Spike** *(repo: forge)* — resolve the permission-relay transport/schema design
+- [ ] **Phase 153 — Forge: Session UI** *(repo: forge)* — real UI to list, view, and drive Forge sessions
+- [ ] **Phase 154 — Forge: Permission Relay Implementation** *(repo: forge)* — ship NDJSON → daemon → Convex, live end-to-end — **gates COCKPIT-01/02/04**
+- [ ] **Phase 155 — Unified Cross-Session Inbox** — one Inbox across all Forge sessions with a composer — the zero-terminal threshold
+- [ ] **Phase 156 — New Project Wizard** — bootstrap a project end-to-end, chained into a relayed `/gsd-new-project` session
+- [ ] **Phase 157 — Ship Gates with Approval** — build → preview URL to Inbox → approve → promote, no un-gated production deploys
+
+---
+
+## Phase Details
+
+### Phase 128: Planning Reconciliation
+**Goal**: Every planning artifact (todos, seeds, the carried-forward list, phase-close discipline) reflects the actual code, not stale filed status.
+**Depends on**: Nothing (first phase)
+**Requirements**: RECON-01, RECON-02, RECON-03, RECON-04
+**Success Criteria** (what must be TRUE):
+  1. Every pending todo is either moved to `completed/` with the `file:line` proving the fix in code, or remains `pending/` with fresh evidence it is still open.
+  2. SEED-005, SEED-006, and SEED-007's `submittedAt` half read `shipped` in their seed files, each citing the commit/phase that shipped them.
+  3. `.planning/REQUIREMENTS.md` no longer carries a "Carried forward from v14.0" list — each of its nine items resolves to a v16.0 requirement ID or a dated out-of-scope entry, no unowned note survives.
+  4. `requirementsDrift.ratchet.test.ts` is extended to fail when a phase is marked Complete while a mapped requirement reads `Pending` OR carries a stale `Partial` note — proven by a mutation that sets exactly that state and watching the test go red, then reverting.
+**Plans**: TBD
+
+### Phase 129: Dashboard Unbounded Read & Ratchet Coverage
+**Goal**: The Dashboard route and its ratchet guard both stop being blind to unbounded full-table scans.
+**Depends on**: Nothing
+**Requirements**: FIX-01, FIX-02
+**Success Criteria** (what must be TRUE):
+  1. `convex/metrics.ts`'s dashboard summary query no longer issues a bare `ctx.db.query("events").collect()` or an unbounded `discoveredTools` read — both carry an index range or a bounded `.take()`.
+  2. A new or extended ratchet test asserts on the RECORDED QUERY plan (index name + range), not on returned row counts, so a `.collect()` reintroduced later fails the test even against a tiny fixture.
+  3. The ratchet's own blind spot is closed (proven by mutating `metrics.ts` back to the unbounded form and watching the ratchet fail) or its remaining limitation is recorded in the test file with the reason it structurally cannot see that shape.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 130: Inbox Count Reconciliation
+**Goal**: The `/inbox` tab counts and the sidebar badge report numbers that agree, because they read the same defined quantity.
+**Depends on**: Nothing
+**Requirements**: FIX-03
+**Success Criteria** (what must be TRUE):
+  1. A single documented definition exists for what the Inbox count means, recorded as a comment or shared constant rather than left implicit across two different caps.
+  2. `DEFAULT_LIST_ALL_LIMIT` and `HELD_COUNT_SCAN_CAP` are unified to one bound, or the page and badge both derive from the same underlying bounded query — proven by a test asserting the two figures can never be computed from different caps for the same set.
+  3. On a live populated `/inbox`, the on-page tab count and the sidebar badge display the identical figure, captured in one screenshot.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 131: UI Polish Sweep
+**Goal**: The visual defects filed against production surfaces are gone, each fixed as a construct-level change and proven against the actual rendered DOM.
+**Depends on**: Nothing
+**Requirements**: FIX-04, FIX-05, FIX-06, FIX-07, FIX-08
+**Success Criteria** (what must be TRUE):
+  1. `IdeationRow`'s `SEVERITY_CLASSES` reads exclusively from CSS-variable-backed Tailwind classes — proven by a test importing the object and asserting no value matches a raw-white pattern, paired with a control that a reintroduced `text-white` value fails it.
+  2. The sidebar renders with no horizontal scrollbar at supported viewport widths, measured via `scrollWidth <= clientWidth` on the live rendered element.
+  3. `/alerts` rules list rows show no overlapping or bunched text at realistic row content lengths — root-caused via live DOM measurement before the fix, then regression-guarded.
+  4. Forge's job-list column no longer clips card header rows at realistic (non-single-word) job title lengths.
+  5. Forge's selected-row and single-series charts render as designed rather than as saturated slabs, verified by rasterizing the chart and confirming it is not a flat single-color block.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 132: Settled-Page E2E Geometry Measurement
+**Goal**: `polish-geometry.spec.ts` measures the page after it has actually settled, so its passing result is evidence rather than a lucky race.
+**Depends on**: Nothing
+**Requirements**: FIX-09
+**Success Criteria** (what must be TRUE):
+  1. The spec waits on an explicit settled-state signal, not a fixed timeout, before taking any geometry measurement.
+  2. A deliberately throttled run produces the same header zone-3 measurement as the fast run — proven by a paired before/after comparison.
+  3. The spec fails when a mutation reintroduces the cold-page race (reverting the wait makes the previously-passing assertion go red or flaky across repeated runs).
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 133: Accessibility Violation Triage
+**Goal**: Every one of the 96 objects / 966 nodes in the 42-route backlog is triaged to a source `file:line`, sized honestly before any fix work is planned.
+**Depends on**: Nothing
+**Requirements**: A11Y-03
+**Success Criteria** (what must be TRUE):
+  1. All 8 rule categories — not just the 1 already triaged — carry a `file:line` mapping for every violating node, recorded in a triage ledger.
+  2. The ledger's per-category counts are derived from a fresh live scan against current code, not carried from the 2026-08-20 measurement.
+  3. The triage separates "category size was previously unknown" from genuinely new violations introduced since 2026-08-20.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 134: Accessibility Remediation & Exception Recording
+**Goal**: Every triaged violation from Phase 133 is either fixed or carries a dated, reasoned exception; the contrast/axe suite cannot pass without having actually rendered content.
+**Depends on**: Phase 133
+**Requirements**: A11Y-04, A11Y-05
+**Success Criteria** (what must be TRUE):
+  1. Re-running the full triaged-route axe scan shows zero violations in categories marked "fixed"; every category marked "exception" carries a dated rationale in the ledger.
+  2. The axe/contrast suite fails — not skips, not passes vacuously — when a cell's page has not resolved data yet, proven with a deliberately-stalled query fixture the suite catches.
+  3. A before/after object-count comparison is recorded with an ex-noise-source column (following the 122/123 discipline) so cosmetic swings aren't misread as regressions.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 135: Privacy Markup — PII Enumeration & Coverage
+**Goal**: A real, complete enumeration of PII-rendering elements exists, they carry `data-sensitive`, and the coverage floor is raised to the real count.
+**Depends on**: Nothing
+**Requirements**: PRIV-01, PRIV-02, PRIV-03
+**Success Criteria** (what must be TRUE):
+  1. A written enumeration lists every element in `src/` that renders PII, each with a `file:line`, produced by walking actual rendered pages rather than guessing from component names.
+  2. Every enumerated element carries `data-sensitive` in the live DOM — verified by rendering each page and querying for the attribute, not by grepping source for the literal string.
+  3. `dataSensitiveCoverage.ratchet.test.ts`'s `MIN_CONSUMERS` equals the enumerated count, and the test fails when a `data-sensitive` element is removed from source (mutation-proven).
+  4. Screenshot mode (`.privacy-screenshot`) is verified by rasterizing a populated page and confirming PII regions are visually hidden — not by a jsdom unit test.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 136: Flaky Test Reproduction & Root Cause
+**Goal**: The four filed flaky-test instances are understood as one family with a measured reproduction rate and a proven, not inferred, mechanism.
+**Depends on**: Nothing
+**Requirements**: FLAKE-01, FLAKE-02
+**Success Criteria** (what must be TRUE):
+  1. A reproduction rate (failures per N loop iterations) exists for each of the four instances, established by an actual repeated-run loop rather than a single re-run.
+  2. The standing hypothesis (immediate-assert-after-`await` with no `waitFor`, file-wide in `KnowledgeGraph.test.tsx`) is confirmed by a controlled reproduction that fails only when the hypothesized race is present, or refuted with the refuting evidence recorded.
+  3. The proven mechanism is written down with the evidence that discriminates it from at least one plausible alternative (e.g. shared-fixture mutation).
+**Plans**: TBD
+
+### Phase 137: Full-Suite Determinism Verification
+**Goal**: The full test suite is deterministic across repeated runs under the mandated sequential invariant.
+**Depends on**: Phase 136
+**Requirements**: FLAKE-03
+**Success Criteria** (what must be TRUE):
+  1. Ten consecutive full-suite runs (`--project unit` then `--project browser`, sequential, never concurrent) all pass with identical pass/fail counts.
+  2. The ten-iteration run is executed AFTER Phase 136's mechanism fix lands, not before.
+  3. CI's own invocation is confirmed to use the sequential two-step form, not a bare `vitest run`.
+**Plans**: TBD
+
+### Phase 138: Process Integrity Gates
+**Goal**: The phase-completion gate and the public-repo posture both do what they claim to do.
+**Depends on**: Nothing
+**Requirements**: GATE-01, GATE-02, GATE-03
+**Success Criteria** (what must be TRUE):
+  1. `phase-state.json`'s `missing: []` field either encodes a real UI-SPEC-presence check — proven to go non-empty when a UI-flagged phase genuinely lacks a spec — or is no longer presented anywhere as a pass/fail verdict.
+  2. A recorded, dated decision states what `.planning/` and `CLAUDE.md` should contain for a public repo, with rationale — not a blanket sanitize of all 272 files.
+  3. A disclosure scan runs as the documented last step before push, and a known-positive control string is proven caught by the scan, so a scan matching nothing is distinguishable from a scan that works.
+**Plans**: TBD
+
+### Phase 139: Cache-Aware Cost Pricing
+**Goal**: CodePulse's cost surfaces distinguish cache-write/cache-read/uncached tokens at their real rates and reconcile against a real invoice.
+**Depends on**: Nothing
+**Requirements**: COST-04, COST-05, COST-06
+**Success Criteria** (what must be TRUE):
+  1. Cost calculations apply distinct per-token rates for cache-write, cache-read, and uncached input tokens sourced from real provider pricing — verified by a test asserting three different computed costs for the same token count under the three categories.
+  2. A CodePulse-computed cost figure for a real billing period reconciles against the corresponding provider invoice line item within a stated tolerance, with the comparison recorded.
+  3. Budget thresholds and alerts operate on the corrected absolute-dollar figures — verified by a test that a threshold trips at the corrected number and does NOT trip at the old (wrong) number for the same underlying usage.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 140: Projects Lifecycle View
+**Goal**: Operators can see and manage every project's lifecycle from one card-grid view.
+**Depends on**: Nothing
+**Requirements**: COCKPIT-03
+**Success Criteria** (what must be TRUE):
+  1. A Projects view renders a card grid with Active/Archived/Scrapped tiers, and switching tiers changes which cards display.
+  2. Each card shows vault summary, phase progress, last git activity, disk footprint, and staleness — each field sourced live, not hardcoded.
+  3. Search and sort controls change the rendered card order/set live.
+  4. Dispatching an existing Forge job from a card produces an observable state change on that card.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 141: Destructive Lifecycle Guardrails
+**Goal**: Archive/scrap/purge actions refuse when they would lose real work, and only Purge can truly destroy.
+**Depends on**: Phase 140
+**Requirements**: COCKPIT-06
+**Success Criteria** (what must be TRUE):
+  1. Attempting to archive or scrap a project with unpushed commits, uncommitted changes, or a detected untracked-secrets hit is BLOCKED with a stated reason — proven against a fixture actually carrying each of the three conditions.
+  2. Attempting the same actions against a clean project succeeds — the must-differ control proving the guard discriminates rather than always refusing.
+  3. Purge requires typed confirmation before executing and is the only one of the three actions that performs irreversible deletion.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 142: Tailnet Cockpit Access
+**Goal**: CodePulse is usable as an operational cockpit over the tailnet from a phone, independent of the Inbox composer.
+**Depends on**: Nothing
+**Requirements**: COCKPIT-05
+**Success Criteria** (what must be TRUE):
+  1. CodePulse's existing surfaces render usably at phone viewport widths over the tailnet URL (not localhost), verified live from a phone or a phone-emulated viewport.
+  2. Telegram remains alerts-only — no new bidirectional command surface is added to the Telegram channel by this phase.
+  3. The tailnet-serving half is verified to work with COCKPIT-01 explicitly absent/incomplete, since this requirement is independent of it.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 143: XREPO — Sub-Agent Trace-ID Plumbing (repo: C:\Users\mandr\astridr-repo)
+**Goal**: A sub-agent's trace id survives out through the `_dispatch` boundary to the terminal emit envelope, so downstream consumers can join tool activity back to its mission.
+**Depends on**: Nothing
+**Requirements**: XREPO-01
+**Success Criteria** (what must be TRUE):
+  1. A sub-agent's emitted terminal event carries the same trace id as its parent mission — verified by a live sub-agent dispatch whose emitted envelope's trace id matches the value read from the contextvar at `agent/loop.py:1028` before it resets in the `finally` at `:1033`.
+  2. The trace id crosses the sub-agent result type explicitly, plumbed through `delegate_task.py:398` — a field addition alone is proven insufficient given the existing structural unreadability.
+  3. A control case (a dispatch with a deliberately different/missing trace id) is distinguishable in the emitted envelope, proving the plumbing carries the real value rather than a constant.
+**Plans**: TBD
+
+### Phase 144: XREPO — Deployed CORS Origin Fix (repo: C:\Users\mandr\astridr-repo)
+**Goal**: The deployed `feature/brain-swap` branch no longer references the retired `tidy-whale-981` host as an unconditional CORS origin.
+**Depends on**: Nothing
+**Requirements**: XREPO-02
+**Success Criteria** (what must be TRUE):
+  1. `feature/brain-swap`'s CORS configuration matches `main`'s conditional form — ported, not reinvented — verified by a diff against `main`'s equivalent block.
+  2. A live request from an origin that is NOT `tidy-whale-981` succeeds against the deployed branch, and the old unconditional-allow behavior is proven gone.
+  3. The deployed container is rebuilt (not restarted) and the running config is confirmed via a live probe — not a git diff alone — to match the fixed source.
+**Plans**: TBD
+
+### Phase 145: XREPO — Mission-01 Live Row Confirmation (repo: C:\Users\mandr\astridr-repo)
+**Goal**: MISSION-01 closes on a real background job producing a `subagentJobs` row with `finishedAt > submittedAt`, confirmed live and never auto-ticked.
+**Depends on**: Nothing
+**Requirements**: XREPO-03
+**Success Criteria** (what must be TRUE):
+  1. A real background job runs end-to-end on the rebuilt operator stack and produces a `subagentJobs` row where `finishedAt > submittedAt`.
+  2. That row is read directly from Convex — not inferred from a dashboard count — as the closing evidence.
+  3. `mission-01-watch`'s cron is confirmed, by reading its current implementation, to still only notify and never mutate status.
+**Plans**: TBD
+
+### Phase 146: Mission Board Live Cards
+**Goal**: `/missions` renders live per-mission cards streaming real tool/note/result events with cost, duration and status.
+**Depends on**: Nothing
+**Requirements**: BOARD-01
+**Success Criteria** (what must be TRUE):
+  1. `/missions` shows a card per active/recent mission that updates live — new events append without a manual reload — against a real running mission.
+  2. Each card displays per-mission cost, duration, and status sourced from real data, with no placeholder/zero rendered as if it were a real figure.
+  3. A mission that hits astridr's `_boot_sweep` orphan-recovery path renders as FAILED on the card — the existing honest-orphan behavior is preserved and not regressed.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 147: Mission Board Humanized Tool Activity
+**Goal**: Tool activity on mission cards reads as a human sentence, joined correctly to its owning mission via the trace id Phase 143 plumbed.
+**Depends on**: Phase 143, Phase 146
+**Requirements**: BOARD-02
+**Success Criteria** (what must be TRUE):
+  1. A live mission's tool calls render humanized labels (e.g. "reading Gmail…") rather than raw tool/function names on its card.
+  2. The join between a tool-call row and its owning mission uses the trace id from Phase 143 on BOTH sides — proven by a test asserting the join returns nothing when either side's trace id is absent, closing the "join key on one side only" gap.
+  3. A mission with zero tool calls renders an honest empty state, not a stale or fabricated activity line.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 148: Mission Board HITL Gated Steps
+**Goal**: Missions with gated steps surface awaiting-confirm cards resolved through the existing HITL approval-block contract.
+**Depends on**: Phase 146
+**Requirements**: BOARD-03
+**Success Criteria** (what must be TRUE):
+  1. A mission that reaches a gated step renders an awaiting-confirm card in the UI.
+  2. Approving or rejecting from that card round-trips through the SAME approval-block contract the Chat/Inbox consumers already use — verified against the same server ack boolean both existing consumers gate on, not a new parallel path.
+  3. A code check confirms the mission board's approval component composes the existing contract rather than forking a new mechanism.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 149: Forge — Foundation Completion (repo: C:\Users\mandr\forge)
+**Goal**: Forge Phase 21 (Session Lifecycle & Resume) finishes its remaining 8 plans.
+**Depends on**: Nothing (first Forge phase)
+**Requirements**: FORGE-01
+**Success Criteria** (what must be TRUE):
+  1. Forge's `.planning/STATE.md` shows Phase 21 fully complete (all plans) with a phase-level summary/verification artifact present.
+  2. Session lifecycle (start/resume) works live against a real interrupted session, not just a unit test.
+  3. Forge's own phase-close discipline is followed — cross-checked against git ground truth rather than trusted from STATE.md alone.
+**Plans**: TBD
+
+### Phase 150: Forge — Worktree-per-Session (repo: C:\Users\mandr\forge)
+**Goal**: Each Forge session runs in its own git worktree, isolating concurrent sessions from each other.
+**Depends on**: Phase 149
+**Requirements**: FORGE-02
+**Success Criteria** (what must be TRUE):
+  1. Starting two concurrent sessions against the same repo produces two distinct worktrees on disk, each with its own working-tree state.
+  2. A commit made in one session's worktree does not appear as uncommitted/staged in the other session's worktree.
+  3. Session teardown cleans up its worktree — or the decision not to is explicitly documented, verified by inspecting the worktree list before/after.
+**Plans**: TBD
+
+### Phase 151: Forge — WS Attach + Stdin Write (repo: C:\Users\mandr\forge)
+**Goal**: A client can attach to a running Forge session over WebSocket and write to its stdin live.
+**Depends on**: Phase 150
+**Requirements**: FORGE-03
+**Success Criteria** (what must be TRUE):
+  1. A WS client attaches to a running session and receives its live output stream.
+  2. Text written to stdin via the WS connection is observably received by the running process.
+  3. Detaching and reattaching to the same session preserves the ability to write stdin without restarting the session.
+**Plans**: TBD
+
+### Phase 152: Forge — Permission-Relay Research Spike (repo: C:\Users\mandr\forge)
+**Goal**: The permission-relay design is resolved with a concrete, buildable spec before implementation starts.
+**Depends on**: Phase 151
+**Requirements**: FORGE-04
+**Success Criteria** (what must be TRUE):
+  1. A written design document names the concrete transport (NDJSON → daemon → Convex) and the message schema for a permission-prompt round trip.
+  2. At least one open design question (e.g. how a prompt maps to a Convex row, how a response routes back to the exact waiting process) is resolved with evidence — a prototype or a traced code path — not left as a TODO.
+  3. The design is reviewed and accepted as buildable: Phase 154 can be planned directly from it without re-researching the transport.
+**Plans**: TBD
+
+### Phase 153: Forge — Session UI (repo: C:\Users\mandr\forge)
+**Goal**: Forge sessions are visible and manageable through a real UI, not just the CLI.
+**Depends on**: Phase 152
+**Requirements**: FORGE-05
+**Success Criteria** (what must be TRUE):
+  1. A session list UI shows all running/recent sessions with live status.
+  2. Selecting a session shows its live output stream, reusing Phase 151's WS attach.
+  3. A user can start a new session and send it stdin from the UI without dropping to a terminal.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 154: Forge — Permission Relay Implementation (repo: C:\Users\mandr\forge)
+**Goal**: The permission relay ships — NDJSON → daemon → Convex — the mechanism SEED-004's Inbox depends on.
+**Depends on**: Phase 152, Phase 153
+**Requirements**: FORGE-06
+**Success Criteria** (what must be TRUE):
+  1. A real permission prompt from a running Forge session reaches Convex as a row, live end-to-end with nothing mocked at any layer.
+  2. Responding to that Convex row (approve/deny) is observed by the waiting Forge process, which proceeds or halts accordingly.
+  3. The relay survives a daemon restart mid-prompt without losing or double-delivering the pending prompt — or the failure mode is explicit and documented, not silent.
+**Plans**: TBD
+
+### Phase 155: Unified Cross-Session Inbox
+**Goal**: One Inbox surfaces permission prompts, AskUserQuestion gates, and UAT questions across all Forge sessions, with a composer to start and steer them — the zero-terminal threshold.
+**Depends on**: Phase 154
+**Requirements**: COCKPIT-01
+**Success Criteria** (what must be TRUE):
+  1. Permission prompts, AskUserQuestion gates, and UAT questions from at least two concurrently running Forge sessions all appear in one Inbox view.
+  2. A composer in the Inbox can start a new Forge session and steer (send input to) an existing one, without opening a terminal.
+  3. Resolving a prompt from the Inbox — not the terminal — is observed by the originating Forge session, proven live against a real running session.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 156: New Project Wizard
+**Goal**: A "New Project" wizard bootstraps a project end-to-end and chains into a relayed `/gsd-new-project` session whose Q&A lands in the Inbox.
+**Depends on**: Phase 155
+**Requirements**: COCKPIT-02
+**Success Criteria** (what must be TRUE):
+  1. Running the wizard against a fresh name produces a directory with `git init` run, a GitHub repo created (`gh repo create`), scaffolding applied, graphify bootstrapped, and a vault project note created — each step verified to have actually happened, not just reported success.
+  2. The wizard chains into a `/gsd-new-project` session relayed through Forge, and its Q&A turns appear in Phase 155's Inbox.
+  3. A wizard run that fails partway (e.g. `gh repo create` fails) leaves an honest partial state rather than claiming success.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 157: Ship Gates with Approval
+**Goal**: Deploys go through build → preview URL to Inbox → approve → promote, with no un-gated production deploy path.
+**Depends on**: Phase 155
+**Requirements**: COCKPIT-04
+**Success Criteria** (what must be TRUE):
+  1. Triggering a ship produces a build and a preview URL that lands as a card in the Inbox.
+  2. Promotion to production only happens after an explicit approve action on that Inbox card — proven by a control run where approval is withheld and production is confirmed unchanged.
+  3. No code path promotes to production without passing through the Inbox approval card — verified by reading every deploy-triggering call site.
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress
+
+**Execution Order:**
+Unblocked work first (128–148), then the strictly sequential Forge chain (149–154), then the
+three Cockpit phases it gates (155–157). Within the unblocked block, 134 needs 133, 137 needs
+136, 141 needs 140, and 147/148 need 146 (147 also needs 143) — otherwise phases 128–148 can
+execute in any order relative to each other.
+
+| Phase | Milestone | Plans Complete | Status | Completed | Notes |
+|-------|-----------|----------------|--------|-----------|-------|
+| 128. Planning Reconciliation | v16.0 | 0/TBD | Not started | - | |
+| 129. Dashboard Unbounded Read & Ratchet Coverage | v16.0 | 0/TBD | Not started | - | |
+| 130. Inbox Count Reconciliation | v16.0 | 0/TBD | Not started | - | |
+| 131. UI Polish Sweep | v16.0 | 0/TBD | Not started | - | |
+| 132. Settled-Page E2E Geometry Measurement | v16.0 | 0/TBD | Not started | - | |
+| 133. Accessibility Violation Triage | v16.0 | 0/TBD | Not started | - | |
+| 134. Accessibility Remediation & Exception Recording | v16.0 | 0/TBD | Not started | - | |
+| 135. Privacy Markup — PII Enumeration & Coverage | v16.0 | 0/TBD | Not started | - | |
+| 136. Flaky Test Reproduction & Root Cause | v16.0 | 0/TBD | Not started | - | |
+| 137. Full-Suite Determinism Verification | v16.0 | 0/TBD | Not started | - | |
+| 138. Process Integrity Gates | v16.0 | 0/TBD | Not started | - | |
+| 139. Cache-Aware Cost Pricing | v16.0 | 0/TBD | Not started | - | |
+| 140. Projects Lifecycle View | v16.0 | 0/TBD | Not started | - | |
+| 141. Destructive Lifecycle Guardrails | v16.0 | 0/TBD | Not started | - | |
+| 142. Tailnet Cockpit Access | v16.0 | 0/TBD | Not started | - | |
+| 143. XREPO — Sub-Agent Trace-ID Plumbing | v16.0 | 0/TBD | Not started | - | |
+| 144. XREPO — Deployed CORS Origin Fix | v16.0 | 0/TBD | Not started | - | |
+| 145. XREPO — Mission-01 Live Row Confirmation | v16.0 | 0/TBD | Not started | - | |
+| 146. Mission Board Live Cards | v16.0 | 0/TBD | Not started | - | |
+| 147. Mission Board Humanized Tool Activity | v16.0 | 0/TBD | Not started | - | |
+| 148. Mission Board HITL Gated Steps | v16.0 | 0/TBD | Not started | - | |
+| 149. Forge — Foundation Completion | v16.0 | 0/TBD | Not started | - | |
+| 150. Forge — Worktree-per-Session | v16.0 | 0/TBD | Not started | - | |
+| 151. Forge — WS Attach + Stdin Write | v16.0 | 0/TBD | Not started | - | |
+| 152. Forge — Permission-Relay Research Spike | v16.0 | 0/TBD | Not started | - | |
+| 153. Forge — Session UI | v16.0 | 0/TBD | Not started | - | |
+| 154. Forge — Permission Relay Implementation | v16.0 | 0/TBD | Not started | - | |
+| 155. Unified Cross-Session Inbox | v16.0 | 0/TBD | Not started | - | |
+| 156. New Project Wizard | v16.0 | 0/TBD | Not started | - | |
+| 157. Ship Gates with Approval | v16.0 | 0/TBD | Not started | - | |
+
+---
+
+*Last updated: 2026-08-27 — **v16.0 "Terminal Zero" — Full Stack Close-Out roadmapped**: 30 phases (128–157) derived from the milestone's 46 requirements — 100% coverage, zero orphans, zero duplicates. Continues phase numbering from v15.0 (120–127). Sequences the unblocked work (128–148) ahead of the two real dependency chains — Forge v4.0 (149–154, strictly sequential) gating the Project Lifecycle Cockpit (155–157). Awaiting `/gsd:plan-phase 128`.*

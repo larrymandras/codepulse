@@ -233,8 +233,53 @@ evidence remains in git history (`.planning/REQUIREMENTS.md` at `9ea8e4df`). Dis
 
 ## Traceability
 
-*Filled by the roadmapper — every requirement above maps to exactly one phase.*
+Every v16.0 requirement maps to exactly one phase. 46/46 mapped, zero orphans.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| *pending roadmap* | | |
+| RECON-01 | Phase 128 | Pending |
+| RECON-02 | Phase 128 | Pending |
+| RECON-03 | Phase 128 | Pending |
+| RECON-04 | Phase 128 | Pending |
+| FIX-01 | Phase 129 | Pending |
+| FIX-02 | Phase 129 | Pending |
+| FIX-03 | Phase 130 | Pending |
+| FIX-04 | Phase 131 | Pending |
+| FIX-05 | Phase 131 | Pending |
+| FIX-06 | Phase 131 | Pending |
+| FIX-07 | Phase 131 | Pending |
+| FIX-08 | Phase 131 | Pending |
+| FIX-09 | Phase 132 | Pending |
+| A11Y-03 | Phase 133 | Pending |
+| A11Y-04 | Phase 134 | Pending |
+| A11Y-05 | Phase 134 | Pending |
+| PRIV-01 | Phase 135 | Pending |
+| PRIV-02 | Phase 135 | Pending |
+| PRIV-03 | Phase 135 | Pending |
+| FLAKE-01 | Phase 136 | Pending |
+| FLAKE-02 | Phase 136 | Pending |
+| FLAKE-03 | Phase 137 | Pending |
+| GATE-01 | Phase 138 | Pending |
+| GATE-02 | Phase 138 | Pending |
+| GATE-03 | Phase 138 | Pending |
+| COST-04 | Phase 139 | Pending |
+| COST-05 | Phase 139 | Pending |
+| COST-06 | Phase 139 | Pending |
+| COCKPIT-03 | Phase 140 | Pending |
+| COCKPIT-06 | Phase 141 | Pending |
+| COCKPIT-05 | Phase 142 | Pending |
+| XREPO-01 | Phase 143 | Pending |
+| XREPO-02 | Phase 144 | Pending |
+| XREPO-03 | Phase 145 | Pending |
+| BOARD-01 | Phase 146 | Pending |
+| BOARD-02 | Phase 147 | Pending |
+| BOARD-03 | Phase 148 | Pending |
+| FORGE-01 | Phase 149 | Pending |
+| FORGE-02 | Phase 150 | Pending |
+| FORGE-03 | Phase 151 | Pending |
+| FORGE-04 | Phase 152 | Pending |
+| FORGE-05 | Phase 153 | Pending |
+| FORGE-06 | Phase 154 | Pending |
+| COCKPIT-01 | Phase 155 | Pending |
+| COCKPIT-02 | Phase 156 | Pending |
+| COCKPIT-04 | Phase 157 | Pending |
