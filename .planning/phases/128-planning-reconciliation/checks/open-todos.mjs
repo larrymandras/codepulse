@@ -8,6 +8,19 @@
 // Threat register: T-128-04 (a static grep presented as visual-defect proof), T-128-05 (a todo
 // silently kept open with no re-derivation), T-128-06 (a checker that parses nothing and reports
 // green).
+//
+// LIMIT (found by the phase-128 adversarial mutation gate -- do not read this checker as
+// proving more than it does): the citation test proves a cited path RESOLVES. It does NOT
+// prove the citation SUPPORTS the verdict. Every Re-derivation section closes with a
+// boilerplate `.planning/REQUIREMENTS.md:NNN` self-citation which always resolves, so breaking
+// the real code citation ALONE will not turn this checker red. This cannot be fixed by banning
+// planning-internal citations: for `public-repo-exposes-...` the REQUIREMENTS.md line IS the
+// evidence, because its claim is an ABSENCE (no public-repo decision has been recorded) and
+// the requirement row is the only artifact that can witness it. Separating support from
+// bookkeeping needs semantics, not a path rule. The `note:` line in the output makes the weak
+// cases visible instead of silent -- today that is exactly one file, `public-repo-exposes-...`.
+// (`phase-state-missing-array-...` is NOT weak: CITE_RE covers .json, so its
+// phase-state.json:NNN citations count as substantive.)
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
@@ -95,6 +108,7 @@ let evidenceBacked = 0;
 let deferrals = 0;
 let failures = 0;
 let advisories = 0;
+const weakEvidence = [];
 const failedFiles = [];
 
 for (const file of pendingFiles) {
@@ -126,6 +140,16 @@ for (const file of pendingFiles) {
     const hasValidDeferral = deferMatch && roadmapPhases.has(deferMatch[1]);
     const hasResolvableCite = Boolean(resolvableCite);
 
+    // GAP-2 (phase-128 adversarial gate): a deferral line that IS present but names a phase
+    // with no ROADMAP row used to fall through to the citation branch and be silently
+    // recounted as "evidence-backed". Fail it explicitly before the either/or test below.
+    if (deferMatch && !hasValidDeferral) {
+      problems.push(
+        `'REQUIRES LIVE MEASUREMENT - deferred to Phase ${deferMatch[1]}' names a phase with ` +
+          `no matching row in ROADMAP.md's Progress table`
+      );
+    }
+
     if (!hasValidDeferral && !hasResolvableCite) {
       problems.push(
         `'## Re-derivation' section has neither a resolvable path:line citation nor a valid ` +
@@ -135,6 +159,10 @@ for (const file of pendingFiles) {
       if (inScope) deferrals++;
     } else {
       if (inScope) evidenceBacked++;
+      const substantive = cites.filter(
+        (m) => existsSync(resolve(REPO_ROOT, m[1])) && m[1] !== ".planning/REQUIREMENTS.md"
+      );
+      if (inScope && substantive.length === 0) weakEvidence.push(file);
     }
   }
 
@@ -160,6 +188,13 @@ console.log(`  evidence-backed: ${evidenceBacked}`);
 console.log(`  deferrals: ${deferrals}`);
 console.log(`  failed: ${failures}`);
 console.log(`advisory (out of scope): ${advisories}`);
+if (weakEvidence.length > 0) {
+  console.log(
+    `  note: ${weakEvidence.length} evidence-backed todo(s) rest ONLY on a ` +
+      `.planning/REQUIREMENTS.md self-citation (see LIMIT in this file's header): ` +
+      weakEvidence.join(", ")
+  );
+}
 
 if (pendingFiles.length === 0) {
   console.error("FATAL: pending-todo population is zero — the checker parsed nothing (T-128-06).");
@@ -167,6 +202,13 @@ if (pendingFiles.length === 0) {
 }
 if (roadmapPhases.size === 0) {
   console.error("FATAL: roadmap-phase population is zero — the roadmap parser matched nothing (T-128-06).");
+  process.exit(1);
+}
+if (checked === 0) {
+  console.error(
+    "FATAL: in-scope population is zero - the scope list matched no pending todo (T-128-06). " +
+      "A checker that examined nothing must not report success."
+  );
   process.exit(1);
 }
 if (failures > 0) {
