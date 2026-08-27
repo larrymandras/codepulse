@@ -1,14 +1,26 @@
 ---
 id: TODO-forge-loading-div-aria-prohibited-attr
-status: pending
+status: closed
 planted: 2026-08-19
 planted_during: Phase 122 (Tokens, Primitives & Contrast Measurement) — present in every A11Y-01 capture; independently re-flagged by a Codex adversarial review of the phase
 trigger_when: Phase 123 (A11Y-02). IMPORTANT — A11Y-02's success criterion is written as "no wcag2a/wcag2aa violations", which does cover this rule, but the phase is framed throughout as CONTRAST remediation. This one is markup, not colour, and will be missed if 123 is planned as a colour-only sweep.
 scope: Trivial (one element; add a permitting role, or expose the label through a status element)
 source: Measured in all four Forge cells of every A11Y-01 capture, 2026-08-19; src/components/forge/ForgeJobList.tsx:174
 resolves_phase: 128
-last_reviewed: 2026-08-19
+last_reviewed: 2026-08-27
+closed: 2026-08-27
+closed_by: 128-01 (D-04 re-derivation)
 ---
+
+## Resolution (128-01, 2026-08-27)
+
+Re-derived against live code, not inherited from the scoping sweep (D-04).
+`src/components/forge/ForgeJobList.tsx:171-176` is
+`<div className="flex flex-col gap-2 p-3" role="status" aria-busy="true" aria-label="Loading jobs">`
+— `role="status"` (`:173`), `aria-busy="true"` (`:174`) and `aria-label="Loading jobs"` (`:175`)
+are all attributes of the same `div`, and `role="status"` is a permitting role for `aria-label`,
+closing the `aria-prohibited-attr` violation. Full ledger:
+`.planning/phases/128-planning-reconciliation/128-TODO-CLOSURES.md`.
 
 # Forge's loading container is a roleless `div` carrying `aria-label`
 

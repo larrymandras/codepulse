@@ -7,7 +7,7 @@ trigger_when: Next Analytics- or Dashboard-touching phase, OR the next time an o
 scope: Medium (one phase — per-query triage keyed on table row count, NOT a mechanical sweep of every .collect())
 source: Observed live 2026-08-18 against the self-hosted backend; convex/analytics.ts, convex/metrics.ts
 resolves_phase: 129
-last_reviewed: 2026-08-18
+last_reviewed: 2026-08-27
 ---
 
 # Unbounded `.collect()` scans time out at current data volume
@@ -81,3 +81,32 @@ inventing an approach:
    Several components do `useQuery(...) ?? {}`, so a failed query renders a confident zero
    rather than an unavailable state. Phase 122's TOKEN-04 six-state tile contract owns that;
    Phase 121 deliberately did not.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-derived against live code per D-04. `.planning/REQUIREMENTS.md`'s RECON-01 bullet lists
+"unbounded analytics scans" among eight items it calls already-fixed — that framing is WRONG as
+a blanket statement, though most of the underlying work genuinely is done.
+
+Three of the four queries this todo names ARE fixed: `analytics:activityHeatmap`
+(`convex/analytics.ts:17-33`), `analytics:toolFlowSankey` (`:35-55`) and `analytics:tokenSunburst`
+(`:57-86`) now read the `aggregates` rollup table via
+`.withIndex("by_type_period_bucket", (q) => q.eq("metric_type", ...).eq("period", "hourly").gte("bucket_start", cutoff)).collect()`
+— bounded by an index range, not a post-read `.filter()`. `analytics:errorRateTrend`
+(`:88-109`, this todo's own "observed-adjacent, not verified failing" fifth query) is bounded
+the same way. This matches Phase 121's own closing record (`STATE.md`'s Phase 121 entry,
+AR-01..03) — that work landed before this phase started.
+
+The fourth named query, `metrics:dashboardSummary`, is **still fully unbounded**:
+`convex/metrics.ts:19` reads `const events = await ctx.db.query("events").collect();` — no
+`.withIndex()` range, no `.take()` — and `:24` does the identical thing to `discoveredTools`
+(`const tools = await ctx.db.query("discoveredTools").collect();`). This is a live, unfixed
+defect, and it matches `.planning/REQUIREMENTS.md`'s FIX-01 verbatim (FIX-01 records this exact
+`convex/metrics.ts:19` finding, dated "Found 2026-08-27", assigned to Phase 129).
+
+**Verdict: PARTIALLY FIXED — keep, scope narrowed.** This todo stays open, narrowed to
+`convex/metrics.ts:19` and `:24` alone (`metrics:dashboardSummary`'s two unbounded reads) —
+`analytics.ts`'s four queries no longer need triage. `resolves_phase` is unchanged at 129,
+which was already correct (this todo was never one of the four folded-as-fixed items in
+`128-CONTEXT.md`; it was included in this plan specifically because of the RECON-01/FIX-01
+contradiction). Full ledger: `.planning/phases/128-planning-reconciliation/128-TODO-CLOSURES.md`.
