@@ -132,9 +132,9 @@ for (const file of pendingFiles) {
           `'REQUIRES LIVE MEASUREMENT — deferred to Phase NNN' line`
       );
     } else if (hasValidDeferral) {
-      deferrals++;
+      if (inScope) deferrals++;
     } else {
-      evidenceBacked++;
+      if (inScope) evidenceBacked++;
     }
   }
 
