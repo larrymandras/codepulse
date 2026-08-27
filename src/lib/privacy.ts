@@ -35,6 +35,38 @@ export function maskIp(ip: string): string {
   return `${parts[0]}.${parts[1]}.*.*`;
 }
 
+/**
+ * Mask a contact handle — the `sender` on a `messageRoutes` row, which
+ * astridr fills with whatever identifier the source channel uses (a Telegram
+ * numeric id, a WhatsApp `<digits>@lid`, an E.164 number).
+ *
+ * Keeps two characters at each end so two different handles stay visually
+ * DISTINGUISHABLE: the Message Routing surface labels each channel with its
+ * sender, and a mask that collapsed every handle to "***" would render two
+ * different people identically. An `@suffix` is preserved whole — it is an
+ * identifier TYPE, not personal data — on the same reasoning maskEmail keeps
+ * the domain.
+ */
+export function maskHandle(handle: string): string {
+  if (!handle) return handle;
+
+  // Split on the LAST @: a handle whose local part contains an @ must not
+  // keep everything after the first one.
+  const at = handle.lastIndexOf("@");
+  const local = at > 0 ? handle.slice(0, at) : handle;
+  const suffix = at > 0 ? handle.slice(at) : "";
+
+  // 4 characters or fewer: keeping 2+2 would reveal the whole local part.
+  const masked = local.length <= 4 ? "***" : `${local.slice(0, 2)}***${local.slice(-2)}`;
+  return `${masked}${suffix}`;
+}
+
+/** Mask a contact handle — only when privacy mode is on. Same caller-gated
+ * shape as maskFilePath/maskText. */
+export function maskContactHandle(handle: string, enabled: boolean): string {
+  return enabled ? maskHandle(handle) : handle;
+}
+
 export function maskEnvValue(envLine: string): string {
   const eq = envLine.indexOf("=");
   if (eq < 0) return envLine;

@@ -20,6 +20,7 @@ import { NotificationPreferences } from "../components/NotificationPreferences";
 import { EmailDigestConfig } from "../components/EmailDigestConfig";
 import { DeliveryHistory } from "../components/DeliveryHistory";
 import { GovernorDecisionLog } from "../components/GovernorDecisionLog";
+import { MessageRoutingSummary } from "../components/MessageRoutingSummary";
 import LLMProviderConfig from "../components/LLMProviderConfig";
 import ProviderControls from "../components/ProviderControls";
 import CostBudgetsAdmin from "../components/CostBudgetsAdmin";
@@ -985,6 +986,15 @@ export default function Settings() {
       <SectionErrorBoundary name="Governor Decisions">
       <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <GovernorDecisionLog />
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Message Routing — the sibling telemetry axis from the same Phase 112
+          pass. Sits beside Governor Decisions because the two are the pair
+          D-04/D-13 split: one got a row table, this one got an aggregate. */}
+      <SectionErrorBoundary name="Message Routing">
+      <div className="bg-card border border-border rounded-xl p-4 mt-12">
+        <MessageRoutingSummary />
       </div>
       </SectionErrorBoundary>
 
