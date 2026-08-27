@@ -236,6 +236,27 @@ Note the JS fix alone changes behaviour app-wide: anything routed through `mask`
 `redact` now masks at demo and screenshot levels where it previously did not. Full suite green
 (5,367 passed) and `tsc` clean after the change, so no consumer depended on the old behaviour.
 
+## Suite non-determinism — a named instance, 2026-08-27
+
+The known "~1 random test per full run" flakiness finally produced a concrete, attributable
+instance, which is more than the note filed by the Phase 192 session had.
+
+`src/pages/KnowledgeGraph.test.tsx:1364` — *"GLXY-02: a payload with only invalid ids logs
+zero-valid-ids with the raw and valid counts"* — failed on CI at commit `7ac63267`.
+
+**It is provably not a code regression.** `7ac63267` changes ONE markdown file; the immediately
+preceding commit `e50e1d50` has identical source and passed CI. Re-running the SAME run on the
+SAME commit went green. It also passes 3/3 locally in isolation. Red-then-green on identical code
+is the control that settles it.
+
+**Plausible but UNPROVEN mechanism:** the test asserts on `consoleWarnSpy` *immediately* after
+`await renderIn3D(...)`, with no `waitFor`. If the effect that emits the warn has not flushed, the
+spy has not been called. The whole file uses that immediate-assert-after-await shape, so if this is
+the cause it is file-wide, not one test. **Do not blind-fix it by wrapping this one assertion in
+`waitFor`** — that treats the instance and would make the next occurrence land on a different test
+with no record of why. Reproduce it first: the failure rate is low (5+ clean full local runs today,
+one CI failure), so it needs a loop, not a single re-run.
+
 ## Disclosure
 
 **This repo is public.** On 2026-08-27 a pre-push scan found the operator's real Telegram chat id
