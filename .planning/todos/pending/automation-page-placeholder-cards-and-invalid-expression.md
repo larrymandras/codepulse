@@ -6,8 +6,8 @@ planted_during: Phase 124 — operator hit it during the 124-11 checkpoint while
 trigger_when: Next Automation- or Convex-transport-touching phase. No longer cosmetically severe (the parse half is fixed); the remaining half is a real ~9-10s perceived load latency on first page visit.
 scope: NARROWED 2026-08-24 (126-03, D-07 Task 2) — the "Invalid expression" half is FIXED (see below). Only the stat-card half remains, and it is now measured, not merely observed.
 source: src/pages/Automation.tsx; convex/automation.ts:135-157 (cronSummary); measured live against the self-hosted deployment
-resolves_phase: 128
-last_reviewed: 2026-08-24
+resolves_phase: 129
+last_reviewed: 2026-08-27
 ---
 
 # `/automation` stat cards resolve after a ~9-10s COLD SUBSCRIPTION delay, not never — mechanism unconfirmed
@@ -89,3 +89,32 @@ Not a correctness bug and not unbounded-read risk. It is a real ~9-10 second wai
 an operator sees the three summary tiles populate on first visit to `/automation` in a
 session — long enough that a glance-and-leave visit (exactly what produced the original
 2026-08-21 screenshot) reads as "broken" when it is actually "slow to arrive."
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-derived against live code per D-04. `128-CONTEXT.md`'s Folded Todos section frames this todo
+as "ALREADY FIXED" on the strength of `cronSummary`'s index bound. That specific claim IS true:
+`convex/automation.ts:148` reads
+`.withIndex("by_timestamp", (q) => q.gte("timestamp", oneHourAgo)).collect()` — the bound is
+inside the index range callback, not a post-read `.filter()`, so the unbounded-scan fear the
+scoping sweep named is genuinely closed.
+
+**Verdict: PARTIALLY FIXED — keep, scope narrowed.** The index-bound concern above is resolved
+and does not need re-investigation. What remains open is exactly what this todo's own
+2026-08-24 measurement (above) already found and never closed: the three stat cards still take
+~9-10s to render on first visit, via a cold-WebSocket-subscription delay whose mechanism is
+unconfirmed and is NOT explained by anything in `convex/automation.ts` — the query itself
+returns in well under a second from the CLI. Scope narrows to that delay-mechanism
+investigation alone.
+
+`resolves_phase` corrected 128 -> 129 (finding, recorded in the ledger): Phase 128 is
+constrained to never fix a defect, so a still-open todo cannot correctly point at it — the
+folded-todo assumption ("all four resolve_phase:128 entries are already-fixed closures") broke
+down for this one specific todo once the delay was found to persist. No v16.0 requirement in
+`.planning/REQUIREMENTS.md` currently names this cold-subscription delay explicitly (FIX-01
+through FIX-09 do not mention it), so there is no established single owning phase; 129 is
+chosen as the closest match to this todo's own `trigger_when` ("Next Automation- or
+Convex-transport-touching phase") and to the pairing precedent already set by the sibling
+`unbounded-analytics-scans-timeout.md` todo, which points the same class of leftover Convex
+work at Phase 129. Full ledger:
+`.planning/phases/128-planning-reconciliation/128-TODO-CLOSURES.md`.

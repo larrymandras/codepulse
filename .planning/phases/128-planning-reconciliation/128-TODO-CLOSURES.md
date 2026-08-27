@@ -59,7 +59,20 @@ sweep's one-line "already fixed" tag did not account for a re-derivation the cor
 contained. Recorded here per D-05, not silently corrected in `128-CONTEXT.md` or REQUIREMENTS.md
 (neither is a `files_modified` target of this plan).
 
-**3. Two `file:line` citations in `128-CONTEXT.md` drift slightly from what the code contains.**
+**3. `automation-page-placeholder-cards-and-invalid-expression.md`'s `resolves_phase` was wrong
+once the re-derivation kept it open.** It was filed at `resolves_phase: 128` as one of the four
+folded todos, on the assumption all four would close this phase. Since this one stays open (per
+Finding 2), leaving `resolves_phase: 128` would be a real error — Phase 128 is constrained to
+never fix a defect (this plan's own `<context>` block), so a still-open todo cannot correctly
+name it as the phase that resolves it. No requirement in `.planning/REQUIREMENTS.md` (FIX-01
+through FIX-09) currently names this delay explicitly, so there is no established single owner.
+Corrected `resolves_phase` to `129`, matching this todo's own `trigger_when` ("Next Automation-
+or Convex-transport-touching phase") and the pairing precedent the sibling
+`unbounded-analytics-scans-timeout.md` todo already sets for leftover Convex-transport work.
+Recorded here per the plan's own instruction to record any `resolves_phase` correction as a
+finding.
+
+**4. Two `file:line` citations in `128-CONTEXT.md` drift slightly from what the code contains.**
 Neither changes a verdict, but D-06's "cite the line you actually read, not the line the todo
 named" applies:
 - `128-CONTEXT.md`'s Folded Todos entry for `tool-galaxy-getprojectgraph-timeout.md` names the

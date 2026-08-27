@@ -1,14 +1,30 @@
 ---
 id: TODO-inbox-listheldunacked-unbounded-every-route
-status: pending
+status: closed
 planted: 2026-08-21
 planted_during: Phase 124 (Shell & Information Architecture) — found by the phase's own code review (`124-REVIEW.md`, WR-01), confirmed independently by the orchestrator and again by `124-VERIFICATION.md`
 trigger_when: The next Convex-touching phase, batched with the other two Convex items below so they share ONE operator deploy. Not a live outage — 46 rows today, contained by its own error boundary.
 scope: Small (one plan) — add a bounded query, point the badge at it, leave the shared query alone
 source: convex/inbox.ts:206-214; src/layouts/DashboardLayout.tsx:137; convex/inboxIngest.ts:174
 resolves_phase: 128
-last_reviewed: 2026-08-21
+last_reviewed: 2026-08-27
+closed: 2026-08-27
+closed_by: 128-01 (D-04 re-derivation)
 ---
+
+## Resolution (128-01, 2026-08-27)
+
+Re-derived against live code, not inherited from the scoping sweep (D-04). `countHeldUnacked`
+(`convex/inbox.ts:269-298`) reads
+`.withIndex("by_itemType", (q) => q.eq("itemType", "held")).order("desc").take(HELD_COUNT_SCAN_CAP + 1)`
+at `:278`, with `HELD_COUNT_SCAN_CAP = 2000` (`:247`) — bound is at the read, index-scoped.
+`src/layouts/DashboardLayout.tsx:146` confirms the sidebar badge (the every-route consumer named
+in this todo) was actually swapped onto `api.inbox.countHeldUnacked`, satisfying this todo's own
+"a bounded query that nothing calls fixes nothing" warning. `listHeldUnackedHandler`
+(`:208-216`) is unchanged and still unbounded exactly as prescribed, and
+`convex/inboxIngest.ts:174` confirms the digest consumer still calls the unbounded
+`listHeldUnacked` — the "one set consumed for two different questions" split holds on both
+sides. Full ledger: `.planning/phases/128-planning-reconciliation/128-TODO-CLOSURES.md`.
 
 # `inbox.listHeldUnacked` is an unbounded `.collect()` on an every-route subscription
 
