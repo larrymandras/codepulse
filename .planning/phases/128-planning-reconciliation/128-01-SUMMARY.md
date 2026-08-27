@@ -154,3 +154,9 @@ None - no external service configuration required.
 ---
 *Phase: 128-planning-reconciliation*
 *Completed: 2026-08-27*
+
+## Self-Check: PASSED
+
+All 9 claimed files verified present on disk (`128-TODO-CLOSURES.md`, `checks/closed-todos.mjs`,
+`deferred-items.md`, this SUMMARY, and the 5 todo files at their re-derived locations). All 3
+task commit hashes (`99b603f0`, `0123ad54`, `92eff790`) verified present in `git log --all`.
