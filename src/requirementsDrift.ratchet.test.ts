@@ -84,13 +84,23 @@
  * cannot establish.
  *
  * GRANDFATHERING. Measured 2026-08-27: the live Traceability table in
- * `.planning/REQUIREMENTS.md` holds 46 rows, all `Pending`, zero `Partial`. The only
- * `Partial` row anywhere in the corpus is `MISSION-01` in the archived
- * `milestones/v14.0-REQUIREMENTS.md`, mapped to Phase 111 — outside both the current
- * milestone's phase range (>= 128) and the live REQUIREMENTS.md file, so it is out of
- * this check's scope via the same current-milestone partition the orphan check below
- * uses. The in-range `Partial` population is therefore ZERO. No allowlist is added;
- * there is nothing to grandfather.
+ * `.planning/REQUIREMENTS.md` holds 46 rows, all `Pending`, zero `Partial`. There are
+ * TWO `Partial` rows in the wider corpus, both archived and both out of range:
+ *   - `MISSION-01`, `milestones/v14.0-REQUIREMENTS.md`, Phase 111.
+ *   - `QA-01`, `milestones/v8.0-REQUIREMENTS.md:155`, Phase 71 — written
+ *     `\u{1F504} Partial`, i.e. emoji-prefixed.
+ * Both sit outside the current milestone's phase range (>= 128) and outside the live
+ * REQUIREMENTS.md, so they are out of this check's scope via the same
+ * current-milestone partition the orphan check below uses. The in-range `Partial`
+ * population is therefore ZERO. No allowlist is added; there is nothing to
+ * grandfather.
+ *
+ * An earlier version of this paragraph claimed MISSION-01 was the ONLY `Partial` row
+ * anywhere in the corpus. That was false, and the way it was false mattered: QA-01's
+ * emoji prefix meant `statusWord` (then an inline `split`) returned the emoji rather
+ * than "Partial", so the row was invisible to the check instead of being judged and
+ * ruled out of range. `statusWord` now strips leading decoration; the row is seen,
+ * and it is excluded on phase range like MISSION-01 rather than by accident.
  *
  * CURRENT VACUITY, STATED HONESTLY. With zero in-range Partial rows, the live
  * assertion below passes trivially and proves nothing about `stalePartialOffenders`
@@ -154,6 +164,23 @@ interface Req {
   file: string;
 }
 
+/**
+ * First WORD of a status cell, ignoring leading decoration.
+ *
+ * Status cells are not uniformly plain text. `v8.0-REQUIREMENTS.md:155` reads
+ * `| QA-01 | Phase 71 | \u{1F504} Partial - ... |`, and a bare
+ * `statusCell.split(/\s+/)[0]` returns the EMOJI, not "Partial" -- so that row was
+ * invisible to every Partial predicate in this file rather than being judged by them.
+ * A row that silently vanishes is the exact failure mode `stalePartialOffenders` was
+ * written to prevent, so the decoration is stripped before the word is taken.
+ *
+ * Found by the phase-128 adversarial claims audit, which caught the header below
+ * asserting MISSION-01 was the only Partial row in the corpus. It was not.
+ */
+function statusWord(statusCell: string): string {
+  return statusCell.replace(/^[^\p{L}]+/u, "").split(/\s+/)[0] ?? "";
+}
+
 function collectRequirements(): Req[] {
   const out: Req[] = [];
   for (const f of requirementFiles()) {
@@ -161,7 +188,7 @@ function collectRequirements(): Req[] {
       const m = REQ_ROW.exec(line.trim());
       if (m) {
         const statusCell = m[3];
-        const status = statusCell.split(/\s+/)[0] ?? "";
+        const status = statusWord(statusCell);
         out.push({ id: m[1], phase: Number(m[2]), status, statusCell, file: f });
       }
     }
@@ -639,6 +666,40 @@ function makeOracle(overrides: Partial<FreshnessOracle> = {}): FreshnessOracle {
     ...overrides,
   };
 }
+
+describe("statusWord: a decorated status cell must not vanish from the check", () => {
+  // Found by the phase-128 adversarial claims audit. Before this, the status word was
+  // `statusCell.split(/\s+/)[0]`, so an emoji-prefixed cell yielded the EMOJI and the row
+  // was invisible to every Partial predicate here -- silently skipped rather than judged
+  // and ruled out of range. Invisible is the one outcome this file must never produce.
+
+  it("strips leading decoration so an emoji-prefixed Partial is still seen as Partial", () => {
+    expect(statusWord("\u{1F504} Partial \u2014 auto-sync not yet wired")).toBe("Partial");
+  });
+
+  it("leaves an undecorated cell exactly as it was (no behaviour change for the 46 live rows)", () => {
+    expect(statusWord("Pending")).toBe("Pending");
+    expect(statusWord("Complete \u2014 shipped 2026-08-27")).toBe("Complete");
+    expect(statusWord("Partial \u2014 X shipped (re-derived a1b2c3d)")).toBe("Partial");
+  });
+
+  it("returns empty string for a cell with no letters at all, rather than a decoration", () => {
+    // An empty word is falsy and comparable; an emoji masquerading as a status is not.
+    expect(statusWord("\u{1F504}")).toBe("");
+    expect(statusWord("   ")).toBe("");
+  });
+
+  it("REGRESSION: the real QA-01 corpus row parses as Partial, not as its emoji", () => {
+    // Pinned to the actual line that exposed the bug:
+    // .planning/milestones/v8.0-REQUIREMENTS.md:155
+    const cell = "\u{1F504} Partial \u2014 v6.0 table reconciled 2026-06-18; auto-sync step not yet wired";
+    expect(statusWord(cell)).toBe("Partial");
+    // And it must be a real row the collector actually returns, not just a string I typed:
+    const qa01 = collectRequirements().find((r) => r.id === "QA-01");
+    expect(qa01, "QA-01 not found in the corpus -- has v8.0-REQUIREMENTS.md moved?").toBeDefined();
+    expect(qa01!.status).toBe("Partial");
+  });
+});
 
 describe("D-01 fake-oracle logic table", () => {
   it("case 1: stamp is a strict ancestor of the completion commit -> STALE, exactly one offender naming both SHAs", () => {

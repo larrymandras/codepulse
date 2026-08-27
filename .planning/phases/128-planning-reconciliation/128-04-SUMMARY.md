@@ -122,7 +122,7 @@ completed: 2026-08-27
 
 ## Files Created/Modified
 
-- `src/requirementsDrift.ratchet.test.ts` — extended from 177 lines / 4 tests to ~730 lines / 19
+- `src/requirementsDrift.ratchet.test.ts` — extended from 177 lines / 4 tests to 873 lines / 19
   tests. All 4 pre-existing tests preserved unweakened (one call-site updated for the `PhaseInfo`
   object return type; no assertion loosened).
 
@@ -132,13 +132,31 @@ completed: 2026-08-27
   matching the `| ID | Phase N | Status |` shape, and a negated grep for anything not ending
   `Pending |` returned **zero** hits — all 46 rows are `Pending`. Matches the plan's stated
   measurement exactly.
-- **Only `Partial` row in the corpus:** `MISSION-01` in
+- **`Partial` rows in the corpus (CORRECTED 2026-08-27):** there are TWO, not one. The
   `.planning/milestones/v14.0-REQUIREMENTS.md`, mapped to Phase 111. `grep -n "| 111\."
   .planning/ROADMAP.md` returns nothing (Phase 111 is not in the live ROADMAP.md — it lives only
   in the archived `milestones/v14.0-ROADMAP.md`), so `phases.get(111)` is `undefined` in the live
   run: this row is excluded both by `inCurrentMilestoneRange` (phase 111 < current milestone's
   minimum of 128, and its file is not the live `REQUIREMENTS.md`) and, independently, by
   `stalePartialOffenders`'s own `phaseInfo.status !== "Complete"` guard.
+
+  The second is `QA-01` at `.planning/milestones/v8.0-REQUIREMENTS.md:155`, mapped to
+  Phase 71, written `🔄 Partial` (emoji-prefixed). This SUMMARY and the file's own
+  GRANDFATHERING header both originally claimed `MISSION-01` was the only one; that was
+  FALSE, found by the phase-128 adversarial claims audit.
+
+  It mattered beyond the miscount. `status` was parsed as `statusCell.split(/\s+/)[0]`,
+  which for that row returned the EMOJI rather than `Partial`, so the row was invisible to
+  every `Partial` predicate in the file instead of being seen and ruled out of range. A row
+  that silently vanishes is the failure mode this check exists to prevent. Fixed by a
+  `statusWord()` helper that strips leading decoration before taking the first word, with 4
+  new tests including a regression case pinned to the real QA-01 line. Mutation-proven:
+  reverting `statusWord` to the naive split turns exactly 3 of those 4 red, while the
+  "undecorated cells unchanged" control stays green in both directions.
+
+  The in-range population is still 0 — Phase 71 is out of range exactly as Phase 111 is —
+  so no verdict in this plan changes. What changed is that the exclusion is now by rule
+  rather than by accident.
 - **In-range `Partial` population: 0.** Grandfathering decision: no allowlist added; there is
   nothing to grandfather. This is recorded in the rewritten header.
 - **v16.0 Progress table start:** Phase 128 (`Math.min(...phases.keys())` resolves to 128 live),
