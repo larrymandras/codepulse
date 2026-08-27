@@ -7,7 +7,7 @@ trigger_when: Before the next frontend phase is planned or executed, or any time
 scope: Small — either make the validator encode the check, or stop presenting `missing: []` as if it were a verdict
 source: `.planning/phases/*/phase-state.json`; the gsd-sdk readiness validator
 resolves_phase: 138
-last_reviewed: 2026-08-25
+last_reviewed: 2026-08-27
 ---
 
 # `phase-state.json`'s `missing: []` carries no signal about UI-SPEC — for ANY phase
@@ -71,3 +71,56 @@ the same probe that must come out differently afterwards.
 
 Pair it with the standing rule for this repo's gates: **read `missing`/`skipped`/`total`, never
 `ready`/`passed` alone.**
+
+---
+
+## MECHANISM FOUND 2026-08-27 — `isFrontend` is a CONSTANT-TRUE predicate
+
+Surfaced by a Codex adversarial review of Phase 128's `phase-state.json`, then measured by the
+orchestrator. This supplies the half the 2026-08-25 entry above could not explain: it established
+that `missing` carries no signal, but not WHY `isFrontend` kept reading `true`.
+
+**The classifier greps case-insensitively for `UI` as an UNANCHORED SUBSTRING.** The gate
+(`plan-phase.md` step 5.6) tests the roadmap phase section against:
+
+    UI|interface|frontend|component|layout|page|screen|view|form|dashboard|widget
+
+`**Requirements**:` is a MANDATORY field in the GSD roadmap phase template, and it contains
+`UI` inside "req-UI-rement". So every phase that uses the standard template matches.
+
+**Measured across `.planning/ROADMAP.md` (all milestones, 2026-08-27):**
+
+| Result | Count |
+|---|---|
+| Phase sections scanned | 56 |
+| Classified `isFrontend` | **56** |
+| Classified non-frontend | **0** |
+
+Six fire on NOTHING ELSE — remove the string "requirement" and they stop matching entirely:
+**128** (planning reconciliation), **136** (flaky-test repro), and **149/150/151/154** (Forge
+backend: session lifecycle, worktrees, WS attach, permission relay). Not one is a UI phase.
+
+A predicate that returns `true` for all 56 inputs has never once discriminated. Note the other
+listed words are substrings too — `view` matches "review"/"overview", `form` matches
+"information"/"performed"/"transform" — so even removing "requirement" would not make this sound.
+
+### Refinement to this todo's own title
+
+The title says `missing: []` carries no signal. That is right for `execute-phase` but INCOMPLETE:
+under `plan-phase` the field DOES populate. Phase 128's record reads
+
+```json
+{ "command": "plan-phase", "ready": false, "missing": ["UI-SPEC.md"] }
+```
+
+— non-empty, and WRONG, on a phase whose only code deliverable is one test file. So there are two
+distinct failure modes, not one: the field is vacuously empty under `execute-phase`, and
+confidently wrong under `plan-phase`. Both trace to the same constant-true classifier.
+
+### Consequence for GATE-01's acceptance criterion — this is the trap
+
+GATE-01 must NOT be written as "`missing` becomes non-empty" or "the gate fires". Both are already
+true here while the gate is broken. **Require a BIDIRECTIONAL test:** a genuine UI phase lacking a
+UI-SPEC must FAIL, and a non-UI phase touching only TypeScript/tests must stay READY without one.
+Anchor the match (word boundaries, or read the phase's `files_modified`) rather than substring-
+grepping prose.

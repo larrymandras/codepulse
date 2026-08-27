@@ -53,6 +53,23 @@ open, never closes it by fixing it. The fixes belong to Phases 129-148.
   the test red. Pair it with the opposite control: a Partial WITH a fresh stamp must stay green.
   A guard that only ever goes red on command has not been shown to discriminate.
 
+- **D-03a: The stamp is a COMMIT SHA compared by git ancestry — never a date.**
+  *(Added 2026-08-27 after a Codex adversarial review; the original text left "date vs SHA" to
+  Claude's discretion, which was wrong.)* A date has day granularity, so a re-derivation performed
+  hours BEFORE the phase's completion commit but on the same calendar day does not "predate" it
+  under a date comparison and passes — reintroducing the exact false-green RECON-04 exists to
+  prevent. Require a SHA, record the completion SHA, and compare with explicit ancestry
+  (`git merge-base --is-ancestor <stamp> <completion>` ⇒ STALE), never string or date ordering.
+
+  **The controls must include the same-day case specifically:** an earlier same-day commit must
+  FAIL, and a descendant re-derivation commit must PASS. A control set that only tests
+  different-day stamps cannot discriminate the defect this decision exists to close.
+
+  **Open implementation question for the planner to resolve and record:** what IS a phase's
+  "completion commit"? Candidates — the commit that flipped the ROADMAP row to `Complete`
+  (findable via `git log -S`), or the phase's last `*-SUMMARY.md` commit. They are not always the
+  same. Pick one, justify it, and make the ratchet's failure message name which it used.
+
 ### Scope — the reconciliation already performed during v16.0 scoping
 
 - **D-04: Re-verify independently; do not inherit.** During scoping (commits `89def342`,
@@ -102,8 +119,9 @@ open, never closes it by fixing it. The fixes belong to Phases 129-148.
 ### Claude's Discretion
 
 - Plan decomposition and wave structure.
-- The exact stamp format for D-01 (date vs SHA), provided the ratchet can compare it against
-  the phase's completion commit.
+- ~~The exact stamp format for D-01 (date vs SHA)~~ — **WITHDRAWN 2026-08-27.** This was never
+  discretionary: a date cannot order against a commit. See D-03a — SHA plus git ancestry, and the
+  same-day control is mandatory.
 - Whether the seed frontmatter change is one plan or folded into the todo sweep.
 
 ### Folded Todos
