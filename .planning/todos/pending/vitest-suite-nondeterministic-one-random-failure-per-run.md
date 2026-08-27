@@ -1,7 +1,13 @@
 ---
 id: TODO-vitest-suite-nondeterministic-one-random-failure-per-run
 status: pending
+planted: 2026-08-20
+planted_during: astridr-repo Phase 192's post-merge gate (cross-repo phase) — filed by the Phase 192 orchestrator at Larry's direction; not owned by 192, this is codepulse's own defect surfacing in phase-111 / phase-187 test files
+trigger_when: unknown — not recorded at filing time
+scope: unknown — not recorded at filing time
+source: src/components/JobsPanel.test.tsx:173; src/pages/KnowledgeGraph.test.tsx (GLXY-02)
 resolves_phase: 136
+last_reviewed: 2026-08-27
 ---
 
 # Vitest suite is non-deterministic — ~1 random test fails per full run
@@ -91,3 +97,27 @@ across every run measured. The full-suite step is the exposure.
 The `ResizeObserver loop completed with undelivered notifications` storm (~725 per 6s browser
 run) is a **separate, deterministic** issue also found by Phase 192, tracked with the
 lipsync work. It does not fail any test.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06/D-07. `.planning/REQUIREMENTS.md:99`
+states the flake family is "Four separate filings that are ONE family" — of the three filed in
+this repo, this one and `kg-answer-sync-glxy02-test-flake.md` both name the SAME underlying
+`KnowledgeGraph.test.tsx` GLXY-02 failure (this filing also separately names `JobsPanel.test.tsx`,
+which neither of the other two filings mentions). "A different test fails each run" is a claim
+about run-to-run statistical behaviour, which by definition cannot be settled by reading any
+single point-in-time state of the source — this todo's own suggested first move is "run the suite
+N times." Context only: `src/test/setup.ts`'s `audioWorklet` guard, which this todo's own
+investigation already exonerated by reading (`proto.audioWorklet` is `undefined` under jsdom both
+before and after the cited change), is unchanged this session — re-confirms the exoneration,
+proves nothing about whether the flake itself still fires.
+
+This todo's frontmatter was also normalized this session to carry the same keys as its siblings
+(`planted`, `planted_during`, `trigger_when`, `scope`, `source`, `last_reviewed`), each sourced
+from the body text where the file states it, and `unknown — not recorded at filing time` where it
+does not (per D-04/D-06 — no value was invented).
+
+**REQUIRES LIVE MEASUREMENT — deferred to Phase 136.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 13.
+`resolves_phase: 136` confirmed against `.planning/REQUIREMENTS.md:259`
+(`FLAKE-01 | Phase 136 | Pending`).

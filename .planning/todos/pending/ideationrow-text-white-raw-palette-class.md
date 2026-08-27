@@ -7,7 +7,7 @@ trigger_when: Any future accessibility/token sweep phase that includes raw-palet
 scope: Trivial (3 call sites, one file, one substitution each)
 source: Read live during 123-10's Task 2 (src/components/IdeationRow.tsx:27-31, SEVERITY_CLASSES), 2026-08-20
 resolves_phase: 131
-last_reviewed: 2026-08-20
+last_reviewed: 2026-08-27
 ---
 
 # `IdeationRow.tsx`'s `SEVERITY_CLASSES` uses raw `text-white` instead of a token
@@ -53,3 +53,25 @@ on `high`'s background (`bg-(--status-error)/70`) was NOT covered by 123-10's st
 (which measured flat, non-alpha backgrounds only) — re-measure that specific composited pairing
 before assuming the flat-background figure transfers, and check it against the light `:root`
 palette too, which none of 123-10's four (dark-only) themes covered.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06. `src/components/IdeationRow.tsx:27-32`:
+
+```tsx
+const SEVERITY_CLASSES: Record<string, string> = {
+  critical: "bg-(--status-error) text-white",
+  high:     "bg-(--status-error)/70 text-white",
+  medium:   "bg-(--status-warn) text-(--primary-foreground)",
+  low:      "bg-(--status-ok) text-white",
+};
+```
+
+Lines 28, 29, 31 are byte-identical to this todo's own transcription — still raw
+`text-white`, not a token. Line 30 (`medium`) remains the one already remedied by 123-10
+and is not part of this claim.
+
+**Verdict: STILL OPEN — evidence cited above.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 1.
+`resolves_phase: 131` confirmed against `.planning/REQUIREMENTS.md:247`
+(`FIX-04 | Phase 131 | Pending`).

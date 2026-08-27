@@ -1,13 +1,15 @@
 ---
 id: TODO-sidebar-4px-horizontal-overflow-separator
-status: pending
+status: closed
 planted: 2026-08-21
 planted_during: Phase 124 — spotted by the orchestrator in the operator's own checkpoint screenshots (a horizontal scrollbar at the sidebar's bottom edge on all three routes), then measured
 trigger_when: Any shell- or DashboardLayout-touching phase. Frontend-only, no deploy, one class.
 scope: Trivial (one task) — but pick the remedy deliberately, see below
 source: src/layouts/DashboardLayout.tsx:458,463
 resolves_phase: 131
-last_reviewed: 2026-08-21
+closed: 2026-08-27
+closed_by: 128-02
+last_reviewed: 2026-08-27
 ---
 
 # Sidebar shows a horizontal scrollbar from a 4px overflow
@@ -62,3 +64,45 @@ Whichever is chosen, **re-measure** afterwards — assert `scrollWidth <= client
 the nav, not merely that the scrollbar looks gone. And pair it with a control: confirm
 the probe reports overflow correctly on the pre-fix markup, or a passing measurement
 proves nothing.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06. This todo's own suggested
+remedy option 1 ("Drop `mx-3` and inset the separator with padding on its wrapper
+instead") is what shipped, in Phase 126-04 (SWEEP-06). The file has moved since filing
+(`:458,463` → the nav container is now `:544`, the Separator block `:549-566`) — the same
+line-drift the todo's own "first step when picked up" section implicitly anticipated by
+citing the markup rather than only line numbers:
+
+```tsx
+// src/layouts/DashboardLayout.tsx:549-566
+{i > 0 && (
+  <div className="px-3 my-2">
+    <Separator />
+  </div>
+)}
+```
+
+The `Separator` itself no longer carries `mx-3` — the inline comment at this site
+("126-04 (SWEEP-06)") states directly that this "is what closed the 231/235px (nav
+clientWidth/scrollWidth) 4px overhang."
+
+Also re-measured, per this todo's own instruction not to trust a passing test alone:
+`e2e/polish-geometry.spec.ts:528-557`, `"Sidebar nav — horizontal overflow (SWEEP-06)"`,
+asserts `navScrollWidth <= navClientWidth` and `widestDescendantRight <= navRight + 0.5px`
+at the same 1512x900 viewport this todo's own original measurement used — i.e. the exact
+regression guard this todo asked for ("assert `scrollWidth <= clientWidth`... pair it with
+a control") now exists and passes.
+
+**Verdict: ALREADY FIXED.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 6.
+
+## Resolution (128-02, 2026-08-27)
+
+Closed on re-derivation, not on new work performed by this plan (128-02 fixes no defects —
+D-06/D-07). The fix landed in Phase 126; this session found and recorded that it had
+already closed the gap this todo described. `resolves_phase` in the frontmatter is left at
+131 (its filed value, confirmed correct against `.planning/REQUIREMENTS.md:248`'s
+`FIX-05 | Phase 131 | Pending` row) for traceability — Phase 131 should verify this closure
+and flip `FIX-05` to Complete, since REQUIREMENTS.md itself was found stale on this point
+(see the ledger's D-05 Finding 2).

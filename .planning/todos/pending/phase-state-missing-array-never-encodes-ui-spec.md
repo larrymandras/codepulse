@@ -10,6 +10,7 @@ resolves_phase: 138
 last_reviewed: 2026-08-27
 ---
 
+
 # `phase-state.json`'s `missing: []` carries no signal about UI-SPEC — for ANY phase
 
 ## What was observed (2026-08-25)
@@ -124,3 +125,29 @@ true here while the gate is broken. **Require a BIDIRECTIONAL test:** a genuine 
 UI-SPEC must FAIL, and a non-UI phase touching only TypeScript/tests must stay READY without one.
 Anchor the match (word boundaries, or read the phase's `files_modified`) rather than substring-
 grepping prose.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06. Sampled 3 `phase-state.json` files
+across different UI-spec situations (the population this todo's own "Verification when fixed"
+section asks for):
+
+1. `.planning/phases/128-planning-reconciliation/phase-state.json:9-13,17-21` — `isFrontend: true`,
+   no `128-UI-SPEC.md` (correct — 128 builds one test file, no UI). `{"command":"plan-phase",
+   "ready":false,"missing":["UI-SPEC.md"]}` on both history entries — **non-empty and wrong**.
+2. `.planning/milestones/v15.0-phases/124-shell-information-architecture/phase-state.json:6-11,30-36`
+   — `isFrontend: true`, **has** `124-UI-SPEC.md`. `{"command":"code-review","ready":true,
+   "missing":[]}` — empty/green.
+3. `.planning/milestones/v15.0-phases/126-page-body-and-convex-read-defect-sweep/phase-state.json:12-17`
+   — `isFrontend: true`, **no** UI-SPEC (deliberate skip). `{"command":"execute-phase","ready":true,
+   "missing":[]}` — also empty/green, byte-identical to file 2's `missing` value despite the
+   opposite UI-SPEC situation.
+
+Files 2 and 3 confirm the field still cannot discriminate "has a spec" from "deliberately has
+none" under non-`plan-phase` commands. File 1 confirms the `plan-phase`-side false positive this
+todo's own 2026-08-27 addendum already found is still live today, not merely historical.
+
+**Verdict: STILL OPEN — evidence cited above.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 3.
+`resolves_phase: 138` confirmed against `.planning/REQUIREMENTS.md:262`
+(`GATE-01 | Phase 138 | Pending`).

@@ -7,7 +7,7 @@ trigger_when: Either failure recurs, OR a phase is scoped to test-infrastructure
 scope: Small-to-medium — two observed failures, each unreproduced, in TWO DIFFERENT vitest projects with two different mechanisms. Diagnosis is measurement-first, not fix-first
 source: Measured 2026-08-24. codepulse failure observed once by plan 125-05's executor; astridr-repo analog logged by that repo's phase 195-03. Orchestrator re-ran the full codepulse suite independently — did not reproduce
 resolves_phase: 136
-last_reviewed: 2026-08-24
+last_reviewed: 2026-08-27
 ---
 
 # Two full-suite-only test failures, deferred with operator approval
@@ -75,3 +75,21 @@ test-isolation pass.
 - `astridr-repo/.planning/phases/195-persona-dial-dashboard/deferred-items.md`
 - `vitest.config.ts:29-88` — the two-project layout, and the load-bearing comment explaining why
   the root `test` block must not declare `include`
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06/D-07. `.planning/REQUIREMENTS.md:99`
+states the flake family is "Four separate filings that are ONE family" — of the three filed in
+this repo, this one is a genuinely DIFFERENT codepulse-side failure than the other two
+(`AvatarAura.browser.test.tsx`, the `browser` vitest project — not `KnowledgeGraph.test.tsx`'s
+GLXY-02, which is `unit`), and this todo's own body already warns "do not merge" it with the
+astridr-side analog it references. This todo's own text is explicit that a single re-run
+structurally cannot discriminate "transient" from "order-dependent under full-suite load" —
+establishing a reproduction rate (its own prescribed first step) needs repeated live `npm test`
+runs, not a source read. Context only: `vitest.config.ts`'s two-project layout, cited by this
+todo, is unchanged this session.
+
+**REQUIRES LIVE MEASUREMENT — deferred to Phase 136.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 12.
+`resolves_phase: 136` confirmed against `.planning/REQUIREMENTS.md:259`
+(`FLAKE-01 | Phase 136 | Pending`).

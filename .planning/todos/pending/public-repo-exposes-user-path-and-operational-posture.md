@@ -7,7 +7,7 @@ trigger_when: Before the next decision about what `.planning/` and `CLAUDE.md` c
 scope: Unknown until the decision is made — ranges from one `.gitignore` line to a repo-visibility change. Sanitizing 272 files is NOT recommended without a reason better than tidiness.
 source: repo-wide; `CLAUDE.md`, `.planning/**`, `html-out/`
 resolves_phase: 138
-last_reviewed: 2026-08-24
+last_reviewed: 2026-08-27
 ---
 
 # `codepulse` is a PUBLIC repo, and nobody has decided what belongs in it
@@ -80,3 +80,24 @@ question is answered.
 files against a true count of **272** during this very investigation — a false negative that would
 have closed the todo as trivial. Use `git grep -F 'C:\Users\mandr'`, and confirm any count against
 a control that could have come out the other way.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06. The claim is an absence (no decision
+has been made) plus a presence (a requirement scheduling the decision for a future phase):
+
+- `.planning/REQUIREMENTS.md:117-120` — `GATE-02`: "The public-repo posture is DECIDED and
+  recorded... nobody has ever decided what `.planning/` and `CLAUDE.md` should contain." The
+  checkbox is `- [ ]` (unchecked/Pending) — this is a restatement of the open question, not a
+  resolution.
+- `.planning/REQUIREMENTS.md:263` — traceability row `GATE-02 | Phase 138 | Pending`.
+- Searched `.planning/**/*.md` and `CLAUDE.md` for any other decision record ("public repo",
+  "GATE-02", "DECIDED") — none found. `CLAUDE.md`'s deploy-command section still mandates the
+  absolute `C:\Users\mandr\...` path this todo names as the reason a blanket sanitize would be
+  undone by the next correctly-written plan; it records no public/private decision either.
+
+**Verdict: STILL OPEN — evidence cited above** (absence of a decision, presence of the scheduled
+requirement). Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 5.
+`resolves_phase: 138` confirmed against `.planning/REQUIREMENTS.md:263`
+(`GATE-02 | Phase 138 | Pending`).

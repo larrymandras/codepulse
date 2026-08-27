@@ -7,7 +7,7 @@ trigger_when: Next /alerts- or AlertRulesEngine-touching phase. Purely visual, n
 scope: Small (one plan) once root-caused — but it is NOT root-caused, and that needs live DOM measurement first
 source: src/components/AlertRulesEngine.tsx:75,108-109,205,218-219,388; observed live on /alerts
 resolves_phase: 131
-last_reviewed: 2026-08-21
+last_reviewed: 2026-08-27
 ---
 
 # Alert Rules Engine rows overlap and bunch their text
@@ -61,3 +61,18 @@ checkpoint surfaced a Radix `ScrollArea` clipping defect whose viewport wraps ch
 a `display:table` div that sizes to CONTENT width, which silently defeats `truncate` /
 `min-w-0` / `flex-wrap` at the call site. Worth checking whether an ancestor of this panel
 does the same before blaming the row markup.
+
+## Re-derivation (Phase 128, 2026-08-27)
+
+Re-checked against `HEAD` in this worktree, per D-04/D-06/D-07. The defect is rendered row
+geometry (vertical pitch, text overlap) — a property of the browser's box layout at runtime, not
+of the class strings — so reading code cannot establish whether it currently reproduces; only a
+live DOM measurement can, which is exactly why this todo's own author already declined to guess
+at a mechanism. Context only (not evidence of presence or absence): `src/components/AlertRulesEngine.tsx:75,108-109,205,218-219,388`
+re-read this session are byte-identical to this todo's own transcription, and no commit since
+2026-08-21 touches this component.
+
+**REQUIRES LIVE MEASUREMENT — deferred to Phase 131.** Full ledger entry:
+`.planning/phases/128-planning-reconciliation/128-TODO-OPEN-EVIDENCE.md`, Verdict 8.
+`resolves_phase: 131` confirmed against `.planning/REQUIREMENTS.md:249`
+(`FIX-06 | Phase 131 | Pending`).
