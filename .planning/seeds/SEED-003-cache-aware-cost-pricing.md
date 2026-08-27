@@ -1,6 +1,8 @@
 ---
 id: SEED-003
-status: dormant
+status: absorbed
+absorbed: 2026-08-27
+absorbed_by: [COST-04, COST-05, COST-06]
 planted: 2026-08-07
 planted_during: v14.0 Phase 108 (COST-01 side quest — daily-rollup gap + unpriced-model closure)
 trigger_when: >
@@ -17,6 +19,11 @@ origin: >
   1fe02ad9 (three unpriced model rates), 1af87f28 (cacheStats bounded read),
   astridr-repo a4ab5861 (CMA cost/cache accumulation).
 ---
+
+> **Absorbed 2026-08-27 (Phase 128, full coverage).** v16.0's COST-04/05/06 map 1:1 onto this
+> seed's core ask (distinguish cache-write/cache-read/uncached at real rates) and its own
+> `trigger_when` clauses (invoice reconciliation, budget thresholds tuned against real dollars).
+> See `128-SEED-RECONCILIATION.md`.
 
 # SEED-003: Cache-aware cost pricing
 

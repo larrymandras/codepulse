@@ -1,6 +1,8 @@
 ---
 id: SEED-002
-status: dormant
+status: absorbed
+absorbed: 2026-08-27
+absorbed_by: [BOARD-01, BOARD-02, BOARD-03]
 planted: 2026-07-20
 planted_during: v11.0 pause / astridr v28.0 (JARVIS v5 + TARS deep-read, Codex-converged)
 trigger_when: astridr SEED-023 (Mission Control) enters planning — this is its frontend half. PAIRS WITH (does not replace) Phase 99 Skill Launch/Dispatch; armory tiles + receipts ride Phase 100.
@@ -8,6 +10,13 @@ scope: Medium
 origin: "TARS server.py:1068-1099 stream-json→live telemetry parse + JARVIS v5 missions.py event buffer. Full analysis: C:\\Users\\mandr\\Mandras\\04-research\\jarvis-v5-tars-astridr-gap-analysis.md; astridr spec: astridr-repo/docs/superpowers/specs/2026-07-20-jarvis-v5-tars-v29-changeset.md"
 paired_seed: astridr-repo/.planning/seeds/SEED-023-mission-control-jobs-board.md
 ---
+
+> **Absorbed 2026-08-27 (Phase 128, PARTIAL — see `128-SEED-RECONCILIATION.md` Finding 1).**
+> v16.0's BOARD-01/02/03 scope the live-board, humanized-tool-activity, and HITL-confirm-card
+> thirds of this seed. NOT covered by any v16.0 requirement: squad grouping ("phase two, astridr
+> MC-2") and the self-critique `{critique, follow_up}` "deploy follow-up" card remain unscoped
+> ideas — not re-scoped here, flagged so a later reader does not assume BOARD-01..03 close this
+> seed completely.
 
 # SEED-002: Mission Control jobs board (frontend half of astridr SEED-023)
 

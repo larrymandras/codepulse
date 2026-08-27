@@ -1,6 +1,6 @@
 ---
 id: SEED-005
-status: dormant
+status: shipped # 2026-08-27 — Phase 128 re-derivation: v14.0 Phases 116-119 all read `Complete` in .planning/milestones/v14.0-ROADMAP.md (116 Galdr 2026-08-10, 117 Bifröst 2026-08-10, 118 Studio 2026-08-17 verified 16/16, 119 Loom 2026-08-11). See 128-SEED-RECONCILIATION.md.
 planted: 2026-08-07
 planted_during: v14.0 (design session in home-dir CWD; phases not yet added — GSD add must run from a codepulse session)
 trigger_when: >

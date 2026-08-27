@@ -1,6 +1,8 @@
 ---
 id: SEED-007
-status: dormant
+status: shipped # 2026-08-27 — Phase 128: only item 1's FIRST gap (real submittedAt) shipped, astridr e435f71a. Items 1's other two gaps (non-terminal queued/running states, the mission-to-tool correlation key) plus D-11/D-12 remain open — see 128-SEED-RECONCILIATION.md Finding 3.
+absorbed: 2026-08-27
+absorbed_by: [BOARD-01, BOARD-02]
 planted: 2026-08-10
 planted_during: v14.0 / Phase 111 (Mission Board scope narrowing)
 trigger_when: the astridr emitter resumes writing subagent_job events with real submittedAt/queued/running states, OR the live-mission board is scheduled as a phase
@@ -8,6 +10,16 @@ scope: Medium
 origin: "111-CONTEXT.md probe (npx convex run subagentJobs:listRecent --url http://127.0.0.1:3210, 2026-08-10T20:49Z): 7 rows ever | {failed:2, cancelled:3, completed:2} | zero queued, zero running | submittedAt === finishedAt in 7 of 7 | newest row 2026-07-07 | 0 rows with sessionId/traceId | subagentJobs absent from retention.ts (control: toolExecutions present). Corroborating code: convex/runtimeIngest.ts:594-596, convex/subagentJobs.ts:13-16, convex/schema.ts:562-586 and :1028-1041, convex/retention.ts:34."
 paired_seed: .planning/seeds/SEED-002-mission-control-jobs-board.md
 ---
+
+> **Dual status, 2026-08-27 (Phase 128).** `shipped` covers ONLY item 1's real-`submittedAt` gap —
+> astridr `e435f71a` — which is the "repair half" that unblocks XREPO-03 (MISSION-01
+> duration/orphan). `absorbed_by: [BOARD-01, BOARD-02]` covers the mission-board /
+> tool-activity halves this seed describes, now owned by those requirements. **Still open, not
+> shipped and not absorbed by anything**: item 1's other two named gaps (non-terminal
+> `queued`/`running` states — still Supabase-only per `convex/runtimeIngest.ts`'s own comment;
+> the mission-to-tool correlation key — no `sessionId`/`traceId` field exists on `subagentJobs`)
+> plus D-11 (retention binding) and D-12 (bounding `listRecent`), both still absent from the live
+> code. See `128-SEED-RECONCILIATION.md` Finding 3.
 
 # SEED-007: Mission emitter revival (prerequisite for SEED-002's live board)
 

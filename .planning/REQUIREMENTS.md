@@ -207,7 +207,7 @@ evidence remains in git history (`.planning/REQUIREMENTS.md` at `9ea8e4df`). Dis
 | 4 | `links` retention + unbounded read | ✅ Closed before v16.0 — `bifrost.ts:85` bounded; `links` in `COVERAGE_KEEP_FOREVER` |
 | 5 | `llm-analytics-rollup` CR-01 | ✅ Absorbed as v15.0 DEBT-08 |
 | 6 | `detectCredentialValue` rule C | ✅ Accepted decision, not open work |
-| 7 | Nyquist coverage (117/119) | ✅ Closed 2026-08-26/27 — VALIDATION docs written, Loom coverage landed (`7a782bfa`) |
+| 7 | Nyquist coverage (117/119) | ⚠ **CORRECTED (Phase 128, 2026-08-27):** Phase 119 closed 2026-08-27 (`7a782bfa`, `119-VALIDATION.md`'s three coverage gaps resolved). **Phase 117 remains PARTIAL, not closed** — its own `117-VALIDATION.md` (2026-08-26) records the container-name liveness-dot join (`links.containerName` → `dockerContainers.status`) as `❌ GAP — untested`, judged cosmetic and deliberately accepted, never closed. The original row's blanket "closed" over-claimed Phase 117; see `128-SEED-RECONCILIATION.md` Carried-forward audit item 7. |
 | 8 | DEBT-06 | ✅ Closed GUARDED — 80 clean soak iterations, cause never identified, disposition recorded |
 | 9 | astridr CORS on deployed branch | → **XREPO-02** |
 

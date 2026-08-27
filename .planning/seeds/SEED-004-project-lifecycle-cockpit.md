@@ -1,6 +1,8 @@
 ---
 id: SEED-004
-status: dormant
+status: absorbed
+absorbed: 2026-08-27
+absorbed_by: [COCKPIT-01, COCKPIT-02, COCKPIT-03, COCKPIT-04, COCKPIT-05, COCKPIT-06]
 planted: 2026-08-07
 planted_during: v14.0 (agentic-OS daily-driver design session)
 trigger_when: "Next milestone planning after v14.0 (version TBD - v15.0 is earmarked for the Borealis UI overhaul per CLAUDE.md), gated on Forge v4.0 Interactive Sessions shipping (Phases 21-26) - the Inbox/composer half is Mission Control Slice 3 and depends on Forge's permission relay"
@@ -8,6 +10,11 @@ scope: Large
 origin: "Daily-driver design interview 2026-08-07. Full spec: C:\\Users\\mandr\\Mandras\\runbooks\\agentic-os-project-runbook.md (sections: Target Workflow, Build Roadmap items 2-4, 6-7). Decisions table there is binding."
 paired_seed: astridr-repo/.planning/seeds/SEED-027-astridr-forge-dispatch.md
 ---
+
+> **Absorbed 2026-08-27 (Phase 128, full coverage).** v16.0's COCKPIT-01..06 map 1:1 onto this
+> seed's five components (Inbox/composer → COCKPIT-01, Factory → COCKPIT-02, Projects view →
+> COCKPIT-03, ship gates → COCKPIT-04, tailnet cockpit → COCKPIT-05) plus the Non-negotiables
+> (COCKPIT-06). See `128-SEED-RECONCILIATION.md`.
 
 # SEED-004: Project Lifecycle Cockpit — Factory, Projects view, Inbox, ship gates
 

@@ -1,12 +1,22 @@
 ---
 id: SEED-006
-status: dormant
+status: shipped # 2026-08-27 — Phase 128: this seed's OWN declared scope (the 4-theme x 5-page / 20-cell matrix its body names) fully remediated by v15.0 Phases 122/123 — see 128-SEED-RECONCILIATION.md Finding 2.
+absorbed: 2026-08-27
+absorbed_by: [A11Y-03, A11Y-04, A11Y-05]
 planted: 2026-08-10
 planted_during: v13.x (188.4 validation-audit follow-on)
 trigger_when: "Any milestone with UI/design capacity. NOT urgent-blocking — nothing regressed; these violations have been live the whole time and were merely invisible. Do it before any accessibility claim is made about CodePulse externally."
 scope: Medium-Large (unmeasured — sizing is task 1)
 origin: ".planning/todos/pending/2026-08-10-theme-contrast-tests-passed-vacuously-behind-clerk-gate.md (astridr-repo), part 2. Part 1 (stop the vacuous pass) shipped as codepulse fee96b5d."
 ---
+
+> **Dual status, 2026-08-27 (Phase 128).** `shipped` covers this seed's OWN declared scope — the
+> `e2e/theme-contrast.spec.ts` 4-theme x 5-page (20-cell) matrix its body names — fully
+> remediated by v15.0 Phase 122 (measure) and Phase 123 (fix): 0 violations across all 20
+> criterion cells. `absorbed_by: [A11Y-03, A11Y-04, A11Y-05]` covers the wider-app remainder this
+> seed's own "measure everything, size the fix" instruction implied but v15.0 never actually
+> measured — Phase 122 sampled only 5 of 47 route files, and the other 42 are v16.0's A11Y-03/04/05
+> backlog. See `128-SEED-RECONCILIATION.md` Finding 2.
 
 # SEED-006: WCAG-AA contrast remediation across the theme system
 
