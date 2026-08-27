@@ -226,6 +226,29 @@ non-CodePulse session. Full war stories: memory [[lessons-archive-2026-08-21]].
   reason unrelated to tokens, and it escaped because the close was tagged and pushed from a
   green run taken BEFORE the close commit. Re-run the suite AFTER a close, and resolve phase
   dirs across both the active and archived locations rather than repointing the literal.
+- **`--chart-bar` is the base-series NEUTRAL, not an accent.** In the cyan theme it resolves to
+  `#1e1e24` — byte-identical to `--muted` — so painting a bar fill or sparkline stroke with it
+  renders the mark invisible against its own track. That shipped once, with 21 green unit tests,
+  because **jsdom does not resolve CSS custom properties**, so no unit test here can ever catch a
+  token-choice error. Use `--chart-bar-accent` for visible marks (`TokenUsageChart.tsx:123-129`
+  uses the two correctly as a base/accent pair) and verify colour by rasterising the real page.
+
+- **`PrivacyContext.enabled` and `.level` are INDEPENDENT.** `setLevel` (`PrivacyContext.tsx:59-66`)
+  writes only `level` and never touches `enabled`, so a user who picks Demo or Screenshot from the
+  default off state still has `enabled === false`. Gate masking on `enabled || level !== "off"` —
+  `usePrivacyMask` exposes that as `masking`. Gating on `enabled` alone made screenshot mode redact
+  NOTHING app-wide. The CSS half is separate and equally easy to miss: `.privacy-demo`/
+  `.privacy-screenshot` (`index.css:649-661`) only reach elements carrying `data-sensitive`, and
+  `dataSensitiveCoverage.ratchet.test.ts` keeps that count from silently dropping.
+
+- **A new `convex/` module breaks `tsc` until `_generated/api.d.ts` is regenerated.** `crons.ts`
+  referencing `internal.myModule.fn` fails with "Property 'myModule' does not exist" until
+  `npx convex codegen` runs — it is local-only ("does not modify the code running on the
+  deployment") and takes NO `--env-file`, unlike `run`/`deploy`. Also: `convex run --inline-query`
+  is sandboxed READ-ONLY, so a live probe cannot write a fixture row — proving a write path in
+  production means deploying throwaway code, which is usually not worth it. Say so rather than
+  implying end-to-end proof.
+
 - **Requirement status decays and nobody re-derives it.** At v15.0's close, 8 requirements read
   `Pending` on phases already marked Complete, 3 of 4 `Partial` cells were stale notes
   describing work that had landed, and 6 of 9 carried-forward v14.0 items were wrong (4 already
