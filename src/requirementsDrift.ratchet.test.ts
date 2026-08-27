@@ -113,8 +113,9 @@
  * should be re-measured.
  */
 import { describe, it, expect } from "vitest";
+import { load } from "js-yaml";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -432,10 +433,10 @@ function stalePartialOffenders(
 // Windows escaping rules mangle patterns containing brackets/carets.
 // ---------------------------------------------------------------------------
 
-function gitIsShallow(): boolean {
+function gitIsShallow(cwd: string = REPO_ROOT): boolean {
   try {
     const out = execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
-      cwd: REPO_ROOT,
+      cwd,
       encoding: "utf8",
     }).trim();
     return out === "true";
@@ -698,6 +699,99 @@ describe("statusWord: a decorated status cell must not vanish from the check", (
     const qa01 = collectRequirements().find((r) => r.id === "QA-01");
     expect(qa01, "QA-01 not found in the corpus -- has v8.0-REQUIREMENTS.md moved?").toBeDefined();
     expect(qa01!.status).toBe("Partial");
+  });
+});
+
+describe("gitIsShallow: the REAL implementation, not just the fake oracle", () => {
+  // Found by the phase-128 adversarial mutation gate. Neutering this function to
+  // `return false` left the whole suite 23/23 GREEN: case 8 of the logic table below only
+  // ever drives a FAKE oracle, and the live D-01 assertion never reaches oracle.isShallow()
+  // while the in-range Partial population is zero. So the one component that decides whether
+  // CI is running with usable history had no test at all.
+  //
+  // These build a genuinely shallow clone rather than mocking git, because the thing under
+  // test IS the git invocation.
+
+  it("returns true for a real shallow clone and false for its full source (paired control)", () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "requirements-drift-shallow-"));
+    try {
+      // Identity/signing scoped to this throwaway repo only, per the same discipline as the
+      // D-03a fixture below - never the --no-gpg-sign bypass CLAUDE.md forbids on THIS repo.
+      const gitPrefix = [
+        "-c", "user.name=ratchet-fixture",
+        "-c", "user.email=ratchet-fixture@example.invalid",
+        "-c", "commit.gpgsign=false",
+      ];
+      const src = join(tmpDir, "src-repo");
+      const shallow = join(tmpDir, "shallow-clone");
+      mkdirSync(src, { recursive: true });
+      const git = (args: string[], cwd: string): string =>
+        execFileSync("git", [...gitPrefix, ...args], { cwd, encoding: "utf8" });
+
+      git(["init", "-q"], src);
+      writeFileSync(join(src, "f.txt"), "one\n", "utf8");
+      git(["add", "f.txt"], src);
+      git(["commit", "-q", "-m", "one"], src);
+      writeFileSync(join(src, "f.txt"), "two\n", "utf8");
+      git(["add", "f.txt"], src);
+      git(["commit", "-q", "-m", "two"], src);
+
+      // file:// is required for --depth to take effect; a plain local path clone ignores it.
+      const srcUrl = "file:///" + src.replace(/\\/g, "/");
+      git(["clone", "-q", "--depth", "1", srcUrl, shallow], tmpDir);
+
+      // The control that could have come out the other way: same function, non-shallow repo.
+      expect(gitIsShallow(shallow), "a --depth 1 clone must read as shallow").toBe(true);
+      expect(gitIsShallow(src), "its full source must read as NOT shallow").toBe(false);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("defaults to SHALLOW (the loud answer) when it cannot determine shallowness at all", () => {
+    // Indeterminate must never present as non-shallow: reading "not shallow" from a failed
+    // probe is exactly how a freshness check passes for a reason that has nothing to do with
+    // freshness.
+    expect(gitIsShallow(join(tmpdir(), "definitely-not-a-git-repo-xyz-128"))).toBe(true);
+  });
+
+  it("reports THIS repository as not shallow, so the live assertion is not silently skipped", () => {
+    expect(gitIsShallow()).toBe(false);
+  });
+});
+
+describe("CI reachability: the workflow must keep the history this ratchet needs", () => {
+  // Found by the phase-128 adversarial mutation gate: NOTHING in this repo guarded
+  // `fetch-depth: 0`. It is one line in ci.yml, added by plan 128-05 precisely so
+  // `git merge-base --is-ancestor` can answer in CI, and deleting it would be silent to the
+  // entire test suite - the ratchet would go quietly indeterminate on the one machine whose
+  // result anyone acts on.
+  //
+  // Parsed with js-yaml rather than grepped: a grep matches the word in a comment, which is
+  // how a criterion gets satisfied by rewording prose instead of by keeping the setting.
+
+  it("ci.yml checks out full history for the job that runs the unit project", () => {
+    const raw = readFileSync(join(REPO_ROOT, ".github/workflows/ci.yml"), "utf8");
+    const doc = load(raw) as {
+      jobs: Record<string, { steps: Array<{ uses?: string; with?: Record<string, unknown> }> }>;
+    };
+
+    const jobs = Object.values(doc.jobs ?? {});
+    expect(jobs.length, "no jobs parsed from ci.yml - has the workflow moved?").toBeGreaterThan(0);
+
+    const checkouts = jobs
+      .flatMap((j) => j.steps ?? [])
+      .filter((st) => typeof st.uses === "string" && st.uses.startsWith("actions/checkout"));
+    expect(checkouts.length, "no actions/checkout step found in ci.yml").toBeGreaterThan(0);
+
+    for (const st of checkouts) {
+      expect(
+        st.with?.["fetch-depth"],
+        "ci.yml checkout must set fetch-depth: 0. Without full history, " +
+          "completionCommitFor cannot bisect ROADMAP.md and merge-base --is-ancestor " +
+          "cannot answer, so this ratchet stops being able to fire in CI.",
+      ).toBe(0);
+    }
   });
 });
 

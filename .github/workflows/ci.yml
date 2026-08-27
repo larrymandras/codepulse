@@ -10,11 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # fetch-depth: 0 (full history) is required because
-      # requirementsDrift.ratchet.test.ts resolves a phase's completion commit
-      # by bisecting ROADMAP.md's own revision history and compares stamp
-      # ancestry against it (`git merge-base --is-ancestor`) — a depth-1
-      # checkout leaves that unanswerable and the ratchet's shallow-repository
-      # branch fails loudly rather than silently passing.
+      # requirementsDrift.ratchet.test.ts resolves a phase's completion commit by
+      # bisecting ROADMAP.md's own revision history and compares stamp ancestry
+      # against it (`git merge-base --is-ancestor`). A depth-1 checkout leaves that
+      # unanswerable.
+      #
+      # Measured 2026-08-27, stated precisely because the obvious stronger claim is
+      # NOT true today: with zero in-range `Partial` rows, the ratchet's
+      # shallow-repository branch is never REACHED, so in a shallow clone it does not
+      # fire. What actually goes red there is completionCommitFor's own bisect test.
+      # The shallow branch becomes load-bearing the moment a real in-range Partial
+      # appears (verified by injecting one into a real depth-1 clone). Keeping this
+      # flag is what makes that future case answerable rather than indeterminate.
+      #
+      # Guarded by the "CI reachability" test in requirementsDrift.ratchet.test.ts,
+      # which parses this file; before that existed, deleting this line was silent.
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           fetch-depth: 0
