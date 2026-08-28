@@ -23,7 +23,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { getFunctionName } from "convex/server";
 import * as missions from "./missions";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import {
   resolveMissionProjectionEvent,
   resolveMissionProjectionEventRow,
@@ -196,14 +196,17 @@ describe("missions.upsert", () => {
     expect(store.tables.missionRuns).toHaveLength(2);
   });
 
-  it("a partial token-tick push does NOT null a previously-set totalCostUsd (D-20 coalesce)", async () => {
+  it("a partial token-tick push does NOT null previously-set fields (D-20 coalesce)", async () => {
     const store = makeStore();
+    // Both pushes are NON-terminal, so this test isolates the coalesce and does
+    // not silently depend on the terminal-monotonicity guard below.
     await run(missions.upsert, store.ctx, {
       ...baseMission,
-      status: "completed",
+      status: "running",
       totalCostUsd: 0.0528,
       contained: true,
       offeredEscapes: ["Bash"],
+      startedAt: 1000,
     });
     // The shape a D-20 token tick actually pushes: identity + status + tokens.
     await run(missions.upsert, store.ctx, {
@@ -214,10 +217,12 @@ describe("missions.upsert", () => {
     });
 
     const row = store.tables.missionRuns[0];
+    expect(row.status).toBe("running");
     expect(row.promptTokens).toBe(1234);
     expect(row.totalCostUsd).toBe(0.0528);
     expect(row.contained).toBe(true);
     expect(row.offeredEscapes).toEqual(["Bash"]);
+    expect(row.startedAt).toBe(1000);
   });
 
   it("an explicit contained:false OVERWRITES a prior true — a real escape is not swallowed by the coalesce", async () => {
@@ -480,6 +485,217 @@ describe("missions.eventsForMission", () => {
   });
 });
 
+
+/** The four terminal statuses, read off the module under test rather than
+ * re-typed here, so a change to the real set drives these cases. */
+const TERMINAL_FIXTURE = missions.TERMINAL_STATUSES.map((s) => [s] as const);
+
+// ---------------------------------------------------------------------------
+// F2 — terminal state is monotonic
+// ---------------------------------------------------------------------------
+
+describe("missions.upsert — terminal state is monotonic (F2)", () => {
+  it("a late RUNNING tick after `completed` is ignored WHOLE — status, cost and containment all survive", async () => {
+    const store = makeStore();
+    await run(missions.upsert, store.ctx, {
+      ...baseMission,
+      status: "completed",
+      finishedAt: 1100,
+      totalCostUsd: 0.0528,
+      promptTokens: 9000,
+      contained: true,
+    });
+
+    const outcome = await run(missions.upsert, store.ctx, {
+      missionId: "m-1",
+      status: "running",
+      missionClass: "subscription-reaper",
+      promptTokens: 1234,
+    });
+
+    const row = store.tables.missionRuns[0];
+    // The assertion the previous version of the coalesce test was missing.
+    expect(row.status).toBe("completed");
+    // The tick's RUNNING totals are lower than the terminal ones by
+    // construction, so applying them would regress the numbers too.
+    expect(row.promptTokens).toBe(9000);
+    expect(row.totalCostUsd).toBe(0.0528);
+    expect(row.contained).toBe(true);
+    expect(row.finishedAt).toBe(1100);
+    expect(outcome).toBe("ignored_stale_after_terminal");
+  });
+
+  it.each(TERMINAL_FIXTURE)(
+    "a non-terminal push after %s is ignored",
+    async (terminalStatus) => {
+      const store = makeStore();
+      await run(missions.upsert, store.ctx, { ...baseMission, status: terminalStatus });
+      await run(missions.upsert, store.ctx, { ...baseMission, status: "running" });
+      expect(store.tables.missionRuns[0].status).toBe(terminalStatus);
+    }
+  );
+
+  it("CONTROL: terminal -> terminal IS allowed — a corrected completed -> failed is a real late correction, not a regression", async () => {
+    const store = makeStore();
+    await run(missions.upsert, store.ctx, { ...baseMission, status: "completed" });
+    const outcome = await run(missions.upsert, store.ctx, {
+      ...baseMission,
+      status: "failed",
+      finishedAt: 1200,
+    });
+    expect(store.tables.missionRuns[0].status).toBe("failed");
+    expect(store.tables.missionRuns[0].finishedAt).toBe(1200);
+    expect(outcome).toBe("patched");
+  });
+
+  it("CONTROL: every non-terminal transition still lands, so the guard discriminates rather than freezing the row", async () => {
+    const store = makeStore();
+    await run(missions.upsert, store.ctx, { ...baseMission, status: "queued" });
+    for (const next of ["running", "awaiting_approval", "running", "completed"]) {
+      await run(missions.upsert, store.ctx, { ...baseMission, status: next });
+      expect(store.tables.missionRuns[0].status).toBe(next);
+    }
+  });
+
+  it("the terminal set is exactly the four non-live statuses of the Postgres CHECK constraint", () => {
+    // Derived from the authority rather than re-typed: the seven statuses the
+    // migration allows, minus the three the boot sweep treats as still live
+    // (`supabase/migrations/20260824210500_create_missions.sql:22-23,52`).
+    const ALL = [
+      "queued",
+      "running",
+      "awaiting_approval",
+      "completed",
+      "failed",
+      "expired",
+      "cancelled",
+    ];
+    const LIVE = ["queued", "running", "awaiting_approval"];
+    expect([...missions.TERMINAL_STATUSES].sort()).toEqual(
+      ALL.filter((s) => !LIVE.includes(s)).sort()
+    );
+    // CONTROL: the two sets are not trivially equal.
+    expect(missions.TERMINAL_STATUSES).not.toContain("running");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F3 — a caller-supplied limit cannot widen the read
+// ---------------------------------------------------------------------------
+
+describe("missions.listRecent / eventsForMission — the limit is clamped (F3)", () => {
+  async function recordListRecent(limit: unknown) {
+    const store = makeStore();
+    await seedMission(store);
+    store.reads.length = 0;
+    await run(missions.listRecent, store.ctx, { limit });
+    return store.reads[0].limit;
+  }
+
+  it("an oversized limit is clamped to MAX_RECENT_LIMIT, not honoured", async () => {
+    expect(await recordListRecent(1_000_000)).toBe(missions.MAX_RECENT_LIMIT);
+    // CONTROL: a limit UNDER the ceiling is honoured verbatim, so the clamp is
+    // a clamp and not a constant.
+    expect(await recordListRecent(7)).toBe(7);
+  });
+
+  it("zero, negative and fractional limits are coerced to a finite positive integer", async () => {
+    expect(await recordListRecent(0)).toBe(1);
+    expect(await recordListRecent(-5)).toBe(1);
+    expect(await recordListRecent(2.7)).toBe(2);
+  });
+
+  it("non-finite limits fall back to the default rather than reaching take()", async () => {
+    expect(await recordListRecent(Number.NaN)).toBe(missions.DEFAULT_RECENT_LIMIT);
+    expect(await recordListRecent(Number.POSITIVE_INFINITY)).toBe(missions.DEFAULT_RECENT_LIMIT);
+  });
+
+  it("every recorded limit is a finite positive integer no larger than the ceiling", async () => {
+    for (const requested of [undefined, 0, -5, 2.7, 7, 1_000_000, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const recorded = await recordListRecent(requested);
+      expect(Number.isInteger(recorded)).toBe(true);
+      expect(recorded).toBeGreaterThan(0);
+      expect(recorded).toBeLessThanOrEqual(missions.MAX_RECENT_LIMIT);
+    }
+  });
+
+  it("eventsForMission clamps to MAX_EVENTS_LIMIT the same way", async () => {
+    const store = makeStore();
+    await seedMission(store);
+    store.reads.length = 0;
+    await run(missions.eventsForMission, store.ctx, { missionId: "m-1", limit: 1_000_000 });
+    expect(store.reads[0].limit).toBe(missions.MAX_EVENTS_LIMIT);
+
+    store.reads.length = 0;
+    await run(missions.eventsForMission, store.ctx, { missionId: "m-1", limit: -3 });
+    expect(store.reads[0].limit).toBe(1);
+  });
+
+  it("the ceilings are at least the defaults — otherwise the default itself would be clamped away", () => {
+    expect(missions.MAX_RECENT_LIMIT).toBeGreaterThanOrEqual(missions.DEFAULT_RECENT_LIMIT);
+    expect(missions.MAX_EVENTS_LIMIT).toBeGreaterThanOrEqual(missions.DEFAULT_EVENTS_LIMIT);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F1 — the two writes are NOT public
+// ---------------------------------------------------------------------------
+
+describe("F1 — upsert and appendEvent are internal, not public", () => {
+  it("both writes carry isInternal and NOT isPublic", () => {
+    for (const [name, fn] of [
+      ["upsert", missions.upsert],
+      ["appendEvent", missions.appendEvent],
+    ] as const) {
+      const f = fn as unknown as { isInternal?: boolean; isPublic?: boolean; isMutation?: boolean };
+      expect(f.isMutation, `${name} must still be a mutation`).toBe(true);
+      expect(f.isInternal, `${name} must be internalMutation`).toBe(true);
+      expect(f.isPublic, `${name} must NOT be public`).toBeUndefined();
+    }
+  });
+
+  it("CONTROL: the three READ functions ARE public, so the flags above are a real reading and not the only value this probe can return", () => {
+    for (const [name, fn] of [
+      ["byId", missions.byId],
+      ["listRecent", missions.listRecent],
+      ["eventsForMission", missions.eventsForMission],
+    ] as const) {
+      const f = fn as unknown as { isInternal?: boolean; isPublic?: boolean; isQuery?: boolean };
+      expect(f.isQuery, `${name} must be a query`).toBe(true);
+      expect(f.isPublic, `${name} is D-05 ungated and stays public`).toBe(true);
+      expect(f.isInternal, `${name} must not be internal`).toBeUndefined();
+    }
+  });
+
+  it("no PUBLIC api reference is generated for either write — the generated api surface exposes reads only", () => {
+    // convex/_generated/api.d.ts builds `api` from
+    // FilterApi<typeof fullApi, FunctionReference<any, "public">>, so an
+    // internalMutation is absent from `api.missions.*` BY TYPE. `api` is a
+    // runtime proxy that answers to any name, so the type surface is the real
+    // authority here and tsc is the enforcement: reverting either function to
+    // `mutation(` makes runtimeIngest.ts's `internal.missions.*` call sites
+    // fail to compile, and reverting the CALL SITES to `api.missions.*` fails
+    // to compile against the internal declaration. This test pins the runtime
+    // half that tsc cannot see.
+    const generated = readFileSync(resolve(process.cwd(), "convex/missions.ts"), "utf-8");
+    const declarations = generated.match(/^export const (\w+) = (\w+)\(/gm) ?? [];
+    expect(declarations).toContain("export const upsert = internalMutation(");
+    expect(declarations).toContain("export const appendEvent = internalMutation(");
+    // CONTROL: the same read finds the public queries, so a regex that matched
+    // nothing would be caught instead of passing vacuously.
+    expect(declarations).toContain("export const byId = query(");
+    expect(declarations).not.toContain("export const upsert = mutation(");
+  });
+
+  it("runtimeIngest reaches both writes through internal.*, never api.*", () => {
+    const ingest = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
+    const calls = ingest.match(/ctx\.runMutation\((api|internal)\.missions\.(\w+)/g) ?? [];
+    expect(calls.length).toBe(2); // control: the probe found the call sites at all
+    for (const call of calls) expect(call).toContain("internal.missions.");
+    expect(ingest).not.toContain("ctx.runMutation(api.missions.");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // D-02 field boundary — read from the live args validators, not the source text
 // ---------------------------------------------------------------------------
@@ -635,8 +851,9 @@ function ingestRequest(events: any[]) {
 function makeIngestCtx(store: ReturnType<typeof makeStore>) {
   const runMutation = vi.fn(async (ref: any, args: any) => {
     const name = getFunctionName(ref);
-    if (name === getFunctionName(api.missions.upsert)) return run(missions.upsert, store.ctx, args);
-    if (name === getFunctionName(api.missions.appendEvent)) return run(missions.appendEvent, store.ctx, args);
+    if (name === getFunctionName(internal.missions.upsert)) return run(missions.upsert, store.ctx, args);
+    if (name === getFunctionName(internal.missions.appendEvent))
+      return run(missions.appendEvent, store.ctx, args);
     return undefined;
   });
   return { runMutation };

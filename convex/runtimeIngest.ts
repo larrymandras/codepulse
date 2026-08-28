@@ -635,7 +635,7 @@ function displayString(value: unknown, fallback: string): string {
 
 /**
  * resolveMissionProjectionEvent — resolves a `mission_projection` payload into
- * the args for `api.missions.upsert`, or `null` when the event must be
+ * the args for `internal.missions.upsert`, or `null` when the event must be
  * skipped. See the block comment above for the identifier rule.
  */
 export function resolveMissionProjectionEvent(
@@ -700,7 +700,7 @@ export function resolveMissionProjectionEvent(
 
 /**
  * resolveMissionProjectionEventRow — resolves a `mission_projection_event`
- * payload into the args for `api.missions.appendEvent`, or `null` when the
+ * payload into the args for `internal.missions.appendEvent`, or `null` when the
  * event must be skipped. Both halves of the `(missionId, seq)` identity are
  * required and type-checked; `occurredAt` is required because the board's
  * liveness readout is derived from it and a fabricated "now" would make a
@@ -974,7 +974,18 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
               );
               break;
             }
-            await ctx.runMutation(api.missions.upsert, resolvedMission);
+            const upsertOutcome = await ctx.runMutation(internal.missions.upsert, resolvedMission);
+            if (upsertOutcome === "ignored_stale_after_terminal") {
+              // Visible, not silent: a push carrying a NON-terminal status for a
+              // mission the DB already called done is a stale, out-of-order
+              // delivery. It is dropped whole (D-06: the DB owns the terminal
+              // transition, the board only renders it), and that drop is real
+              // signal loss worth counting rather than swallowing.
+              skippedCount++;
+              console.warn(
+                `[runtimeIngest] mission_projection ignored: a non-terminal status "${resolvedMission.status}" arrived after this mission was already terminal. Stale out-of-order delivery; nothing was written.`
+              );
+            }
             break;
           }
           case "mission_projection_event": {
@@ -990,7 +1001,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
               );
               break;
             }
-            await ctx.runMutation(api.missions.appendEvent, resolvedEvent);
+            await ctx.runMutation(internal.missions.appendEvent, resolvedEvent);
             break;
           }
           case "security_event": {
