@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v16.0
 milestone_name: Terminal Zero - Full Stack Close-Out
 status: ready_to_plan
-last_updated: 2026-08-27T22:56:30.580Z
-last_activity: 2026-08-27 -- Phase 128 (Planning Reconciliation) complete: 5/5 plans, 4/4 requirements verified
+last_updated: "2026-08-28T19:16:21.903Z"
+last_activity: "2026-08-28 -- Phase 129 (Dashboard Unbounded Read & Ratchet Coverage) context gathered: 15 decisions, 4 gray areas, F-1..F-4 recorded"
 progress:
   total_phases: 30
   completed_phases: 1
   total_plans: 5
   completed_plans: 5
   percent: 3
-stopped_at: Phase 128 complete (5/5) — ready to discuss Phase 129
+stopped_at: Phase 129 context gathered -- ready to plan
 ---
 
 Prior (superseded by the above) --- 2026-08-21 -- Phase 125 (Signature Layers) CONTEXT GATHERED via /gsd-discuss-phase -- 16 decisions across 4 gray areas, committed 8a9253e6 (125-CONTEXT.md + 125-DISCUSSION-LOG.md, 652 insertions, exactly 2 files, no cross-session sweep-in). FOUR MEASUREMENTS TAKEN DURING THE DISCUSSION CHANGE WHAT THIS PHASE CAN HONESTLY PROMISE, recorded as F-1..F-4 in 125-CONTEXT.md rather than discovered at plan time. F-1 -- CodePulse CANNOT OBSERVE E-STOP AT ALL TODAY, so ROADMAP criterion 1 rested on a mechanism that does not exist. No estop function in convex/, no estop topic in AstridrWSContext.tsx TOPIC_EVENT_MAP, nothing latches the WS ack. Astridr does expose GET /api/estop/status but _estop_precheck (astridr channels/web.py 1730-1750) rejects any caller whose request.client.host is not in _LOOPBACK_HOSTS at 1728, AND demands x-astridr-admin-key -- a browser reaches the container via the docker gateway IP and gets 403 loopback only, as would convex-backend, and baking the admin key into the bundle is what EStopButton.tsx 11-20 explicitly refuses. D-01 resolves it by making Astridr the source of truth via a new estop_state telemetry event -- CROSS-REPO WORK IN astridr-repo, which this milestone has not done before, and which needs docker compose up --build (the package is baked, restart will not deploy it). D-02 pushes that state on connect as well as on transition, following the commands.catalog push-on-connect precedent in the same file, because estop.py 60-63 records the state as in-memory and cleared by a restart. F-2 -- TWO TOKENS 122 WAS EXPECTED TO HAND DOWN WERE NEVER LANDED. 122 shipped --surface-0..3, --hairline, --astridr, the --status-ok decouple and --duration-fast/normal/slow + --ease-house, but zero hits for --aurora-a/b/c and zero for --font-voice or any serif family. Both are 125's to create. Note also that 122's D-10 deliberately named --duration-* and --ease-house, NOT the sketch's --dur-1/2/3 and --ease-out, so the horizon must read the names that exist. F-3 -- NO ENTRY-CHUNK BUDGET EXISTS TO HOLD. There is a DEBT-03 convention and comments citing it, but nothing measures or asserts a byte figure anywhere, so criterion 2's entry-chunk clause was unmeasurable as written. D-10 creates one baseline-then-ratchet, in the shape tokenSweep.ratchet.test.ts already uses. The risk is also inverted from the criterion's wording -- Dashboard is lazy (App.tsx 18) so the ECG lands in the Dashboard chunk, while DashboardLayout is a static import (App.tsx 4) so the HORIZON is what lands in the entry chunk. F-4 -- 124's deferred SYS/LAT item is ALREADY CLOSED, not inherited; 124 plan 09 relocated them into the overflow menu at DashboardLayout.tsx 953-984. NO TODOS FOLDED -- todo.match-phase returned 8, all at 0.6 on generic keyword overlap; seven are named by ROADMAP as Phase 126's entire scope and the other two carry trigger_when values naming different phases. STATE.md HAND-EDITED IN BOTH THE FRONTMATTER AND BODY COPIES WITH ONE SHARED TIMESTAMP -- gsd-sdk state.record-session was run once as the workflow directs and produced the documented clobber, deleting 151 lines to insert 6 (7 non-blank) and writing a 14ms frontmatter/body skew of its own (.956Z vs .942Z), while its payload reported only {Last session, Stopped At, Resume File}. Recovered via git checkout HEAD -- proven byte-exact by an empty git diff HEAD, then re-applied by asserted single-occurrence replaces. Phase 124's full record is unaffected and lives in ROADMAP.md's Progress row and .planning/phases/124-shell-information-architecture/. Counters NOT touched -- nothing was executed. NEXT -- /gsd-plan-phase 125, and note the planner must sequence the horizon so its state layer can be built and verified against a stubbed estop_state before the cross-repo Astridr half deploys, or one operator rebuild gates the phase.
@@ -86,6 +86,7 @@ Resume file (historical, v15.0 -- moved by the milestone close): .planning/miles
 Phase: 129
 Plan: Not started
 Status: Ready to plan
-Next step: phase-level verification, then /gsd-execute-phase completion
-Last activity: 2026-08-27 -- Phase 128 (Planning Reconciliation) complete: 5/5 plans, 4/4 requirements verified
-Last session: 2026-08-27T18:30:00.000Z
+Next step: /gsd-plan-phase 129
+Last activity: 2026-08-28 -- Phase 129 (Dashboard Unbounded Read & Ratchet Coverage) context gathered: 15 decisions, 4 gray areas, F-1..F-4 recorded
+Last session: 2026-08-28T19:16:21.887Z
+Resume file: .planning/phases/129-dashboard-unbounded-read-ratchet-coverage/129-CONTEXT.md
