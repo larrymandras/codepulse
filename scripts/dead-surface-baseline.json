@@ -1,14 +1,10 @@
 {
   "_comment": "Convex exports with no caller. Adding a name here is a deliberate 'keep it, I run it by hand' decision -- see CLAUDE.md. Regenerate with: node scripts/check-dead-surface.mjs --update",
   "generated": "2026-08-28",
-  "total_exports": 582,
+  "total_exports": 578,
   "allowed_dead": [
-    "alerts:getLastCriticalEvalTimestamp",
     "bifrost:updateLink",
-    "deliveryLogs:insertGithubLog",
-    "profiles:summarize",
     "retention:oldestPrunableDoc",
-    "selfHealing:recordRecoveryWithCommit",
     "tasks:remove",
     "tasks:update"
   ]

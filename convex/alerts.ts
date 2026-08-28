@@ -888,18 +888,6 @@ export const evaluateInternal = internalMutation({
   },
 });
 
-// Rate-limit helper: returns the last critical eval timestamp (epoch seconds) or null
-export const getLastCriticalEvalTimestamp = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const config = await ctx.db
-      .query("agentConfigs")
-      .withIndex("by_key", (q) => q.eq("configKey", "last-critical-eval"))
-      .first();
-    return config ? (config.value as number) : null;
-  },
-});
-
 // Critical-only evaluation for ingest hook (sub-60s alerting, per D-04)
 export const evaluateCriticalInternal = internalMutation({
   // Required arg added 2026-07-14 as a queue-drain mechanism: tens of thousands

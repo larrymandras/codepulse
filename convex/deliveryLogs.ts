@@ -57,37 +57,6 @@ export const insertPagerdutyLog = mutation({
   },
 });
 
-export const insertGithubLog = mutation({
-  args: {
-    alertId: v.id("alerts"),
-    ruleId: v.string(),
-    attempt: v.float64(),
-    status: v.string(),
-    errorMessage: v.optional(v.string()),
-    dispatchId: v.optional(v.string()),
-    runUrl: v.optional(v.string()),
-    rateLimited: v.optional(v.boolean()),
-    repo: v.optional(v.string()),
-    workflowFile: v.optional(v.string()),
-    sentAt: v.float64(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.insert("githubTriggerLog", {
-      alertId: args.alertId,
-      ruleId: args.ruleId,
-      attempt: args.attempt,
-      status: args.status,
-      errorMessage: args.errorMessage,
-      dispatchId: args.dispatchId,
-      runUrl: args.runUrl,
-      rateLimited: args.rateLimited,
-      repo: args.repo,
-      workflowFile: args.workflowFile,
-      sentAt: args.sentAt,
-    });
-  },
-});
-
 export const listEmailLogs = query({
   args: { ruleId: v.optional(v.string()) },
   handler: async (ctx, args) => {

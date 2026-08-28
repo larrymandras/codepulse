@@ -251,35 +251,3 @@ export const recentSwitches = query({
       .take(args.limit ?? 20);
   },
 });
-
-export const summarize = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now() / 1000;
-    const fifteenMinAgo = now - 900;
-
-    const recent = await ctx.db
-      .query("profileMetrics")
-      .withIndex("by_metric")
-      .order("desc")
-      .take(200);
-
-    const recentActivity = recent.filter((m) => m.timestamp >= fifteenMinAgo);
-    const byProfile: Record<string, number> = {};
-
-    for (const m of recentActivity) {
-      byProfile[m.profileId] = (byProfile[m.profileId] ?? 0) + m.value;
-    }
-
-    // Store summary
-    await ctx.db.insert("profileMetrics", {
-      profileId: "_summary",
-      metric: "activity_summary",
-      value: Object.keys(byProfile).length,
-      tags: { profiles: byProfile },
-      timestamp: now,
-    });
-
-    return { profiles: Object.keys(byProfile).length };
-  },
-});

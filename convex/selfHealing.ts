@@ -62,50 +62,6 @@ export const uptimeStats = query({
   },
 });
 
-export const recordRecoveryWithCommit = mutation({
-  args: {
-    component: v.string(),
-    issue: v.string(),
-    action: v.string(),
-    outcome: v.string(),
-    details: v.optional(v.any()),
-    commitSha: v.optional(v.string()),
-    commitMessage: v.optional(v.string()),
-    commitBranch: v.optional(v.string()),
-    filesChanged: v.optional(v.float64()),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now() / 1000;
-
-    // Record self-healing event
-    await ctx.db.insert("selfHealingEvents", {
-      component: args.component,
-      issue: args.issue,
-      action: args.action,
-      outcome: args.outcome,
-      details: {
-        ...(args.details ?? {}),
-        commitSha: args.commitSha,
-      },
-      timestamp: now,
-    });
-
-    // Record associated git commit if provided
-    if (args.commitSha) {
-      await ctx.db.insert("gitCommits", {
-        sha: args.commitSha,
-        message:
-          args.commitMessage ??
-          `[self-healing] ${args.action}: ${args.issue}`,
-        branch: args.commitBranch ?? "main",
-        author: "astridr-self-healing",
-        filesChanged: args.filesChanged ?? 1,
-        timestamp: now,
-      });
-    }
-  },
-});
-
 export const listVersions = query({
   args: { limit: v.optional(v.float64()) },
   handler: async (ctx, args) => {
