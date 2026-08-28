@@ -17,11 +17,15 @@ import { evaluateToolPolicyAlerts } from "./toolPolicyAlertEval";
 //     documented `maxHours: 6` it always issued 6 paginated queries and failed
 //     on its very first live invocation, 0 rows or not:
 //     "This query or mutation function ran multiple paginated queries."
-//   - `computeHourly` (pre-existing, Phase 88 `4e8c2be9`) has the same loop and
-//     survives only because a page of 500 has always covered one hour, so
-//     `isDone` is true on the first call and the loop exits after one paginate.
-//     The first hour to exceed 500 rows would kill the LIVE CRON -- and now also
-//     the budget evaluator appended to its tail (D-14).
+//   - `computeHourly` (pre-existing, Phase 88 `4e8c2be9`) HAD the same loop and
+//     survived only because a page of 500 had always covered one hour, so
+//     `isDone` was true on the first call and the loop exited after one
+//     paginate. The first hour to exceed 500 rows would have killed the LIVE
+//     CRON -- and the budget evaluator appended to its tail (D-14) with it.
+//     PAST TENSE as of 2026-08-28: no `.paginate()` remains in this file. Both
+//     readers are index-range + a hard `.take()` cap (LLM_WINDOW_READ_CAP /
+//     TOOL_WINDOW_READ_CAP, 4000 each) and report truncation rather than
+//     silently undercounting. Kept as the reason the shape below is what it is.
 // Neither was catchable by the unit suite: the fake ctx in aggregates.test.ts
 // implemented `paginate()` more permissively than Convex and allowed repeated
 // calls. That mock now enforces the real single-call rule.

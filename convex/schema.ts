@@ -484,7 +484,15 @@ export default defineSchema({
 
   episodicEvents: defineTable({
     agentId: v.optional(v.string()),
-    eventType: v.string(), // "memory_stored" | "memory_recalled" | "memory_pruned"
+    // NOT a closed enum, despite what this comment claimed until 2026-08-28.
+    // The only writer is episodic.recordEvent, whose only caller is
+    // runtimeIngest.ts:1356 -- it forwards whatever the Astridr payload sends
+    // (`d.memoryType ?? d.memory_type ?? d.eventType ?? d.event_type ?? "unknown"`),
+    // so this is a free-form caller-supplied string. Measured the same day, the
+    // 50 most recent rows were all `tool_call`, not memory_* at all. Anything
+    // reading only the memory_* slice must range the `by_type` index rather than
+    // collect the table and filter -- see memoryQuality.ts:evaluateInternal.
+    eventType: v.string(),
     summary: v.string(),
     detail: v.optional(v.any()),
     occurredAt: v.float64(),
