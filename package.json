@@ -2,7 +2,7 @@
   "name": "codepulse",
   "version": "0.1.0",
   "private": true,
-  "description": "CodePulse \u2014 \u00c1str\u00ed\u00f0r runtime telemetry backend (Convex)",
+  "description": "CodePulse — Ástríðr runtime telemetry backend (Convex)",
   "scripts": {
     "dev": "vite",
     "dev:backend": "npx convex dev",
@@ -18,7 +18,11 @@
     "deploy": "npx convex deploy && npx vite build",
     "test:unit": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
-    "test:watch": "vitest --project unit"
+    "test:watch": "vitest --project unit",
+    "check:dead-surface": "node scripts/check-dead-surface.mjs",
+    "check:dead-surface:list": "node scripts/check-dead-surface.mjs --list",
+    "check:dead-surface:update": "node scripts/check-dead-surface.mjs --update",
+    "hooks:install": "cp scripts/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",

@@ -255,6 +255,41 @@ non-CodePulse session. Full war stories: memory [[lessons-archive-2026-08-21]].
   done, 2 describing blockers since solved). Every one was resolved by reading the CODE, so the
   information was always available. **Close requirements at PHASE close, against the code** —
   and treat any carried-forward list as suspect until re-derived.
+## Dead Surface
+
+Do not add a Convex export in one commit and its caller in a later one. An
+export with no call site is not "ready for the UI" -- it is code that ships,
+type-checks, deploys, and is never run. A 2026-08-28 audit found **86 of 543
+public exports had no caller anywhere**, including four ways to slice
+`credentialAudit` with no screen to show any of them, and three quarters of a
+CRUD set on `wizardDrafts` where only `save` was ever used.
+
+The rule is one line: **a new query/mutation lands in the same commit as the
+code that calls it, or it does not land.**
+
+Enforced, not just written down:
+
+```
+npm run check:dead-surface          # ratchet; fails on any NEW uncalled export
+npm run check:dead-surface:list     # show every uncalled export
+npm run check:dead-surface:update   # record a deliberate keep
+npm run hooks:install               # (re)install the pre-commit hook
+```
+
+The pre-commit hook runs it whenever a commit touches `convex/`.
+`scripts/dead-surface-baseline.json` holds the exports we know are uncalled --
+that file is the outstanding-debt list, not a permission slip. It currently
+carries 40 entries: 22 mutations and 18 `internal*` functions, several of which
+are genuine hand-run admin one-shots (`seedTeams:seed`,
+`registry:repairSkillsFromOverrides`, `skillCategories:migrateDisplayNames`).
+Adding a name to it is a decision you should be able to defend.
+
+The ratchet recognises four invocation forms, each of which was observed in this
+repo: `api.mod.fn`, `internal.mod.fn`, `convex run mod:fn` in docs and scripts,
+and `import * as mod from "../mod"` followed by `mod.fn` in tests. A grep for
+only the first form under-counts callers and will delete live code -- that
+mistake was made during the audit and `tsc` caught it.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/.

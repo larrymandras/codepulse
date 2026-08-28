@@ -1,0 +1,20 @@
+#!/bin/sh
+# CodePulse pre-commit: dead-surface ratchet.
+#
+# Fails the commit when it adds a Convex export that nothing calls.
+# Only runs when the commit actually touches convex/ -- unrelated commits
+# pay nothing.
+#
+# Install with: npm run hooks:install
+# Bypass is --no-verify, which is a deliberate decision, not a default.
+
+if ! git diff --cached --name-only | grep -q '^convex/.*\.ts$'; then
+  exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel)
+node "$repo_root/scripts/check-dead-surface.mjs" || {
+  echo ""
+  echo "pre-commit: dead-surface ratchet failed (see above)."
+  exit 1
+}
