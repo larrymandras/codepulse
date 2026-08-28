@@ -283,6 +283,15 @@ function isOptionalStringArray(value: unknown): value is string[] | undefined | 
   );
 }
 
+/** Runtime type guard: `undefined`, `null`, or a `boolean` -- matches every
+ * `v.optional(v.boolean())` field, including the TRI-STATE `contained`
+ * (Phase 197 D-04). Same `null`-as-absent rationale as the three guards
+ * above; `normalizeOptional` still has to strip the `null` before it
+ * reaches the validator. */
+function isOptionalBoolean(value: unknown): value is boolean | undefined | null {
+  return value === undefined || value === null || typeof value === "boolean";
+}
+
 /**
  * resolveModelRoutingEvent — resolves a `model_routing` event payload into
  * the args for `internal.activeEngine.recordRouting`, or `null` when the
@@ -541,6 +550,209 @@ export function resolveMessageRoutedEvent(
 }
 
 /**
+ * Phase 197 (MISSION-05, D-01/D-02/D-04/D-20) — the mission projection Ástríðr
+ * pushes into `missionRuns` / `missionRunEvents`.
+ *
+ * Extracted as pure functions for the same reason as
+ * `resolveModelRoutingEvent` / `resolveControlVerbSwapEvent` above: real,
+ * directly-testable coverage instead of logic duplicated between the case and
+ * its test mirror.
+ *
+ * THE IDENTIFIER RULE, which is the whole point of these two functions:
+ * a missing, empty or non-string `missionId` (and, on the event side, a
+ * missing or non-numeric `seq`) makes the event UNROUTABLE, and it must then
+ * create and mutate NOTHING. Returning `null` here is what produces that, and
+ * the caller counts it into the response body's `skipped` field and logs it,
+ * so the rejection is OBSERVABLE rather than an absence of a row.
+ *
+ * This deliberately DIVERGES from `case "subagent_job"` above, which carries
+ * the latent defect this rule exists to avoid: `jobId: d.job_id ?? d.jobId ??
+ * "unknown"`. `missionRuns` is upserted BY `missionId`, so under a `"unknown"`
+ * fallback every identifier-less or version-skewed event would converge on ONE
+ * synthetic shared row, where a malformed terminal event can overwrite an
+ * unrelated run's status and timings — fabricated mission history, on the exact
+ * field MISSION-05 makes its correctness claim about. `seq` matters for the
+ * same reason: it is half the `(missionId, seq)` event identity that
+ * `missions.appendEvent` deduplicates telemetry retries on.
+ * `validateIngestAuth` gates WHO may post, not whether a payload is
+ * well-formed, so auth does not cover this. Do NOT propagate the `"unknown"`
+ * fallback here, and do NOT change `case "subagent_job"` — that is a separate,
+ * out-of-scope fix.
+ *
+ * Non-identifier DISPLAY fallbacks are fine and are used below: a missing
+ * `status`/`missionClass` renders as an unknown badge and harms nothing.
+ *
+ * A wrong-TYPED field rejects the whole event rather than being coerced,
+ * matching `resolveControlVerbSwapEvent`'s posture: a wrong type means the
+ * emitter is broken, and a loud `skipped` is how that gets noticed. The
+ * per-event try/catch in the dispatch loop would otherwise turn it into a
+ * `dropped` Convex validator throw, which is the same loss with a worse
+ * message.
+ *
+ * The fields below are the CANONICAL WIRE CONTRACT for this projection —
+ * plan 197-06's frozen envelope is built against this exact key set, and the
+ * two must not drift. Nothing outside it is forwarded: the payload is
+ * destructured by name and never spread, because `ConvexHandler.send()` on the
+ * Ástríðr side injects a `session_id` key into every payload after the emitter
+ * builds it, and `session_id` is one of the six columns D-02 forbids.
+ */
+interface ResolvedMissionProjection {
+  missionId: string;
+  status: string;
+  missionClass: string;
+  startedAt?: number;
+  finishedAt?: number;
+  totalCostUsd?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  cachedTokens?: number;
+  contained?: boolean;
+  aborted?: boolean;
+  abortTool?: string;
+  offeredEscapes?: string[];
+  voidReason?: string;
+  lastEventAt?: number;
+}
+
+interface ResolvedMissionProjectionEvent {
+  missionId: string;
+  seq: number;
+  eventType: string;
+  occurredAt: number;
+  contained?: boolean;
+  aborted?: boolean;
+  abortTool?: string;
+  offeredEscapes?: string[];
+  toolNames?: string[];
+}
+
+/** Display-only coalesce for a non-identifier required string. Unlike an
+ * identifier, a missing status is safe to render as "unknown" — it cannot
+ * merge two runs into one row. */
+function displayString(value: unknown, fallback: string): string {
+  return typeof value === "string" && value !== "" ? value : fallback;
+}
+
+/**
+ * resolveMissionProjectionEvent — resolves a `mission_projection` payload into
+ * the args for `api.missions.upsert`, or `null` when the event must be
+ * skipped. See the block comment above for the identifier rule.
+ */
+export function resolveMissionProjectionEvent(
+  data: unknown
+): ResolvedMissionProjection | null {
+  const d = (data ?? {}) as Record<string, any>;
+
+  const missionId = d.mission_id ?? d.missionId;
+  if (typeof missionId !== "string" || missionId === "") return null;
+
+  const startedAt = d.started_at ?? d.startedAt;
+  const finishedAt = d.finished_at ?? d.finishedAt;
+  const totalCostUsd = d.total_cost_usd ?? d.totalCostUsd;
+  const promptTokens = d.prompt_tokens ?? d.promptTokens;
+  const completionTokens = d.completion_tokens ?? d.completionTokens;
+  const cachedTokens = d.cached_tokens ?? d.cachedTokens;
+  const lastEventAt = d.last_event_at ?? d.lastEventAt;
+  const contained = d.contained;
+  const aborted = d.aborted;
+  const abortTool = d.abort_tool ?? d.abortTool;
+  const offeredEscapes = d.offered_escapes ?? d.offeredEscapes;
+  const voidReason = d.void_reason ?? d.voidReason;
+
+  if (
+    !isOptionalNumber(startedAt) ||
+    !isOptionalNumber(finishedAt) ||
+    !isOptionalNumber(totalCostUsd) ||
+    !isOptionalNumber(promptTokens) ||
+    !isOptionalNumber(completionTokens) ||
+    !isOptionalNumber(cachedTokens) ||
+    !isOptionalNumber(lastEventAt) ||
+    !isOptionalBoolean(contained) ||
+    !isOptionalBoolean(aborted) ||
+    !isOptionalString(abortTool) ||
+    !isOptionalStringArray(offeredEscapes) ||
+    !isOptionalString(voidReason)
+  ) {
+    return null;
+  }
+
+  return {
+    missionId,
+    status: displayString(d.status, "unknown"),
+    missionClass: displayString(d.mission_class ?? d.missionClass, "unknown"),
+    startedAt: normalizeOptional(startedAt),
+    finishedAt: normalizeOptional(finishedAt),
+    totalCostUsd: normalizeOptional(totalCostUsd),
+    promptTokens: normalizeOptional(promptTokens),
+    completionTokens: normalizeOptional(completionTokens),
+    cachedTokens: normalizeOptional(cachedTokens),
+    // TRI-STATE: an absent `contained` stays absent all the way to the row, so
+    // "containment was never established" survives the wire as VOID and is
+    // never collapsed into a pass.
+    contained: normalizeOptional(contained),
+    aborted: normalizeOptional(aborted),
+    abortTool: normalizeOptional(abortTool),
+    offeredEscapes: normalizeOptional(offeredEscapes),
+    voidReason: normalizeOptional(voidReason),
+    lastEventAt: normalizeOptional(lastEventAt),
+  };
+}
+
+/**
+ * resolveMissionProjectionEventRow — resolves a `mission_projection_event`
+ * payload into the args for `api.missions.appendEvent`, or `null` when the
+ * event must be skipped. Both halves of the `(missionId, seq)` identity are
+ * required and type-checked; `occurredAt` is required because the board's
+ * liveness readout is derived from it and a fabricated "now" would make a
+ * stalled mission look alive.
+ */
+export function resolveMissionProjectionEventRow(
+  data: unknown,
+  timestamp: number
+): ResolvedMissionProjectionEvent | null {
+  const d = (data ?? {}) as Record<string, any>;
+
+  const missionId = d.mission_id ?? d.missionId;
+  if (typeof missionId !== "string" || missionId === "") return null;
+
+  const seq = d.seq;
+  if (typeof seq !== "number" || !Number.isFinite(seq)) return null;
+
+  const occurredAt = d.occurred_at ?? d.occurredAt;
+  if (!isOptionalNumber(occurredAt)) return null;
+
+  const contained = d.contained;
+  const aborted = d.aborted;
+  const abortTool = d.abort_tool ?? d.abortTool;
+  const offeredEscapes = d.offered_escapes ?? d.offeredEscapes;
+  const toolNames = d.tool_names ?? d.toolNames;
+
+  if (
+    !isOptionalBoolean(contained) ||
+    !isOptionalBoolean(aborted) ||
+    !isOptionalString(abortTool) ||
+    !isOptionalStringArray(offeredEscapes) ||
+    !isOptionalStringArray(toolNames)
+  ) {
+    return null;
+  }
+
+  return {
+    missionId,
+    seq,
+    eventType: displayString(d.event_type ?? d.eventType, "unknown"),
+    // The envelope's own timestamp is the fallback, not `Date.now()` — it is
+    // the same clock reading the generic runtime_events row already carries.
+    occurredAt: normalizeOptional(occurredAt) ?? timestamp,
+    contained: normalizeOptional(contained),
+    aborted: normalizeOptional(aborted),
+    abortTool: normalizeOptional(abortTool),
+    offeredEscapes: normalizeOptional(offeredEscapes),
+    toolNames: normalizeOptional(toolNames),
+  };
+}
+
+/**
  * HTTP action: POST /runtime-ingest
  *
  * Supports dual formats:
@@ -741,6 +953,44 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
               submittedAt: d.submitted_at ?? d.submittedAt ?? undefined,
               finishedAt: d.finished_at ?? d.finishedAt ?? timestamp,
             });
+            break;
+          }
+          case "mission_projection": {
+            // Phase 197 (MISSION-05, D-01/D-02) — one mission row, upserted by
+            // missionId into the projection table. Inherits the
+            // validateIngestAuth Bearer gate above. Resolution, the dual
+            // snake/camelCase coalesce and the identifier rule live in
+            // `resolveMissionProjectionEvent`; see its block comment for why a
+            // missing missionId must NOT fall back to "unknown" the way
+            // `case "subagent_job"` above does.
+            const resolvedMission = resolveMissionProjectionEvent(data);
+            if (!resolvedMission) {
+              // Visible, not silent — a refused resolution is real signal
+              // loss, distinct from a throw, and 197-16's acceptance step
+              // reads this counter.
+              skippedCount++;
+              console.warn(
+                "[runtimeIngest] skipped mission_projection event: resolveMissionProjectionEvent rejected the payload (missing/empty/non-string missionId, or a wrong-typed field). Nothing was written."
+              );
+              break;
+            }
+            await ctx.runMutation(api.missions.upsert, resolvedMission);
+            break;
+          }
+          case "mission_projection_event": {
+            // Phase 197 (MISSION-05, D-02/D-04) — one append-only mission
+            // event. `missions.appendEvent` is insert-or-ignore on
+            // (missionId, seq), so a telemetry retry of an identical payload
+            // cannot create a board event that does not exist in Postgres.
+            const resolvedEvent = resolveMissionProjectionEventRow(data, timestamp);
+            if (!resolvedEvent) {
+              skippedCount++;
+              console.warn(
+                "[runtimeIngest] skipped mission_projection_event: resolveMissionProjectionEventRow rejected the payload (missing/empty/non-string missionId, non-numeric seq, or a wrong-typed field). Nothing was written."
+              );
+              break;
+            }
+            await ctx.runMutation(api.missions.appendEvent, resolvedEvent);
             break;
           }
           case "security_event": {
