@@ -1058,6 +1058,82 @@ export default defineSchema({
     .index("by_status", ["status", "submittedAt"]),
 
   // ============================================================
+  // MISSION RUN PROJECTION (Phase 197 — MISSION-05, D-01/D-02/D-04/D-20)
+  //
+  // These two tables are a PROJECTION of Ástríðr's Postgres `missions` /
+  // `mission_events` tables (supabase/migrations/20260824210500_create_missions.sql).
+  // They are deliberately NOT a mirror. D-02: the projection carries status,
+  // class, timings, measured token/cost aggregates and per-event containment
+  // metadata — and nothing else.
+  //
+  // These six Postgres columns must NEVER appear here, now or later:
+  //   brief, draft_result, execute_result, working_dir, session_id, chat_id
+  // They stay in Postgres, where the only policy is `service_role ALL USING
+  // (true)` and no anon/authenticated policy exists. That containment is what
+  // makes D-05 (ungated Convex reads, matching subagentJobs) acceptable — if a
+  // later change proposes pushing the brief or either result JSON, D-05 must be
+  // reopened in the SAME change, not after it.
+  //
+  // The tables are named `missionRuns`/`missionRunEvents`, not `missions`/
+  // `mission_events`, precisely so the field-set gap is visible in the schema
+  // rather than only in this comment (197-UI-SPEC.md, "Naming & Routing").
+  // Unrelated surface, do not merge: convex/missionWatch.ts, whose own
+  // "MISSION-01" refers to a different requirement.
+  //
+  // `contained` is TRI-STATE — `v.optional(v.boolean())`, never a plain
+  // `v.boolean()`. ABSENT means "the run's containment was never established"
+  // (astridr `mission_receipt.py:400-406`: `contained: bool | None`, "`None`
+  // means the run's containment was never established and must never be read
+  // as a pass"). A plain boolean would collapse that VOID state into `false`
+  // or into a default `true`; either way the board would render an unknown as
+  // an answer. It must never render as a pass.
+  //
+  // All timestamps are epoch SECONDS (matching subagentJobs and
+  // docs/astridr-contract.md), not milliseconds.
+  // ============================================================
+
+  missionRuns: defineTable({
+    missionId: v.string(),
+    status: v.string(),                        // "queued"|"running"|"awaiting_approval"|"completed"|"failed"|"expired"|"cancelled"
+    missionClass: v.string(),                  // e.g. "subscription-reaper"
+    startedAt: v.optional(v.float64()),
+    finishedAt: v.optional(v.float64()),
+    updatedAt: v.float64(),
+    // D-18/D-19: measured only. `totalCostUsd` is the CLI's own authoritative
+    // terminal `total_cost_usd`; there is no mid-flight dollar figure and none
+    // may be derived from tokens client-side.
+    totalCostUsd: v.optional(v.float64()),
+    // D-20: RUNNING TOTALS pushed by the emitter, never client-summed deltas.
+    promptTokens: v.optional(v.float64()),
+    completionTokens: v.optional(v.float64()),
+    cachedTokens: v.optional(v.float64()),
+    contained: v.optional(v.boolean()),        // TRI-STATE — see header. Never v.boolean().
+    aborted: v.optional(v.boolean()),
+    abortTool: v.optional(v.string()),         // tool NAME only, never an argument (D-03)
+    offeredEscapes: v.optional(v.array(v.string())),
+    voidReason: v.optional(v.string()),
+    lastEventAt: v.optional(v.float64()),
+  })
+    .index("by_missionId", ["missionId"])
+    .index("by_status", ["status", "startedAt"]),
+
+  missionRunEvents: defineTable({
+    missionId: v.string(),
+    seq: v.float64(),
+    eventType: v.string(),
+    occurredAt: v.float64(),
+    contained: v.optional(v.boolean()),        // TRI-STATE — see header. Never v.boolean().
+    aborted: v.optional(v.boolean()),
+    abortTool: v.optional(v.string()),
+    offeredEscapes: v.optional(v.array(v.string())),
+    toolNames: v.optional(v.array(v.string())), // NAMES only — no arguments, no result text (D-03)
+  })
+    // (missionId, seq) is the event IDENTITY. Postgres enforces it with
+    // `UNIQUE (mission_id, seq)`; Convex has no unique constraint, so
+    // missions.appendEvent reads this index first and ignores a repeat.
+    .index("by_missionId_seq", ["missionId", "seq"]),
+
+  // ============================================================
   // ALERT ROUTING (Phase 6)
   // ============================================================
 
