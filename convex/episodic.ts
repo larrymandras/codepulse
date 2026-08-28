@@ -20,28 +20,3 @@ export const recordEvent = mutation({
     });
   },
 });
-
-export const prune = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const thirtyDaysAgo = Date.now() / 1000 - 30 * 24 * 3600;
-
-    const old = await ctx.db
-      .query("episodicEvents")
-      .withIndex("by_timestamp")
-      .order("asc")
-      .take(500);
-
-    let deleted = 0;
-    for (const event of old) {
-      if (event.timestamp < thirtyDaysAgo) {
-        await ctx.db.delete(event._id);
-        deleted++;
-      } else {
-        break; // Sorted asc, so once we hit a recent one we're done
-      }
-    }
-
-    return { deleted };
-  },
-});

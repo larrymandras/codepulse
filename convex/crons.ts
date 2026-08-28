@@ -294,4 +294,39 @@ crons.daily(
   {}
 );
 
+// Phase 129 (2026-08-28): three janitors that were written but never scheduled.
+//
+// Found by scripts/check-dead-surface.mjs. Each had no caller of any kind, and
+// each guards a table the UI reads, so "uncalled" here meant a live staleness
+// bug rather than dead code:
+//
+//   - agents:      measured 50 rows stuck in status="running" via the UI's own
+//                  capped query, and 122 within a single 500-row page with
+//                  pagination not exhausted. Oldest had been "running" 30 days.
+//   - sessions:    20 rows stuck in status="active", every one of them already
+//                  stale by this janitor's own 30-minute rule.
+//   - github runs: nothing ever demoted a run stuck in_progress/queued, so
+//                  GithubActionsPanel showed it as in-flight indefinitely.
+//
+// Both health sweeps are bounded to STALE_SWEEP_BATCH (200) per run and drain a
+// backlog across successive runs -- see the comments in convex/health.ts.
+crons.interval(
+  "detect-stale-sessions",
+  { hours: 1 },
+  internal.health.detectStaleSessions
+);
+
+crons.interval(
+  "detect-stale-agents",
+  { hours: 1 },
+  internal.health.detectStaleAgents
+);
+
+// Its own rule is a one-hour staleness threshold, so an hourly cadence matches.
+crons.interval(
+  "github-actions-poll-runs",
+  { hours: 1 },
+  internal.githubActions.internalPollRuns
+);
+
 export default crons;

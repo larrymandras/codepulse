@@ -44,7 +44,7 @@ for (const [file, fns] of byFile) {
   for (const fn of fns) {
     const startIdxs = [];
     for (let i = 0; i < lines.length; i++) {
-      if (new RegExp(`^export const ${fn}\\s*=\\s*(query|mutation|action)\\(\\{`).test(lines[i])) {
+      if (new RegExp(`^export const ${fn}\\s*=\\s*(query|mutation|action|internalQuery|internalMutation|internalAction)\\(\\{`).test(lines[i])) {
         startIdxs.push(i);
       }
     }
