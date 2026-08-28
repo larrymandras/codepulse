@@ -63,19 +63,3 @@ export const list = query({
     return await ctx.db.query("approvalQueue").collect();
   },
 });
-
-export const updateStatus = mutation({
-  args: {
-    id: v.id("approvalQueue"),
-    status: v.string(),
-    decidedAt: v.optional(v.number()),
-    decidedBy: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
-      status: args.status,
-      decidedAt: args.decidedAt,
-      decidedBy: args.decidedBy,
-    });
-  },
-});

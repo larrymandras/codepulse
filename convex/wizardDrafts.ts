@@ -36,10 +36,3 @@ export const save = mutation({
     });
   },
 });
-
-export const remove = mutation({
-  args: { id: v.id("wizardDrafts") },
-  handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
-  },
-});

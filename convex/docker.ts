@@ -45,17 +45,6 @@ export const recordStatus = mutation({
   },
 });
 
-export const removeByContainerId = mutation({
-  args: { containerId: v.string() },
-  handler: async (ctx, args) => {
-    const doc = await ctx.db
-      .query("dockerContainers")
-      .withIndex("by_containerId", (q) => q.eq("containerId", args.containerId))
-      .first();
-    if (doc) await ctx.db.delete(doc._id);
-  },
-});
-
 export const currentStatus = query({
   args: {},
   handler: async (ctx) => {

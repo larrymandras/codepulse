@@ -706,49 +706,6 @@ export const importToolInventory = mutation({
   },
 });
 
-/**
- * One-time cleanup: remove Astridr tool names that were misclassified
- * into mcpServers, skills, and plugins tables.
- */
-export const cleanupMisclassifiedTools = mutation({
-  args: {
-    toolNames: v.array(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const names = new Set(args.toolNames);
-    let removed = 0;
-
-    // Clean mcpServers
-    const servers = await ctx.db.query("mcpServers").collect();
-    for (const s of servers) {
-      if (names.has(s.name)) {
-        await ctx.db.delete(s._id);
-        removed++;
-      }
-    }
-
-    // Clean skills
-    const skills = await ctx.db.query("skills").collect();
-    for (const s of skills) {
-      if (names.has(s.name)) {
-        await ctx.db.delete(s._id);
-        removed++;
-      }
-    }
-
-    // Clean plugins
-    const plugins = await ctx.db.query("plugins").collect();
-    for (const p of plugins) {
-      if (names.has(p.name)) {
-        await ctx.db.delete(p._id);
-        removed++;
-      }
-    }
-
-    return { removed };
-  },
-});
-
 // --- New queries ---
 
 export const listMcpServers = query({
@@ -1138,33 +1095,6 @@ export const getSessionSnapshot = query({
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .order("desc")
       .first();
-  },
-});
-
-export const repairSkillsFromOverrides = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const skills = await ctx.db.query("skills").collect();
-    if (skills.length > 0) return { repaired: 0, message: "skills table not empty, skipping" };
-
-    const overrides = await ctx.db.query("skillOverrides").collect();
-    const now = Date.now() / 1000;
-    let repaired = 0;
-    for (const override of overrides) {
-      const existing = await ctx.db
-        .query("skills")
-        .withIndex("by_name", (q) => q.eq("name", override.skillName))
-        .first();
-      if (!existing) {
-        await ctx.db.insert("skills", {
-          name: override.skillName,
-          discoveredAt: now,
-          origin: "unknown",
-        });
-        repaired++;
-      }
-    }
-    return { repaired, message: `Recreated ${repaired} skills from overrides` };
   },
 });
 

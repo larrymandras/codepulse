@@ -322,11 +322,6 @@ export async function dismissAllCardsHandler(
   return dismissed;
 }
 
-export const dismissAllCards = mutation({
-  args: {},
-  handler: async (ctx) => dismissAllCardsHandler(ctx, Date.now() / 1000),
-});
-
 // ============================================================
 // Phase 127 (JANITOR-01, R-02) — ack-aware auto-close + prune janitor
 // ============================================================

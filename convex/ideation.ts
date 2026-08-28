@@ -30,16 +30,6 @@ export const recordFinding = mutation({
   },
 });
 
-export const dismissFinding = mutation({
-  args: { id: v.id("ideationFindings") },
-  handler: async (ctx, { id }) => {
-    await ctx.db.patch(id, {
-      dismissed: true,
-      dismissedAt: Date.now() / 1000,
-    });
-  },
-});
-
 export const listFindings = query({
   args: {
     dismissed: v.optional(v.boolean()),

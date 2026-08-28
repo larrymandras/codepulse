@@ -39,20 +39,6 @@ export const create = mutation({
   },
 });
 
-export const acknowledge = mutation({
-  args: {
-    id: v.id("alerts"),
-    acknowledgedBy: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
-      acknowledged: true,
-      acknowledgedBy: args.acknowledgedBy,
-      acknowledgedAt: Date.now() / 1000,
-    });
-  },
-});
-
 export const listActive = query({
   args: {},
   handler: async (ctx) => {
@@ -126,25 +112,6 @@ export const countBySeverity = query({
     // have seen every unacknowledged alert — consumers must not render the
     // four counts as complete when this is true (D-13).
     return { ...counts, truncated: active.length === ALERT_COUNT_SCAN_CAP };
-  },
-});
-
-export const dismissAll = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const active = await ctx.db
-      .query("alerts")
-      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
-      .collect();
-    const now = Date.now() / 1000;
-    for (const a of active) {
-      await ctx.db.patch(a._id, {
-        acknowledged: true,
-        acknowledgedBy: "dashboard-bulk",
-        acknowledgedAt: now,
-      });
-    }
-    return { dismissed: active.length };
   },
 });
 

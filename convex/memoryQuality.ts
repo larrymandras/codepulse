@@ -43,42 +43,6 @@ export function identifyStaleMemories(
 
 // ─── Internal queries ─────────────────────────────────────────────────────────
 
-export const getAgentConfigInternal = internalQuery({
-  args: { key: v.string() },
-  handler: async (ctx, { key }) => {
-    const config = await ctx.db
-      .query("agentConfigs")
-      .withIndex("by_key", (q) => q.eq("configKey", key))
-      .first();
-    return config?.value ?? null;
-  },
-});
-
-export const getEpisodicEventsInternal = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    // Get all episodic events (memory stored/recalled/pruned)
-    const events = await ctx.db
-      .query("episodicEvents")
-      .withIndex("by_type", (q) =>
-        q.gte("eventType", "memory_").lte("eventType", "memory_~")
-      )
-      .collect();
-    return events;
-  },
-});
-
-export const getLatestQualityRowInternal = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("memoryQuality")
-      .withIndex("by_evaluated")
-      .order("desc")
-      .first();
-  },
-});
-
 // ─── Main evaluation cron (internalMutation) ─────────────────────────────────
 
 export const evaluateInternal = internalMutation({
@@ -98,13 +62,28 @@ export const evaluateInternal = internalMutation({
         ? (stalenessConfig.value as number)
         : 30;
 
-    // Query all memory events
-    const allEvents = await ctx.db
+    // Read ONLY the memory_* slice, via the index, rather than scanning the
+    // whole table and discarding the rest in JS.
+    //
+    // The old shape was `.query("episodicEvents").collect()` followed by an
+    // array filter. schema.ts comments eventType as
+    // "memory_stored" | "memory_recalled" | "memory_pruned", which would have
+    // made that harmless -- but the comment is stale: sampled 2026-08-28, all
+    // 50 most recent rows were `tool_call`. So this cron was reading a table
+    // dominated by rows it then threw away, every hour, unbounded.
+    //
+    // `by_type` is ["eventType", "timestamp"], so the type prefix is an index
+    // range. The array filter below is kept as an exactness guard: the range
+    // admits any future "memory_*" type, and the metric is defined over
+    // exactly these three.
+    const memoryTypeEvents = await ctx.db
       .query("episodicEvents")
+      .withIndex("by_type", (q) =>
+        q.gte("eventType", "memory_").lte("eventType", "memory_~")
+      )
       .collect();
 
-    // Filter to memory-related event types
-    const memoryEvents = allEvents.filter((e) =>
+    const memoryEvents = memoryTypeEvents.filter((e) =>
       ["memory_stored", "memory_recalled", "memory_pruned"].includes(e.eventType)
     );
 

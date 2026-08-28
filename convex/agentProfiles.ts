@@ -56,17 +56,6 @@ export const list = query({
   },
 });
 
-export const updateSortOrder = mutation({
-  args: {
-    orderedIds: v.array(v.id("agentProfiles")),
-  },
-  handler: async (ctx, args) => {
-    for (let i = 0; i < args.orderedIds.length; i++) {
-      await ctx.db.patch(args.orderedIds[i], { sortOrder: i });
-    }
-  },
-});
-
 export const remove = mutation({
   args: { id: v.id("agentProfiles") },
   handler: async (ctx, args) => {
