@@ -60,7 +60,15 @@ export const COVERAGE_PRUNED: readonly string[] = [
   "hiveMindEntries",
   "agentMetrics",
   "briefings",
-  "subagentExecutions"
+  "subagentExecutions",
+  // Phase 197 D-20 -- the mission-board projection tables. 14 days for the
+  // per-tick missionRunEvents firehose, 30 for the one-row-per-mission
+  // missionRuns; day values and rationale in retention.ts's RETENTION_DAYS.
+  // Prunable because Postgres is the authority (Phase 197 D-01/D-02/D-06) and
+  // plan 197-08 requires the final token count to survive independent of
+  // Convex retention -- a pruned row costs the board history, never a fact.
+  "missionRunEvents",
+  "missionRuns"
 ] as const;
 
 /**

@@ -199,6 +199,33 @@ export const RETENTION_DAYS: Record<string, number> = {
   // pass carries effectively no backlog.
   aggregates: 90,
 
+  // Phase 197 D-20 -- the mission-board projection tables, bounded BEFORE they
+  // can ever grow (the same pre-emptive move as gatewayQuotaSnapshots /
+  // toolPolicyEvents / activeEngineSnapshots / controlVerbSwaps above). Day
+  // values decided by Larry, 2026-08-28.
+  //
+  // Pruning strands nothing here, which is the check this file's convention
+  // demands before enrolling anything carrying a status field. These two are a
+  // PROJECTION (Phase 197 D-01/D-02) of Astridr's Postgres missions /
+  // mission_events, and Postgres stays the authority: D-06 gives the
+  // MissionRunner's watchdog and boot sweep sole ownership of the terminal
+  // transition, and plan 197-08's must_have requires that a mission's final
+  // token count "survives INDEPENDENT OF CONVEX RETENTION". A pruned row is a
+  // row the board no longer shows, never a fact that is lost. That is the whole
+  // reason the projection is allowed to be prunable while the durable record
+  // is not.
+  //
+  // missionRunEvents is a per-tick FIREHOSE -- one row per mission event, at
+  // the rate a running mission emits them -- so it takes the 14-day tier
+  // alongside runtime_events / toolExecutions / activeTime / fileOps.
+  missionRunEvents: 14,
+  missionRuns: 30,
+  // missionRuns is ONE ROW PER MISSION, upserted in place rather than
+  // appended, so it is not a firehose at all. It takes the 30-day
+  // snapshot/trend tier alongside gatewayQuotaSnapshots. The board keeps a
+  // month of mission history; anything older is reachable from the durable
+  // Postgres row.
+
   // Phase 116 D-13: `prompts` is deliberately EXEMPT from RETENTION_DAYS — do
   // not add it as a key here. Every other new table above was bounded
   // pre-emptively because it is a firehose (gatewayQuotaSnapshots per Phase
