@@ -69,14 +69,3 @@ export const recent = query({
       .take(args.limit ?? 20);
   },
 });
-
-export const byAgent = query({
-  args: { agentId: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("reflectionResults")
-      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
-      .order("desc")
-      .take(args.limit ?? 20);
-  },
-});

@@ -32,14 +32,3 @@ export const recentCommits = query({
       .take(args.limit ?? 50);
   },
 });
-
-export const byBranch = query({
-  args: { branch: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("gitCommits")
-      .withIndex("by_branch", (q) => q.eq("branch", args.branch))
-      .order("desc")
-      .take(args.limit ?? 50);
-  },
-});

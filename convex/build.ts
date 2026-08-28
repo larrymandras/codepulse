@@ -99,13 +99,3 @@ export const recentActivity = query({
       .take(limit);
   },
 });
-
-export const componentsByPhase = query({
-  args: { phase: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("buildProgress")
-      .withIndex("by_phase", (q) => q.eq("phase", args.phase))
-      .collect();
-  },
-});

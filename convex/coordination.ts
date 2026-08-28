@@ -21,17 +21,6 @@ export const recordEvent = mutation({
   },
 });
 
-export const activeHandoffs = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("agentCoordination")
-      .withIndex("by_type", (q) => q.eq("eventType", "handoff"))
-      .order("desc")
-      .take(20);
-  },
-});
-
 export const recentAll = query({
   args: {},
   handler: async (ctx) => {

@@ -67,16 +67,6 @@ export const updateSortOrder = mutation({
   },
 });
 
-export const getByProfileId = query({
-  args: { profileId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("agentProfiles")
-      .withIndex("by_profileId", (q) => q.eq("profileId", args.profileId))
-      .first();
-  },
-});
-
 export const remove = mutation({
   args: { id: v.id("agentProfiles") },
   handler: async (ctx, args) => {

@@ -28,30 +28,6 @@ export const recent = query({
   },
 });
 
-export const byIntegration = query({
-  args: { integrationName: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("integrationCalls")
-      .withIndex("by_integration", (q) =>
-        q.eq("integrationName", args.integrationName)
-      )
-      .order("desc")
-      .take(args.limit ?? 50);
-  },
-});
-
-export const failures = query({
-  args: { limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("integrationCalls")
-      .withIndex("by_success", (q) => q.eq("success", false))
-      .order("desc")
-      .take(args.limit ?? 20);
-  },
-});
-
 export const overview = query({
   args: {},
   handler: async (ctx) => {

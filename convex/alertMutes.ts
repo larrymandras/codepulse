@@ -129,17 +129,6 @@ export const isTargetMutedPublic = query({
   },
 });
 
-export const listActiveMutes = query({
-  args: {},
-  handler: async (ctx) => {
-    const all = await ctx.db.query("alertMutes").collect();
-    const now = Date.now() / 1000;
-    return all.filter(
-      (m) => m.expiresAt === undefined || m.expiresAt === null || m.expiresAt >= now
-    );
-  },
-});
-
 // Periodic cleanup of expired mute records to prevent unbounded table growth
 export const cleanupExpired = internalMutation({
   args: {},

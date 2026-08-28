@@ -27,36 +27,6 @@ export const recent = query({
   },
 });
 
-export const byExecution = query({
-  args: { executionId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("pipelineCheckpoints")
-      .withIndex("by_execution", (q) => q.eq("executionId", args.executionId))
-      .order("desc")
-      .take(50);
-  },
-});
-
-export const activeExecutions = query({
-  args: {},
-  handler: async (ctx) => {
-    const saved = await ctx.db
-      .query("pipelineCheckpoints")
-      .withIndex("by_status", (q) => q.eq("status", "saved"))
-      .order("desc")
-      .take(50);
-
-    const resumed = await ctx.db
-      .query("pipelineCheckpoints")
-      .withIndex("by_status", (q) => q.eq("status", "resumed"))
-      .order("desc")
-      .take(50);
-
-    return [...saved, ...resumed];
-  },
-});
-
 export const overview = query({
   args: {},
   handler: async (ctx) => {

@@ -32,20 +32,3 @@ export const upsertStatus = mutation({
     }
   },
 });
-
-export const getByDistro = query({
-  args: { distro: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("wsl2Status")
-      .withIndex("by_distro", (q) => q.eq("distro", args.distro))
-      .first();
-  },
-});
-
-export const listAll = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("wsl2Status").collect();
-  },
-});

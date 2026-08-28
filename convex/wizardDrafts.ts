@@ -37,26 +37,6 @@ export const save = mutation({
   },
 });
 
-export const get = query({
-  args: { id: v.id("wizardDrafts") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
-export const list = query({
-  args: { status: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    if (args.status) {
-      return await ctx.db
-        .query("wizardDrafts")
-        .withIndex("by_status", (q) => q.eq("status", args.status!))
-        .collect();
-    }
-    return await ctx.db.query("wizardDrafts").collect();
-  },
-});
-
 export const remove = mutation({
   args: { id: v.id("wizardDrafts") },
   handler: async (ctx, args) => {

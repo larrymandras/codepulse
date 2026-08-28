@@ -11,14 +11,3 @@ export const insert = mutation({
     await ctx.db.insert("instructionsLoaded", args);
   },
 });
-
-export const recent = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("instructionsLoaded")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(50);
-  },
-});

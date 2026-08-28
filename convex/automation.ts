@@ -92,17 +92,6 @@ export const recordProactiveMessage = mutation({
   },
 });
 
-export const recentProactiveMessages = query({
-  args: { limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("proactiveMessages")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(args.limit ?? 50);
-  },
-});
-
 // ── Subagent Executions ──────────────────────────────────────────
 
 export const recordSubagentExecution = mutation({
@@ -164,17 +153,6 @@ export const cronSummary = query({
 
 // ── Per-job executions ───────────────────────────────────────────
 
-export const cronsByJob = query({
-  args: { jobName: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("cronExecutions")
-      .withIndex("by_jobName", (q) => q.eq("jobName", args.jobName))
-      .order("desc")
-      .take(args.limit ?? 10);
-  },
-});
-
 // ── Webhook Events ───────────────────────────────────────────────
 
 export const recordWebhook = mutation({
@@ -186,16 +164,5 @@ export const recordWebhook = mutation({
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("webhookEvents", args);
-  },
-});
-
-export const recentWebhooks = query({
-  args: { limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("webhookEvents")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(args.limit ?? 50);
   },
 });

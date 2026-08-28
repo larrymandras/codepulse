@@ -62,14 +62,3 @@ export const listEdges = query({
       .take(500);
   },
 });
-
-export const getBySession = query({
-  args: { sessionId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("callGraphEdges")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-  },
-});

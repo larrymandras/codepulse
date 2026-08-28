@@ -48,22 +48,3 @@ export const buckets = query({
     return Array.from(bucketMap.values()).sort((a, b) => a.timestamp - b.timestamp);
   },
 });
-
-export const messageDetail = query({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const event = await ctx.db.get(args.eventId);
-    if (!event) return null;
-
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", event.sessionId))
-      .first();
-
-    return {
-      ...event,
-      sessionStatus: session?.status,
-      sessionCwd: session?.cwd,
-    };
-  },
-});

@@ -19,26 +19,6 @@ export const recordMetrics = mutation({
   },
 });
 
-export const overview = query({
-  args: {},
-  handler: async (ctx) => {
-    const recent = await ctx.db
-      .query("profileMetrics")
-      .withIndex("by_profile")
-      .order("desc")
-      .take(100);
-
-    const grouped: Record<string, (typeof recent)> = {};
-    for (const record of recent) {
-      if (!grouped[record.profileId]) {
-        grouped[record.profileId] = [];
-      }
-      grouped[record.profileId].push(record);
-    }
-    return grouped;
-  },
-});
-
 // Batch ingest from Astridr profile_activity telemetry
 // Astridr sends: { activeProfiles, activeChannels, profileActivity: {profile_id: sender_count} }
 export const recordActivityBatch = mutation({

@@ -65,15 +65,3 @@ export const listAll = query({
       .take(limit);
   },
 });
-
-export const listCompleted = query({
-  args: { limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 20;
-    return await ctx.db
-      .query("pipelineExecutions")
-      .withIndex("by_status", (q) => q.eq("status", "completed"))
-      .order("desc")
-      .take(limit);
-  },
-});

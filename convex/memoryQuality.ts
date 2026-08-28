@@ -323,15 +323,3 @@ export const getLatestQuality = query({
     return row ?? null;
   },
 });
-
-export const getQualityHistory = query({
-  args: {},
-  handler: async (ctx) => {
-    const rows = await ctx.db
-      .query("memoryQuality")
-      .withIndex("by_evaluated")
-      .order("desc")
-      .take(10);
-    return rows;
-  },
-});

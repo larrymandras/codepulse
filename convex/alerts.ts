@@ -91,21 +91,6 @@ export const listAllPaginated = query({
   },
 });
 
-export const listBySource = query({
-  args: {
-    source: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 50;
-    return await ctx.db
-      .query("alerts")
-      .withIndex("by_source", (q) => q.eq("source", args.source))
-      .order("desc")
-      .take(limit);
-  },
-});
-
 // D-13 (124-CONTEXT.md, first half): countBySeverity is about to run on EVERY
 // route once the shell subscribes to it, so an unbounded `.collect()` here is
 // an app-wide DoS risk, not a one-widget one. Live measurement, self-hosted

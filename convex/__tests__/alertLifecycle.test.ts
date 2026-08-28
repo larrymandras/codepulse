@@ -31,10 +31,6 @@ describe("Alert Lifecycle (ALR-04)", () => {
     expect(alertMutes.isTargetMutedPublic).toBeDefined();
   });
 
-  test("listActiveMutes query is exported", () => {
-    expect(alertMutes.listActiveMutes).toBeDefined();
-  });
-
   test.todo("acknowledge mutation transitions alert status from active to acknowledged");
   test.todo("resolve mutation transitions alert status to resolved with resolvedAt timestamp");
   test.todo("mute creates alertMutes record with correct expiresAt");

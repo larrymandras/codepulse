@@ -21,17 +21,3 @@ export const recordRun = internalMutation({
     await ctx.db.insert("kgBenchmarkRuns", args);
   },
 });
-
-/**
- * Return the 10 most recent benchmark runs, ordered by timestamp desc.
- */
-export const latestRuns = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("kgBenchmarkRuns")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(10);
-  },
-});

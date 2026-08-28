@@ -127,23 +127,3 @@ export const listPagerdutyLogs = query({
       .take(100);
   },
 });
-
-export const listGithubLogs = query({
-  args: { ruleId: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    if (args.ruleId) {
-      return await ctx.db
-        .query("githubTriggerLog")
-        .withIndex("by_rule", (q) => q.eq("ruleId", args.ruleId!))
-        .order("desc")
-        .filter((q) => q.neq(q.field("archived"), true))
-        .take(100);
-    }
-    return await ctx.db
-      .query("githubTriggerLog")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .take(100);
-  },
-});

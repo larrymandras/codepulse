@@ -186,15 +186,3 @@ export const getThresholdOverride = query({
     return config ? (config.value as { threshold: number; lookbackWindow: string }) : null;
   },
 });
-
-export const listThresholdOverrides = query({
-  args: {},
-  handler: async (ctx) => {
-    const all = await ctx.db.query("agentConfigs").collect();
-    return all.filter((c) => c.configKey.startsWith("alert-rule-override:")).map((c) => ({
-      ruleId: c.configKey.replace("alert-rule-override:", ""),
-      ...(c.value as { threshold: number; lookbackWindow: string }),
-      updatedAt: c.updatedAt,
-    }));
-  },
-});

@@ -53,13 +53,6 @@ export const list = query({
   },
 });
 
-export const get = query({
-  args: { id: v.id("teamPresets") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
 export const incrementUsage = mutation({
   args: { id: v.id("teamPresets") },
   handler: async (ctx, args) => {

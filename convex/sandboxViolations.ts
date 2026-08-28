@@ -25,28 +25,6 @@ export const recent = query({
   },
 });
 
-export const byTool = query({
-  args: { toolName: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("sandboxViolations")
-      .withIndex("by_tool", (q) => q.eq("toolName", args.toolName))
-      .order("desc")
-      .take(args.limit ?? 50);
-  },
-});
-
-export const byPermission = query({
-  args: { permission: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("sandboxViolations")
-      .withIndex("by_permission", (q) => q.eq("permission", args.permission))
-      .order("desc")
-      .take(args.limit ?? 50);
-  },
-});
-
 export const overview = query({
   args: {},
   handler: async (ctx) => {

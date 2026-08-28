@@ -67,17 +67,6 @@ export const severityCounts = query({
   },
 });
 
-export const recentByType = query({
-  args: { eventType: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("securityEvents")
-      .withIndex("by_type", (q) => q.eq("eventType", args.eventType))
-      .order("desc")
-      .take(args.limit ?? 20);
-  },
-});
-
 export const rlsStats = query({
   args: {},
   handler: async (ctx) => {

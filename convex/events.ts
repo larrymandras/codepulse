@@ -109,22 +109,6 @@ export const listBySession = query({
   },
 });
 
-export const listByTool = query({
-  args: {
-    toolName: v.string(),
-    limit: v.optional(v.float64()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 50;
-    return await ctx.db
-      .query("events")
-      .withIndex("by_tool", (q) => q.eq("toolName", args.toolName))
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .take(limit);
-  },
-});
-
 export const listBashCommands = query({
   args: {
     sessionId: v.string(),
@@ -158,23 +142,6 @@ export const listErrors = query({
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     return events.filter((e) => e.eventType === "Error" || e.eventType === "ToolError" || e.eventType === "PostToolUseFailure").slice(0, limit);
-  },
-});
-
-export const listPrompts = query({
-  args: {
-    sessionId: v.string(),
-    limit: v.optional(v.float64()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 50;
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-    return events.filter((e) => e.eventType.includes("Prompt") || e.eventType === "UserPrompt").slice(0, limit);
   },
 });
 
@@ -319,46 +286,5 @@ export const listByType = query({
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
-  },
-});
-
-export const listCritical = query({
-  args: {
-    limit: v.optional(v.float64()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 50;
-    return await ctx.db
-      .query("runtime_events")
-      .withIndex("by_critical", (q) => q.eq("critical", true))
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .take(limit);
-  },
-});
-
-export const listRecentRuntimePaginated = query({
-  args: { paginationOpts: paginationOptsValidator },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("runtime_events")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .paginate(args.paginationOpts);
-  },
-});
-
-export const countByType = query({
-  args: {},
-  handler: async (ctx) => {
-    const all = await ctx.db.query("runtime_events")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-    const counts: Record<string, number> = {};
-    for (const event of all) {
-      counts[event.eventType] = (counts[event.eventType] ?? 0) + 1;
-    }
-    return counts;
   },
 });

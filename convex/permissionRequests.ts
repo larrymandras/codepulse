@@ -13,14 +13,3 @@ export const insert = mutation({
     await ctx.db.insert("permissionRequests", args);
   },
 });
-
-export const recent = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("permissionRequests")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(50);
-  },
-});

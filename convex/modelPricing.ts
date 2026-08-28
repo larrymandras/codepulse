@@ -221,13 +221,6 @@ export const list = query({
   },
 });
 
-export const get = query({
-  args: { id: v.id("modelPricing") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
 // ============================================================
 // Seed — idempotent, additive-only
 // ============================================================

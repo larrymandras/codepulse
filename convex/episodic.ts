@@ -21,28 +21,6 @@ export const recordEvent = mutation({
   },
 });
 
-export const recentEvents = query({
-  args: { limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("episodicEvents")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(args.limit ?? 50);
-  },
-});
-
-export const byAgent = query({
-  args: { agentId: v.string(), limit: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("episodicEvents")
-      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
-      .order("desc")
-      .take(args.limit ?? 50);
-  },
-});
-
 export const prune = internalMutation({
   args: {},
   handler: async (ctx) => {
