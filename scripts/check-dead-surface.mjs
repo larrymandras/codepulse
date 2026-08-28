@@ -8,6 +8,12 @@
  * also complains when a baseline entry has become live or has been deleted
  * (so the baseline cannot silently rot).
  *
+ * KNOWN LIMIT: invocations are found by scanning text, so a quoted "mod:fn"
+ * sitting in call-argument position anywhere in a tracked file counts as a
+ * caller -- including in an example inside a comment. That is the deliberate
+ * trade for catching scripts/verify-intake-claim.mjs, which calls Convex
+ * through a convexRun("mod:fn", ...) helper rather than by the api.* path.
+ *
  * Usage:
  *   node scripts/check-dead-surface.mjs            # check (exit 1 on new dead)
  *   node scripts/check-dead-surface.mjs --list     # print every dead export
@@ -29,7 +35,10 @@ function tracked() {
     .map((f) => f.trim())
     .filter(Boolean)
     .filter((f) => !f.startsWith("convex/_generated/"))
-    .filter((f) => !f.includes("node_modules/"));
+    .filter((f) => !f.includes("node_modules/"))
+    // The baseline lists dead names as quoted strings; scanning it would make
+    // every entry vouch for itself.
+    .filter((f) => f !== "scripts/dead-surface-baseline.json");
 }
 
 /** Every public Convex function, as "module:fnName". */
@@ -71,6 +80,18 @@ function invocations(files) {
     }
     // form 3: npx convex run mod:fn  (lives in docs and scripts)
     for (const m of src.matchAll(/convex run ([A-Za-z0-9_]+):([A-Za-z0-9_]+)/g)) {
+      seen.add(`${m[1]}:${m[2]}`);
+    }
+    // form 5: the name passed as a QUOTED string to a helper, e.g.
+    //   convexRun("forge:generateVerificationUploadUrl", "{}")
+    // in scripts/verify-intake-claim.mjs. Quotes are required: a docs bullet
+    // like `- credentialAudit:byTool` is a mention, not a call, and counting
+    // those would turn the whole .planning tree into a fake caller.
+    // Anchored to a CALL-ARGUMENT position -- `(` then the quoted name -- not
+    // any quoted "word:word" anywhere. The loose version matched this very
+    // baseline file's own entries and reported 0 dead of 582, a perfectly
+    // circular green.
+    for (const m of src.matchAll(/\(\s*["'`]([A-Za-z0-9_]+):([A-Za-z0-9_]+)["'`]/g)) {
       seen.add(`${m[1]}:${m[2]}`);
     }
     // form 4: direct module import in a test, then alias.fn
@@ -131,7 +152,12 @@ if (process.argv.includes("--update")) {
 if (process.argv.includes("--self-test")) {
   // Prove the check CAN fail: a name that is declared nowhere must not be
   // reported live, and a name in the baseline must be reported dead.
-  const fakeLive = invocations(files).has("__definitely_not_a_module__:__nope__");
+  // Built at runtime, NOT written as a literal: form 5 matches a quoted
+  // "mod:fn" in call-argument position, and a literal sentinel here would sit
+  // in exactly that position inside this very file -- the scan would then find
+  // it and the self-test would report a false negative. It did, once.
+  const sentinel = ["__no", "such", "module__"].join("") + ":" + ["__no", "such", "fn__"].join("");
+  const fakeLive = invocations(files).has(sentinel);
   const baselineNow = JSON.parse(fs.readFileSync(BASELINE, "utf8")).allowed_dead;
   const ok = !fakeLive && baselineNow.length > 0 && baselineNow.every((k) => deadKeys.includes(k));
   console.log(`self-test: invocation scan rejects unknown name = ${!fakeLive}`);

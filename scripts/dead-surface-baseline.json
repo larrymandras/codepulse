@@ -6,8 +6,6 @@
     "alerts:getLastCriticalEvalTimestamp",
     "bifrost:updateLink",
     "deliveryLogs:insertGithubLog",
-    "forge:generateVerificationUploadUrl",
-    "forge:seedIntakeRowForVerification",
     "profiles:summarize",
     "retention:oldestPrunableDoc",
     "selfHealing:recordRecoveryWithCommit",
